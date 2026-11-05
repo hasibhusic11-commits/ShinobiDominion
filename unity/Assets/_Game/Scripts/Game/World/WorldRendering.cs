@@ -215,9 +215,17 @@ namespace ShinobiDominion.Game
     /// Honest primitive placeholder art. Each function gets a distinct silhouette so buildings
     /// read at isometric distance without labels. All of it is replaced by real art in Phase 5.
     /// </summary>
+    /// <summary>What a pedestal should show. Null means an empty base.</summary>
+    public sealed class HeroLook
+    {
+        public Color Color;
+        public int Evolution;
+        public string Key => $"{ColorUtility.ToHtmlStringRGB(Color)}_{Evolution}";
+    }
+
     public static class BuildingMeshes
     {
-        public static MeshBuilder For(BuildingDefinition definition, bool hasHero)
+        public static MeshBuilder For(BuildingDefinition definition, HeroLook hero)
         {
             var mesh = new MeshBuilder();
             var w = definition.width * GridSpace.CellSize;
@@ -232,7 +240,7 @@ namespace ShinobiDominion.Game
                 case BuildingFunction.Headquarters: Pagoda(mesh, floor, w, d); break;
                 case BuildingFunction.BuilderHall: Workshop(mesh, floor, w, d); break;
                 case BuildingFunction.HeroAltar: Altar(mesh, floor, w, d); break;
-                case BuildingFunction.HeroBase: Pedestal(mesh, floor, w, hasHero); break;
+                case BuildingFunction.HeroBase: Pedestal(mesh, floor, w, hero); break;
                 case BuildingFunction.SummoningGate: Gate(mesh, floor, w, d); break;
                 case BuildingFunction.Training: TrainingYard(mesh, floor, w, d); break;
                 case BuildingFunction.Research: Hut(mesh, floor, w, d); break;
@@ -282,21 +290,34 @@ namespace ShinobiDominion.Game
             mesh.Frustum(top + Vector3.up * 0.5f, 0.45f, 0.45f, 0f, 0f, 0.8f, Palette.AccentBlue);
         }
 
-        private static void Pedestal(MeshBuilder mesh, Vector3 floor, float w, bool hasHero)
+        private static void Pedestal(MeshBuilder mesh, Vector3 floor, float w, HeroLook hero)
         {
             mesh.Frustum(floor, w - 0.5f, w - 0.5f, w - 0.9f, w - 0.9f, 0.3f, Palette.Stone);
             var top = floor + Vector3.up * 0.3f;
-            if (hasHero)
-            {
-                // Tiny hero placeholder: legs, torso and head blocks.
-                mesh.Box(top, new Vector3(0.28f, 0.45f, 0.2f), Palette.Slate);
-                mesh.Box(top + Vector3.up * 0.45f, new Vector3(0.4f, 0.5f, 0.26f), Palette.AccentRed);
-                mesh.Box(top + Vector3.up * 0.95f, new Vector3(0.24f, 0.24f, 0.24f), Palette.Plaster);
-            }
-            else
+            if (hero == null)
             {
                 // Neutral empty marker: a small, unmistakably vacant stone token.
                 mesh.Frustum(top, 0.4f, 0.4f, 0.22f, 0.22f, 0.18f, Palette.DarkStone);
+                return;
+            }
+
+            // Placeholder figure. The body stays the same across forms so identity carries over,
+            // and each evolution adds a silhouette element rather than only a bigger glow.
+            mesh.Box(top, new Vector3(0.28f, 0.45f, 0.2f), Palette.Slate);
+            mesh.Box(top + Vector3.up * 0.45f, new Vector3(0.4f, 0.5f, 0.26f), hero.Color);
+            mesh.Box(top + Vector3.up * 0.95f, new Vector3(0.24f, 0.24f, 0.24f), Palette.Plaster);
+
+            if (hero.Evolution >= 1)
+                mesh.Box(top + new Vector3(0f, 0.15f, 0.17f), new Vector3(0.36f, 0.75f, 0.05f), hero.Color);
+            if (hero.Evolution >= 2)
+            {
+                mesh.Box(top + new Vector3(-0.27f, 0.82f, 0f), new Vector3(0.16f, 0.14f, 0.3f), Palette.Amber);
+                mesh.Box(top + new Vector3(0.27f, 0.82f, 0f), new Vector3(0.16f, 0.14f, 0.3f), Palette.Amber);
+            }
+            if (hero.Evolution >= 3)
+            {
+                mesh.Frustum(top + Vector3.up * 1.19f, 0.3f, 0.3f, 0f, 0f, 0.34f, Palette.Amber);
+                mesh.Frustum(top + new Vector3(0f, 0.02f, 0f), 0.95f, 0.95f, 0.8f, 0.8f, 0.05f, hero.Color);
             }
         }
 

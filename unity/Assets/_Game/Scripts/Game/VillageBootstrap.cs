@@ -31,6 +31,18 @@ namespace ShinobiDominion.Game
             var store = new FileVillageStore(savePath);
             var village = store.LoadOrCreate(catalog, DateTime.UtcNow.Ticks);
 
+            var heroConfig = Resources.Load<TextAsset>("Config/heroes");
+            if (heroConfig == null)
+                throw new InvalidOperationException("Resources/Config/heroes.json is missing.");
+            var heroCatalog = HeroCatalog.FromJson(heroConfig.text);
+            var rosterStore = new FileRosterStore(savePath + ".heroes");
+            var roster = rosterStore.LoadOrCreate(heroCatalog);
+
+            // A base can only point at a hero the player still owns.
+            foreach (var building in new System.Collections.Generic.List<BuildingInstance>(village.Buildings))
+                if (building.AssignedHeroInstanceId != null && !roster.Owns(building.AssignedHeroInstanceId))
+                    village.TryUnassignHero(building.Id);
+
             var world = new GameObject("World").transform;
             world.SetParent(transform, false);
             VillageScenery.Create(world);
@@ -44,7 +56,7 @@ namespace ShinobiDominion.Game
 
             var ui = new UiRoot(transform);
             Controller = gameObject.AddComponent<VillageController>();
-            Controller.Initialize(village, store, IsoCamera, world, ui);
+            Controller.Initialize(village, store, roster, rosterStore, IsoCamera, world, ui);
 
             gameObject.AddComponent<WorldInput>().Initialize(IsoCamera, Controller);
         }

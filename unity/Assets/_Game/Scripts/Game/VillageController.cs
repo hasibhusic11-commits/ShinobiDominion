@@ -61,7 +61,7 @@ namespace ShinobiDominion.Game
     /// Connects model, world and UI. All game rules live in Core; this class only drives the
     /// screen flow and reports errors. Public methods double as the PlayMode test surface.
     /// </summary>
-    public sealed class VillageController : MonoBehaviour, IWorldGestureHandler
+    public sealed partial class VillageController : MonoBehaviour, IWorldGestureHandler
     {
         private static readonly Color GoodCell = new Color(0.25f, 0.85f, 0.40f, 0.45f);
         private static readonly Color BadCell = new Color(0.90f, 0.20f, 0.18f, 0.55f);
@@ -109,14 +109,16 @@ namespace ShinobiDominion.Game
 
         private static long Now => DateTime.UtcNow.Ticks;
 
-        public void Initialize(Village village, FileVillageStore store, IsoCamera isoCamera, Transform worldRoot, UiRoot ui)
+        public void Initialize(Village village, FileVillageStore store, HeroRoster roster, FileRosterStore rosterStore, IsoCamera isoCamera, Transform worldRoot, UiRoot ui)
         {
             Village = village;
             _store = store;
+            Roster = roster;
+            _rosterStore = rosterStore;
             _camera = isoCamera;
             _uiRoot = ui.Safe;
 
-            _view = new VillageView(village, worldRoot);
+            _view = new VillageView(village, worldRoot, HeroLookFor);
             _grid = new GridOverlay(worldRoot);
             _placementCells = new CellHighlight(worldRoot, "PlacementCells", GoodCell, BadCell, 0.03f);
             _selectionCells = new CellHighlight(worldRoot, "SelectionCells", SelectCell, SelectCell, 0.025f);
@@ -124,6 +126,7 @@ namespace ShinobiDominion.Game
             _panel = new PanelView(ui.Safe);
 
             Village.Changed += OnVillageChanged;
+            Roster.Changed += OnRosterChanged;
             UiState.Changed += ApplyUiState;
             RefreshHud();
             ApplyUiState();
@@ -132,17 +135,21 @@ namespace ShinobiDominion.Game
         private void OnDestroy()
         {
             if (Village != null) Village.Changed -= OnVillageChanged;
+            if (Roster != null) Roster.Changed -= OnRosterChanged;
             UiState.Changed -= ApplyUiState;
         }
 
         private void LateUpdate()
         {
             if (_dirty) Flush();
+            if (_rosterDirty) FlushRoster();
         }
 
         private void OnApplicationPause(bool paused)
         {
-            if (paused) Flush();
+            if (!paused) return;
+            Flush();
+            FlushRoster();
         }
 
         private void Flush()
@@ -302,6 +309,13 @@ namespace ShinobiDominion.Game
             }
 
             var definition = building.Definition;
+            if (definition.function == BuildingFunction.HeroAltar && !_showAltarBuildingOptions)
+            {
+                ShowAltarRoster();
+                return;
+            }
+            _showAltarBuildingOptions = false;
+
             _panel.Show(definition.displayName, CloseAll, panel =>
             {
                 panel.Line(definition.description);
@@ -329,14 +343,10 @@ namespace ShinobiDominion.Game
                     panel.Line("The Dojo level sets how many of each building you can own.");
                     break;
                 case BuildingFunction.HeroAltar:
-                    panel.Line("Hero roster, upgrades and evolution arrive in Phase 2.", 20, Ui.AccentColor);
+                    panel.Action("RosterButton", "Open roster", ShowAltarRoster, true, Ui.AccentColor);
                     break;
                 case BuildingFunction.HeroBase:
-                    panel.Line(building.AssignedHeroInstanceId == null ? "Assigned hero: none" : $"Assigned hero: {building.AssignedHeroInstanceId}");
-                    panel.Line("Choosing a hero arrives in Phase 2.", 20, Ui.AccentColor);
-                    panel.Action("ChangeHeroButton", "Change Hero", null, false);
-                    if (building.AssignedHeroInstanceId != null)
-                        panel.Action("UnassignButton", "Unassign", () => RunAndRefresh(Village.TryUnassignHero(building.Id)));
+                    HeroBaseActions(panel, building);
                     break;
                 case BuildingFunction.SummoningGate:
                     panel.Line("Summoning runs only on the server and arrives in Phase 3. No rolls happen on this device.", 20, Ui.AccentColor);

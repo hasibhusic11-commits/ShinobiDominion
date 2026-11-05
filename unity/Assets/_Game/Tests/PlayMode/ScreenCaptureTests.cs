@@ -75,11 +75,28 @@ namespace ShinobiDominion.Tests
             village.TryPlace("hero_base", new GridCoord(17, 33), Rotation.R0, 0, out _);
             village.TryPlace("hero_base", new GridCoord(23, 36), Rotation.R0, 0, out _);
             village.TryPlace("hero_base", new GridCoord(29, 34), Rotation.R0, 0, out _);
-            var last = village.TryPlace("hero_base", new GridCoord(33, 31), Rotation.R0, 0, out var heroBase);
+            var last = village.TryPlace("hero_base", new GridCoord(33, 31), Rotation.R0, 0, out _);
             Assert.AreEqual(VillageError.None, last);
-            village.TryAssignHero(heroBase, "placeholder-hero");
             village.TryPlace("defense_tower", new GridCoord(35, 16), Rotation.R0, 0, out _);
+
+            // One Legendary in each of the four forms, on a base, to show the visual progression.
+            var roster = controller.Roster;
+            var bases = village.Buildings.Where(b => b.Definition.function == BuildingFunction.HeroBase).ToList();
+            for (var e = 0; e <= 3; e++)
+                controller.AssignHero(bases[e].Id, roster.AddHero("thunder_empress", e, 50).InstanceId);
             yield return shot("07_home_six_bases_and_walls");
+
+            game.IsoCamera.ZoomAt(0.4f, new Vector2(texture.width * 0.5f, texture.height * 0.62f));
+            yield return shot("09_four_forms_close_up");
+            game.IsoCamera.ZoomAt(2.5f, new Vector2(texture.width * 0.5f, texture.height * 0.62f));
+
+            controller.Select(First("hero_altar").Id);
+            yield return shot("10_hero_altar");
+
+            var evolving = roster.Heroes.First(h => h.ArchetypeId == "solar_beast_sage" && h.Level == HeroMath.MaxLevel);
+            controller.ShowEvolution(evolving.InstanceId);
+            yield return shot("11_evolution_requirements");
+            controller.CloseAll();
 
             game.IsoCamera.ZoomAt(5f, new Vector2(texture.width * 0.5f, texture.height * 0.5f));
             yield return shot("08_zoomed_out_full_map");

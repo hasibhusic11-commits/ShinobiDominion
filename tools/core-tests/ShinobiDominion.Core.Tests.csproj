@@ -14,6 +14,7 @@
     <Compile Include="..\..\unity\Assets\_Game\Scripts\Core\**\*.cs" />
     <Compile Include="..\..\unity\Assets\_Game\Tests\EditMode\**\*.cs" />
     <Content Include="..\..\unity\Assets\_Game\Resources\Config\buildings.json" Link="Config\buildings.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\unity\Assets\_Game\Resources\Config\heroes.json" Link="Config\heroes.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />

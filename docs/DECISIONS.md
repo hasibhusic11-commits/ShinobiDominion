@@ -48,5 +48,14 @@ The brief lists "Chakra Turret" as an example but also requires original termino
 ## ADR-012: Backend (provisional, verify in Phase 3)
 Plan is Nakama's Go runtime with Go `crypto/rand`. Before relying on any atomic write path, read the current Nakama source and prove it with concurrency tests, per the brief.
 
+## ADR-014: Heroes stay on the device until Phase 3
+Roster rules live in Core so they can move to the server, and they already use idempotency keys. Release builds start with an empty roster. The dev roster is compiled in only for the editor and development builds, and it is a direct grant, never a summon.
+
+## ADR-015: Hero power formula
+`stat = base + growth * (200 * evolutionIndex + level - 1)`, with growth required to be non-negative. Evo I Lv1 is always one step above Base Lv200. Numbers are test values.
+
+## ADR-016: Altar opens straight into the roster
+Building options such as Move and Upgrade sit behind an "Altar building options" button, since the roster is what the Altar is for.
+
 ## ADR-013: Docker and memory on this machine (open risk)
 This PC has 7.3 GB of RAM and no WSL2 or Docker. Unity plus Docker Desktop, Nakama and Postgres may not fit comfortably. Decide in Phase 3 between Docker and native Nakama and Postgres on Windows.

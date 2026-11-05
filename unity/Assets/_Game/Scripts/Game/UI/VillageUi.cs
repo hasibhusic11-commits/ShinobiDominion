@@ -251,9 +251,9 @@ namespace ShinobiDominion.Game
             return Ui.Label(_content, text, size, TextAnchor.UpperLeft, color ?? Ui.MutedText);
         }
 
-        public Button Action(string name, string caption, Action onClick, bool interactable = true, Color? color = null)
+        public Button Action(string name, string caption, Action onClick, bool interactable = true, Color? color = null, int fontSize = 22)
         {
-            return Ui.Button(_content, name, caption, onClick, interactable, color);
+            return Ui.Button(_content, name, caption, onClick, interactable, color, fontSize);
         }
 
         /// <summary>A row of equal-width small buttons, used for the catalog's category tabs.</summary>

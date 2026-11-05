@@ -348,6 +348,9 @@ namespace ShinobiDominion.Core
             return VillageError.None;
         }
 
+        public bool IsHeroAssigned(string heroInstanceId) =>
+            _buildings.Values.Any(b => b.AssignedHeroInstanceId == heroInstanceId);
+
         public VillageError TryUnassignHero(int baseId)
         {
             var building = Find(baseId);

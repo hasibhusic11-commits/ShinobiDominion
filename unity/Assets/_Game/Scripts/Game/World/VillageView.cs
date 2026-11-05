@@ -284,13 +284,15 @@ namespace ShinobiDominion.Game
         private readonly WallView _walls;
         private readonly Dictionary<string, Mesh> _meshCache = new Dictionary<string, Mesh>();
         private readonly Dictionary<string, Material[]> _materialCache = new Dictionary<string, Material[]>();
+        private readonly System.Func<string, HeroLook> _heroLook;
         private int _hiddenId;
 
         public int ViewCount => _views.Count;
 
-        public VillageView(Village village, Transform parent)
+        public VillageView(Village village, Transform parent, System.Func<string, HeroLook> heroLook)
         {
             _village = village;
+            _heroLook = heroLook;
             _root = new GameObject("Buildings").transform;
             _root.SetParent(parent, false);
             _walls = new WallView(parent);
@@ -311,11 +313,12 @@ namespace ShinobiDominion.Game
             {
                 if (building.Definition.IsWall) continue;
                 alive.Add(building.Id);
-                var signature = $"{building.Definition.id}|{building.AssignedHeroInstanceId != null}";
+                var look = building.AssignedHeroInstanceId != null ? _heroLook(building.AssignedHeroInstanceId) : null;
+                var signature = $"{building.Definition.id}|{look?.Key}";
                 if (!_views.TryGetValue(building.Id, out var entry) || entry.Signature != signature)
                 {
                     if (entry != null) Object.Destroy(entry.Go);
-                    entry = Create(building, signature);
+                    entry = Create(building, look, signature);
                     _views[building.Id] = entry;
                 }
 
@@ -339,24 +342,24 @@ namespace ShinobiDominion.Game
             _walls.Rebuild(_village, _hiddenId);
         }
 
-        private Entry Create(BuildingInstance building, string signature)
+        private Entry Create(BuildingInstance building, HeroLook look, string signature)
         {
             var go = new GameObject($"{building.Definition.id}_{building.Id}");
             go.transform.SetParent(_root, false);
-            GetMesh(building.Definition, building.AssignedHeroInstanceId != null, signature, out var mesh, out var materials);
+            GetMesh(building.Definition, look, signature, out var mesh, out var materials);
             go.AddComponent<MeshFilter>().sharedMesh = mesh;
             go.AddComponent<MeshRenderer>().sharedMaterials = materials;
             return new Entry { Go = go, Signature = signature };
         }
 
-        private void GetMesh(BuildingDefinition definition, bool hasHero, string key, out Mesh mesh, out Material[] materials)
+        private void GetMesh(BuildingDefinition definition, HeroLook hero, string key, out Mesh mesh, out Material[] materials)
         {
             if (_meshCache.TryGetValue(key, out mesh))
             {
                 materials = _materialCache[key];
                 return;
             }
-            var builder = BuildingMeshes.For(definition, hasHero);
+            var builder = BuildingMeshes.For(definition, hero);
             mesh = builder.Build(definition.id);
             materials = builder.LitMaterials();
             _meshCache[key] = mesh;
@@ -366,8 +369,8 @@ namespace ShinobiDominion.Game
         /// <summary>A ghost for placement: the same silhouette in a see-through tint.</summary>
         public GameObject CreateGhost(BuildingDefinition definition, Color tint)
         {
-            var key = $"{definition.id}|False";
-            GetMesh(definition, false, key, out var mesh, out var materials);
+            var key = $"{definition.id}|";
+            GetMesh(definition, null, key, out var mesh, out var materials);
             var go = new GameObject("PlacementGhost");
             go.transform.SetParent(_root, false);
             go.AddComponent<MeshFilter>().sharedMesh = mesh;

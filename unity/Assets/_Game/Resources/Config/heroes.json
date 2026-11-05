@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "balanceStatus": "PROPOSED TEST VALUES AND PROVISIONAL NAMES - NOT APPROVED",
+  "catalystByTransition": ["awakening_scroll", "ascension_stone", "sovereign_scroll"],
+  "xpPerLevelBase": 100,
+  "xpPerLevelStep": 10,
+  "heroes": [
+    {
+      "id": "river_scout", "displayName": "River Scout", "rarity": "Common", "role": "Assassin", "affinity": "Water", "contentComplete": true,
+      "baseHp": 420, "baseAttack": 60, "baseDefense": 22, "growthHp": 11, "growthAttack": 2, "growthDefense": 1, "primaryColor": "#5A87A3",
+      "skills": [ { "id": "quick_cut", "displayName": "Quick Cut", "description": "A fast strike on the nearest target.", "unlockEvolution": 0 } ]
+    },
+    {
+      "id": "lantern_warden", "displayName": "Lantern Warden", "rarity": "Elite", "role": "Tank", "affinity": "Steel", "contentComplete": true,
+      "baseHp": 900, "baseAttack": 55, "baseDefense": 60, "growthHp": 24, "growthAttack": 2, "growthDefense": 3, "primaryColor": "#8A8F73",
+      "skills": [ { "id": "lantern_guard", "displayName": "Lantern Guard", "description": "Draws attacks and hardens against them.", "unlockEvolution": 0 } ]
+    },
+    {
+      "id": "solar_beast_sage", "displayName": "Solar Beast Sage", "rarity": "Legendary", "role": "Fighter", "affinity": "Solar", "contentComplete": true,
+      "baseHp": 1200, "baseAttack": 140, "baseDefense": 55, "growthHp": 34, "growthAttack": 5, "growthDefense": 2, "primaryColor": "#C9772B",
+      "skills": [
+        { "id": "sun_palm", "displayName": "Sun Palm", "description": "A heavy open-handed blow.", "unlockEvolution": 0 },
+        { "id": "beast_stride", "displayName": "Beast Stride", "description": "Leaps to a target wrapped in a spirit-beast outline.", "unlockEvolution": 1 },
+        { "id": "radiant_roar", "displayName": "Radiant Roar", "description": "A wave of Spirit Force strikes nearby foes.", "unlockEvolution": 2 },
+        { "id": "celestial_guardian", "displayName": "Celestial Guardian", "description": "A radiant guardian fights at the Sage's side.", "unlockEvolution": 3 }
+      ],
+      "forms": [
+        { "formName": "Wandering Sage", "summary": "Simple orange and gray training clothes, a modest silhouette.", "primaryColor": "#C9772B", "vfxBudget": 0, "portraitAssetId": "portrait_solar_0", "modelAssetId": "model_solar_0" },
+        { "formName": "Dawn Disciple", "summary": "Refined layered robe and a faint, controlled warm aura.", "primaryColor": "#D98A2E", "vfxBudget": 1, "portraitAssetId": "portrait_solar_1", "modelAssetId": "model_solar_1" },
+        { "formName": "Beast-Bound Master", "summary": "Intricate bracers and clan sash, beast markings on the Spirit Force.", "primaryColor": "#E8A02F", "vfxBudget": 2, "portraitAssetId": "portrait_solar_2", "modelAssetId": "model_solar_2" },
+        { "formName": "Celestial Guardian", "summary": "Radiant armored mantle, the same face and stance as the Wandering Sage.", "primaryColor": "#F5C13E", "vfxBudget": 3, "portraitAssetId": "portrait_solar_3", "modelAssetId": "model_solar_3" }
+      ]
+    },
+    {
+      "id": "thunder_empress", "displayName": "Thunder Empress", "rarity": "Legendary", "role": "Control", "affinity": "Lightning", "contentComplete": true,
+      "baseHp": 1000, "baseAttack": 150, "baseDefense": 42, "growthHp": 28, "growthAttack": 6, "growthDefense": 2, "primaryColor": "#6C63B5",
+      "skills": [
+        { "id": "arc_lash", "displayName": "Arc Lash", "description": "A crackling whip strike.", "unlockEvolution": 0 },
+        { "id": "chain_stun", "displayName": "Chain Stun", "description": "Lightning jumps between enemies and stuns them.", "unlockEvolution": 1 },
+        { "id": "storm_court", "displayName": "Storm Court", "description": "Marks an area that slows and shocks raiders.", "unlockEvolution": 2 },
+        { "id": "sky_decree", "displayName": "Sky Decree", "description": "A column of lightning falls on the strongest foe.", "unlockEvolution": 3 }
+      ],
+      "forms": [
+        { "formName": "Storm Apprentice", "summary": "Plain indigo travel wear with a single copper hairpin.", "primaryColor": "#6C63B5", "vfxBudget": 0, "portraitAssetId": "portrait_thunder_0", "modelAssetId": "model_thunder_0" },
+        { "formName": "Court Herald", "summary": "Fitted court coat, small sparks held under tight control.", "primaryColor": "#7B6FCB", "vfxBudget": 1, "portraitAssetId": "portrait_thunder_1", "modelAssetId": "model_thunder_1" },
+        { "formName": "Tempest Regent", "summary": "Ornate shoulder plates and a clan sigil crackling with charge.", "primaryColor": "#8E80E0", "vfxBudget": 2, "portraitAssetId": "portrait_thunder_2", "modelAssetId": "model_thunder_2" },
+        { "formName": "Thunder Empress", "summary": "Iconic crowned silhouette and a mantle of living lightning.", "primaryColor": "#A99BF5", "vfxBudget": 3, "portraitAssetId": "portrait_thunder_3", "modelAssetId": "model_thunder_3" }
+      ]
+    },
+    {
+      "id": "stone_titan", "displayName": "Stone Titan", "rarity": "Legendary", "role": "Tank", "affinity": "Earth", "contentComplete": true,
+      "baseHp": 1700, "baseAttack": 95, "baseDefense": 90, "growthHp": 48, "growthAttack": 3, "growthDefense": 5, "primaryColor": "#7A6A55",
+      "skills": [
+        { "id": "stone_guard", "displayName": "Stone Guard", "description": "Braces and absorbs incoming damage.", "unlockEvolution": 0 },
+        { "id": "bulwark", "displayName": "Bulwark", "description": "Raises a brief earthen wall in front of allies.", "unlockEvolution": 1 },
+        { "id": "fault_line", "displayName": "Fault Line", "description": "A ground crack staggers enemies in a line.", "unlockEvolution": 2 },
+        { "id": "mountain_heart", "displayName": "Mountain Heart", "description": "Shares damage taken by nearby allies.", "unlockEvolution": 3 }
+      ],
+      "forms": [
+        { "formName": "Quarry Hand", "summary": "A broad laborer in worn leather with a stone maul.", "primaryColor": "#7A6A55", "vfxBudget": 0, "portraitAssetId": "portrait_titan_0", "modelAssetId": "model_titan_0" },
+        { "formName": "Wallkeeper", "summary": "Fitted slate plates and a calm dust haze.", "primaryColor": "#8A7A62", "vfxBudget": 1, "portraitAssetId": "portrait_titan_1", "modelAssetId": "model_titan_1" },
+        { "formName": "Ridge Bastion", "summary": "Carved clan armor with runes that glow when struck.", "primaryColor": "#9C8B6E", "vfxBudget": 2, "portraitAssetId": "portrait_titan_2", "modelAssetId": "model_titan_2" },
+        { "formName": "Stone Titan", "summary": "Towering living-rock armor around the same weathered face.", "primaryColor": "#B3A17F", "vfxBudget": 3, "portraitAssetId": "portrait_titan_3", "modelAssetId": "model_titan_3" }
+      ]
+    },
+    {
+      "id": "moonfang_oracle", "displayName": "Moonfang Oracle", "rarity": "Legendary", "role": "Support", "affinity": "Lunar", "contentComplete": true,
+      "baseHp": 980, "baseAttack": 110, "baseDefense": 48, "growthHp": 27, "growthAttack": 4, "growthDefense": 2, "primaryColor": "#6E8FA8",
+      "skills": [
+        { "id": "moon_salve", "displayName": "Moon Salve", "description": "Heals the most wounded ally.", "unlockEvolution": 0 },
+        { "id": "clear_sight", "displayName": "Clear Sight", "description": "Removes debuffs from nearby allies.", "unlockEvolution": 1 },
+        { "id": "silver_ward", "displayName": "Silver Ward", "description": "Shields the team for a short time.", "unlockEvolution": 2 },
+        { "id": "tide_of_night", "displayName": "Tide of Night", "description": "Slow healing wave for all allies in range.", "unlockEvolution": 3 }
+      ],
+      "forms": [
+        { "formName": "Shrine Novice", "summary": "Plain gray shrine robes and a wooden charm.", "primaryColor": "#6E8FA8", "vfxBudget": 0, "portraitAssetId": "portrait_moon_0", "modelAssetId": "model_moon_0" },
+        { "formName": "Night Seer", "summary": "Layered silver-trim robes and a dim lunar halo.", "primaryColor": "#7FA2BC", "vfxBudget": 1, "portraitAssetId": "portrait_moon_1", "modelAssetId": "model_moon_1" },
+        { "formName": "Fang Priestess", "summary": "Crescent fang jewelry and floating ward talismans.", "primaryColor": "#93B7D0", "vfxBudget": 2, "portraitAssetId": "portrait_moon_2", "modelAssetId": "model_moon_2" },
+        { "formName": "Moonfang Oracle", "summary": "A striking crescent mantle and full silver moonlight.", "primaryColor": "#B4D3E6", "vfxBudget": 3, "portraitAssetId": "portrait_moon_3", "modelAssetId": "model_moon_3" }
+      ]
+    },
+    { "id": "crimson_eye_prodigy", "displayName": "Crimson Eye Prodigy", "rarity": "Legendary", "role": "Assassin", "affinity": "Fire", "contentComplete": false, "baseHp": 1, "baseAttack": 0, "baseDefense": 0, "primaryColor": "#8A3030" },
+    { "id": "void_sovereign", "displayName": "Void Sovereign", "rarity": "Legendary", "role": "Mage", "affinity": "Void", "contentComplete": false, "baseHp": 1, "baseAttack": 0, "baseDefense": 0, "primaryColor": "#4A3A6A" },
+    { "id": "ashen_flame_lord", "displayName": "Ashen Flame Lord", "rarity": "Legendary", "role": "Mage", "affinity": "Fire", "contentComplete": false, "baseHp": 1, "baseAttack": 0, "baseDefense": 0, "primaryColor": "#A04A20" },
+    { "id": "storm_crow_shinobi", "displayName": "Storm Crow Shinobi", "rarity": "Legendary", "role": "Assassin", "affinity": "Storm", "contentComplete": false, "baseHp": 1, "baseAttack": 0, "baseDefense": 0, "primaryColor": "#3A4A5A" }
+  ]
+}
