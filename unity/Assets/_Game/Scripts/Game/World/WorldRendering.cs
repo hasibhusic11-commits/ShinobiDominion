@@ -30,6 +30,7 @@ namespace ShinobiDominion.Game
     {
         private static readonly Dictionary<Color, Material> LitCache = new Dictionary<Color, Material>();
         private static readonly Dictionary<Color, Material> OverlayCache = new Dictionary<Color, Material>();
+        private static readonly Dictionary<Color, Material> OnTopCache = new Dictionary<Color, Material>();
         private static readonly int BaseColor = Shader.PropertyToID("_BaseColor");
 
         public static Material Lit(Color color)
@@ -64,6 +65,19 @@ namespace ShinobiDominion.Game
             return material;
         }
 
+        /// <summary>Always drawn over buildings. Used for cell feedback that must not be hidden.</summary>
+        public static Material OnTop(Color color)
+        {
+            if (OnTopCache.TryGetValue(color, out var cached) && cached != null) return cached;
+            var template = Resources.Load<Material>("Materials/PlaceholderOnTop");
+            var material = template != null
+                ? new Material(template)
+                : new Material(Shader.Find("ShinobiDominion/OverlayOnTop"));
+            material.SetColor(BaseColor, color);
+            OnTopCache[color] = material;
+            return material;
+        }
+
         public static void MakeTransparent(Material material)
         {
             material.SetFloat("_Surface", 1f);
@@ -80,6 +94,7 @@ namespace ShinobiDominion.Game
         {
             LitCache.Clear();
             OverlayCache.Clear();
+            OnTopCache.Clear();
         }
     }
 

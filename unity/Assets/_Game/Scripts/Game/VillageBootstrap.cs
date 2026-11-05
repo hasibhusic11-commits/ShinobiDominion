@@ -57,10 +57,10 @@ namespace ShinobiDominion.Game
             var light = go.GetComponent<Light>();
             light.type = LightType.Directional;
             light.color = new Color(1f, 0.96f, 0.88f);
-            light.intensity = 1.25f;
+            light.intensity = 1.2f;
             light.shadows = LightShadows.Soft;
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
-            RenderSettings.ambientLight = new Color(0.55f, 0.58f, 0.60f);
+            RenderSettings.ambientLight = new Color(0.52f, 0.55f, 0.58f);
         }
     }
 }

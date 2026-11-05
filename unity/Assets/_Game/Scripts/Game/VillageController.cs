@@ -65,7 +65,7 @@ namespace ShinobiDominion.Game
     {
         private static readonly Color GoodCell = new Color(0.25f, 0.85f, 0.40f, 0.45f);
         private static readonly Color BadCell = new Color(0.90f, 0.20f, 0.18f, 0.55f);
-        private static readonly Color SelectCell = new Color(0.95f, 0.72f, 0.25f, 0.40f);
+        private static readonly Color SelectCell = new Color(0.95f, 0.72f, 0.25f, 0.26f);
         private static readonly Color GhostTint = new Color(0.85f, 0.92f, 1f, 0.55f);
 
         private FileVillageStore _store;
@@ -450,8 +450,10 @@ namespace ShinobiDominion.Game
                 AddTab(tabs, BuildingCategory.HeroBases, "Bases");
                 AddTab(tabs, BuildingCategory.Walls, "Walls");
 
+                // Unique essentials such as the Dojo always exist, so they would only be noise here.
                 foreach (var definition in Village.Catalog.InCategory(_catalogCategory))
-                    CatalogRow(panel, definition);
+                    if (definition.removable)
+                        CatalogRow(panel, definition);
 
                 if (_history.Count > 0)
                     panel.Action("CatalogUndoButton", "Undo last build", UndoFromCatalog);
@@ -461,11 +463,12 @@ namespace ShinobiDominion.Game
         private void AddTab(RectTransform row, BuildingCategory category, string caption)
         {
             var color = category == _catalogCategory ? Ui.AccentColor : Ui.ButtonColor;
-            Ui.Button(row, "Tab" + category, caption, () =>
+            var tab = Ui.Button(row, "Tab" + category, caption, () =>
             {
                 _catalogCategory = category;
                 ShowCatalog();
             }, true, color, 15);
+            tab.GetComponentInChildren<Text>().horizontalOverflow = HorizontalWrapMode.Overflow;
         }
 
         private void CatalogRow(PanelView panel, BuildingDefinition definition)
@@ -482,9 +485,10 @@ namespace ShinobiDominion.Game
             else if (!Village.CanAfford(definition.costGold, definition.costCrystals)) error = VillageError.InsufficientFunds;
 
             panel.Line($"{definition.displayName}   {size}   {cost}   {count}/{limit}", 20, Ui.TextColor);
-            var caption = error == VillageError.None
-                ? (definition.IsWall ? "Draw walls" : "Place")
-                : VillageErrorText.Describe(error);
+            string caption;
+            if (error == VillageError.None) caption = definition.IsWall ? "Draw walls" : "Place";
+            else if (limit == 0) caption = "Needs a higher Dojo level";
+            else caption = VillageErrorText.Describe(error);
             panel.Action("Place_" + definition.id, caption, () => BeginPlacement(definition.id), error == VillageError.None);
         }
 

@@ -128,7 +128,7 @@ namespace ShinobiDominion.Game
             _root.transform.SetParent(parent, false);
             _root.AddComponent<MeshFilter>().sharedMesh = _mesh;
             var renderer = _root.AddComponent<MeshRenderer>();
-            renderer.sharedMaterials = new[] { Mats.Overlay(goodColor), Mats.Overlay(badColor), Mats.Overlay(new Color(1f, 1f, 1f, 0.95f)) };
+            renderer.sharedMaterials = new[] { Mats.OnTop(goodColor), Mats.OnTop(badColor), Mats.OnTop(new Color(1f, 1f, 1f, 0.95f)) };
             renderer.shadowCastingMode = ShadowCastingMode.Off;
             _root.SetActive(false);
         }

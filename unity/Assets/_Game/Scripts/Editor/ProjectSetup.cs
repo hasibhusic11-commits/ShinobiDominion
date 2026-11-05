@@ -50,6 +50,22 @@ namespace ShinobiDominion.EditorTools
             Debug.Log("[Shinobi Dominion] Project setup complete.");
         }
 
+        /// <summary>Batch use: -executeMethod ShinobiDominion.EditorTools.ProjectSetup.BuildWindows</summary>
+        [MenuItem("Shinobi Dominion/Build Windows Player")]
+        public static void BuildWindows()
+        {
+            var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
+            {
+                scenes = new[] { ScenePath },
+                locationPathName = "Builds/Windows/ShinobiDominion.exe",
+                target = BuildTarget.StandaloneWindows64,
+                options = BuildOptions.None
+            });
+            Debug.Log($"[Shinobi Dominion] Build result: {report.summary.result}, {report.summary.totalSize / (1024 * 1024)} MB, {report.summary.totalErrors} errors.");
+            if (report.summary.result != UnityEditor.Build.Reporting.BuildResult.Succeeded && Application.isBatchMode)
+                EditorApplication.Exit(1);
+        }
+
         private static void ConfigurePipeline()
         {
             var pipeline = AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>(PipelinePath);
@@ -86,12 +102,17 @@ namespace ShinobiDominion.EditorTools
                 Mats.MakeTransparent(overlay);
                 AssetDatabase.CreateAsset(overlay, overlayPath);
             }
+
+            var onTopPath = MaterialsFolder + "/PlaceholderOnTop.mat";
+            if (AssetDatabase.LoadAssetAtPath<Material>(onTopPath) == null)
+                AssetDatabase.CreateAsset(new Material(Shader.Find("ShinobiDominion/OverlayOnTop")), onTopPath);
         }
 
         private static void ConfigurePlayer()
         {
             PlayerSettings.companyName = "ShinobiDominionDev";
             PlayerSettings.productName = "Shinobi Dominion";
+            PlayerSettings.colorSpace = ColorSpace.Linear;
             PlayerSettings.defaultInterfaceOrientation = UIOrientation.AutoRotation;
             PlayerSettings.allowedAutorotateToPortrait = false;
             PlayerSettings.allowedAutorotateToPortraitUpsideDown = false;
