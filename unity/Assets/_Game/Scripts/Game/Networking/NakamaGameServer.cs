@@ -1,0 +1,133 @@
+using System;
+using System.Threading.Tasks;
+using Nakama;
+using Newtonsoft.Json;
+using ShinobiDominion.Core;
+using UnityEngine;
+
+namespace ShinobiDominion.Game
+{
+    /// <summary>What the game asks of the backend. Results come only from the server.</summary>
+    public interface IGameServer
+    {
+        Task<ServerState> ConnectAsync();
+        Task<ServerState> GetStateAsync();
+        Task<ServerOdds> GetOddsAsync();
+        Task<ServerSummonResult> SummonAsync(int poolVersion, int count, string key);
+        Task<ServerState> EvolveAsync(string key, string mainId, string duplicateId);
+        Task<ServerState> SetLockAsync(string instanceId, bool locked);
+        Task<ServerState> AssignAsync(int slot, string instanceId);
+        Task<ServerState> DevMaxLevelAsync(string instanceId);
+    }
+
+    public sealed class GameServerException : Exception
+    {
+        public readonly string Code;
+        public GameServerException(string code) : base(code)
+        {
+            Code = code;
+        }
+    }
+
+    [Serializable]
+    public sealed class ServerConfig
+    {
+        public string scheme = "http";
+        public string host = "127.0.0.1";
+        public int port = 7350;
+        public string serverKey;
+
+        /// <summary>Written locally by backend/write_client_config.ps1 and gitignored. Null means no server.</summary>
+        public static ServerConfig Load()
+        {
+            var asset = Resources.Load<TextAsset>("Config/server.local");
+            if (asset == null) return null;
+            var config = JsonUtility.FromJson<ServerConfig>(asset.text);
+            return string.IsNullOrEmpty(config?.serverKey) ? null : config;
+        }
+    }
+
+    public sealed class NakamaGameServer : IGameServer
+    {
+        private const string DeviceIdKey = "sd_device_id";
+
+        private readonly IClient _client;
+        private readonly string _deviceId;
+        private ISession _session;
+
+        public NakamaGameServer(ServerConfig config, string deviceId = null)
+        {
+            _client = new Client(config.scheme, config.host, config.port, config.serverKey, UnityWebRequestAdapter.Instance)
+            {
+                Timeout = 10
+            };
+            _deviceId = deviceId ?? LoadDeviceId();
+        }
+
+        /// <summary>A random id kept on this device, rather than any real hardware identifier.</summary>
+        private static string LoadDeviceId()
+        {
+            var id = PlayerPrefs.GetString(DeviceIdKey, null);
+            if (string.IsNullOrEmpty(id))
+            {
+                id = "sd-" + Guid.NewGuid().ToString("N");
+                PlayerPrefs.SetString(DeviceIdKey, id);
+                PlayerPrefs.Save();
+            }
+            return id;
+        }
+
+        private async Task EnsureSessionAsync()
+        {
+            if (_session != null && !_session.HasExpired(DateTime.UtcNow.AddMinutes(1))) return;
+            _session = await _client.AuthenticateDeviceAsync(_deviceId);
+        }
+
+        private async Task<string> CallAsync(string rpc, object payload)
+        {
+            try
+            {
+                await EnsureSessionAsync();
+                var response = await _client.RpcAsync(_session, rpc, JsonConvert.SerializeObject(payload ?? new { }));
+                return response.Payload;
+            }
+            catch (ApiResponseException exception)
+            {
+                throw new GameServerException(ExtractCode(exception.Message));
+            }
+            catch (Exception exception) when (!(exception is GameServerException))
+            {
+                Debug.LogWarning($"Server call {rpc} failed: {exception.Message}");
+                throw new GameServerException("UNREACHABLE");
+            }
+        }
+
+        private static string ExtractCode(string message)
+        {
+            if (string.IsNullOrEmpty(message)) return "UNKNOWN";
+            var trimmed = message.Trim();
+            return trimmed.IndexOf(' ') < 0 ? trimmed : "UNKNOWN";
+        }
+
+        public Task<ServerState> ConnectAsync() => GetStateAsync();
+
+        public async Task<ServerState> GetStateAsync() => ServerState.Parse(await CallAsync("sd_get_state", null));
+
+        public async Task<ServerOdds> GetOddsAsync() => ServerOdds.Parse(await CallAsync("sd_summon_odds", null));
+
+        public async Task<ServerSummonResult> SummonAsync(int poolVersion, int count, string key) =>
+            ServerSummonResult.Parse(await CallAsync("sd_summon", new { poolVersion, count, key }));
+
+        public async Task<ServerState> EvolveAsync(string key, string mainId, string duplicateId) =>
+            ServerState.Parse(await CallAsync("sd_evolve", new { key, mainInstanceId = mainId, duplicateInstanceId = duplicateId }));
+
+        public async Task<ServerState> SetLockAsync(string instanceId, bool locked) =>
+            ServerState.Parse(await CallAsync("sd_set_lock", new { instanceId, locked }));
+
+        public async Task<ServerState> AssignAsync(int slot, string instanceId) =>
+            ServerState.Parse(await CallAsync("sd_assign_hero", new { slot, instanceId }));
+
+        public async Task<ServerState> DevMaxLevelAsync(string instanceId) =>
+            ServerState.Parse(await CallAsync("sd_dev_grant", new { maxLevelFor = instanceId }));
+    }
+}

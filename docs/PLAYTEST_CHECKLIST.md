@@ -21,6 +21,14 @@ The editor gives you a development-only starter roster. It is not a summon, and 
 
 If your layout predates Phase 2 you may want Menu, then Reset village. That keeps your heroes.
 
+## Phase 3
+Start Docker Desktop, then from `backend/` run `docker compose up -d --wait nakama` before pressing Play. Without the server the game plays offline and summoning is unavailable.
+
+1. **Crystals:** the top bar shows 3,000, which comes from the server.
+2. **Summon:** tap the Summoning Gate, which has the red gate frame. Check the rates, which should say they are test rates. Summon x10: you pay 1,000 and get exactly ten heroes, whatever they are.
+3. **Persistence:** stop and restart Play Mode. Crystals and heroes stay, because the server holds them.
+4. **Server off:** run `docker compose stop nakama`, then try to summon. You should get a clear message and lose nothing.
+
 ## Please watch for
 - Whether pan, zoom and placement *feel* right. Automated tests prove they work, not that they feel good.
 - Anything hard to tap or read.

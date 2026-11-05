@@ -23,8 +23,15 @@ Six functional heroes (four Legendary, one Elite, one Common), roster, Altar fil
 ## Style pass — done, awaiting your review
 Chunky UI, card screens, castle walls, shadows and collect markers (ADR-017). Shadow settings are not yet measured on a phone.
 
-## Phase 3: Nakama backend — blocked on your decision
-Needs a local server environment. Accounts, server inventory, server-side evolution, and summoning with crypto-secure randomness and no pity.
+## Phase 3: Nakama backend — done for its named scope, rule 10 not yet fully met
+Local server, device sign-in, server inventory, x1 and x10 summoning with crypto-secure randomness and no pity, displayed odds, server-side evolution, locks and assignments. Verified by attack, concurrency and crash tests, and by the real game talking to the real server.
+
+**Still on the device, so still forgeable:** village layout, gold, building upgrades and mine collection. See `SECURITY_MODEL.md`. This must move before Phase 4 rewards mean anything.
+
+**Not done:** summon reveal animation, TLS and production setup, real sources for XP and catalysts.
+
+## Phase 3b: village authority — next recommended
+Move layout, gold and upgrades to the server.
 
 ## Phase 4: combat vertical slice — not started
 ## Phase 5: polish and ship readiness — not started
@@ -32,7 +39,12 @@ Needs a local server environment. Accounts, server inventory, server-side evolut
 ## Latest test results (2026-11-05)
 | Suite | Result |
 |---|---|
-| .NET harness (`tools/core-tests`) | 95 of 95 passed |
-| Unity EditMode, 6000.3.28f1 | 95 of 95 passed |
-| Unity PlayMode, 6000.3.28f1 | 33 of 33 passed |
+| .NET harness (`tools/core-tests`) | 102 of 102 passed |
+| Unity EditMode, 6000.3.28f1 | 102 of 102 passed |
+| Unity PlayMode, including 8 against the live server | 41 of 41 passed |
+| Backend unit tests | passed; part of the server build |
+| Backend attack and concurrency suite | passed |
+| Crash recovery and production mode | passed |
 | Windows player | built, 0 errors, ran 20 seconds with no errors logged |
+
+Local builds embed the development server settings, so do not distribute them.

@@ -194,7 +194,7 @@ namespace ShinobiDominion.Game
 
         private void RefreshHud()
         {
-            _hud.SetWallet(Village.Gold, Village.Crystals);
+            _hud.SetWallet(Village.Gold, ServerCrystals ?? Village.Crystals);
             _hud.SetIdentity("Player", Village.HqLevel);
         }
 
@@ -350,6 +350,11 @@ namespace ShinobiDominion.Game
                 ShowAltarRoster();
                 return;
             }
+            if (definition.function == BuildingFunction.SummoningGate && IsOnline && !_showAltarBuildingOptions)
+            {
+                ShowSummoningGate();
+                return;
+            }
             _showAltarBuildingOptions = false;
 
             _panel.Show(definition.displayName, CloseAll, panel =>
@@ -385,7 +390,11 @@ namespace ShinobiDominion.Game
                     HeroBaseActions(panel, building);
                     break;
                 case BuildingFunction.SummoningGate:
-                    panel.Line("Summoning runs only on the server and arrives in Phase 3. No rolls happen on this device.", 20, Ui.AccentColor);
+                    panel.Line(IsOnline
+                        ? "Summoning runs only on the server."
+                        : "Cannot reach the server. Summoning only happens there, so it is unavailable right now.", 20, Ui.AccentColor);
+                    if (IsOnline)
+                        panel.Action("OpenGateButton", "Open the Gate", ShowSummoningGate, true, Ui.AccentColor);
                     break;
                 case BuildingFunction.Training:
                 case BuildingFunction.Research:
@@ -429,8 +438,10 @@ namespace ShinobiDominion.Game
 
         private void RemoveSelected(int id)
         {
+            var heldHero = Village.Find(id)?.AssignedHeroInstanceId != null;
             var error = Village.TryRemove(id);
             LastMessage = VillageErrorText.Describe(error);
+            if (error == VillageError.None && heldHero) ReleaseSlotOnline(id);
             if (error == VillageError.None) CloseAll();
             else ShowContextPanel();
         }
@@ -473,6 +484,7 @@ namespace ShinobiDominion.Game
         {
             Village.Restore(StarterVillage.Create(Village.Catalog, Now).ToSave());
             CloseAll();
+            if (IsOnline) ConnectTask = ConnectAsync();
         }
 
         // ---------- Build catalog: reachable only through the Builder Hall ----------

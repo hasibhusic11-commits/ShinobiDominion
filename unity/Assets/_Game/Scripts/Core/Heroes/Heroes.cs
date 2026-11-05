@@ -403,6 +403,20 @@ namespace ShinobiDominion.Core
             return HeroError.None;
         }
 
+        /// <summary>
+        /// Replaces everything with a server snapshot, which is validated first. A bad snapshot
+        /// throws and leaves the roster as it was. Online, this is the only way the roster changes.
+        /// </summary>
+        public void ReplaceWithServerState(string rosterJson)
+        {
+            var fresh = FromJson(Catalog, rosterJson);
+            _heroes.Clear();
+            foreach (var pair in fresh._heroes) _heroes.Add(pair.Key, pair.Value);
+            _items.Clear();
+            foreach (var pair in fresh._items) _items.Add(pair.Key, pair.Value);
+            Changed?.Invoke();
+        }
+
         // ---------- Save and load ----------
 
         public string ToJson()

@@ -71,7 +71,8 @@ namespace ShinobiDominion.Game
 
         private void OnRosterChanged()
         {
-            _rosterDirty = true;
+            // Online, the server holds the truth, and a local copy would only invite tampering.
+            _rosterDirty = !IsOnline;
             _view.Sync();
         }
 
@@ -174,7 +175,11 @@ namespace ShinobiDominion.Game
             panel.Line($"{archetype.displayName}  ·  {archetype.rarity}", 22, Ui.TextColor);
             panel.Line($"{EvolutionLabel(hero.EvolutionIndex)}  Lv {hero.Level}  ·  {archetype.role}  ·  {archetype.affinity}");
             panel.Action("ChangeHeroButton", "Change Hero", () => ShowHeroPicker(building.Id), true, Ui.AccentColor);
-            panel.Action("UnassignButton", "Unassign", () => RunAndRefresh(Village.TryUnassignHero(building.Id)));
+            panel.Action("UnassignButton", "Unassign", () =>
+            {
+                if (IsOnline) AssignOnline(building.Id, null);
+                else RunAndRefresh(Village.TryUnassignHero(building.Id));
+            });
         }
 
         private void ShowHeroPicker(int baseId)
@@ -196,7 +201,13 @@ namespace ShinobiDominion.Game
         /// <summary>Assigns only a hero the player owns. The one-base rule is enforced in Core.</summary>
         public VillageError AssignHero(int baseId, string heroInstanceId)
         {
-            var error = Roster.Owns(heroInstanceId) ? Village.TryAssignHero(baseId, heroInstanceId) : VillageError.InvalidHeroId;
+            if (!Roster.Owns(heroInstanceId)) return VillageError.InvalidHeroId;
+            if (IsOnline)
+            {
+                AssignOnline(baseId, heroInstanceId);
+                return VillageError.None;
+            }
+            var error = Village.TryAssignHero(baseId, heroInstanceId);
             LastMessage = VillageErrorText.Describe(error);
             if (UiState.Screen == VillageScreen.BuildingPanel) ShowContextPanel();
             return error;
@@ -325,12 +336,22 @@ namespace ShinobiDominion.Game
                         panel.Action("EvolveButton", "Evolution", () => ShowEvolution(instanceId), true, Ui.AccentColor);
                     panel.Action("LockButton", hero.Locked ? "Unlock" : "Lock (protect from sacrifice)", () =>
                     {
+                        if (IsOnline)
+                        {
+                            SetLockOnline(instanceId, !hero.Locked);
+                            return;
+                        }
                         Roster.SetLocked(instanceId, !hero.Locked);
                         ShowHeroDetail(instanceId);
                     });
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
                     panel.Action("DevLevelButton", "Dev only: set to level 200", () =>
                     {
+                        if (IsOnline)
+                        {
+                            DevMaxLevelOnline(instanceId);
+                            return;
+                        }
                         Roster.GrantXp(instanceId, 100_000_000);
                         ShowHeroDetail(instanceId);
                     }, hero.Level < HeroMath.MaxLevel);
@@ -436,7 +457,12 @@ namespace ShinobiDominion.Game
                 panel.Line($"After: {EvolutionLabel(main.EvolutionIndex + 1)} Lv 1     HP {after.Hp:N0}     Attack {after.Attack:N0}     Defense {after.Defense:N0}", 21, Ui.TextColor);
                 panel.Line("The displayed level resets to 1, but combat power does not drop.", 19);
                 panel.Line($"This permanently consumes your {archetype.displayName} copy ({EvolutionLabel(duplicate.EvolutionIndex)} Lv {duplicate.Level}) and one {ItemName(Roster.CatalystFor(main.EvolutionIndex))}.", 21, Ui.AccentColor);
-                panel.Action("ConfirmEvolveButton", "Evolve", () => ConfirmEvolution(key, mainId, duplicateId), true, Ui.AttackColor);
+                if (IsOnline && !string.IsNullOrEmpty(_pendingKey) && _hasError) panel.Line(LastMessage, 20, Ui.AccentColor);
+                panel.Action("ConfirmEvolveButton", "Evolve", () =>
+                {
+                    if (IsOnline) ConfirmEvolutionOnline(mainId, duplicateId);
+                    else ConfirmEvolution(key, mainId, duplicateId);
+                }, true, Ui.AttackColor);
                 panel.Action("CancelEvolveButton", "Cancel", () => ShowEvolution(mainId));
             });
         }

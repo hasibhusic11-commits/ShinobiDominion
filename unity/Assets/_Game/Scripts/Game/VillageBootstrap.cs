@@ -17,6 +17,9 @@ namespace ShinobiDominion.Game
         /// <summary>Lets tests run against a temp file instead of the player's save.</summary>
         public static string SavePathOverride;
 
+        /// <summary>Lets tests supply a server. Unset, tests run offline and the game uses its local config.</summary>
+        public static Func<IGameServer> ServerOverride;
+
         public VillageController Controller { get; private set; }
         public IsoCamera IsoCamera { get; private set; }
 
@@ -57,6 +60,16 @@ namespace ShinobiDominion.Game
             var ui = new UiRoot(transform);
             Controller = gameObject.AddComponent<VillageController>();
             Controller.Initialize(village, store, roster, rosterStore, IsoCamera, world, ui);
+
+            if (ServerOverride != null)
+            {
+                Controller.ConnectToServer(ServerOverride());
+            }
+            else if (SavePathOverride == null)
+            {
+                var serverConfig = ServerConfig.Load();
+                if (serverConfig != null) Controller.ConnectToServer(new NakamaGameServer(serverConfig));
+            }
 
             gameObject.AddComponent<WorldInput>().Initialize(IsoCamera, Controller);
         }

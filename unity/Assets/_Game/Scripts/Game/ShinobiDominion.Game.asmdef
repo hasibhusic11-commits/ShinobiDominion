@@ -4,7 +4,8 @@
     "references": [
         "ShinobiDominion.Core",
         "Unity.InputSystem",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "NakamaRuntime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

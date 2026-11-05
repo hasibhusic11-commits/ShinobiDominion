@@ -45,8 +45,17 @@ The brief lists "Chakra Turret" as an example but also requires original termino
 - Removing a building gives no refund.
 - All numbers in `Resources/Config/buildings.json` are test values and the file is marked not approved.
 
-## ADR-012: Backend (provisional, verify in Phase 3)
-Plan is Nakama's Go runtime with Go `crypto/rand`. Before relying on any atomic write path, read the current Nakama source and prove it with concurrency tests, per the brief.
+## ADR-012: Nakama's Go runtime with `crypto/rand`
+Decided in Phase 3. See ADR-018 for persistence.
+
+## ADR-018: Custom Postgres tables, not Nakama's wallet and storage
+Each change of value is one SQL transaction in our own tables, starting with a lock on the player's row. This gives all-or-nothing behaviour directly, instead of relying on separate wallet and storage writes, and it was proven with concurrency and crash tests. The cost is that Nakama's built-in wallet and storage console views do not show this data, and one player's mutations run strictly one at a time, which is fine at player scale.
+
+## ADR-019: Village stays on the device for now
+Phase 3's brief names inventory, summoning and evolution, so those moved first. Village layout and gold have not moved, which means rule 10 is not yet fully met. See `SECURITY_MODEL.md`.
+
+## ADR-020: Local machine limits
+WSL2 is capped at 3 GB in `%USERPROFILE%\.wslconfig`, because this PC has 7.3 GB and Unity also needs room.
 
 ## ADR-014: Heroes stay on the device until Phase 3
 Roster rules live in Core so they can move to the server, and they already use idempotency keys. Release builds start with an empty roster. The dev roster is compiled in only for the editor and development builds, and it is a direct grant, never a summon.
@@ -64,5 +73,5 @@ Not adopted: Castle Clash's art, UI assets, icons, names or specific look. The b
 
 **Home screen, decided by the owner on 2026-11-05:** ATTACK only. The screenshots show icon rails and a five-button bottom bar, and the owner chose to keep non-negotiable rule 2 instead. Do not add them. Management screens are full-screen but still open only from buildings.
 
-## ADR-013: Docker and memory on this machine (open risk)
-This PC has 7.3 GB of RAM and no WSL2 or Docker. Unity plus Docker Desktop, Nakama and Postgres may not fit comfortably. Decide in Phase 3 between Docker and native Nakama and Postgres on Windows.
+## ADR-013: Docker for the local server
+Go plugins do not run natively on Windows, so the server runs in Docker on WSL2. Unity, Docker, Nakama and Postgres together are tight on this PC's 7.3 GB. It worked for every test here, but an active Unity Editor session alongside the server has not been measured.

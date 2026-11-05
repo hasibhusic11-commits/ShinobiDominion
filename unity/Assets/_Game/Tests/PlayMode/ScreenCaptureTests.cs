@@ -113,7 +113,7 @@ namespace ShinobiDominion.Tests
             if (File.Exists(savePath)) File.Delete(savePath);
         }
 
-        private static IEnumerator Capture(Camera camera, RenderTexture texture, string path)
+        internal static IEnumerator Capture(Camera camera, RenderTexture texture, string path)
         {
             yield return null;
             Canvas.ForceUpdateCanvases();
