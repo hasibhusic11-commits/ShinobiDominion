@@ -19,6 +19,19 @@ namespace ShinobiDominion.Game
                 new Vector3(size + outer, -0.02f, size + outer), new Vector3(-outer, -0.02f, size + outer), Vector3.up, Palette.OuterGrass);
             mesh.Quad(new Vector3(0, 0, 0), new Vector3(size, 0, 0), new Vector3(size, 0, size), new Vector3(0, 0, size), Vector3.up, Palette.Grass);
 
+            // Subtle worn patches so the courtyard reads as packed earth rather than a flat sheet.
+            var patches = new System.Random(2718);
+            for (var i = 0; i < 70; i++)
+            {
+                var px = (float)patches.NextDouble() * (size - 5f);
+                var pz = (float)patches.NextDouble() * (size - 5f);
+                var pw = 1.5f + (float)patches.NextDouble() * 3.2f;
+                var pd = 1.5f + (float)patches.NextDouble() * 3.2f;
+                var tone = i % 2 == 0 ? Palette.GrassLight : Palette.GrassDark;
+                const float y = 0.004f;
+                mesh.Quad(new Vector3(px, y, pz), new Vector3(px + pw, y, pz), new Vector3(px + pw, y, pz + pd), new Vector3(px, y, pz + pd), Vector3.up, tone);
+            }
+
             // Low stone kerb just outside the map, so the buildable boundary reads without a grid.
             var mid = size * 0.5f;
             var kerbLength = size + border * 2f;
@@ -33,7 +46,7 @@ namespace ShinobiDominion.Game
 
             // Fixed seed: the same forest every launch.
             var random = new System.Random(5150);
-            for (var i = 0; i < 220; i++)
+            for (var i = 0; i < 380; i++)
             {
                 var x = (float)(random.NextDouble() * (size + outer * 2f) - outer);
                 var z = (float)(random.NextDouble() * (size + outer * 2f) - outer);
@@ -235,22 +248,38 @@ namespace ShinobiDominion.Game
         {
             var center = GridSpace.CellCenter(wall.Origin);
             var mask = ConnectionsExcluding(village, wall.Origin, hiddenWallId);
-            var height = 0.8f + 0.05f * (wall.Level - 1);
-            var color = wall.Level >= 5 ? Palette.DarkStone : Palette.Stone;
-            const float thickness = 0.5f;
+            var body = 0.75f + 0.05f * (wall.Level - 1);
+            var stone = wall.Level >= 5 ? Palette.DarkStone : Palette.Stone;
+            const float thickness = 0.56f;
             const float arm = 0.25f;
+            const float capHeight = 0.2f;
 
-            // A straight run has no post, so it reads as a continuous wall; ends, corners and junctions do.
+            // Castle-style wall: stone footing, pale plaster, and a dark tiled cap with brass
+            // finials on the posts. A straight run has no post, so it reads as continuous.
             var straight = mask == (Village.WallNorth | Village.WallSouth) || mask == (Village.WallEast | Village.WallWest);
-            var postHeight = straight ? height : height + 0.18f;
-            var postWidth = straight ? thickness : thickness + 0.14f;
-            builder.Box(center, new Vector3(postWidth, postHeight, postWidth), color);
+            var postHeight = straight ? body : body + 0.2f;
+            var postWidth = straight ? thickness : thickness + 0.16f;
+            builder.Box(center, new Vector3(postWidth, postHeight * 0.45f, postWidth), stone);
+            builder.Box(center + Vector3.up * postHeight * 0.45f, new Vector3(postWidth - 0.06f, postHeight * 0.55f, postWidth - 0.06f), Palette.Plaster);
+            builder.Frustum(center + Vector3.up * postHeight, postWidth + 0.2f, postWidth + 0.2f, postWidth - 0.2f, postWidth - 0.2f, capHeight, Palette.Slate);
+            if (!straight)
+                builder.Frustum(center + Vector3.up * (postHeight + capHeight), 0.18f, 0.18f, 0f, 0f, 0.26f, Palette.Amber);
 
             var offset = 0.25f + 0.25f * 0.5f;
-            if ((mask & Village.WallNorth) != 0) builder.Box(center + new Vector3(0, 0, offset), new Vector3(thickness, height, arm), color);
-            if ((mask & Village.WallSouth) != 0) builder.Box(center + new Vector3(0, 0, -offset), new Vector3(thickness, height, arm), color);
-            if ((mask & Village.WallEast) != 0) builder.Box(center + new Vector3(offset, 0, 0), new Vector3(arm, height, thickness), color);
-            if ((mask & Village.WallWest) != 0) builder.Box(center + new Vector3(-offset, 0, 0), new Vector3(arm, height, thickness), color);
+            if ((mask & Village.WallNorth) != 0) Arm(builder, center + new Vector3(0, 0, offset), new Vector2(thickness, arm), body, capHeight, stone);
+            if ((mask & Village.WallSouth) != 0) Arm(builder, center + new Vector3(0, 0, -offset), new Vector2(thickness, arm), body, capHeight, stone);
+            if ((mask & Village.WallEast) != 0) Arm(builder, center + new Vector3(offset, 0, 0), new Vector2(arm, thickness), body, capHeight, stone);
+            if ((mask & Village.WallWest) != 0) Arm(builder, center + new Vector3(-offset, 0, 0), new Vector2(arm, thickness), body, capHeight, stone);
+        }
+
+        private static void Arm(MeshBuilder builder, Vector3 at, Vector2 size, float body, float capHeight, Color stone)
+        {
+            builder.Box(at, new Vector3(size.x, body * 0.45f, size.y), stone);
+            builder.Box(at + Vector3.up * body * 0.45f, new Vector3(size.x - 0.04f, body * 0.55f, size.y - 0.04f), Palette.Plaster);
+            var wide = size.x > size.y;
+            var capX = wide ? size.x + 0.2f : size.x;
+            var capZ = wide ? size.y : size.y + 0.2f;
+            builder.Frustum(at + Vector3.up * body, capX, capZ, wide ? size.x - 0.2f : size.x, wide ? size.y : size.y - 0.2f, capHeight, Palette.Slate);
         }
 
         private static int ConnectionsExcluding(Village village, GridCoord cell, int hiddenWallId)
@@ -268,6 +297,71 @@ namespace ShinobiDominion.Game
         }
     }
 
+    /// <summary>Renders each building's real mesh once to a texture, for catalog cards.</summary>
+    public sealed class BuildingThumbnails : System.IDisposable
+    {
+        private const int ThumbnailLayer = 31;
+        private readonly Dictionary<string, RenderTexture> _textures = new Dictionary<string, RenderTexture>();
+        private readonly Camera _camera;
+        private readonly Transform _stage;
+
+        public BuildingThumbnails(Transform parent)
+        {
+            _stage = new GameObject("ThumbnailStage").transform;
+            _stage.SetParent(parent, false);
+            _stage.position = new Vector3(0f, -500f, 0f);
+
+            var cameraObject = new GameObject("ThumbnailCamera", typeof(Camera));
+            cameraObject.transform.SetParent(_stage, false);
+            cameraObject.transform.localRotation = Quaternion.Euler(35.264f, 45f, 0f);
+            _camera = cameraObject.GetComponent<Camera>();
+            _camera.enabled = false;
+            _camera.orthographic = true;
+            _camera.cullingMask = 1 << ThumbnailLayer;
+            _camera.clearFlags = CameraClearFlags.SolidColor;
+            _camera.backgroundColor = new Color(0f, 0f, 0f, 0f);
+            _camera.nearClipPlane = 0.1f;
+            _camera.farClipPlane = 60f;
+        }
+
+        public Texture For(BuildingDefinition definition)
+        {
+            if (_textures.TryGetValue(definition.id, out var existing) && existing != null) return existing;
+
+            var builder = BuildingMeshes.For(definition, null);
+            var mesh = builder.Build("Thumbnail");
+            var subject = new GameObject("Subject") { layer = ThumbnailLayer };
+            subject.transform.SetParent(_stage, false);
+            subject.AddComponent<MeshFilter>().sharedMesh = mesh;
+            var renderer = subject.AddComponent<MeshRenderer>();
+            renderer.sharedMaterials = builder.LitMaterials();
+
+            var center = mesh.bounds.center;
+            var extent = mesh.bounds.extents.magnitude;
+            _camera.orthographicSize = extent * 1.02f;
+            _camera.transform.localPosition = center - _camera.transform.forward * 30f;
+
+            var texture = new RenderTexture(256, 256, 24);
+            _camera.targetTexture = texture;
+            _camera.Render();
+            _camera.targetTexture = null;
+            _textures[definition.id] = texture;
+
+            // Destroy waits for end of frame, so hide it now or the next thumbnail would include it.
+            subject.SetActive(false);
+            Object.Destroy(subject);
+            Object.Destroy(mesh);
+            return texture;
+        }
+
+        public void Dispose()
+        {
+            foreach (var texture in _textures.Values)
+                if (texture != null) texture.Release();
+            _textures.Clear();
+        }
+    }
+
     /// <summary>Keeps world objects in sync with the Village model, and resolves taps to buildings.</summary>
     public sealed class VillageView
     {
@@ -276,6 +370,7 @@ namespace ShinobiDominion.Game
             public GameObject Go;
             public Bounds Bounds;
             public string Signature;
+            public GameObject Marker;
         }
 
         private readonly Village _village;
@@ -364,6 +459,35 @@ namespace ShinobiDominion.Game
             materials = builder.LitMaterials();
             _meshCache[key] = mesh;
             _materialCache[key] = materials;
+        }
+
+        /// <summary>Floating markers over buildings with something to collect. Spatial, so the HUD stays clear.</summary>
+        public void SetCollectMarkers(System.Func<BuildingInstance, bool> hasPending)
+        {
+            foreach (var pair in _views)
+            {
+                var building = _village.Find(pair.Key);
+                if (building == null || building.Definition.produces == ResourceKind.None) continue;
+                var show = hasPending(building);
+                var entry = pair.Value;
+                if (show && entry.Marker == null) entry.Marker = CreateMarker(entry.Go.transform, building.Definition.produces);
+                if (entry.Marker != null) entry.Marker.SetActive(show);
+            }
+        }
+
+        private static GameObject CreateMarker(Transform parent, ResourceKind kind)
+        {
+            var color = kind == ResourceKind.Crystals ? Palette.Crystal : Palette.Amber;
+            var builder = new MeshBuilder();
+            builder.Box(new Vector3(0f, 2.2f, 0f), new Vector3(0.08f, 0.5f, 0.08f), Palette.Plaster);
+            builder.Frustum(new Vector3(0f, 2.7f, 0f), 0.8f, 0.8f, 0.6f, 0.6f, 0.28f, color);
+            var marker = new GameObject("CollectMarker");
+            marker.transform.SetParent(parent, false);
+            marker.AddComponent<MeshFilter>().sharedMesh = builder.Build("CollectMarker");
+            var renderer = marker.AddComponent<MeshRenderer>();
+            renderer.sharedMaterials = builder.LitMaterials();
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+            return marker;
         }
 
         /// <summary>A ghost for placement: the same silhouette in a see-through tint.</summary>

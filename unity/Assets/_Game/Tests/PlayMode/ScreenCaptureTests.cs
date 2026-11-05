@@ -84,6 +84,8 @@ namespace ShinobiDominion.Tests
             var bases = village.Buildings.Where(b => b.Definition.function == BuildingFunction.HeroBase).ToList();
             for (var e = 0; e <= 3; e++)
                 controller.AssignHero(bases[e].Id, roster.AddHero("thunder_empress", e, 50).InstanceId);
+            First("gold_mine").LastCollectedUtcTicks = DateTime.UtcNow.Ticks - TimeSpan.TicksPerHour;
+            controller.RefreshCollectMarkers();
             yield return shot("07_home_six_bases_and_walls");
 
             game.IsoCamera.ZoomAt(0.4f, new Vector2(texture.width * 0.5f, texture.height * 0.62f));
@@ -94,6 +96,8 @@ namespace ShinobiDominion.Tests
             yield return shot("10_hero_altar");
 
             var evolving = roster.Heroes.First(h => h.ArchetypeId == "solar_beast_sage" && h.Level == HeroMath.MaxLevel);
+            controller.ShowHeroDetail(evolving.InstanceId);
+            yield return shot("12_hero_detail");
             controller.ShowEvolution(evolving.InstanceId);
             yield return shot("11_evolution_requirements");
             controller.CloseAll();

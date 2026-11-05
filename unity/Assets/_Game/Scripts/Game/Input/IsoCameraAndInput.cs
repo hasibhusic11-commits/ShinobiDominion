@@ -10,7 +10,7 @@ namespace ShinobiDominion.Game
     [RequireComponent(typeof(Camera))]
     public sealed class IsoCamera : MonoBehaviour
     {
-        private const float Distance = 120f;
+        private const float Distance = 70f;
         private const float MinSize = 5f;
         private const float MaxSize = 26f;
         private const float PanMargin = 4f;

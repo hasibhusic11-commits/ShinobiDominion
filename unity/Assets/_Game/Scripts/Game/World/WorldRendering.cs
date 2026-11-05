@@ -203,8 +203,10 @@ namespace ShinobiDominion.Game
         public static readonly Color AccentRed = new Color(0.62f, 0.20f, 0.18f);
         public static readonly Color AccentBlue = new Color(0.25f, 0.47f, 0.72f);
         public static readonly Color Crystal = new Color(0.45f, 0.82f, 0.90f);
-        public static readonly Color Grass = new Color(0.40f, 0.52f, 0.33f);
-        public static readonly Color OuterGrass = new Color(0.29f, 0.41f, 0.27f);
+        public static readonly Color Grass = new Color(0.42f, 0.40f, 0.29f);
+        public static readonly Color GrassLight = new Color(0.43f, 0.41f, 0.295f);
+        public static readonly Color GrassDark = new Color(0.41f, 0.39f, 0.285f);
+        public static readonly Color OuterGrass = new Color(0.23f, 0.31f, 0.21f);
         public static readonly Color Leaf = new Color(0.20f, 0.36f, 0.24f);
         public static readonly Color Sakura = new Color(0.86f, 0.62f, 0.70f);
         public static readonly Color Water = new Color(0.28f, 0.50f, 0.60f);
@@ -263,7 +265,10 @@ namespace ShinobiDominion.Game
             {
                 var body = size * scale;
                 mesh.Box(new Vector3(0, y, 0), new Vector3(body, 0.85f, body), Palette.Plaster);
+                foreach (var corner in new[] { new Vector3(1, 0, 1), new Vector3(-1, 0, 1), new Vector3(1, 0, -1), new Vector3(-1, 0, -1) })
+                    mesh.Box(new Vector3(0, y, 0) + corner * (body * 0.5f), new Vector3(0.14f, 0.85f, 0.14f), Palette.AccentRed);
                 y += 0.85f;
+                mesh.Box(new Vector3(0, y - 0.08f, 0), new Vector3(body + 0.24f, 0.1f, body + 0.24f), Palette.Amber);
                 mesh.Frustum(new Vector3(0, y, 0), body + 1.1f, body + 1.1f, body * 0.45f, body * 0.45f, 0.5f, Palette.Slate);
                 y += 0.5f;
             }
@@ -375,6 +380,7 @@ namespace ShinobiDominion.Game
             mesh.Frustum(floor, w - 0.5f, w - 0.5f, w - 0.9f, w - 0.9f, 2.0f, Palette.Stone);
             var top = floor + Vector3.up * 2.0f;
             mesh.Box(top, new Vector3(w - 0.65f, 0.25f, w - 0.65f), Palette.DarkStone);
+            mesh.Box(floor + new Vector3(0f, 0.7f, -(w * 0.5f - 0.4f)), new Vector3(0.42f, 0.8f, 0.05f), spirit ? Palette.AccentBlue : Palette.AccentRed);
             if (spirit)
                 mesh.Frustum(top + Vector3.up * 0.25f, 0.5f, 0.5f, 0f, 0f, 0.9f, Palette.AccentBlue);
             else

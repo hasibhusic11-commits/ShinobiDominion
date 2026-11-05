@@ -52,7 +52,7 @@ namespace ShinobiDominion.Game
             cameraObject.transform.SetParent(transform, false);
             cameraObject.tag = "MainCamera";
             IsoCamera = cameraObject.AddComponent<IsoCamera>();
-            IsoCamera.Initialize(new Vector3(25f, 0f, 25f), 14f);
+            IsoCamera.Initialize(new Vector3(25f, 0f, 25f), 12f);
 
             var ui = new UiRoot(transform);
             Controller = gameObject.AddComponent<VillageController>();
@@ -71,6 +71,9 @@ namespace ShinobiDominion.Game
             light.color = new Color(1f, 0.96f, 0.88f);
             light.intensity = 1.2f;
             light.shadows = LightShadows.Soft;
+            light.shadowStrength = 0.55f;
+            light.shadowBias = 0.12f;
+            light.shadowNormalBias = 0.9f;
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
             RenderSettings.ambientLight = new Color(0.52f, 0.55f, 0.58f);
         }

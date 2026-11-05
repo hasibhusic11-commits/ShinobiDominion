@@ -125,10 +125,10 @@ namespace ShinobiDominion.Tests
         [UnityTest]
         public IEnumerator Tap_OnEmptyGround_ClosesPanel()
         {
-            yield return Click(ScreenOf(First("hero_altar")));
+            yield return Click(ScreenOf(First("dojo_hq")));
             Assert.IsTrue(Controller.Panel.IsOpen);
 
-            yield return Click(ScreenOf(41, 18));
+            yield return Click(ScreenOf(36, 20));
             Assert.AreEqual(VillageScreen.Home, Controller.UiState.Screen);
             Assert.IsFalse(Controller.Panel.IsOpen);
         }
@@ -168,7 +168,7 @@ namespace ShinobiDominion.Tests
             Assert.AreEqual(VillageScreen.PlacingBuilding, Controller.UiState.Screen);
             Assert.IsTrue(Controller.Grid.Visible);
 
-            yield return Click(ScreenOf(40, 22));
+            yield return Click(ScreenOf(36, 22));
             yield return Click(ScreenOf(Find("ConfirmButton")));
 
             Assert.AreEqual(towers + 1, Controller.Village.CountOf("defense_tower"));
@@ -186,15 +186,52 @@ namespace ShinobiDominion.Tests
             Assert.AreEqual(VillageScreen.PaintingWalls, Controller.UiState.Screen);
 
             var cameraBefore = Cam.transform.position;
-            yield return Drag(ScreenOf(32, 14), ScreenOf(38, 14));
+            yield return Drag(ScreenOf(32, 20), ScreenOf(36, 20));
             Assert.AreEqual(cameraBefore, Cam.transform.position, "Painting must not pan the camera");
 
             var confirm = Find("ConfirmButton");
             Assert.IsTrue(confirm.interactable);
             yield return Click(ScreenOf(confirm));
-            Assert.AreEqual(7, Controller.Village.CountOf(Village.WallId));
-            Assert.IsNotNull(Controller.Village.BuildingAt(new GridCoord(32, 14)));
-            Assert.IsNotNull(Controller.Village.BuildingAt(new GridCoord(38, 14)));
+            Assert.AreEqual(5, Controller.Village.CountOf(Village.WallId));
+            Assert.IsNotNull(Controller.Village.BuildingAt(new GridCoord(32, 20)));
+            Assert.IsNotNull(Controller.Village.BuildingAt(new GridCoord(36, 20)));
+        }
+
+        [UnityTest]
+        public IEnumerator Tap_OnMineWithPendingGold_CollectsWithoutOpeningAMenu()
+        {
+            var mine = First("gold_mine");
+            var gold = Controller.Village.Gold;
+            mine.LastCollectedUtcTicks = System.DateTime.UtcNow.Ticks - System.TimeSpan.TicksPerHour;
+
+            yield return Click(ScreenOf(mine));
+
+            Assert.Greater(Controller.Village.Gold, gold);
+            Assert.AreEqual(VillageScreen.Home, Controller.UiState.Screen);
+            Assert.IsFalse(Controller.Panel.IsOpen);
+
+            // Nothing left to collect, so a second tap opens the mine's panel.
+            yield return Click(ScreenOf(mine));
+            Assert.AreEqual(VillageScreen.BuildingPanel, Controller.UiState.Screen);
+        }
+
+        [UnityTest]
+        public IEnumerator CatalogAndAltar_AreFullScreen_AndLeaveNoTraceOnExit()
+        {
+            yield return Click(ScreenOf(First("builder_hall")));
+            Assert.IsFalse(Controller.Panel.IsFullScreen, "A building's own panel stays a small overlay");
+
+            yield return Click(ScreenOf(Find("BuildButton")));
+            Assert.IsTrue(Controller.Panel.IsFullScreen);
+
+            yield return Click(ScreenOf(Find("CloseButton")));
+            Assert.IsFalse(Controller.Panel.IsOpen);
+            Assert.AreEqual(VillageScreen.Home, Controller.UiState.Screen);
+            Assert.IsTrue(Controller.Hud.AttackButton.gameObject.activeSelf);
+
+            Controller.Select(First("hero_altar").Id);
+            yield return null;
+            Assert.IsTrue(Controller.Panel.IsFullScreen);
         }
 
         [UnityTest]

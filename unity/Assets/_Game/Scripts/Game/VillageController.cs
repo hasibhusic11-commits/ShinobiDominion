@@ -78,6 +78,8 @@ namespace ShinobiDominion.Game
         private PanelView _panel;
         private RectTransform _uiRoot;
         private bool _dirty;
+        private BuildingThumbnails _thumbnails;
+        private float _markerTimer;
 
         // Placement state
         private BuildingDefinition _placingDefinition;
@@ -119,6 +121,8 @@ namespace ShinobiDominion.Game
             _uiRoot = ui.Safe;
 
             _view = new VillageView(village, worldRoot, HeroLookFor);
+            _thumbnails = new BuildingThumbnails(worldRoot);
+            RefreshCollectMarkers();
             _grid = new GridOverlay(worldRoot);
             _placementCells = new CellHighlight(worldRoot, "PlacementCells", GoodCell, BadCell, 0.03f);
             _selectionCells = new CellHighlight(worldRoot, "SelectionCells", SelectCell, SelectCell, 0.025f);
@@ -137,6 +141,21 @@ namespace ShinobiDominion.Game
             if (Village != null) Village.Changed -= OnVillageChanged;
             if (Roster != null) Roster.Changed -= OnRosterChanged;
             UiState.Changed -= ApplyUiState;
+            _thumbnails?.Dispose();
+        }
+
+        private void Update()
+        {
+            _markerTimer -= Time.unscaledDeltaTime;
+            if (_markerTimer > 0f) return;
+            _markerTimer = 1f;
+            RefreshCollectMarkers();
+        }
+
+        public void RefreshCollectMarkers()
+        {
+            var now = Now;
+            _view.SetCollectMarkers(building => Village.PendingCollection(building, now) >= 1);
         }
 
         private void LateUpdate()
@@ -236,7 +255,7 @@ namespace ShinobiDominion.Game
                 case VillageScreen.Home:
                 case VillageScreen.BuildingPanel:
                     var hit = _view.Pick(_camera.ScreenRay(screen));
-                    if (hit != null) Select(hit.Id);
+                    if (hit != null) CollectOrSelect(hit.Id);
                     else CloseAll();
                     break;
                 case VillageScreen.BuildCatalog:
@@ -272,6 +291,23 @@ namespace ShinobiDominion.Game
         private GridCoord CellAt(Vector2 screen) => GridSpace.WorldToCell(_camera.GroundPoint(screen));
 
         // ---------- Selection and panels ----------
+
+        /// <summary>
+        /// A tap on a mine showing its collect marker collects straight away, with no menu.
+        /// When there is nothing to collect, or storage is full, it opens the panel as usual.
+        /// </summary>
+        public void CollectOrSelect(int id)
+        {
+            var building = Village.Find(id);
+            if (building == null) return;
+            if (UiState.Screen == VillageScreen.Home && Village.PendingCollection(building, Now) >= 1
+                && Village.TryCollect(id, Now, out _) == VillageError.None)
+            {
+                RefreshCollectMarkers();
+                return;
+            }
+            Select(id);
+        }
 
         public void Select(int id)
         {
@@ -451,19 +487,20 @@ namespace ShinobiDominion.Game
 
         private void ShowCatalog()
         {
-            _panel.Show("Build", CloseAll, panel =>
+            _panel.ShowScreen("Build", WalletInfo, CloseAll, panel =>
             {
                 var tabs = panel.Row();
                 AddTab(tabs, BuildingCategory.Structures, "Structures");
                 AddTab(tabs, BuildingCategory.Defense, "Defense");
                 AddTab(tabs, BuildingCategory.Resources, "Resources");
-                AddTab(tabs, BuildingCategory.HeroBases, "Bases");
+                AddTab(tabs, BuildingCategory.HeroBases, "Hero Bases");
                 AddTab(tabs, BuildingCategory.Walls, "Walls");
 
                 // Unique essentials such as the Dojo always exist, so they would only be noise here.
+                var grid = panel.Grid(new Vector2(226f, 330f));
                 foreach (var definition in Village.Catalog.InCategory(_catalogCategory))
                     if (definition.removable)
-                        CatalogRow(panel, definition);
+                        CatalogCard(grid, definition);
 
                 if (_history.Count > 0)
                     panel.Action("CatalogUndoButton", "Undo last build", UndoFromCatalog);
@@ -477,29 +514,52 @@ namespace ShinobiDominion.Game
             {
                 _catalogCategory = category;
                 ShowCatalog();
-            }, true, color, 15);
+            }, true, color, 17);
             tab.GetComponentInChildren<Text>().horizontalOverflow = HorizontalWrapMode.Overflow;
         }
 
-        private void CatalogRow(PanelView panel, BuildingDefinition definition)
+        /// <summary>A shop-style card: name, real building preview, footprint, count and cost.</summary>
+        private void CatalogCard(RectTransform grid, BuildingDefinition definition)
         {
             var count = Village.CountOf(definition.id);
             var limit = Village.LimitOf(definition);
-            var size = $"{definition.width}x{definition.depth}";
             var cost = definition.costCrystals > 0
                 ? $"{definition.costGold:N0} gold, {definition.costCrystals:N0} crystals"
                 : $"{definition.costGold:N0} gold";
 
-            var error = VillageError.None;
-            if (count >= limit) error = VillageError.LimitReached;
-            else if (!Village.CanAfford(definition.costGold, definition.costCrystals)) error = VillageError.InsufficientFunds;
+            string blocked = null;
+            if (limit == 0) blocked = "Needs a higher Dojo level";
+            else if (count >= limit) blocked = "Maximum built";
+            else if (!Village.CanAfford(definition.costGold, definition.costCrystals)) blocked = "Not enough resources";
 
-            panel.Line($"{definition.displayName}   {size}   {cost}   {count}/{limit}", 20, Ui.TextColor);
-            string caption;
-            if (error == VillageError.None) caption = definition.IsWall ? "Draw walls" : "Place";
-            else if (limit == 0) caption = "Needs a higher Dojo level";
-            else caption = VillageErrorText.Describe(error);
-            panel.Action("Place_" + definition.id, caption, () => BeginPlacement(definition.id), error == VillageError.None);
+            var rect = Ui.Rect("Place_" + definition.id, grid);
+            var frame = Ui.Framed(rect, UiSkin.Frame(new Color(0.32f, 0.30f, 0.36f), new Color(0.14f, 0.14f, 0.20f), UiSkin.Brass, 4));
+            var button = rect.gameObject.AddComponent<Button>();
+            button.targetGraphic = frame;
+            button.interactable = blocked == null;
+            var colors = button.colors;
+            colors.disabledColor = new Color(0.55f, 0.55f, 0.55f, 0.85f);
+            button.colors = colors;
+            button.onClick.AddListener(() => BeginPlacement(definition.id));
+
+            var title = Ui.Strong(Ui.Label(rect, definition.displayName, 21, TextAnchor.MiddleCenter));
+            Ui.Anchor(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(214f, 40f), new Vector2(0f, -6f));
+
+            var preview = Ui.Rect("Preview", rect);
+            Ui.Anchor(preview, new Vector2(0.5f, 1f), new Vector2(190f, 190f), new Vector2(0f, -44f));
+            var image = preview.gameObject.AddComponent<RawImage>();
+            image.texture = _thumbnails.For(definition);
+            image.raycastTarget = false;
+
+            var info = Ui.Strong(Ui.Label(rect, $"{definition.width}x{definition.depth}     Built {count}/{limit}", 16, TextAnchor.MiddleCenter));
+            Ui.Anchor(info.rectTransform, new Vector2(0.5f, 0f), new Vector2(214f, 26f), new Vector2(0f, 58f));
+
+            var strip = Ui.Rect("Cost", rect);
+            Ui.Anchor(strip, new Vector2(0.5f, 0f), new Vector2(206f, 48f), new Vector2(0f, 8f));
+            Ui.Framed(strip, UiSkin.ButtonFace, false, blocked == null ? Ui.AccentColor : Ui.ButtonColor);
+            var caption = blocked ?? (definition.IsWall ? $"{cost} each" : cost);
+            var costLabel = Ui.Strong(Ui.Label(strip, caption, 16, TextAnchor.MiddleCenter));
+            Ui.Stretch(costLabel.rectTransform, 4f, 2f, 4f, 2f);
         }
 
         private void UndoFromCatalog()

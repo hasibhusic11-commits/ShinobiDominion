@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using ShinobiDominion.Core;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace ShinobiDominion.Game
 {
@@ -56,6 +57,8 @@ namespace ShinobiDominion.Game
 
     public sealed partial class VillageController
     {
+        private static readonly Vector2 HeroCardSize = new Vector2(176f, 244f);
+
         private FileRosterStore _rosterStore;
         private bool _rosterDirty;
         private bool _showAltarBuildingOptions;
@@ -86,15 +89,18 @@ namespace ShinobiDominion.Game
             }
         }
 
+        private Color HeroColor(HeroArchetype archetype, int evolution)
+        {
+            var form = archetype.CanEvolve && evolution < archetype.forms.Count ? archetype.forms[evolution] : null;
+            ColorUtility.TryParseHtmlString(form != null ? form.primaryColor : archetype.primaryColor, out var color);
+            return color;
+        }
+
         private HeroLook HeroLookFor(string instanceId)
         {
             var hero = Roster?.Find(instanceId);
             if (hero == null) return null;
-            var archetype = Roster.ArchetypeOf(hero);
-            var form = archetype.CanEvolve && hero.EvolutionIndex < archetype.forms.Count ? archetype.forms[hero.EvolutionIndex] : null;
-            var html = form != null ? form.primaryColor : archetype.primaryColor;
-            ColorUtility.TryParseHtmlString(html, out var color);
-            return new HeroLook { Color = color, Evolution = hero.EvolutionIndex };
+            return new HeroLook { Color = HeroColor(Roster.ArchetypeOf(hero), hero.EvolutionIndex), Evolution = hero.EvolutionIndex };
         }
 
         private string FormName(HeroInstance hero)
@@ -106,6 +112,50 @@ namespace ShinobiDominion.Game
 
         private static string EvolutionLabel(int evolution) =>
             evolution == 0 ? "Base" : "Evo " + new string('I', evolution);
+
+        private static Color RarityColor(HeroRarity rarity)
+        {
+            switch (rarity)
+            {
+                case HeroRarity.Legendary: return UiSkin.Brass;
+                case HeroRarity.Elite: return new Color(0.40f, 0.62f, 0.85f);
+                default: return new Color(0.58f, 0.60f, 0.62f);
+            }
+        }
+
+        private string WalletInfo => $"Gold {Village.Gold:N0}     Crystals {Village.Crystals:N0}";
+
+        // ---------- Hero cards ----------
+
+        /// <summary>A roster card: figure, level and rarity. Rarity is written out too, never colour alone.</summary>
+        private Button HeroCard(Transform parent, string name, HeroInstance hero, string tag, Action onClick, bool interactable)
+        {
+            var archetype = Roster.ArchetypeOf(hero);
+            var rect = Ui.Rect(name, parent);
+            var frame = Ui.Framed(rect, UiSkin.Frame(new Color(0.30f, 0.27f, 0.33f), new Color(0.13f, 0.12f, 0.18f), RarityColor(archetype.rarity), 5));
+            var button = rect.gameObject.AddComponent<Button>();
+            button.targetGraphic = frame;
+            button.interactable = interactable;
+            var colors = button.colors;
+            colors.disabledColor = new Color(0.5f, 0.5f, 0.5f, 0.8f);
+            button.colors = colors;
+            if (onClick != null) button.onClick.AddListener(() => onClick());
+
+            Ui.Figure(rect, HeroColor(archetype, hero.EvolutionIndex), hero.EvolutionIndex, 96f, new Vector2(0f, 74f));
+
+            var level = Ui.Strong(Ui.Label(rect, $"Lv {hero.Level}", 19, TextAnchor.UpperRight));
+            Ui.Anchor(level.rectTransform, new Vector2(1f, 1f), new Vector2(110f, 28f), new Vector2(-10f, -8f));
+
+            var evolution = Ui.Strong(Ui.Label(rect, EvolutionLabel(hero.EvolutionIndex), 15, TextAnchor.UpperLeft));
+            Ui.Anchor(evolution.rectTransform, new Vector2(0f, 1f), new Vector2(70f, 24f), new Vector2(10f, -10f));
+
+            var title = Ui.Strong(Ui.Label(rect, archetype.displayName, 16, TextAnchor.MiddleCenter));
+            Ui.Anchor(title.rectTransform, new Vector2(0.5f, 0f), new Vector2(166f, 40f), new Vector2(0f, 32f));
+
+            var rarity = Ui.Strong(Ui.Label(rect, string.IsNullOrEmpty(tag) ? archetype.rarity.ToString() : tag, 14, TextAnchor.MiddleCenter, RarityColor(archetype.rarity)));
+            Ui.Anchor(rarity.rectTransform, new Vector2(0.5f, 0f), new Vector2(166f, 22f), new Vector2(0f, 9f));
+            return button;
+        }
 
         // ---------- Hero Base ----------
 
@@ -129,18 +179,16 @@ namespace ShinobiDominion.Game
 
         private void ShowHeroPicker(int baseId)
         {
-            _panel.Show("Choose a Hero", ShowContextPanel, panel =>
+            _selectionCells.Clear();
+            _panel.ShowScreen("Choose a Hero", null, ShowContextPanel, panel =>
             {
+                var grid = panel.Grid(HeroCardSize);
                 foreach (var hero in SortedHeroes(Roster.Heroes))
                 {
-                    var archetype = Roster.ArchetypeOf(hero);
                     var here = Village.Find(baseId)?.AssignedHeroInstanceId == hero.InstanceId;
                     var elsewhere = !here && Village.IsHeroAssigned(hero.InstanceId);
-                    var suffix = here ? "  (on this base)" : elsewhere ? "  (on another base)" : string.Empty;
-                    panel.Action("Pick_" + hero.InstanceId,
-                        $"{archetype.displayName}  {EvolutionLabel(hero.EvolutionIndex)}  Lv {hero.Level}{suffix}",
-                        () => AssignHero(baseId, hero.InstanceId),
-                        !here && !elsewhere, null, 18);
+                    var tag = here ? "On this base" : elsewhere ? "On another base" : null;
+                    HeroCard(grid, "Pick_" + hero.InstanceId, hero, tag, () => AssignHero(baseId, hero.InstanceId), !here && !elsewhere);
                 }
             });
         }
@@ -163,32 +211,27 @@ namespace ShinobiDominion.Game
 
         public void ShowAltarRoster()
         {
-            _panel.Show("Hero Altar", CloseAll, panel =>
+            _selectionCells.Clear();
+            var shown = SortedHeroes(Roster.Heroes.Where(MatchesFilters)).ToList();
+            _panel.ShowScreen("Hero Altar", $"{shown.Count} of {Roster.HeroCount} heroes", CloseAll, panel =>
             {
-                var rarityRow = panel.Row();
-                FilterTab(rarityRow, "All", _rarityFilter == null, () => _rarityFilter = null);
+                var filters = panel.Row();
+                FilterTab(filters, "All", _rarityFilter == null, () => _rarityFilter = null);
                 foreach (HeroRarity rarity in Enum.GetValues(typeof(HeroRarity)))
                 {
                     var value = rarity;
-                    FilterTab(rarityRow, value.ToString(), _rarityFilter == value, () => _rarityFilter = value);
+                    FilterTab(filters, value.ToString(), _rarityFilter == value, () => _rarityFilter = value);
                 }
+                CycleTab(filters, "FilterRole", $"Role: {(_roleFilter?.ToString() ?? "All")}", () => _roleFilter = Next(_roleFilter));
+                CycleTab(filters, "FilterAffinity", $"Affinity: {(_affinityFilter?.ToString() ?? "All")}", () => _affinityFilter = Next(_affinityFilter));
 
-                var cycleRow = panel.Row();
-                CycleTab(cycleRow, "FilterRole", $"Role: {(_roleFilter?.ToString() ?? "All")}", () => _roleFilter = Next(_roleFilter));
-                CycleTab(cycleRow, "FilterAffinity", $"Affinity: {(_affinityFilter?.ToString() ?? "All")}", () => _affinityFilter = Next(_affinityFilter));
-
-                var shown = SortedHeroes(Roster.Heroes.Where(MatchesFilters)).ToList();
-                panel.Line($"Showing {shown.Count} of {Roster.HeroCount} heroes", 19);
                 if (Roster.HeroCount == 0) panel.Line("You own no heroes yet. Summon at the Summoning Gate.");
 
+                var grid = panel.Grid(HeroCardSize);
                 foreach (var hero in shown)
                 {
-                    var archetype = Roster.ArchetypeOf(hero);
-                    var copies = Roster.Heroes.Count(h => h.ArchetypeId == hero.ArchetypeId);
-                    var tags = (Village.IsHeroAssigned(hero.InstanceId) ? "  On base" : string.Empty) + (hero.Locked ? "  Locked" : string.Empty);
-                    panel.Action("Hero_" + hero.InstanceId,
-                        $"{archetype.displayName}  {EvolutionLabel(hero.EvolutionIndex)}  Lv {hero.Level}  x{copies}{tags}",
-                        () => ShowHeroDetail(hero.InstanceId), true, null, 18);
+                    var tag = Village.IsHeroAssigned(hero.InstanceId) ? "On a base" : hero.Locked ? "Locked" : null;
+                    HeroCard(grid, "Hero_" + hero.InstanceId, hero, tag, () => ShowHeroDetail(hero.InstanceId), true);
                 }
 
                 panel.Action("AltarOptionsButton", "Altar building options", () =>
@@ -222,16 +265,32 @@ namespace ShinobiDominion.Game
                 apply();
                 ShowAltarRoster();
             }, true, active ? Ui.AccentColor : Ui.ButtonColor, 15);
-            tab.GetComponentInChildren<UnityEngine.UI.Text>().horizontalOverflow = HorizontalWrapMode.Overflow;
+            tab.GetComponentInChildren<Text>().horizontalOverflow = HorizontalWrapMode.Overflow;
         }
 
         private void CycleTab(RectTransform row, string name, string caption, Action apply)
         {
-            Ui.Button(row, name, caption, () =>
+            var tab = Ui.Button(row, name, caption, () =>
             {
                 apply();
                 ShowAltarRoster();
-            }, true, Ui.ButtonColor, 16);
+            }, true, Ui.ButtonColor, 15);
+            tab.GetComponentInChildren<Text>().horizontalOverflow = HorizontalWrapMode.Overflow;
+        }
+
+        /// <summary>The large showcase on the left of hero screens. The art is a placeholder figure.</summary>
+        private void HeroShowcase(RectTransform column, HeroArchetype archetype, int evolution, string caption)
+        {
+            var stage = Ui.Rect("Stage", column);
+            Ui.Stretch(stage);
+            Ui.Framed(stage, UiSkin.Frame(new Color(0.24f, 0.20f, 0.36f), new Color(0.09f, 0.08f, 0.15f), RarityColor(archetype.rarity), 5), false);
+            Ui.Figure(stage, HeroColor(archetype, evolution), evolution, 210f, new Vector2(0f, 96f));
+            var title = Ui.Strong(Ui.Label(stage, caption, 24, TextAnchor.MiddleCenter));
+            title.rectTransform.anchorMin = new Vector2(0f, 0f);
+            title.rectTransform.anchorMax = new Vector2(1f, 0f);
+            title.rectTransform.pivot = new Vector2(0.5f, 0f);
+            title.rectTransform.sizeDelta = new Vector2(-16f, 70f);
+            title.rectTransform.anchoredPosition = new Vector2(0f, 14f);
         }
 
         public void ShowHeroDetail(string instanceId)
@@ -244,42 +303,56 @@ namespace ShinobiDominion.Game
             }
 
             var archetype = Roster.ArchetypeOf(hero);
-            _panel.Show(archetype.displayName, ShowAltarRoster, panel =>
+            _panel.ShowScreen(archetype.displayName, $"{archetype.rarity}  ·  {archetype.role}  ·  {archetype.affinity}", ShowAltarRoster, panel =>
             {
-                panel.Line($"{archetype.rarity}  ·  {archetype.role}  ·  {archetype.affinity}", 21, Ui.TextColor);
-                panel.Line($"{FormName(hero)}  ({EvolutionLabel(hero.EvolutionIndex)})  Lv {hero.Level} of {HeroMath.MaxLevel}");
-                var stats = Roster.StatsOf(hero);
-                panel.Line($"HP {stats.Hp:N0}    Attack {stats.Attack:N0}    Defense {stats.Defense:N0}");
-                if (Village.IsHeroAssigned(hero.InstanceId)) panel.Line("Assigned to a Hero Base.");
-                panel.Line("Art is placeholder. Equipment arrives in a later phase.", 18);
-
-                panel.Line("Skills", 22, Ui.TextColor);
-                foreach (var skill in archetype.skills)
+                panel.Columns(430f, column => HeroShowcase(column, archetype, hero.EvolutionIndex, $"{FormName(hero)}\n{EvolutionLabel(hero.EvolutionIndex)}  Lv {hero.Level}/{HeroMath.MaxLevel}"), () =>
                 {
-                    var unlocked = skill.unlockEvolution <= hero.EvolutionIndex;
-                    panel.Line(unlocked
-                        ? $"{skill.displayName}: {skill.description}"
-                        : $"Locked until {EvolutionLabel(skill.unlockEvolution)}: {skill.displayName}", 19);
-                }
+                    var stats = Roster.StatsOf(hero);
+                    panel.Line($"HP {stats.Hp:N0}     Attack {stats.Attack:N0}     Defense {stats.Defense:N0}", 24, Ui.TextColor);
+                    if (Village.IsHeroAssigned(hero.InstanceId)) panel.Line("Assigned to a Hero Base.");
+                    panel.Line("Figure is placeholder art. Equipment arrives in a later phase.", 17);
 
-                panel.Action("LockButton", hero.Locked ? "Unlock" : "Lock (protect from sacrifice)", () =>
-                {
-                    Roster.SetLocked(instanceId, !hero.Locked);
-                    ShowHeroDetail(instanceId);
-                });
-                if (archetype.CanEvolve)
-                    panel.Action("EvolveButton", "Evolution", () => ShowEvolution(instanceId), true, Ui.AccentColor);
+                    panel.Line("Skills", 24, Ui.TextColor);
+                    foreach (var skill in archetype.skills)
+                    {
+                        var unlocked = skill.unlockEvolution <= hero.EvolutionIndex;
+                        panel.Line(unlocked
+                            ? $"{skill.displayName}: {skill.description}"
+                            : $"Locked until {EvolutionLabel(skill.unlockEvolution)}: {skill.displayName}", 20);
+                    }
+
+                    if (archetype.CanEvolve)
+                        panel.Action("EvolveButton", "Evolution", () => ShowEvolution(instanceId), true, Ui.AccentColor);
+                    panel.Action("LockButton", hero.Locked ? "Unlock" : "Lock (protect from sacrifice)", () =>
+                    {
+                        Roster.SetLocked(instanceId, !hero.Locked);
+                        ShowHeroDetail(instanceId);
+                    });
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-                panel.Action("DevLevelButton", "Dev only: set to level 200", () =>
-                {
-                    Roster.GrantXp(instanceId, 100_000_000);
-                    ShowHeroDetail(instanceId);
-                }, hero.Level < HeroMath.MaxLevel);
+                    panel.Action("DevLevelButton", "Dev only: set to level 200", () =>
+                    {
+                        Roster.GrantXp(instanceId, 100_000_000);
+                        ShowHeroDetail(instanceId);
+                    }, hero.Level < HeroMath.MaxLevel);
 #endif
+                });
             });
         }
 
         // ---------- Evolution ----------
+
+        private void FormCard(Transform parent, HeroArchetype archetype, int evolution, bool current)
+        {
+            var rect = Ui.Rect("Form" + evolution, parent);
+            var border = current ? Color.white : RarityColor(archetype.rarity);
+            Ui.Framed(rect, UiSkin.Frame(new Color(0.24f, 0.20f, 0.36f), new Color(0.09f, 0.08f, 0.15f), border, current ? 6 : 3), false);
+            Ui.Figure(rect, HeroColor(archetype, evolution), evolution, 84f, new Vector2(0f, 104f));
+            var form = archetype.forms[evolution];
+            var title = Ui.Strong(Ui.Label(rect, (current ? "Current: " : string.Empty) + EvolutionLabel(evolution), 16, TextAnchor.UpperCenter));
+            Ui.Anchor(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(190f, 24f), new Vector2(0f, -8f));
+            var summary = Ui.Label(rect, $"{form.formName}\n{form.summary}", 13, TextAnchor.LowerCenter, Ui.MutedText);
+            Ui.Anchor(summary.rectTransform, new Vector2(0.5f, 0f), new Vector2(190f, 96f), new Vector2(0f, 10f));
+        }
 
         public void ShowEvolution(string instanceId)
         {
@@ -291,18 +364,15 @@ namespace ShinobiDominion.Game
             }
 
             var archetype = Roster.ArchetypeOf(hero);
-            _panel.Show("Evolution", () => ShowHeroDetail(instanceId), panel =>
+            _panel.ShowScreen($"{archetype.displayName}: Evolution", null, () => ShowHeroDetail(instanceId), panel =>
             {
+                var forms = panel.Grid(new Vector2(204f, 276f));
                 for (var e = 0; e < archetype.forms.Count; e++)
-                {
-                    var marker = e == hero.EvolutionIndex ? "Current: " : string.Empty;
-                    panel.Line($"{marker}{EvolutionLabel(e)}  {archetype.forms[e].formName}", 20, e == hero.EvolutionIndex ? Ui.TextColor : Ui.MutedText);
-                    panel.Line(archetype.forms[e].summary, 17);
-                }
+                    FormCard(forms, archetype, e, e == hero.EvolutionIndex);
 
                 if (hero.EvolutionIndex >= HeroMath.MaxEvolution)
                 {
-                    panel.Line("Final form reached.", 22, Ui.TextColor);
+                    panel.Line("Final form reached.", 24, Ui.TextColor);
                     return;
                 }
 
@@ -310,7 +380,7 @@ namespace ShinobiDominion.Game
                 var owned = Roster.ItemCount(catalyst);
                 var duplicates = Roster.EligibleDuplicates(instanceId, Village.IsHeroAssigned);
 
-                panel.Line("Requirements", 22, Ui.TextColor);
+                panel.Line("Requirements", 24, Ui.TextColor);
                 panel.Line($"{Check(hero.Level == HeroMath.MaxLevel)} Level 200 in this form (now {hero.Level})");
                 panel.Line($"{Check(duplicates.Count > 0)} One extra copy of {archetype.displayName} ({duplicates.Count} available)");
                 panel.Line($"{Check(owned > 0)} One {ItemName(catalyst)} (you have {owned})");
@@ -318,22 +388,19 @@ namespace ShinobiDominion.Game
                 var mainError = Roster.CheckEvolutionMain(instanceId);
                 if (mainError != HeroError.None)
                 {
-                    panel.Line(HeroErrorText.Describe(mainError), 20, Ui.AccentColor);
+                    panel.Line(HeroErrorText.Describe(mainError), 21, Ui.AccentColor);
                     return;
                 }
                 if (duplicates.Count == 0)
                 {
-                    panel.Line("Locked copies and copies on a Hero Base cannot be used.", 20, Ui.AccentColor);
+                    panel.Line("Locked copies and copies on a Hero Base cannot be used.", 21, Ui.AccentColor);
                     return;
                 }
 
-                panel.Line("Choose the copy to sacrifice:", 21, Ui.TextColor);
+                panel.Line("Choose the copy to sacrifice:", 22, Ui.TextColor);
+                var grid = panel.Grid(HeroCardSize);
                 foreach (var duplicate in duplicates)
-                {
-                    panel.Action("Sacrifice_" + duplicate.InstanceId,
-                        $"{EvolutionLabel(duplicate.EvolutionIndex)}  Lv {duplicate.Level}",
-                        () => ShowEvolutionConfirm(instanceId, duplicate.InstanceId));
-                }
+                    HeroCard(grid, "Sacrifice_" + duplicate.InstanceId, duplicate, "Sacrifice", () => ShowEvolutionConfirm(instanceId, duplicate.InstanceId), true);
             });
         }
 
@@ -359,13 +426,16 @@ namespace ShinobiDominion.Game
             var before = Roster.StatsOf(main);
             var after = HeroMath.Stats(archetype, main.EvolutionIndex + 1, 1);
 
-            _panel.Show("Confirm Evolution", () => ShowEvolution(mainId), panel =>
+            _panel.ShowScreen("Confirm Evolution", null, () => ShowEvolution(mainId), panel =>
             {
-                panel.Line($"{archetype.forms[main.EvolutionIndex].formName}  to  {archetype.forms[main.EvolutionIndex + 1].formName}", 22, Ui.TextColor);
-                panel.Line($"Now: {EvolutionLabel(main.EvolutionIndex)} Lv {main.Level}   HP {before.Hp:N0}   Attack {before.Attack:N0}   Defense {before.Defense:N0}");
-                panel.Line($"After: {EvolutionLabel(main.EvolutionIndex + 1)} Lv 1   HP {after.Hp:N0}   Attack {after.Attack:N0}   Defense {after.Defense:N0}");
+                var forms = panel.Grid(new Vector2(204f, 276f));
+                FormCard(forms, archetype, main.EvolutionIndex, true);
+                FormCard(forms, archetype, main.EvolutionIndex + 1, false);
+
+                panel.Line($"Now: {EvolutionLabel(main.EvolutionIndex)} Lv {main.Level}     HP {before.Hp:N0}     Attack {before.Attack:N0}     Defense {before.Defense:N0}", 21, Ui.TextColor);
+                panel.Line($"After: {EvolutionLabel(main.EvolutionIndex + 1)} Lv 1     HP {after.Hp:N0}     Attack {after.Attack:N0}     Defense {after.Defense:N0}", 21, Ui.TextColor);
                 panel.Line("The displayed level resets to 1, but combat power does not drop.", 19);
-                panel.Line($"This permanently consumes your {archetype.displayName} copy ({EvolutionLabel(duplicate.EvolutionIndex)} Lv {duplicate.Level}) and one {ItemName(Roster.CatalystFor(main.EvolutionIndex))}.", 20, Ui.AccentColor);
+                panel.Line($"This permanently consumes your {archetype.displayName} copy ({EvolutionLabel(duplicate.EvolutionIndex)} Lv {duplicate.Level}) and one {ItemName(Roster.CatalystFor(main.EvolutionIndex))}.", 21, Ui.AccentColor);
                 panel.Action("ConfirmEvolveButton", "Evolve", () => ConfirmEvolution(key, mainId, duplicateId), true, Ui.AttackColor);
                 panel.Action("CancelEvolveButton", "Cancel", () => ShowEvolution(mainId));
             });

@@ -77,6 +77,12 @@ namespace ShinobiDominion.EditorTools
                 AssetDatabase.CreateAsset(pipeline, PipelinePath);
             }
 
+            // The isometric camera sits 70 units back, so shadows need a long distance to appear at all.
+            // Not yet measured on a phone: Phase 5's quality presets must revisit this resolution.
+            pipeline.shadowDistance = 130f;
+            pipeline.mainLightShadowmapResolution = 4096;
+            EditorUtility.SetDirty(pipeline);
+
             GraphicsSettings.defaultRenderPipeline = pipeline;
             for (var level = 0; level < QualitySettings.names.Length; level++)
             {

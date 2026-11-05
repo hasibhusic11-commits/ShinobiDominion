@@ -57,5 +57,12 @@ Roster rules live in Core so they can move to the server, and they already use i
 ## ADR-016: Altar opens straight into the roster
 Building options such as Move and Upgrade sit behind an "Altar building options" button, since the roster is what the Altar is for.
 
+## ADR-017: Genre conventions adopted, Castle Clash itself not copied
+The owner shared Castle Clash screenshots as a style reference. Adopted as genre conventions: dense isometric compound, chunky framed UI, card roster grid, full-screen hero and build screens, shop-style building cards, and collect markers over resource buildings, with a tap collecting straight away.
+
+Not adopted: Castle Clash's art, UI assets, icons, names or specific look. The brief forbids it, and it is a legal risk. This game's identity is dark lacquer and brass UI, plaster-and-tile castle walls and pagodas.
+
+**Open conflict:** the screenshots show icon rails and a five-button bottom bar, which non-negotiable rule 2 forbids. The rule stands unless the owner changes it. Management screens are full-screen but still open only from buildings.
+
 ## ADR-013: Docker and memory on this machine (open risk)
 This PC has 7.3 GB of RAM and no WSL2 or Docker. Unity plus Docker Desktop, Nakama and Postgres may not fit comfortably. Decide in Phase 3 between Docker and native Nakama and Postgres on Windows.

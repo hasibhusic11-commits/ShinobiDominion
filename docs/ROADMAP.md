@@ -20,6 +20,9 @@ Six functional heroes (four Legendary, one Elite, one Common), roster, Altar fil
 - XP has no real source. Only a development button grants it.
 - In release builds the roster starts empty, because summoning does not exist yet.
 
+## Style pass — done, awaiting your review
+Chunky UI, card screens, castle walls, shadows and collect markers (ADR-017). Shadow settings are not yet measured on a phone.
+
 ## Phase 3: Nakama backend — blocked on your decision
 Needs a local server environment. Accounts, server inventory, server-side evolution, and summoning with crypto-secure randomness and no pity.
 
@@ -31,5 +34,5 @@ Needs a local server environment. Accounts, server inventory, server-side evolut
 |---|---|
 | .NET harness (`tools/core-tests`) | 95 of 95 passed |
 | Unity EditMode, 6000.3.28f1 | 95 of 95 passed |
-| Unity PlayMode, 6000.3.28f1 | 31 of 31 passed |
+| Unity PlayMode, 6000.3.28f1 | 33 of 33 passed |
 | Windows player | built, 0 errors, ran 20 seconds with no errors logged |
