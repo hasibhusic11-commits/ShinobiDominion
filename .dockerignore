@@ -1,0 +1,4 @@
+*
+!backend/nakama
+!backend/migrations
+!unity/Assets/_Game/Resources/Config/heroes.json

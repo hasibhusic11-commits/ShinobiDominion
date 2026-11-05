@@ -34,6 +34,7 @@ research/
 # Local secrets and environment
 .env
 .env.*
+!.env.example
 *.key
 *.pem
 backend/nakama/local.yml

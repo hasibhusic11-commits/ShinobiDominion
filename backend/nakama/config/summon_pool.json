@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "status": "TEST RATES - NOT APPROVED",
+  "bannerName": "Standard Gate",
+  "priceCrystalsPerRoll": 100,
+  "startsAt": "2026-01-01T00:00:00Z",
+  "endsAt": "2099-01-01T00:00:00Z",
+  "items": [
+    { "archetypeId": "river_scout", "weight": 7500 },
+    { "archetypeId": "lantern_warden", "weight": 2000 },
+    { "archetypeId": "solar_beast_sage", "weight": 125 },
+    { "archetypeId": "thunder_empress", "weight": 125 },
+    { "archetypeId": "stone_titan", "weight": 125 },
+    { "archetypeId": "moonfang_oracle", "weight": 125 }
+  ]
+}
