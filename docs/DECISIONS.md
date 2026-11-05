@@ -62,7 +62,7 @@ The owner shared Castle Clash screenshots as a style reference. Adopted as genre
 
 Not adopted: Castle Clash's art, UI assets, icons, names or specific look. The brief forbids it, and it is a legal risk. This game's identity is dark lacquer and brass UI, plaster-and-tile castle walls and pagodas.
 
-**Open conflict:** the screenshots show icon rails and a five-button bottom bar, which non-negotiable rule 2 forbids. The rule stands unless the owner changes it. Management screens are full-screen but still open only from buildings.
+**Home screen, decided by the owner on 2026-11-05:** ATTACK only. The screenshots show icon rails and a five-button bottom bar, and the owner chose to keep non-negotiable rule 2 instead. Do not add them. Management screens are full-screen but still open only from buildings.
 
 ## ADR-013: Docker and memory on this machine (open risk)
 This PC has 7.3 GB of RAM and no WSL2 or Docker. Unity plus Docker Desktop, Nakama and Postgres may not fit comfortably. Decide in Phase 3 between Docker and native Nakama and Postgres on Windows.
