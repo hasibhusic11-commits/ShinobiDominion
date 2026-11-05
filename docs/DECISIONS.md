@@ -79,5 +79,12 @@ Not adopted: Castle Clash's art, UI assets, icons, names or specific look. The b
 
 **Home screen, decided by the owner on 2026-11-05:** ATTACK only. The screenshots show icon rails and a five-button bottom bar, and the owner chose to keep non-negotiable rule 2 instead. Do not add them. Management screens are full-screen but still open only from buildings.
 
+## ADR-021: Troops, decided by the owner on 2026-11-05
+Raids use troops as well as heroes, and this adds to the brief, which described only heroes.
+- Troops are separate units. Heroes do not lead them.
+- The village has **4 troop camps** and a **training hall**, which makes troops that fill the camps' space.
+- **Each troop takes up camp space according to how strong it is.**
+- Not yet decided: camp capacity, troop types, training time and cost, and whether camps are upgradable. These will be test values when built.
+
 ## ADR-013: Docker for the local server
 Go plugins do not run natively on Windows, so the server runs in Docker on WSL2. Unity, Docker, Nakama and Postgres together are tight on this PC's 7.3 GB. It worked for every test here, but an active Unity Editor session alongside the server has not been measured.

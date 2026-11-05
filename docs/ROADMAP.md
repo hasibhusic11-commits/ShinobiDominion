@@ -34,6 +34,7 @@ Layout, gold, limits, walls, moves, upgrades, removal and collection are all ser
 **Not done:** build timers, and online undo.
 
 ## Phase 4: combat vertical slice — not started
+Now includes troops: 4 camps, a training hall, and camp space by troop strength (ADR-021).
 ## Phase 5: polish and ship readiness — not started
 
 ## Visual overhaul — done as temporary art, awaiting your review

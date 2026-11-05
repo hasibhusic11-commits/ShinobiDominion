@@ -7,7 +7,7 @@ Sources: [Brave Squads (2013) gameplay](https://www.youtube.com/watch?v=gcTUu8K4
 ## Why it looks like a real game
 | Area | Early Castle Clash | Shinobi Dominion today |
 |---|---|---|
-| Framing | Close camera, with a building filling about a fifth of the screen | Far camera, with buildings small on a huge plain |
+| Framing | The owner confirms zoom behaves the same as ours, so camera is not a real difference. The frames were simply zoomed in. | Same zoom behaviour |
 | Proportions | Fat, toy-like, exaggerated shapes | Realistic, thin architecture |
 | Materials | Hand-painted: chunky planks, big tiles, painted-in light and wear | Flat colour with a generated pattern |
 | Ground | Paved tile pad under each building, with painted cracks and themed maps | One plain green sheet |
@@ -19,7 +19,7 @@ Sources: [Brave Squads (2013) gameplay](https://www.youtube.com/watch?v=gcTUu8K4
 - **Home:** resource bars with their maximums, buildings tapped directly, and timers over buildings being upgraded.
 - **Battle screen:** End Battle at top centre, a countdown from 3 minutes, Available Loot at the right, percent destroyed at bottom right, and your resources at top left.
 - **Deployment:** tap to drop units. Red zones around buildings refuse with "can't attack here".
-- **Units:** a hero with a level number and bars, leading a squad of small troops.
+- **Units:** heroes and troops are separate. Heroes do not lead troops, which correct what these frames first suggested. Per the owner, troops work like Clash of Clans: see ADR-021.
 - **Destruction:** buildings collapse into rubble, and fallen units leave small gravestones, so progress is visible.
 - **Modes:** themed battle maps such as lava caves, plus a painted world map for expeditions.
 - **Upgrades:** a framed wooden panel where consuming heroes adds skill experience.
