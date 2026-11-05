@@ -1,0 +1,52 @@
+# Decisions
+
+The brief in `docs/spec/` wins over anything here. These cover what the brief left open. All are reversible unless noted.
+
+## ADR-001: Unity 6000.3.28f1 LTS
+Newest Unity 6 LTS on the release API on 2026-11-05, changeset `8f082d2fe476`. The other LTS line, 6000.0.85f2, is older with no benefit for a new project.
+
+## ADR-002: Game rules live in an engine-free Core assembly
+`ShinobiDominion.Core` has `noEngineReferences: true`. Grid, placement, walls, saves and navigation rules compile with no Unity at all.
+- A .NET harness at `tools/core-tests` runs those tests in about a second, with no editor or license.
+- The harness compiles at C# 9, Unity 6's language level, so newer syntax cannot slip in.
+- The same files run under Unity's Test Runner.
+- The rules can be ported line for line to the server in Phase 3.
+
+## ADR-003: Newtonsoft.Json for saves and config
+Unity's `JsonUtility` needs the engine, which would stop Core tests running outside Unity. `com.unity.nuget.newtonsoft-json` is an official Unity package, and the same library comes from NuGet in the harness.
+
+## ADR-004: uGUI built from code, with the built-in font
+UI Toolkit needs theme assets and TextMeshPro needs an imported resources folder, and both add setup that has nothing to do with proving the layout. uGUI with the legacy runtime font has no such setup. Replace the font before release, because it will not cover every language.
+
+## ADR-005: Procedural placeholder art and a code-built scene
+The Village scene holds a single `VillageBootstrap` object, and everything else is created at runtime. Buildings are generated meshes in a neutral palette, each with its own silhouette. All of it is honest placeholder art and is replaced in Phase 5.
+
+## ADR-006: Pathfinding (provisional, decide in Phase 4)
+Lean toward deterministic grid A* over the village's integer grid. The server has to re-run or verify battles, and NavMesh is neither deterministic nor available in the Go backend. `com.unity.ai.navigation` is not installed for now. The obsolete NavMeshComponents repo is rejected.
+
+## ADR-007: Tap picking uses render bounds, not physics
+No colliders exist. A tap tests the ray against each building's bounds, so tapping a tall tower's roof selects the tower. Physics adds nothing here, and this avoids hundreds of wall colliders.
+
+## ADR-008: Wall tool behaviour
+- A diagonal drag locks to the longer axis, and ties go to X.
+- A run is all-or-nothing. If any cell is invalid, the whole run is refused and those cells show red with an X.
+- Crossing an existing wall counts as invalid.
+
+## ADR-009: Local save is a prototype stand-in
+Phase 1 stores the village and wallet in `persistentDataPath/village_v1.json`, which a player could edit. This does **not** meet the brief's online integrity rule. Phase 3 must move authority to Nakama before any of this state has value. Saves are validated on load, and a rejected file is kept as `.rejected`.
+
+## ADR-010: "Spirit Turret" instead of "Chakra Turret"
+The brief lists "Chakra Turret" as an example but also requires original terminology such as Spirit Force. Using Spirit Turret avoids the closer association.
+
+## ADR-011: Rule details the brief left open
+- Dojo HQ, Builder Hall, Hero Altar and Summoning Gate can be moved but not removed, since removing them would lock out their menus.
+- Hero bases are capped at six at every Dojo level, per non-negotiable rule 4.
+- New players start with two placed Hero Bases and build the other four.
+- Removing a building gives no refund.
+- All numbers in `Resources/Config/buildings.json` are test values and the file is marked not approved.
+
+## ADR-012: Backend (provisional, verify in Phase 3)
+Plan is Nakama's Go runtime with Go `crypto/rand`. Before relying on any atomic write path, read the current Nakama source and prove it with concurrency tests, per the brief.
+
+## ADR-013: Docker and memory on this machine (open risk)
+This PC has 7.3 GB of RAM and no WSL2 or Docker. Unity plus Docker Desktop, Nakama and Postgres may not fit comfortably. Decide in Phase 3 between Docker and native Nakama and Postgres on Windows.

@@ -1,0 +1,44 @@
+# Unity generated
+unity/[Ll]ibrary/
+unity/[Tt]emp/
+unity/[Oo]bj/
+unity/[Bb]uild/
+unity/[Bb]uilds/
+unity/[Ll]ogs/
+unity/[Uu]ser[Ss]ettings/
+unity/MemoryCaptures/
+unity/*.csproj
+unity/*.sln
+unity/*.slnx
+unity/.vs/
+unity/.idea/
+unity/.vscode/
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+*.apk
+*.aab
+*.unitypackage
+
+# .NET core-test harness
+tools/**/bin/
+tools/**/obj/
+
+# Third-party research clones: never merged automatically
+research/
+
+# Local secrets and environment
+.env
+.env.*
+*.key
+*.pem
+backend/nakama/local.yml
+
+# OS
+Thumbs.db
+desktop.ini
+.DS_Store

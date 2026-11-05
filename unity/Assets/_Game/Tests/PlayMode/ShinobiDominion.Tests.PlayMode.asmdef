@@ -1,0 +1,23 @@
+{
+    "name": "ShinobiDominion.Tests.PlayMode",
+    "rootNamespace": "ShinobiDominion.Tests",
+    "references": [
+        "ShinobiDominion.Core",
+        "ShinobiDominion.Game",
+        "UnityEngine.UI",
+        "UnityEngine.TestRunner"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

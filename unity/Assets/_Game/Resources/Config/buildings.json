@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "balanceStatus": "PROPOSED TEST VALUES - NOT APPROVED",
+  "startingGold": 5000,
+  "startingCrystals": 100,
+  "baseGoldCapacity": 20000,
+  "buildings": [
+    { "id": "dojo_hq", "displayName": "Dojo HQ", "description": "The heart of the village. Its level sets building limits.", "category": "Structures", "function": "Headquarters", "width": 5, "depth": 5, "removable": false, "maxHp": 2000, "maxLevel": 5, "costGold": 0, "upgradeCostGoldPerLevel": 2000, "maxCountByHqLevel": [1] },
+    { "id": "builder_hall", "displayName": "Builder Hall", "description": "Opens the build catalog.", "category": "Structures", "function": "BuilderHall", "width": 3, "depth": 3, "removable": false, "maxHp": 600, "maxLevel": 5, "costGold": 0, "upgradeCostGoldPerLevel": 800, "maxCountByHqLevel": [1] },
+    { "id": "hero_altar", "displayName": "Hero Altar", "description": "Your hero roster, upgrades and evolution.", "category": "Structures", "function": "HeroAltar", "width": 4, "depth": 4, "removable": false, "maxHp": 800, "maxLevel": 5, "costGold": 0, "upgradeCostGoldPerLevel": 1000, "maxCountByHqLevel": [1] },
+    { "id": "summoning_gate", "displayName": "Summoning Gate", "description": "Summon heroes. Every roll is independent and random.", "category": "Structures", "function": "SummoningGate", "width": 4, "depth": 4, "removable": false, "maxHp": 800, "maxLevel": 1, "costGold": 0, "upgradeCostGoldPerLevel": 0, "maxCountByHqLevel": [1] },
+    { "id": "training_grounds", "displayName": "Training Grounds", "description": "Train heroes. Available in a later phase.", "category": "Structures", "function": "Training", "width": 4, "depth": 3, "rotatable": true, "maxHp": 500, "maxLevel": 5, "costGold": 1500, "upgradeCostGoldPerLevel": 800, "maxCountByHqLevel": [1] },
+    { "id": "research_hut", "displayName": "Research Hut", "description": "Research upgrades. Available in a later phase.", "category": "Structures", "function": "Research", "width": 3, "depth": 3, "maxHp": 400, "maxLevel": 5, "costGold": 1200, "upgradeCostGoldPerLevel": 700, "maxCountByHqLevel": [0, 1] },
+    { "id": "defense_tower", "displayName": "Defense Tower", "description": "Fires on raiders in range.", "category": "Defense", "function": "Defense", "width": 2, "depth": 2, "maxHp": 700, "maxLevel": 10, "costGold": 600, "upgradeCostGoldPerLevel": 400, "maxCountByHqLevel": [2, 3, 4, 6, 8] },
+    { "id": "spirit_turret", "displayName": "Spirit Turret", "description": "Channels Spirit Force into bolts that strike raiders.", "category": "Defense", "function": "Defense", "width": 2, "depth": 2, "maxHp": 500, "maxLevel": 10, "costGold": 900, "upgradeCostGoldPerLevel": 500, "maxCountByHqLevel": [0, 1, 2, 3, 4] },
+    { "id": "gold_mine", "displayName": "Gold Mine", "description": "Produces gold over time.", "category": "Resources", "function": "Collector", "width": 3, "depth": 3, "maxHp": 400, "maxLevel": 10, "costGold": 300, "upgradeCostGoldPerLevel": 300, "maxCountByHqLevel": [2, 3, 4, 5, 6], "produces": "Gold", "productionPerHour": 600, "storedProductionCap": 2400 },
+    { "id": "gold_vault", "displayName": "Gold Vault", "description": "Raises how much gold you can hold.", "category": "Resources", "function": "Storage", "width": 3, "depth": 3, "maxHp": 500, "maxLevel": 10, "costGold": 500, "upgradeCostGoldPerLevel": 400, "maxCountByHqLevel": [1, 2, 3, 4, 4], "goldCapacityBonus": 15000 },
+    { "id": "crystal_mine", "displayName": "Crystal Mine", "description": "Slowly produces crystals.", "category": "Resources", "function": "Collector", "width": 3, "depth": 3, "maxHp": 400, "maxLevel": 5, "costGold": 1500, "upgradeCostGoldPerLevel": 1200, "maxCountByHqLevel": [0, 1, 1, 2, 2], "produces": "Crystals", "productionPerHour": 4, "storedProductionCap": 16 },
+    { "id": "hero_base", "displayName": "Hero Base", "description": "A pedestal that holds one hero for raids and defense.", "category": "HeroBases", "function": "HeroBase", "width": 2, "depth": 2, "maxHp": 500, "maxLevel": 10, "costGold": 400, "upgradeCostGoldPerLevel": 400, "maxCountByHqLevel": [6] },
+    { "id": "wall", "displayName": "Stone Wall", "description": "Drag to build a straight run of wall.", "category": "Walls", "function": "Wall", "width": 1, "depth": 1, "maxHp": 300, "maxLevel": 10, "costGold": 25, "upgradeCostGoldPerLevel": 20, "maxCountByHqLevel": [60, 100, 150, 220, 300] }
+  ]
+}

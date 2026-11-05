@@ -1,0 +1,18 @@
+{
+    "name": "ShinobiDominion.Game",
+    "rootNamespace": "ShinobiDominion.Game",
+    "references": [
+        "ShinobiDominion.Core",
+        "Unity.InputSystem",
+        "UnityEngine.UI"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
