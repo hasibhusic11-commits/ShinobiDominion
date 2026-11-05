@@ -24,6 +24,9 @@ namespace ShinobiDominion.Tests
             if (string.IsNullOrEmpty(dir)) Assert.Ignore("SD_CAPTURE_DIR not set.");
             Directory.CreateDirectory(dir);
 
+            // This test only produces images for review. Other tests check for errors.
+            LogAssert.ignoreFailingMessages = true;
+
             var savePath = Path.Combine(Application.temporaryCachePath, "capture_" + Guid.NewGuid().ToString("N") + ".json");
             VillageBootstrap.SavePathOverride = savePath;
             var root = new GameObject("VillageBootstrapUnderTest");
