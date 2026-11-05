@@ -16,6 +16,8 @@ namespace ShinobiDominion.Game
         private IGameServer _server;
         private ServerOdds _odds;
         private bool _busy;
+        private bool _connecting;
+        private float _reconnectTimer = 10f;
         private string _pendingKey;
         private string _pendingRequest;
 
@@ -23,6 +25,9 @@ namespace ShinobiDominion.Game
         public bool IsOnline { get; private set; }
         public long? ServerCrystals { get; private set; }
         public Task ConnectTask { get; private set; } = Task.CompletedTask;
+
+        /// <summary>Set by the bootstrap. True only in the editor and development builds.</summary>
+        public bool AllowOfflinePlay { get; set; } = true;
 
         public void ConnectToServer(IGameServer server)
         {
@@ -32,13 +37,14 @@ namespace ShinobiDominion.Game
 
         private async Task ConnectAsync()
         {
+            _connecting = true;
             try
             {
                 var state = await _server.ConnectAsync();
                 if (this == null) return;
                 IsOnline = true;
                 ApplyServerState(state);
-                await ClearOrphanedSlotsAsync(state);
+                Debug.Log($"Connected to the server: {Village.BuildingCount} buildings, {Roster.HeroCount} heroes.");
             }
             catch (GameServerException exception)
             {
@@ -48,40 +54,74 @@ namespace ShinobiDominion.Game
             {
                 Debug.LogError($"Server sent bad data: {exception.Message}");
             }
+            catch (VillageSaveException exception)
+            {
+                Debug.LogError($"Server sent a village that failed validation: {exception.Message}");
+            }
+            finally
+            {
+                _connecting = false;
+            }
         }
 
-        /// <summary>The server's answer replaces local heroes, items, crystals and base assignments.</summary>
+        /// <summary>
+        /// The server's answer replaces local heroes, items, crystals, gold and the whole village.
+        /// The client still validates what arrives, and a bad snapshot changes nothing.
+        /// </summary>
         private void ApplyServerState(ServerState state)
         {
             Roster.ReplaceWithServerState(state.RosterJson);
             ServerCrystals = state.Crystals;
-
-            foreach (var building in Village.Buildings.ToList())
-            {
-                if (building.Definition.function != BuildingFunction.HeroBase) continue;
-                state.HeroBySlot.TryGetValue(building.Id, out var hero);
-                if (hero == building.AssignedHeroInstanceId) continue;
-                if (hero == null) Village.TryUnassignHero(building.Id);
-                else
-                {
-                    // Clear any stale local holder first, since the server already allows this move.
-                    foreach (var other in Village.Buildings.Where(b => b.AssignedHeroInstanceId == hero).ToList())
-                        Village.TryUnassignHero(other.Id);
-                    Village.TryAssignHero(building.Id, hero);
-                }
-            }
+            if (state.Village != null) Village.Restore(state.Village);
             RefreshHud();
+            if (_selectionCells != null && UiState.Screen == VillageScreen.BuildingPanel)
+            {
+                var selected = Village.Find(UiState.SelectedBuildingId);
+                if (selected != null) ShowSelectionCells(selected);
+            }
         }
 
-        /// <summary>The server counts these slots against the six, so release any whose base no longer exists.</summary>
-        private async Task ClearOrphanedSlotsAsync(ServerState state)
+        /// <summary>
+        /// False only when this build must not change anything without a server. Release builds
+        /// are like that, so a tampered local file can never become a real village.
+        /// </summary>
+        public bool CanChangeVillage => IsOnline || (AllowOfflinePlay && !_connecting);
+
+        private bool RefuseWhenNoServer()
         {
-            foreach (var slot in state.HeroBySlot.Keys.ToList())
+            if (CanChangeVillage) return false;
+            LastMessage = _connecting ? "Connecting to the server..." : "Cannot reach the server. Your village is safe, and changes need a connection.";
+            if (_toolbar != null) _toolbar.SetStatus(LastMessage);
+            else
+                _panel.Show("Not connected", CloseAll, panel =>
+                {
+                    panel.Line(LastMessage, 22, Ui.TextColor);
+                    panel.Action("RetryConnectButton", "Try again", () =>
+                    {
+                        CloseAll();
+                        if (_server != null && !_connecting) ConnectTask = ConnectAsync();
+                    }, true, Ui.AccentColor);
+                });
+            return true;
+        }
+
+        /// <summary>Sends one village change, then shows whatever the server decided.</summary>
+        private void VillageRequest(string request, Func<string, Task<ServerState>> call, Action onSuccess, Action onFailure)
+        {
+            var key = KeyFor(request);
+            Run(async () =>
             {
-                var building = Village.Find(slot);
-                if (building != null && building.Definition.function == BuildingFunction.HeroBase) continue;
-                ApplyServerState(await _server.AssignAsync(slot, null));
-            }
+                var state = await call(key);
+                ClearKey();
+                ApplyServerState(state);
+                LastMessage = null;
+                onSuccess?.Invoke();
+            }, onFailure);
+        }
+
+        private void ShowFailureOnToolbar()
+        {
+            if (_toolbar != null) _toolbar.SetStatus(LastMessage);
         }
 
         private async void Run(Func<Task> work, Action onFailure = null)
@@ -100,6 +140,12 @@ namespace ShinobiDominion.Game
                     _hasError = true;
                     onFailure?.Invoke();
                 }
+            }
+            catch (VillageSaveException exception)
+            {
+                LastMessage = "The server sent something unexpected.";
+                Debug.LogError(exception.Message);
+                if (this != null) onFailure?.Invoke();
             }
             catch (FormatException exception)
             {
@@ -245,13 +291,6 @@ namespace ShinobiDominion.Game
             {
                 if (UiState.Screen == VillageScreen.BuildingPanel) ShowContextPanel();
             });
-        }
-
-        /// <summary>Removing a base locally must also free its slot on the server.</summary>
-        private void ReleaseSlotOnline(int baseId)
-        {
-            if (!IsOnline) return;
-            AssignOnline(baseId, null);
         }
 
         private void DevMaxLevelOnline(string instanceId)

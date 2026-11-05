@@ -117,10 +117,50 @@ type heroView struct {
 	BaseSlot       *int   `json:"baseSlot"`
 }
 
+type buildingView struct {
+	ID           int     `json:"id"`
+	DefinitionID string  `json:"definitionId"`
+	X            int     `json:"x"`
+	Z            int     `json:"z"`
+	Rotation     int     `json:"rotation"`
+	Level        int     `json:"level"`
+	Hero         *string `json:"assignedHeroInstanceId"`
+}
+
+type villageView struct {
+	Gold      int64          `json:"gold"`
+	Crystals  int64          `json:"crystals"`
+	NextID    int            `json:"nextInstanceId"`
+	Buildings []buildingView `json:"buildings"`
+}
+
 type state struct {
 	Crystals int64            `json:"crystals"`
 	Heroes   []heroView       `json:"heroes"`
 	Items    map[string]int64 `json:"items"`
+	Village  villageView      `json:"village"`
+}
+
+func baseIDs(s state) []int {
+	ids := []int{}
+	for _, b := range s.Village.Buildings {
+		if b.DefinitionID == "hero_base" {
+			ids = append(ids, b.ID)
+		}
+	}
+	return ids
+}
+
+// sixBases builds up to six real Hero Bases and returns their ids.
+func sixBases(t testing.TB, p *player) []int {
+	t.Helper()
+	grant(t, p, map[string]interface{}{"setGold": 10000})
+	for i, x := 0, 2; len(baseIDs(mustState(t, p))) < 6; i, x = i+1, x+3 {
+		if _, err := p.rpc("sd_village_place", map[string]interface{}{"key": "k-" + randomHex(8), "definitionId": "hero_base", "x": x, "z": 2}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return baseIDs(mustState(t, p))
 }
 
 type roll struct {
@@ -676,7 +716,7 @@ func TestEvolve_RefusesEveryBrokenRule(t *testing.T) {
 	})
 	t.Run("duplicate on a base", func(t *testing.T) {
 		p, main, duplicate := evolutionSetup(t)
-		if _, err := p.rpc("sd_assign_hero", map[string]interface{}{"slot": 1, "instanceId": duplicate}); err != nil {
+		if _, err := p.rpc("sd_assign_hero", map[string]interface{}{"slot": baseIDs(mustState(t, p))[0], "instanceId": duplicate}); err != nil {
 			t.Fatal(err)
 		}
 		_, err := evolve(p, "k-"+randomHex(8), main, duplicate)
@@ -690,7 +730,9 @@ func TestEvolve_RefusesEveryBrokenRule(t *testing.T) {
 func TestEvolve_LockedOrAssignedMainMayStillEvolve(t *testing.T) {
 	p, main, duplicate := evolutionSetup(t)
 	p.rpc("sd_set_lock", map[string]interface{}{"instanceId": main, "locked": true})
-	p.rpc("sd_assign_hero", map[string]interface{}{"slot": 1, "instanceId": main})
+	if _, err := p.rpc("sd_assign_hero", map[string]interface{}{"slot": baseIDs(mustState(t, p))[0], "instanceId": main}); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := evolve(p, "k-"+randomHex(8), main, duplicate); err != nil {
 		t.Fatal(err)
 	}
@@ -708,7 +750,7 @@ func TestEvolve_CannotTouchAnotherPlayersHeroes(t *testing.T) {
 	if _, err := attacker.rpc("sd_set_lock", map[string]interface{}{"instanceId": victimDup, "locked": true}); err == nil {
 		t.Error("locked another player's hero")
 	}
-	if _, err := attacker.rpc("sd_assign_hero", map[string]interface{}{"slot": 1, "instanceId": victimMain}); err == nil {
+	if _, err := attacker.rpc("sd_assign_hero", map[string]interface{}{"slot": baseIDs(mustState(t, attacker))[0], "instanceId": victimMain}); err == nil {
 		t.Error("assigned another player's hero")
 	}
 	if s := mustState(t, victim); len(s.Heroes) != 2 || s.Heroes[0].Locked || s.Heroes[1].Locked {
@@ -787,11 +829,12 @@ func TestEvolve_ConcurrentlySacrificingOneDuplicateTwice_OnlyOneWins(t *testing.
 func TestEvolve_ConcurrentAssignVersusSacrifice_NeverBoth(t *testing.T) {
 	for round := 0; round < 15; round++ {
 		p, main, duplicate := evolutionSetup(t)
+		slot := baseIDs(mustState(t, p))[0]
 		var wg sync.WaitGroup
 		wg.Add(2)
 		go func() {
 			defer wg.Done()
-			p.rpc("sd_assign_hero", map[string]interface{}{"slot": 1, "instanceId": duplicate})
+			p.rpc("sd_assign_hero", map[string]interface{}{"slot": slot, "instanceId": duplicate})
 		}()
 		go func() {
 			defer wg.Done()
@@ -815,49 +858,67 @@ func TestEvolve_ConcurrentAssignVersusSacrifice_NeverBoth(t *testing.T) {
 
 func TestAssign_RulesAndSixLegendaries(t *testing.T) {
 	p := blank(t, 0)
+	bases := sixBases(t, p)
 	grant(t, p, map[string]interface{}{"archetypeId": legend, "copies": 3})
 	s := grant(t, p, map[string]interface{}{"archetypeId": "thunder_empress", "copies": 4})
-	if len(s.Heroes) != 7 {
-		t.Fatal(len(s.Heroes))
+	if len(s.Heroes) != 7 || len(bases) != 6 {
+		t.Fatal(len(s.Heroes), len(bases))
 	}
-	for i := 0; i < 6; i++ {
-		if _, err := p.rpc("sd_assign_hero", map[string]interface{}{"slot": i + 1, "instanceId": s.Heroes[i].InstanceID}); err != nil {
-			t.Fatalf("six Legendaries must be allowed, slot %d: %v", i+1, err)
+	for i, slot := range bases {
+		if _, err := p.rpc("sd_assign_hero", map[string]interface{}{"slot": slot, "instanceId": s.Heroes[i].InstanceID}); err != nil {
+			t.Fatalf("six Legendaries must be allowed, base %d: %v", slot, err)
 		}
 	}
-	_, err := p.rpc("sd_assign_hero", map[string]interface{}{"slot": 7, "instanceId": s.Heroes[6].InstanceID})
-	expectError(t, err, "ALL_BASES_FULL")
-
-	_, err = p.rpc("sd_assign_hero", map[string]interface{}{"slot": 2, "instanceId": s.Heroes[0].InstanceID})
+	_, err := p.rpc("sd_assign_hero", map[string]interface{}{"slot": bases[1], "instanceId": s.Heroes[0].InstanceID})
 	expectError(t, err, "HERO_ALREADY_ASSIGNED")
 
-	if _, err := p.rpc("sd_assign_hero", map[string]interface{}{"slot": 1, "instanceId": nil}); err != nil {
+	if _, err := p.rpc("sd_assign_hero", map[string]interface{}{"slot": bases[0], "instanceId": nil}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := p.rpc("sd_assign_hero", map[string]interface{}{"slot": 7, "instanceId": s.Heroes[6].InstanceID}); err != nil {
+	if _, err := p.rpc("sd_assign_hero", map[string]interface{}{"slot": bases[0], "instanceId": s.Heroes[6].InstanceID}); err != nil {
 		t.Fatal(err)
 	}
-	_, err = p.rpc("sd_assign_hero", map[string]interface{}{"slot": 0, "instanceId": s.Heroes[0].InstanceID})
+	for _, slot := range []int{0, -1} {
+		_, err = p.rpc("sd_assign_hero", map[string]interface{}{"slot": slot, "instanceId": s.Heroes[0].InstanceID})
+		expectError(t, err, "BAD_SLOT")
+	}
+}
+
+func TestAssign_OnlyRealHeroBasesCount(t *testing.T) {
+	p := blank(t, 0)
+	s := grant(t, p, map[string]interface{}{"archetypeId": legend})
+	hero := s.Heroes[0].InstanceID
+
+	_, err := p.rpc("sd_assign_hero", map[string]interface{}{"slot": 9999, "instanceId": hero})
 	expectError(t, err, "BAD_SLOT")
-	_, err = p.rpc("sd_assign_hero", map[string]interface{}{"slot": -1, "instanceId": s.Heroes[0].InstanceID})
+
+	dojo := 0
+	for _, b := range s.Village.Buildings {
+		if b.DefinitionID == "dojo_hq" {
+			dojo = b.ID
+		}
+	}
+	_, err = p.rpc("sd_assign_hero", map[string]interface{}{"slot": dojo, "instanceId": hero})
 	expectError(t, err, "BAD_SLOT")
 }
 
-func TestAssign_ConcurrentCannotExceedSix_OrDoubleUseHero(t *testing.T) {
+func TestAssign_ConcurrentNeverDoubleUsesAHero(t *testing.T) {
 	p := blank(t, 0)
+	bases := sixBases(t, p)
 	s := grant(t, p, map[string]interface{}{"archetypeId": legend, "copies": 12})
 	var wg sync.WaitGroup
 	for i := 0; i < 12; i++ {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			p.rpc("sd_assign_hero", map[string]interface{}{"slot": i + 1, "instanceId": s.Heroes[i].InstanceID})
+			p.rpc("sd_assign_hero", map[string]interface{}{"slot": bases[i%len(bases)], "instanceId": s.Heroes[i].InstanceID})
 		}(i)
 	}
 	wg.Wait()
 	used := 0
 	slots := map[int]bool{}
-	for _, h := range mustState(t, p).Heroes {
+	final := mustState(t, p)
+	for _, h := range final.Heroes {
 		if h.BaseSlot != nil {
 			used++
 			if slots[*h.BaseSlot] {
@@ -868,6 +929,338 @@ func TestAssign_ConcurrentCannotExceedSix_OrDoubleUseHero(t *testing.T) {
 	}
 	if used != 6 {
 		t.Fatalf("assigned %d heroes", used)
+	}
+}
+
+// ---------- Village ----------
+
+func place(p *player, key, def string, x, z, rotation int) (state, error) {
+	var s state
+	body, err := p.rpc("sd_village_place", map[string]interface{}{"key": key, "definitionId": def, "x": x, "z": z, "rotation": rotation})
+	if err != nil {
+		return s, err
+	}
+	return s, json.Unmarshal([]byte(body), &s)
+}
+
+func walls(p *player, key string, x1, z1, x2, z2 int) (state, error) {
+	var s state
+	body, err := p.rpc("sd_village_walls", map[string]interface{}{"key": key, "x1": x1, "z1": z1, "x2": x2, "z2": z2})
+	if err != nil {
+		return s, err
+	}
+	return s, json.Unmarshal([]byte(body), &s)
+}
+
+func buildingOp(p *player, rpc, key string, id int) (state, error) {
+	var s state
+	body, err := p.rpc(rpc, map[string]interface{}{"key": key, "id": id})
+	if err != nil {
+		return s, err
+	}
+	return s, json.Unmarshal([]byte(body), &s)
+}
+
+func findBuilding(s state, def string) *buildingView {
+	for i := range s.Village.Buildings {
+		if s.Village.Buildings[i].DefinitionID == def {
+			return &s.Village.Buildings[i]
+		}
+	}
+	return nil
+}
+
+func countBuildings(s state, def string) int {
+	count := 0
+	for _, b := range s.Village.Buildings {
+		if b.DefinitionID == def {
+			count++
+		}
+	}
+	return count
+}
+
+func TestVillage_NewPlayerStartsWithTheStarterLayout(t *testing.T) {
+	s := mustState(t, newPlayer(t))
+	if len(s.Village.Buildings) != 7 || s.Village.Gold != 5000 {
+		t.Fatalf("buildings=%d gold=%d", len(s.Village.Buildings), s.Village.Gold)
+	}
+	if findBuilding(s, "builder_hall") == nil || findBuilding(s, "hero_altar") == nil || countBuildings(s, "hero_base") != 2 {
+		t.Fatalf("%+v", s.Village.Buildings)
+	}
+}
+
+func TestVillage_PlaceCharges_AndPersists(t *testing.T) {
+	p := newPlayer(t)
+	s, err := place(p, "k-"+randomHex(8), "defense_tower", 40, 40, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.Village.Gold != 4400 {
+		t.Fatalf("gold %d", s.Village.Gold)
+	}
+	again := mustState(t, p)
+	tower := findBuilding(again, "defense_tower")
+	if again.Village.Gold != 4400 || tower == nil || tower.X != 40 || tower.Z != 40 {
+		t.Fatalf("%+v", again.Village)
+	}
+}
+
+func TestVillage_RefusalsChangeNothing(t *testing.T) {
+	p := newPlayer(t)
+	cases := []struct {
+		name, message string
+		call          func() error
+	}{
+		{"overlap", "Overlap", func() error { _, e := place(p, "k-"+randomHex(8), "defense_tower", 22, 22, 0); return e }},
+		{"off the map", "OutOfBounds", func() error { _, e := place(p, "k-"+randomHex(8), "defense_tower", 49, 49, 0); return e }},
+		{"negative", "OutOfBounds", func() error { _, e := place(p, "k-"+randomHex(8), "wall", -1, 0, 0); return e }},
+		{"enormous", "OutOfBounds", func() error { _, e := place(p, "k-"+randomHex(8), "wall", 2147483647, 2147483647, 0); return e }},
+		{"unknown building", "UnknownBuilding", func() error { _, e := place(p, "k-"+randomHex(8), "free_gold_machine", 1, 1, 0); return e }},
+		{"bad rotation", "NotRotatable", func() error { _, e := place(p, "k-"+randomHex(8), "defense_tower", 1, 1, 7); return e }},
+		{"second dojo", "LimitReached", func() error { _, e := place(p, "k-"+randomHex(8), "dojo_hq", 1, 1, 0); return e }},
+		{"huge wall run", "OutOfBounds", func() error { _, e := walls(p, "k-"+randomHex(8), 0, 0, 2147483647, 0); return e }},
+		{"wall through a building", "Overlap", func() error { _, e := walls(p, "k-"+randomHex(8), 20, 24, 30, 24); return e }},
+		{"unknown id", "NotFound", func() error { _, e := buildingOp(p, "sd_village_upgrade", "k-"+randomHex(8), 9999); return e }},
+	}
+	before := mustState(t, p)
+	for _, c := range cases {
+		expectError(t, c.call(), c.message)
+	}
+	after := mustState(t, p)
+	if after.Village.Gold != before.Village.Gold || len(after.Village.Buildings) != len(before.Village.Buildings) {
+		t.Fatalf("a refused request changed the village: %+v", after.Village)
+	}
+}
+
+func TestVillage_ForgedFieldsAreRefused(t *testing.T) {
+	p := newPlayer(t)
+	gold := mustState(t, p).Village.Gold
+	for _, payload := range []string{
+		`{"key":"forged-key-01","definitionId":"wall","x":1,"z":1,"cost":0}`,
+		`{"key":"forged-key-02","definitionId":"wall","x":1,"z":1,"gold":999999}`,
+		`{"key":"forged-key-03","definitionId":"wall","x":1,"z":1,"level":10}`,
+		`{"definitionId":"wall","x":1,"z":1}`,
+	} {
+		if _, err := p.rpc("sd_village_place", payload); err == nil {
+			t.Errorf("must be refused: %s", payload)
+		}
+	}
+	mine := findBuilding(mustState(t, p), "gold_mine")
+	if _, err := p.rpc("sd_village_collect", fmt.Sprintf(`{"key":"forged-key-04","id":%d,"amount":999999}`, mine.ID)); err == nil {
+		t.Error("collect must not accept an amount")
+	}
+	if got := mustState(t, p).Village.Gold; got != gold {
+		t.Fatalf("gold changed from %d to %d", gold, got)
+	}
+}
+
+func TestVillage_Replay_ChargesOnce(t *testing.T) {
+	p := newPlayer(t)
+	key := "k-" + randomHex(8)
+	for i := 0; i < 4; i++ {
+		s, err := place(p, key, "defense_tower", 40, 40, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if s.Village.Gold != 4400 {
+			t.Fatalf("attempt %d: gold %d", i, s.Village.Gold)
+		}
+	}
+	final := mustState(t, p)
+	if final.Village.Gold != 4400 || countBuildings(final, "defense_tower") != 1 {
+		t.Fatalf("%+v", final.Village)
+	}
+	_, err := place(p, key, "defense_tower", 44, 44, 0)
+	expectError(t, err, "KEY_REUSED")
+}
+
+func TestVillage_ConcurrentSameCell_OnlyOneWins(t *testing.T) {
+	p := newPlayer(t)
+	var wins int64
+	var wg sync.WaitGroup
+	for i := 0; i < 25; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if _, err := walls(p, "k-"+randomHex(8), 40, 40, 44, 40); err == nil {
+				atomic.AddInt64(&wins, 1)
+			}
+		}()
+	}
+	wg.Wait()
+	final := mustState(t, p)
+	if wins != 1 || countBuildings(final, "wall") != 5 || final.Village.Gold != 5000-5*25 {
+		t.Fatalf("wins=%d walls=%d gold=%d", wins, countBuildings(final, "wall"), final.Village.Gold)
+	}
+}
+
+func TestVillage_ConcurrentBuilds_CannotOverspend(t *testing.T) {
+	p := newPlayer(t)
+	grant(t, p, map[string]interface{}{"setGold": 3*25 + 10})
+	var wins int64
+	var wg sync.WaitGroup
+	for i := 0; i < 20; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			if _, err := walls(p, "k-"+randomHex(8), 2+i*2, 0, 2+i*2, 0); err == nil {
+				atomic.AddInt64(&wins, 1)
+			}
+		}(i)
+	}
+	wg.Wait()
+	final := mustState(t, p)
+	if wins != 3 || countBuildings(final, "wall") != 3 || final.Village.Gold != 10 {
+		t.Fatalf("wins=%d walls=%d gold=%d", wins, countBuildings(final, "wall"), final.Village.Gold)
+	}
+}
+
+func TestVillage_ConcurrentSeventhBase_LimitHolds(t *testing.T) {
+	p := newPlayer(t)
+	grant(t, p, map[string]interface{}{"setGold": 20000})
+	var wg sync.WaitGroup
+	for i := 0; i < 16; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			place(p, "k-"+randomHex(8), "hero_base", i*3, 0, 0)
+		}(i)
+	}
+	wg.Wait()
+	final := mustState(t, p)
+	if countBuildings(final, "hero_base") != 6 {
+		t.Fatalf("bases=%d", countBuildings(final, "hero_base"))
+	}
+	if final.Village.Gold != 20000-4*400 {
+		t.Fatalf("gold=%d", final.Village.Gold)
+	}
+}
+
+func TestVillage_RemovingABase_ReleasesItsHero(t *testing.T) {
+	p := blank(t, 0)
+	s := grant(t, p, map[string]interface{}{"archetypeId": legend})
+	slot := baseIDs(s)[0]
+	if _, err := p.rpc("sd_assign_hero", map[string]interface{}{"slot": slot, "instanceId": s.Heroes[0].InstanceID}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := buildingOp(p, "sd_village_remove", "k-"+randomHex(8), slot); err != nil {
+		t.Fatal(err)
+	}
+	if final := mustState(t, p); final.Heroes[0].BaseSlot != nil {
+		t.Fatalf("hero still points at a removed base: %+v", final.Heroes[0])
+	}
+}
+
+func TestVillage_MoveKeepsAssignment_AndUpgradeCharges(t *testing.T) {
+	p := blank(t, 0)
+	s := grant(t, p, map[string]interface{}{"archetypeId": legend})
+	slot := baseIDs(s)[0]
+	hero := s.Heroes[0].InstanceID
+	if _, err := p.rpc("sd_assign_hero", map[string]interface{}{"slot": slot, "instanceId": hero}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := p.rpc("sd_village_move", map[string]interface{}{"key": "k-" + randomHex(8), "id": slot, "x": 40, "z": 40, "rotation": 0}); err != nil {
+		t.Fatal(err)
+	}
+	gold := mustState(t, p).Village.Gold
+	if _, err := buildingOp(p, "sd_village_upgrade", "k-"+randomHex(8), slot); err != nil {
+		t.Fatal(err)
+	}
+	final := mustState(t, p)
+	moved := baseView(final, slot)
+	if moved.X != 40 || moved.Hero == nil || *moved.Hero != hero || moved.Level != 2 || final.Village.Gold != gold-400 {
+		t.Fatalf("%+v gold=%d", moved, final.Village.Gold)
+	}
+}
+
+func baseView(s state, id int) buildingView {
+	for _, b := range s.Village.Buildings {
+		if b.ID == id {
+			return b
+		}
+	}
+	return buildingView{}
+}
+
+func TestVillage_Collect_UsesServerTime(t *testing.T) {
+	p := newPlayer(t)
+	mine := findBuilding(mustState(t, p), "gold_mine")
+	_, err := buildingOp(p, "sd_village_collect", "k-"+randomHex(8), mine.ID)
+	expectError(t, err, "NothingToCollect")
+
+	grant(t, p, map[string]interface{}{"backdateCollectHours": 1})
+	s, err := buildingOp(p, "sd_village_collect", "k-"+randomHex(8), mine.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.Village.Gold != 5600 {
+		t.Fatalf("one hour should pay 600, gold=%d", s.Village.Gold)
+	}
+	_, err = buildingOp(p, "sd_village_collect", "k-"+randomHex(8), mine.ID)
+	expectError(t, err, "NothingToCollect")
+}
+
+func TestVillage_ConcurrentCollect_PaysOnce(t *testing.T) {
+	p := newPlayer(t)
+	mine := findBuilding(mustState(t, p), "gold_mine")
+	grant(t, p, map[string]interface{}{"backdateCollectHours": 1})
+	var wg sync.WaitGroup
+	for i := 0; i < 25; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			buildingOp(p, "sd_village_collect", "k-"+randomHex(8), mine.ID)
+		}()
+	}
+	wg.Wait()
+	if gold := mustState(t, p).Village.Gold; gold != 5600 {
+		t.Fatalf("25 simultaneous collects paid out %d", gold-5000)
+	}
+}
+
+func TestVillage_CannotTouchAnotherPlayersVillage(t *testing.T) {
+	victim, attacker := newPlayer(t), newPlayer(t)
+	if _, err := place(victim, "k-"+randomHex(8), "defense_tower", 40, 40, 0); err != nil {
+		t.Fatal(err)
+	}
+	before := mustState(t, victim)
+	tower := findBuilding(before, "defense_tower")
+
+	// The attacker has no building with this id, so nothing of the victim's can be reached.
+	_, err := buildingOp(attacker, "sd_village_remove", "k-"+randomHex(8), tower.ID)
+	expectError(t, err, "NotFound")
+	_, err = buildingOp(attacker, "sd_village_upgrade", "k-"+randomHex(8), tower.ID)
+	expectError(t, err, "NotFound")
+
+	after := mustState(t, victim)
+	if len(after.Village.Buildings) != len(before.Village.Buildings) || after.Village.Gold != before.Village.Gold {
+		t.Fatal("the victim's village changed")
+	}
+}
+
+func TestVillage_LedgerAlwaysMatchesGold(t *testing.T) {
+	p := newPlayer(t)
+	var wg sync.WaitGroup
+	for i := 0; i < 15; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			walls(p, "k-"+randomHex(8), i, 0, i, 3)
+		}(i)
+	}
+	wg.Wait()
+	body, err := p.rpc("sd_dev_audit", "{}")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var audit struct {
+		Gold          int64 `json:"gold"`
+		GoldLedgerSum int64 `json:"goldLedgerSum"`
+	}
+	json.Unmarshal([]byte(body), &audit)
+	if audit.Gold != audit.GoldLedgerSum || audit.Gold >= 5000 {
+		t.Fatalf("%+v", audit)
 	}
 }
 
@@ -957,7 +1350,7 @@ func TestProductionMode_HasNoDevCalls(t *testing.T) {
 		}
 	}
 	s := mustState(t, p)
-	if s.Crystals != 3000 || len(s.Heroes) != 0 || len(s.Items) != 0 {
+	if s.Crystals != 3000 || len(s.Heroes) != 0 || len(s.Items) != 0 || s.Village.Gold != 5000 || len(s.Village.Buildings) != 7 {
 		t.Fatalf("production players must start with no free heroes or items: %+v", s)
 	}
 }

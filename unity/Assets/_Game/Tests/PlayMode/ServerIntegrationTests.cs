@@ -208,5 +208,141 @@ namespace ShinobiDominion.Tests
             yield return null;
             Assert.IsFalse(File.Exists(_savePath + ".heroes"), "Online, heroes must not be saved locally");
         }
+
+        // ---------- The village on the server ----------
+
+        private IEnumerator ServerState(Action<ServerState> use)
+        {
+            var task = _direct.GetStateAsync();
+            yield return WaitFor(() => task.IsCompleted);
+            use(task.Result);
+        }
+
+        [UnityTest]
+        public IEnumerator Village_ComesFromTheServer()
+        {
+            yield return ServerState(state =>
+            {
+                Assert.AreEqual(state.Village.gold, Controller.Village.Gold);
+                Assert.AreEqual(state.Village.buildings.Count, Controller.Village.BuildingCount);
+            });
+            StringAssert.Contains($"Gold {Controller.Village.Gold:N0}", string.Join(" ", _root.GetComponentsInChildren<Text>().Select(t => t.text)));
+        }
+
+        [UnityTest]
+        public IEnumerator PlacingABuilding_IsChargedAndStoredByTheServer()
+        {
+            var gold = Controller.Village.Gold;
+            Controller.Select(First("builder_hall").Id);
+            yield return null;
+            Assert.IsTrue(Controller.OpenCatalog());
+            Assert.IsTrue(Controller.BeginPlacement("defense_tower"));
+            Controller.SetGhostOrigin(new GridCoord(40, 40));
+            Assert.AreEqual(VillageError.None, Controller.ConfirmPlacementAction());
+            yield return WaitFor(() => Controller.Village.CountOf("defense_tower") == 1);
+
+            Assert.AreEqual(gold - 600, Controller.Village.Gold);
+            Assert.IsNull(Controller.Toolbar, "Placement closes once the server accepts it");
+            yield return ServerState(state =>
+            {
+                Assert.AreEqual(gold - 600, state.Village.gold);
+                Assert.IsTrue(state.Village.buildings.Any(b => b.definitionId == "defense_tower" && b.x == 40 && b.z == 40));
+            });
+        }
+
+        [UnityTest]
+        public IEnumerator WallRun_MoveUpgradeAndRemove_AllGoThroughTheServer()
+        {
+            Controller.Select(First("builder_hall").Id);
+            yield return null;
+            Controller.OpenCatalog();
+            Controller.BeginPlacement(Village.WallId);
+            Controller.SetWallRun(new GridCoord(35, 40), new GridCoord(39, 40));
+            Assert.AreEqual(VillageError.None, Controller.ConfirmWallRun());
+            yield return WaitFor(() => Controller.Village.CountOf(Village.WallId) == 5);
+            Controller.ExitPlacement();
+            Controller.CloseAll();
+
+            var heroBase = First("hero_base").Id;
+            Controller.Select(heroBase);
+            yield return null;
+            Assert.IsTrue(Controller.BeginMove(heroBase));
+            Controller.SetGhostOrigin(new GridCoord(42, 42));
+            Controller.ConfirmMove();
+            yield return WaitFor(() => Controller.Village.Find(heroBase).Origin == new GridCoord(42, 42));
+            Assert.AreEqual(VillageScreen.Home, Controller.UiState.Screen);
+
+            Controller.Select(heroBase);
+            yield return ClickWhenReady("UpgradeButton");
+            yield return WaitFor(() => Controller.Village.Find(heroBase).Level == 2);
+
+            yield return ClickWhenReady("RemoveButton");
+            yield return WaitFor(() => Controller.Village.Find(heroBase) == null);
+            yield return ServerState(state =>
+            {
+                Assert.IsFalse(state.Village.buildings.Any(b => b.id == heroBase), "The server must have removed it too");
+                Assert.AreEqual(5, state.Village.buildings.Count(b => b.definitionId == Village.WallId));
+            });
+        }
+
+        [UnityTest]
+        public IEnumerator ServerRefusal_IsShown_AndChangesNothing()
+        {
+            // The client's copy is made stale on purpose, so only the server can catch the conflict.
+            var placeTask = _direct.PlaceAsync("direct-" + Guid.NewGuid().ToString("N"), "defense_tower", 40, 40, 0);
+            yield return WaitFor(() => placeTask.IsCompleted);
+
+            Controller.Select(First("builder_hall").Id);
+            yield return null;
+            Controller.OpenCatalog();
+            Controller.BeginPlacement("defense_tower");
+            Controller.SetGhostOrigin(new GridCoord(40, 40));
+            Assert.AreEqual(VillageError.None, Controller.ConfirmPlacementAction(), "The stale client sees free ground");
+            yield return WaitFor(() => Controller.LastMessage == VillageErrorText.Describe(VillageError.Overlap));
+            Assert.IsNotNull(Controller.Toolbar, "Stays in placement so the player can adjust");
+            yield return ServerState(state => Assert.AreEqual(1, state.Village.buildings.Count(b => b.definitionId == "defense_tower")));
+        }
+
+        [UnityTest]
+        public IEnumerator TamperedLocalSave_IsIgnored()
+        {
+            // A forged save with a rich player and a building placed for free.
+            var forged = new VillageSave
+            {
+                schemaVersion = VillageSave.CurrentSchemaVersion,
+                mapVersion = VillageSave.CurrentMapVersion,
+                nextInstanceId = 100,
+                gold = 999999999,
+                crystals = 999999999
+            };
+            forged.buildings.Add(new BuildingSave { id = 50, definitionId = "defense_tower", x = 5, z = 5, level = 1 });
+            File.WriteAllText(_savePath, forged.ToJson());
+
+            Object.Destroy(_root);
+            yield return null;
+            _root = new GameObject("VillageBootstrapUnderTest");
+            Controller = _root.AddComponent<VillageBootstrap>().Controller;
+            yield return WaitFor(() => Controller.ConnectTask.IsCompleted);
+
+            Assert.IsTrue(Controller.IsOnline);
+            Assert.Less(Controller.Village.Gold, 999999999);
+            Assert.AreEqual(0, Controller.Village.CountOf("defense_tower"));
+            yield return ServerState(state => Assert.Less(state.Village.gold, 999999999));
+        }
+
+        [UnityTest]
+        public IEnumerator Online_NoVillageFileIsWrittenToTheDevice()
+        {
+            var mine = First("gold_mine").Id;
+            Controller.Select(mine);
+            yield return null;
+            Controller.BeginMove(mine);
+            Controller.SetGhostOrigin(new GridCoord(42, 42));
+            Controller.ConfirmMove();
+            yield return WaitFor(() => Controller.Village.Find(mine).Origin == new GridCoord(42, 42));
+            yield return null;
+            yield return null;
+            Assert.IsFalse(File.Exists(_savePath), "Online, the village must not be saved locally");
+        }
     }
 }

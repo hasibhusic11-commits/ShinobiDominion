@@ -202,6 +202,7 @@ namespace ShinobiDominion.Game
         public VillageError AssignHero(int baseId, string heroInstanceId)
         {
             if (!Roster.Owns(heroInstanceId)) return VillageError.InvalidHeroId;
+            if (RefuseWhenNoServer()) return VillageError.None;
             if (IsOnline)
             {
                 AssignOnline(baseId, heroInstanceId);

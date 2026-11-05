@@ -28,6 +28,8 @@ Start Docker Desktop, then from `backend/` run `docker compose up -d --wait naka
 2. **Summon:** tap the Summoning Gate, which has the red gate frame. Check the rates, which should say they are test rates. Summon x10: you pay 1,000 and get exactly ten heroes, whatever they are.
 3. **Persistence:** stop and restart Play Mode. Crystals and heroes stay, because the server holds them.
 4. **Server off:** run `docker compose stop nakama`, then try to summon. You should get a clear message and lose nothing.
+5. **Village on the server:** with the server running, build a tower and draw some walls, then restart Play Mode. Everything stays, and gold matches. Your village now lives on the server, so earlier local layouts are gone. The Undo button is hidden while online.
+6. **Build conflict:** a refused build shows the reason in the placement bar and charges nothing.
 
 ## Please watch for
 - Whether pan, zoom and placement *feel* right. Automated tests prove they work, not that they feel good.

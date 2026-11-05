@@ -51,8 +51,14 @@ Decided in Phase 3. See ADR-018 for persistence.
 ## ADR-018: Custom Postgres tables, not Nakama's wallet and storage
 Each change of value is one SQL transaction in our own tables, starting with a lock on the player's row. This gives all-or-nothing behaviour directly, instead of relying on separate wallet and storage writes, and it was proven with concurrency and crash tests. The cost is that Nakama's built-in wallet and storage console views do not show this data, and one player's mutations run strictly one at a time, which is fine at player scale.
 
-## ADR-019: Village stays on the device for now
-Phase 3's brief names inventory, summoning and evolution, so those moved first. Village layout and gold have not moved, which means rule 10 is not yet fully met. See `SECURITY_MODEL.md`.
+## ADR-019: Village on the server, with rules in two languages
+The server enforces village rules in Go, in the same locked transaction as everything else. The client keeps its C# copy for instant previews only. A shared scenario file runs through both, so a rule changed on one side alone fails a test.
+
+Consequences, reversible unless noted:
+- **Undo is offline-only.** Online it would be a free refund, and a building "undo" needs its own rules first.
+- **Earlier local villages are not migrated.** They were forgeable test data, so each player starts from the server's starter village.
+- **Editor and development builds keep offline play** for testing. Release builds do not.
+- **Hero assignment now needs a real Hero Base**, and removing a base frees its hero in the same transaction.
 
 ## ADR-020: Local machine limits
 WSL2 is capped at 3 GB in `%USERPROFILE%\.wslconfig`, because this PC has 7.3 GB and Unity also needs room.

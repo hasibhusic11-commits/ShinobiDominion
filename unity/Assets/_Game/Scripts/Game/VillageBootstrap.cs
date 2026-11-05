@@ -20,6 +20,16 @@ namespace ShinobiDominion.Game
         /// <summary>Lets tests supply a server. Unset, tests run offline and the game uses its local config.</summary>
         public static Func<IGameServer> ServerOverride;
 
+        /// <summary>
+        /// Editor and development builds may play from a local file. Release builds never do, so a
+        /// tampered save cannot become a real village. Tests can turn this off to check that path.
+        /// </summary>
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        public static bool AllowOfflinePlay = true;
+#else
+        public static bool AllowOfflinePlay = false;
+#endif
+
         public VillageController Controller { get; private set; }
         public IsoCamera IsoCamera { get; private set; }
 
@@ -32,14 +42,16 @@ namespace ShinobiDominion.Game
 
             var savePath = SavePathOverride ?? Path.Combine(Application.persistentDataPath, SaveFileName);
             var store = new FileVillageStore(savePath);
-            var village = store.LoadOrCreate(catalog, DateTime.UtcNow.Ticks);
+            var village = AllowOfflinePlay
+                ? store.LoadOrCreate(catalog, DateTime.UtcNow.Ticks)
+                : StarterVillage.Create(catalog, DateTime.UtcNow.Ticks);
 
             var heroConfig = Resources.Load<TextAsset>("Config/heroes");
             if (heroConfig == null)
                 throw new InvalidOperationException("Resources/Config/heroes.json is missing.");
             var heroCatalog = HeroCatalog.FromJson(heroConfig.text);
             var rosterStore = new FileRosterStore(savePath + ".heroes");
-            var roster = rosterStore.LoadOrCreate(heroCatalog);
+            var roster = AllowOfflinePlay ? rosterStore.LoadOrCreate(heroCatalog) : new HeroRoster(heroCatalog);
 
             // A base can only point at a hero the player still owns.
             foreach (var building in new System.Collections.Generic.List<BuildingInstance>(village.Buildings))
@@ -59,7 +71,8 @@ namespace ShinobiDominion.Game
 
             var ui = new UiRoot(transform);
             Controller = gameObject.AddComponent<VillageController>();
-            Controller.Initialize(village, store, roster, rosterStore, IsoCamera, world, ui);
+            Controller.AllowOfflinePlay = AllowOfflinePlay;
+            Controller.Initialize(village, AllowOfflinePlay ? store : null, roster, AllowOfflinePlay ? rosterStore : null, IsoCamera, world, ui);
 
             if (ServerOverride != null)
             {

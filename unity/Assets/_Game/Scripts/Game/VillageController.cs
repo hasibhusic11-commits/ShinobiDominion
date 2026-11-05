@@ -8,8 +8,8 @@ using UnityEngine.UI;
 namespace ShinobiDominion.Game
 {
     /// <summary>
-    /// Local JSON village store. PROTOTYPE ONLY: Phase 3 replaces this with server persistence,
-    /// because a file on the device can be edited by the player.
+    /// Local JSON village store for offline development only. It is never read or written while
+    /// online, and release builds do not use it, because a player can edit a file on their device.
     /// </summary>
     public sealed class FileVillageStore
     {
@@ -146,6 +146,17 @@ namespace ShinobiDominion.Game
 
         private void Update()
         {
+            // Keep trying to reach the server, but never swap the village out mid-action.
+            if (_server != null && !IsOnline && !_connecting && UiState.Screen == VillageScreen.Home)
+            {
+                _reconnectTimer -= Time.unscaledDeltaTime;
+                if (_reconnectTimer <= 0f)
+                {
+                    _reconnectTimer = 10f;
+                    ConnectTask = ConnectAsync();
+                }
+            }
+
             _markerTimer -= Time.unscaledDeltaTime;
             if (_markerTimer > 0f) return;
             _markerTimer = 1f;
@@ -187,7 +198,8 @@ namespace ShinobiDominion.Game
 
         private void OnVillageChanged()
         {
-            _dirty = true;
+            // Online, the server holds the truth, so nothing is saved on the device.
+            _dirty = !IsOnline;
             _view.Sync();
             RefreshHud();
         }
@@ -301,12 +313,25 @@ namespace ShinobiDominion.Game
             var building = Village.Find(id);
             if (building == null) return;
             if (UiState.Screen == VillageScreen.Home && Village.PendingCollection(building, Now) >= 1
-                && Village.TryCollect(id, Now, out _) == VillageError.None)
+                && CollectFromTap(id))
             {
-                RefreshCollectMarkers();
                 return;
             }
             Select(id);
+        }
+
+        private bool CollectFromTap(int id)
+        {
+            if (IsOnline)
+            {
+                // If the server says there is nothing yet, the player's tap still opens the panel.
+                VillageRequest($"collect|{id}", key => _server.CollectAsync(key, id), RefreshCollectMarkers, () => Select(id));
+                return true;
+            }
+            if (!CanChangeVillage) return false;
+            if (Village.TryCollect(id, Now, out _) != VillageError.None) return false;
+            RefreshCollectMarkers();
+            return true;
         }
 
         public void Select(int id)
@@ -366,7 +391,7 @@ namespace ShinobiDominion.Game
                 if (definition.IsWall)
                 {
                     var group = Village.ConnectedWalls(building.Id);
-                    panel.Action("UpgradeGroupButton", $"Upgrade connected walls ({group.Count})", () => RunAndRefresh(Village.TryUpgradeWallGroup(building.Id)));
+                    panel.Action("UpgradeGroupButton", $"Upgrade connected walls ({group.Count})", () => Upgrade(building.Id, true));
                 }
                 panel.Action("MoveButton", "Move", () => BeginMove(building.Id));
                 if (definition.removable) panel.Action("RemoveButton", "Remove", () => RemoveSelected(building.Id));
@@ -422,7 +447,7 @@ namespace ShinobiDominion.Game
                 return;
             }
             var cost = building.Definition.UpgradeCost(building.Level);
-            panel.Action("UpgradeButton", $"Upgrade ({cost:N0} gold)", () => RunAndRefresh(Village.TryUpgrade(building.Id)), Village.CanAfford(cost, 0));
+            panel.Action("UpgradeButton", $"Upgrade ({cost:N0} gold)", () => Upgrade(building.Id, false), Village.CanAfford(cost, 0));
         }
 
         private void RunAndRefresh(VillageError error)
@@ -431,17 +456,38 @@ namespace ShinobiDominion.Game
             ShowContextPanel();
         }
 
+        private void Upgrade(int id, bool group)
+        {
+            if (RefuseWhenNoServer()) return;
+            if (IsOnline)
+            {
+                VillageRequest($"upgrade|{id}|{group}|{Village.Find(id)?.Level}", key => _server.UpgradeAsync(key, id, group), ShowContextPanel, ShowContextPanel);
+                return;
+            }
+            RunAndRefresh(group ? Village.TryUpgradeWallGroup(id) : Village.TryUpgrade(id));
+        }
+
         private void Collect(int id)
         {
+            if (RefuseWhenNoServer()) return;
+            if (IsOnline)
+            {
+                VillageRequest($"collect|{id}", key => _server.CollectAsync(key, id), ShowContextPanel, ShowContextPanel);
+                return;
+            }
             RunAndRefresh(Village.TryCollect(id, Now, out _));
         }
 
         private void RemoveSelected(int id)
         {
-            var heldHero = Village.Find(id)?.AssignedHeroInstanceId != null;
+            if (RefuseWhenNoServer()) return;
+            if (IsOnline)
+            {
+                VillageRequest($"remove|{id}", key => _server.RemoveAsync(key, id), CloseAll, ShowContextPanel);
+                return;
+            }
             var error = Village.TryRemove(id);
             LastMessage = VillageErrorText.Describe(error);
-            if (error == VillageError.None && heldHero) ReleaseSlotOnline(id);
             if (error == VillageError.None) CloseAll();
             else ShowContextPanel();
         }
@@ -464,9 +510,11 @@ namespace ShinobiDominion.Game
             CloseAll();
             _panel.Show("Menu", CloseAll, panel =>
             {
-                panel.Line("Prototype build. Your village is saved on this device only.");
+                panel.Line(IsOnline ? "Connected. Your village is saved on the server." : "Not connected to the server.");
                 panel.Line(Village.Catalog.BalanceStatus, 18);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                 panel.Action("ResetButton", "Reset village (development)", ConfirmReset);
+#endif
             });
         }
 
@@ -474,7 +522,7 @@ namespace ShinobiDominion.Game
         {
             _panel.Show("Reset village?", CloseAll, panel =>
             {
-                panel.Line("This deletes your local layout and starts over. It cannot be undone.");
+                panel.Line("This deletes your layout and starts over. It cannot be undone.");
                 panel.Action("ConfirmResetButton", "Yes, reset", ResetVillage, true, Ui.AttackColor);
                 panel.Action("CancelResetButton", "Keep my village", CloseAll);
             });
@@ -482,9 +530,17 @@ namespace ShinobiDominion.Game
 
         private void ResetVillage()
         {
+            if (IsOnline)
+            {
+                Run(async () =>
+                {
+                    ApplyServerState(await _server.DevResetVillageAsync());
+                    CloseAll();
+                }, CloseAll);
+                return;
+            }
             Village.Restore(StarterVillage.Create(Village.Catalog, Now).ToSave());
             CloseAll();
-            if (IsOnline) ConnectTask = ConnectAsync();
         }
 
         // ---------- Build catalog: reachable only through the Builder Hall ----------
@@ -514,7 +570,8 @@ namespace ShinobiDominion.Game
                     if (definition.removable)
                         CatalogCard(grid, definition);
 
-                if (_history.Count > 0)
+                // Undo is offline-only for now: online it would be a free refund the server must not give.
+                if (!IsOnline && _history.Count > 0)
                     panel.Action("CatalogUndoButton", "Undo last build", UndoFromCatalog);
             });
         }
@@ -584,6 +641,7 @@ namespace ShinobiDominion.Game
 
         public bool BeginPlacement(string definitionId)
         {
+            if (RefuseWhenNoServer()) return false;
             var definition = Village.Catalog.Get(definitionId);
             if (!UiState.TryBeginPlacement(definition.IsWall)) return false;
             _panel.Hide();
@@ -596,7 +654,7 @@ namespace ShinobiDominion.Game
                 _hasWallRun = false;
                 _confirmButton = _toolbar.Add("ConfirmButton", "Confirm", () => ConfirmWallRun(), Ui.AccentColor);
                 _toolbar.Add("ClearButton", "Clear", ClearWallRun);
-                _undoButton = _toolbar.Add("UndoButton", "Undo", UndoWall);
+                if (!IsOnline) _undoButton = _toolbar.Add("UndoButton", "Undo", UndoWall);
                 _toolbar.Add("DoneButton", "Done", ExitPlacement);
                 RefreshWallPreview();
             }
@@ -689,6 +747,17 @@ namespace ShinobiDominion.Game
             var error = GhostError();
             LastMessage = VillageErrorText.Describe(error);
             if (error != VillageError.None) return error;
+            if (RefuseWhenNoServer()) return VillageError.None;
+
+            if (IsOnline)
+            {
+                var definitionId = _placingDefinition.id;
+                var origin = _ghostOrigin;
+                var rotation = (int)_ghostRotation;
+                VillageRequest($"place|{definitionId}|{origin.X}|{origin.Z}|{rotation}",
+                    key => _server.PlaceAsync(key, definitionId, origin.X, origin.Z, rotation), ExitPlacement, ShowFailureOnToolbar);
+                return VillageError.None;
+            }
 
             _history.Capture(Village);
             error = Village.TryPlace(_placingDefinition.id, _ghostOrigin, _ghostRotation, Now, out _);
@@ -724,6 +793,7 @@ namespace ShinobiDominion.Game
 
         public bool BeginMove(int id)
         {
+            if (RefuseWhenNoServer()) return false;
             var building = Village.Find(id);
             if (building == null || !UiState.TryBeginMove()) return false;
             _panel.Hide();
@@ -745,6 +815,17 @@ namespace ShinobiDominion.Game
 
         public VillageError ConfirmMove()
         {
+            if (RefuseWhenNoServer()) return VillageError.None;
+            if (IsOnline)
+            {
+                var id = _movingId;
+                var origin = _ghostOrigin;
+                var rotation = (int)_ghostRotation;
+                VillageRequest($"move|{id}|{origin.X}|{origin.Z}|{rotation}",
+                    key => _server.MoveAsync(key, id, origin.X, origin.Z, rotation), EndMoveFlow, ShowFailureOnToolbar);
+                return VillageError.None;
+            }
+
             var error = Village.TryMove(_movingId, _ghostOrigin, _ghostRotation);
             LastMessage = VillageErrorText.Describe(error);
             if (error == VillageError.None) EndMoveFlow();
@@ -771,7 +852,7 @@ namespace ShinobiDominion.Game
                 _placementCells.Clear();
                 _toolbar.SetStatus("Press and drag across the grid to draw a straight wall.");
                 _confirmButton.interactable = false;
-                _undoButton.interactable = _history.Count > 0;
+                if (_undoButton != null) _undoButton.interactable = _history.Count > 0;
                 return;
             }
 
@@ -786,7 +867,7 @@ namespace ShinobiDominion.Game
                 ? $"{preview.Cells.Count} wall segments for {preview.TotalGold:N0} gold"
                 : $"Blocked: {VillageErrorText.Describe(preview.Error)}");
             _confirmButton.interactable = preview.CanCommit;
-            _undoButton.interactable = _history.Count > 0;
+            if (_undoButton != null) _undoButton.interactable = _history.Count > 0;
         }
 
         /// <summary>Test and tool entry point: sets the current run as if dragged.</summary>
@@ -804,6 +885,16 @@ namespace ShinobiDominion.Game
             var error = Village.PreviewWallRun(_wallStart, _wallEnd).Error;
             LastMessage = VillageErrorText.Describe(error);
             if (error != VillageError.None) return error;
+            if (RefuseWhenNoServer()) return VillageError.None;
+
+            if (IsOnline)
+            {
+                var start = _wallStart;
+                var end = _wallEnd;
+                VillageRequest($"walls|{start}|{end}",
+                    key => _server.PlaceWallsAsync(key, start.X, start.Z, end.X, end.Z), ClearWallRun, ShowFailureOnToolbar);
+                return VillageError.None;
+            }
 
             _history.Capture(Village);
             error = Village.TryPlaceWallRun(_wallStart, _wallEnd, Now);

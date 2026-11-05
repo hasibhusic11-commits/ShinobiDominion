@@ -18,6 +18,13 @@ namespace ShinobiDominion.Game
         Task<ServerState> SetLockAsync(string instanceId, bool locked);
         Task<ServerState> AssignAsync(int slot, string instanceId);
         Task<ServerState> DevMaxLevelAsync(string instanceId);
+        Task<ServerState> DevResetVillageAsync();
+        Task<ServerState> PlaceAsync(string key, string definitionId, int x, int z, int rotation);
+        Task<ServerState> PlaceWallsAsync(string key, int x1, int z1, int x2, int z2);
+        Task<ServerState> MoveAsync(string key, int id, int x, int z, int rotation);
+        Task<ServerState> RemoveAsync(string key, int id);
+        Task<ServerState> UpgradeAsync(string key, int id, bool group);
+        Task<ServerState> CollectAsync(string key, int id);
     }
 
     public sealed class GameServerException : Exception
@@ -129,5 +136,26 @@ namespace ShinobiDominion.Game
 
         public async Task<ServerState> DevMaxLevelAsync(string instanceId) =>
             ServerState.Parse(await CallAsync("sd_dev_grant", new { maxLevelFor = instanceId }));
+
+        public async Task<ServerState> DevResetVillageAsync() =>
+            ServerState.Parse(await CallAsync("sd_dev_grant", new { resetVillage = true }));
+
+        public async Task<ServerState> PlaceAsync(string key, string definitionId, int x, int z, int rotation) =>
+            ServerState.Parse(await CallAsync("sd_village_place", new { key, definitionId, x, z, rotation }));
+
+        public async Task<ServerState> PlaceWallsAsync(string key, int x1, int z1, int x2, int z2) =>
+            ServerState.Parse(await CallAsync("sd_village_walls", new { key, x1, z1, x2, z2 }));
+
+        public async Task<ServerState> MoveAsync(string key, int id, int x, int z, int rotation) =>
+            ServerState.Parse(await CallAsync("sd_village_move", new { key, id, x, z, rotation }));
+
+        public async Task<ServerState> RemoveAsync(string key, int id) =>
+            ServerState.Parse(await CallAsync("sd_village_remove", new { key, id }));
+
+        public async Task<ServerState> UpgradeAsync(string key, int id, bool group) =>
+            ServerState.Parse(await CallAsync("sd_village_upgrade", new { key, id, group }));
+
+        public async Task<ServerState> CollectAsync(string key, int id) =>
+            ServerState.Parse(await CallAsync("sd_village_collect", new { key, id }));
     }
 }

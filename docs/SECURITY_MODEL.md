@@ -1,16 +1,16 @@
 # Security model
 
 ## What the server controls today
-Crystals, heroes, catalysts, summon rolls, evolution, hero locks and hero base assignments. While connected, the game sends requests and replaces its copy with the answer. It writes no hero file to the device.
+Crystals, gold, heroes, catalysts, summon rolls, evolution, hero locks, hero base assignments, village layout, building limits, placement, walls, moves, upgrades, removals and mine collection. While connected, the game sends requests and replaces its copy with the answer. It writes no hero or village file to the device.
+
+The client keeps a copy of the rules only for instant green and red previews. Mine income uses the server's clock, so changing the device's date earns nothing.
+
+Release builds refuse to change anything without a server and never read a local save. Editor and development builds can still play offline from a local file, for testing only.
 
 ## What the server does NOT control yet
-These still run on the device and **can be forged by editing a local file**. Rule 10 of the brief is not met until they move:
-
-- Village layout, building limits, upgrades and placement validation
-- Gold, and collecting from mines
-- Crystal Mine output. It credits the device's local balance, which the HUD ignores while online, so that output is effectively lost. It is locked until Dojo level 2.
-- Whether a base "slot" is a real Hero Base. The server enforces six slots and hero ownership, but cannot see the village.
 - Battle results, because battles do not exist yet
+- Buildings have no build timers, so construction is instant
+- Training Grounds and Research Hut have no features yet
 
 ## How a request stays safe
 Each summon and evolution is one Postgres transaction:
@@ -34,6 +34,17 @@ Rolls use Go's `crypto/rand` with integer weights. The roll function takes only 
 | Using another player's heroes | Refused, victim unchanged |
 | Hard-killing the server under load | 2,400 retried rolls: totals and ledger agree exactly |
 | Development mode off | Dev calls do not exist, no free heroes |
+| Forged cost, gold, level or collect amount | Refused, nothing changes |
+| Enormous or negative coordinates, huge wall runs | Refused without crashing |
+| 25 simultaneous collects from one mine | Paid once |
+| 20 simultaneous wall builds with gold for 3 | Exactly 3 succeed |
+| 16 simultaneous Hero Bases | Stops at six |
+| Same cell built 25 times at once | One succeeds |
+| Touching another player's village | Not found, victim unchanged |
+| Assigning a hero to a Dojo or an invented base | Refused |
+| Forged local save, online | Ignored, server's village shown |
+| Forged local save, release mode with no server | Never loaded, nothing can change |
+| Client and server rules drifting apart | The same scenario file runs in C# and Go |
 | Removing the database locks (deliberately) | Tests failed, proving they can detect it |
 
 ## Known gaps before any public release

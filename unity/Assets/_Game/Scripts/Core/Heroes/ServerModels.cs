@@ -12,6 +12,7 @@ namespace ShinobiDominion.Core
         public long Crystals;
         public string RosterJson;
         public Dictionary<int, string> HeroBySlot = new Dictionary<int, string>();
+        public VillageSave Village;
 
         public static ServerState Parse(string json) => FromToken(ParseObject(json));
 
@@ -23,6 +24,7 @@ namespace ShinobiDominion.Core
                 RosterJson = token.ToString(Formatting.None)
             };
             if (state.Crystals < 0) throw new FormatException("Server returned negative crystals.");
+            if (token["village"] is JObject village) state.Village = village.ToObject<VillageSave>();
             if (token["heroes"] is JArray heroes)
             {
                 foreach (var hero in heroes)
@@ -105,6 +107,9 @@ namespace ShinobiDominion.Core
         /// <summary>Turns a server error code into words for the player.</summary>
         public static string Describe(string code)
         {
+            // Village refusals use the same names on both sides, so they share one set of wording.
+            if (Enum.TryParse<VillageError>(code, out var villageError) && Enum.IsDefined(typeof(VillageError), villageError))
+                return VillageErrorText.Describe(villageError);
             switch (code)
             {
                 case "INSUFFICIENT_FUNDS": return "Not enough crystals";
@@ -123,6 +128,7 @@ namespace ShinobiDominion.Core
                 case "MISSING_CATALYST": return "Missing the required catalyst";
                 case "HERO_ALREADY_ASSIGNED": return "That hero is already on another base";
                 case "ALL_BASES_FULL": return "All six bases already have heroes";
+                case "BAD_SLOT": return "That is not one of your Hero Bases";
                 default: return "Could not reach the server. Your request is safe to retry.";
             }
         }

@@ -80,6 +80,7 @@ var (
 // Server holds immutable config and the rate limiter.
 type Server struct {
 	catalog *HeroCatalog
+	buildings *BuildingCatalog
 	pool    *SummonPool
 	dev     bool
 	limiter *rateLimiter
@@ -97,12 +98,17 @@ func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runti
 	if err != nil {
 		return fmt.Errorf("summon pool: %w", err)
 	}
+	buildings, err := loadBuildingCatalog(buildingsJSON)
+	if err != nil {
+		return fmt.Errorf("building catalog: %w", err)
+	}
 	if err := migrate(ctx, db); err != nil {
 		return fmt.Errorf("migrations: %w", err)
 	}
 
 	server := &Server{
 		catalog: catalog,
+		buildings: buildings,
 		pool:    pool,
 		dev:     devModeEnabled(env),
 		limiter: newRateLimiter(envFloat(env, "SD_RATE_PER_SEC", 5), envFloat(env, "SD_RATE_BURST", 20)),
@@ -130,6 +136,12 @@ func (s *Server) register(initializer runtime.Initializer, logger runtime.Logger
 		"sd_evolve":       s.rpcEvolve,
 		"sd_set_lock":     s.rpcSetLock,
 		"sd_assign_hero":  s.rpcAssign,
+		"sd_village_place": s.rpcPlace,
+		"sd_village_walls": s.rpcWalls,
+		"sd_village_move": s.rpcMove,
+		"sd_village_remove": s.rpcRemove,
+		"sd_village_upgrade": s.rpcUpgrade,
+		"sd_village_collect": s.rpcCollect,
 	}
 	if s.dev {
 		logger.Warn("DEVELOPMENT MODE: dev grant and audit calls are enabled. Never use this in production.")
@@ -261,8 +273,17 @@ func (s *Server) lockPlayer(ctx context.Context, tx *sql.Tx, userID string) (int
 		}
 	}
 	var crystals int64
-	err = tx.QueryRowContext(ctx, `SELECT crystals FROM sd_player WHERE user_id = $1 FOR UPDATE`, userID).Scan(&crystals)
-	return crystals, err
+	var ready bool
+	err = tx.QueryRowContext(ctx, `SELECT crystals, village_ready FROM sd_player WHERE user_id = $1 FOR UPDATE`, userID).Scan(&crystals, &ready)
+	if err != nil {
+		return 0, err
+	}
+	if !ready {
+		if err := s.createStarterVillage(ctx, tx, userID); err != nil {
+			return 0, err
+		}
+	}
+	return crystals, nil
 }
 
 func addLedger(ctx context.Context, tx *sql.Tx, userID string, delta, balance int64, reason, ref string) error {
@@ -313,6 +334,7 @@ type playerState struct {
 	Crystals      int64            `json:"crystals"`
 	Heroes        []heroState      `json:"heroes"`
 	Items         map[string]int64 `json:"items"`
+	Village       *villageState    `json:"village"`
 }
 
 func loadState(ctx context.Context, tx *sql.Tx, userID string, crystals int64) (*playerState, error) {
@@ -350,7 +372,13 @@ func loadState(ctx context.Context, tx *sql.Tx, userID string, crystals int64) (
 		}
 		state.Items[id] = count
 	}
-	return state, itemRows.Err()
+	if err := itemRows.Err(); err != nil {
+		return nil, err
+	}
+	itemRows.Close()
+	rows.Close()
+	state.Village, err = loadVillageState(ctx, tx, userID, crystals)
+	return state, err
 }
 
 func (s *Server) rpcGetState(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error) {
@@ -760,6 +788,17 @@ func (s *Server) rpcAssign(ctx context.Context, logger runtime.Logger, db *sql.D
 			return err
 		}
 		if request.InstanceID != nil {
+			var definitionID string
+			err := tx.QueryRowContext(ctx, `SELECT definition_id FROM sd_building WHERE user_id = $1 AND id = $2`, userID, request.Slot).Scan(&definitionID)
+			if errors.Is(err, sql.ErrNoRows) {
+				return errBadSlot
+			}
+			if err != nil {
+				return err
+			}
+			if def := s.buildings.byID[definitionID]; def == nil || def.Function != "HeroBase" {
+				return errBadSlot
+			}
 			hero, err := loadHero(ctx, tx, userID, *request.InstanceID)
 			if err != nil {
 				return err
@@ -835,6 +874,9 @@ type devGrantRequest struct {
 	ClearHeroes bool             `json:"clearHeroes"`
 	ClearItems  bool             `json:"clearItems"`
 	MaxLevelFor string           `json:"maxLevelFor"`
+	SetGold     *int64           `json:"setGold"`
+	ResetVillage bool            `json:"resetVillage"`
+	BackdateCollectHours int64   `json:"backdateCollectHours"`
 }
 
 func (s *Server) rpcDevGrant(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error) {
@@ -909,6 +951,31 @@ func (s *Server) rpcDevGrant(ctx context.Context, logger runtime.Logger, db *sql
 				}
 			}
 		}
+		if request.ResetVillage {
+			if err := s.createStarterVillage(ctx, tx, userID); err != nil {
+				return err
+			}
+		}
+		if request.SetGold != nil {
+			if *request.SetGold < 0 {
+				return errBadRequest
+			}
+			var before int64
+			if err := tx.QueryRowContext(ctx, `SELECT gold FROM sd_player WHERE user_id = $1`, userID).Scan(&before); err != nil {
+				return err
+			}
+			if _, err := tx.ExecContext(ctx, `UPDATE sd_player SET gold = $1 WHERE user_id = $2`, *request.SetGold, userID); err != nil {
+				return err
+			}
+			if _, err := tx.ExecContext(ctx, `INSERT INTO sd_currency_ledger (user_id, delta, balance_after, reason, ref, currency) VALUES ($1, $2, $3, 'dev_grant', 'dev', 'gold')`, userID, *request.SetGold-before, *request.SetGold); err != nil {
+				return err
+			}
+		}
+		if request.BackdateCollectHours != 0 {
+			if _, err := tx.ExecContext(ctx, `UPDATE sd_building SET last_collected_ms = last_collected_ms - $1 WHERE user_id = $2`, request.BackdateCollectHours*3600000, userID); err != nil {
+				return err
+			}
+		}
 		if request.MaxLevelFor != "" {
 			if !uuidPattern.MatchString(request.MaxLevelFor) {
 				return errBadRequest
@@ -936,6 +1003,8 @@ type auditResponse struct {
 	SummonDebits  int64 `json:"summonDebits"`
 	Rolls         int64 `json:"rolls"`
 	RollsWithHero int64 `json:"rollsWithHero"`
+	Gold          int64 `json:"gold"`
+	GoldLedgerSum int64 `json:"goldLedgerSum"`
 }
 
 // rpcDevAudit reports totals that must always agree, used to prove crash recovery.
@@ -947,11 +1016,13 @@ func (s *Server) rpcDevAudit(ctx context.Context, logger runtime.Logger, db *sql
 	var audit auditResponse
 	err = db.QueryRowContext(ctx, `SELECT
 		COALESCE((SELECT crystals FROM sd_player WHERE user_id = $1), 0),
-		COALESCE((SELECT sum(delta) FROM sd_currency_ledger WHERE user_id = $1), 0),
-		COALESCE((SELECT -sum(delta) FROM sd_currency_ledger WHERE user_id = $1 AND reason = 'summon'), 0),
+		COALESCE((SELECT sum(delta) FROM sd_currency_ledger WHERE user_id = $1 AND currency = 'crystals'), 0),
+		COALESCE((SELECT -sum(delta) FROM sd_currency_ledger WHERE user_id = $1 AND reason = 'summon' AND currency = 'crystals'), 0),
 		(SELECT count(*) FROM sd_summon_roll WHERE user_id = $1),
-		(SELECT count(*) FROM sd_summon_roll r JOIN sd_hero h ON h.instance_id = r.instance_id WHERE r.user_id = $1)`, userID).
-		Scan(&audit.Crystals, &audit.LedgerSum, &audit.SummonDebits, &audit.Rolls, &audit.RollsWithHero)
+		(SELECT count(*) FROM sd_summon_roll r JOIN sd_hero h ON h.instance_id = r.instance_id WHERE r.user_id = $1),
+		COALESCE((SELECT gold FROM sd_player WHERE user_id = $1), 0),
+		COALESCE((SELECT sum(delta) FROM sd_currency_ledger WHERE user_id = $1 AND currency = 'gold'), 0)`, userID).
+		Scan(&audit.Crystals, &audit.LedgerSum, &audit.SummonDebits, &audit.Rolls, &audit.RollsWithHero, &audit.Gold, &audit.GoldLedgerSum)
 	if err != nil {
 		return "", err
 	}
