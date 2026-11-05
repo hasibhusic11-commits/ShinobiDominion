@@ -36,16 +36,19 @@ Layout, gold, limits, walls, moves, upgrades, removal and collection are all ser
 ## Phase 4: combat vertical slice — not started
 ## Phase 5: polish and ship readiness — not started
 
+## Visual overhaul — done as temporary art, awaiting your review
+Curved-roof ninja architecture for every building, modular walls with level tiers, Hero Bases with figures and emblems, textured ground, forest, mountains, waterfall, toon lighting, smoother camera and a quality setting. See `ART_STATUS.md` for what still needs an artist, and `VISUAL_BASELINE.md` for the before state and asset evaluation.
+
 ## Latest test results (2026-11-05)
 | Suite | Result |
 |---|---|
 | .NET harness (`tools/core-tests`) | 104 of 104 passed |
 | Unity EditMode, 6000.3.28f1 | 104 of 104 passed |
-| Unity PlayMode, including live-server and release-mode tests | 51 of 51 passed |
+| Unity PlayMode, including live-server, release-mode and visual tests | 58 of 58 passed |
 | Backend unit tests, including the shared rule scenarios | passed; part of the server build |
 | Backend attack and concurrency suite | passed |
 | Crash recovery and production mode | passed |
-| Windows release player, server up | connected, loaded 7 buildings and 9 heroes from the server |
+| Windows release player, server up | built with the new art, connected, loaded 7 buildings and 9 heroes from the server, no missing-art errors |
 | Windows release player, server down | kept running without errors, reported the server unavailable |
 
 Local builds embed the development server settings, so do not distribute them.

@@ -60,14 +60,16 @@ namespace ShinobiDominion.Game
 
             var world = new GameObject("World").transform;
             world.SetParent(transform, false);
+            GameQuality.Load();
             VillageScenery.Create(world);
-            CreateLight(world);
+            GameQuality.Sun = CreateLight(world);
+            GameQuality.Load();
 
             var cameraObject = new GameObject("IsoCamera", typeof(Camera), typeof(AudioListener));
             cameraObject.transform.SetParent(transform, false);
             cameraObject.tag = "MainCamera";
             IsoCamera = cameraObject.AddComponent<IsoCamera>();
-            IsoCamera.Initialize(new Vector3(25f, 0f, 25f), 12f);
+            IsoCamera.Initialize(new Vector3(25f, 0f, 25f), 10f);
 
             var ui = new UiRoot(transform);
             Controller = gameObject.AddComponent<VillageController>();
@@ -87,21 +89,23 @@ namespace ShinobiDominion.Game
             gameObject.AddComponent<WorldInput>().Initialize(IsoCamera, Controller);
         }
 
-        private static void CreateLight(Transform parent)
+        private static Light CreateLight(Transform parent)
         {
             var go = new GameObject("Sun", typeof(Light));
             go.transform.SetParent(parent, false);
-            go.transform.rotation = Quaternion.Euler(50f, 200f, 0f);
+            // Warm light from the camera's left, which keeps entrances lit and casts shadows up-right.
+            go.transform.rotation = Quaternion.Euler(50f, 18f, 0f);
             var light = go.GetComponent<Light>();
             light.type = LightType.Directional;
-            light.color = new Color(1f, 0.96f, 0.88f);
-            light.intensity = 1.2f;
+            light.color = new Color(1f, 0.95f, 0.82f);
+            light.intensity = 1.25f;
             light.shadows = LightShadows.Soft;
-            light.shadowStrength = 0.55f;
-            light.shadowBias = 0.12f;
-            light.shadowNormalBias = 0.9f;
+            light.shadowStrength = 0.8f;
+            light.shadowBias = 0.25f;
+            light.shadowNormalBias = 0.6f;
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
-            RenderSettings.ambientLight = new Color(0.52f, 0.55f, 0.58f);
+            RenderSettings.ambientLight = new Color(0.52f, 0.58f, 0.66f);
+            return light;
         }
     }
 }

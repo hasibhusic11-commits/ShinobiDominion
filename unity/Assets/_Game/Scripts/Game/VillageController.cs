@@ -342,6 +342,9 @@ namespace ShinobiDominion.Game
             if (UiState.Screen != VillageScreen.BuildingPanel) return;
             ShowSelectionCells(building);
             ShowContextPanel();
+            // Keep the building clear of the side panel, which covers the left of the screen.
+            if (_panel.IsOpen && !_panel.IsFullScreen)
+                _camera.EnsureVisible(GridSpace.FootprintCenter(building.Footprint), 0.48f, 0.92f, 0.14f, 0.86f);
         }
 
         public void CloseAll()
@@ -512,6 +515,13 @@ namespace ShinobiDominion.Game
             {
                 panel.Line(IsOnline ? "Connected. Your village is saved on the server." : "Not connected to the server.");
                 panel.Line(Village.Catalog.BalanceStatus, 18);
+                var high = GameQuality.Current == VisualQuality.High;
+                panel.Line("Fewer trees at Low take effect after a restart.", 17);
+                panel.Action("QualityButton", high ? "Graphics: High (tap for Low)" : "Graphics: Low (tap for High)", () =>
+                {
+                    GameQuality.Set(high ? VisualQuality.Low : VisualQuality.High);
+                    OpenSettings();
+                });
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
                 panel.Action("ResetButton", "Reset village (development)", ConfirmReset);
 #endif
@@ -644,6 +654,7 @@ namespace ShinobiDominion.Game
             if (RefuseWhenNoServer()) return false;
             var definition = Village.Catalog.Get(definitionId);
             if (!UiState.TryBeginPlacement(definition.IsWall)) return false;
+            _camera.StopMotion();
             _panel.Hide();
 
             _placingDefinition = definition;
@@ -796,6 +807,7 @@ namespace ShinobiDominion.Game
             if (RefuseWhenNoServer()) return false;
             var building = Village.Find(id);
             if (building == null || !UiState.TryBeginMove()) return false;
+            _camera.StopMotion();
             _panel.Hide();
             _selectionCells.Clear();
 

@@ -105,6 +105,22 @@ namespace ShinobiDominion.Tests
             game.IsoCamera.ZoomAt(5f, new Vector2(texture.width * 0.5f, texture.height * 0.5f));
             yield return shot("08_zoomed_out_full_map");
 
+            var renderers = root.GetComponentsInChildren<MeshRenderer>();
+            var vertices = renderers.Sum(r => r.GetComponent<MeshFilter>().sharedMesh.vertexCount);
+            var materials = renderers.SelectMany(r => r.sharedMaterials).Distinct().Count();
+            File.WriteAllText(Path.Combine(dir, "stats.txt"), $"renderers={renderers.Length} vertices={vertices} materials={materials}");
+
+            // Common phone and tablet shapes, zoomed out, to check layout and framing.
+            foreach (var shape in new[] { new Vector2Int(2340, 1080), new Vector2Int(1600, 1200) })
+            {
+                var other = new RenderTexture(shape.x, shape.y, 24);
+                camera.targetTexture = other;
+                yield return null;
+                yield return Capture(camera, other, Path.Combine(dir, $"15_aspect_{shape.x}x{shape.y}.png"));
+                camera.targetTexture = texture;
+                Object.Destroy(other);
+            }
+
             camera.targetTexture = null;
             Object.Destroy(texture);
             Object.Destroy(root);

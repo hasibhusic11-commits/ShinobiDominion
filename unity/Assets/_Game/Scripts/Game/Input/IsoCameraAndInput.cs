@@ -12,11 +12,18 @@ namespace ShinobiDominion.Game
     {
         private const float Distance = 70f;
         private const float MinSize = 5f;
-        private const float MaxSize = 26f;
+        private const float MaxSize = 30f;
         private const float PanMargin = 4f;
 
         private static readonly Plane Ground = new Plane(Vector3.up, Vector3.zero);
         private Vector3 _focus;
+        private Vector3 _velocity;
+        private float _targetSize;
+        private Vector2 _zoomAnchor;
+        private bool _zoomingSmoothly;
+        private Vector3 _focusTarget;
+        private float _focusTime = -1f;
+        private Vector3 _focusStart;
 
         public Camera Camera { get; private set; }
 
@@ -25,10 +32,11 @@ namespace ShinobiDominion.Game
             Camera = GetComponent<Camera>();
             Camera.orthographic = true;
             Camera.orthographicSize = Mathf.Clamp(size, MinSize, MaxSize);
+            _targetSize = Camera.orthographicSize;
             Camera.nearClipPlane = 0.1f;
             Camera.farClipPlane = 400f;
             Camera.clearFlags = CameraClearFlags.SolidColor;
-            Camera.backgroundColor = Palette.Sky;
+            Camera.backgroundColor = Palette.Sky.linear;
             transform.rotation = Quaternion.Euler(35.264f, 45f, 0f);
             _focus = focus;
             Apply();
@@ -45,6 +53,8 @@ namespace ShinobiDominion.Game
         /// <summary>Keeps the grabbed ground point under the pointer.</summary>
         public void PanTo(Vector3 grabbedWorld, Vector2 screen)
         {
+            _focusTime = -1f;
+            _velocity = Vector3.zero;
             _focus += grabbedWorld - GroundPoint(screen);
             Apply();
         }
@@ -52,11 +62,77 @@ namespace ShinobiDominion.Game
         /// <summary>Factor below 1 zooms in. The ground under the screen point stays put.</summary>
         public void ZoomAt(float factor, Vector2 screen)
         {
+            _zoomingSmoothly = false;
             var before = GroundPoint(screen);
             Camera.orthographicSize = Mathf.Clamp(Camera.orthographicSize * factor, MinSize, MaxSize);
             Apply();
             _focus += before - GroundPoint(screen);
+            _targetSize = Camera.orthographicSize;
             Apply();
+        }
+
+        /// <summary>Mouse-wheel zoom eases toward its target rather than jumping.</summary>
+        public void ZoomSmooth(float factor, Vector2 screen)
+        {
+            _targetSize = Mathf.Clamp(_targetSize * factor, MinSize, MaxSize);
+            _zoomAnchor = screen;
+            _zoomingSmoothly = true;
+        }
+
+        /// <summary>A released drag keeps gliding briefly, which is what makes panning feel natural.</summary>
+        public void Fling(Vector3 worldVelocity)
+        {
+            _velocity = Vector3.ClampMagnitude(worldVelocity, 45f);
+        }
+
+        public void StopMotion()
+        {
+            _velocity = Vector3.zero;
+            _focusTime = -1f;
+        }
+
+        /// <summary>Eases the view so a selected building stays visible beside the side panel.</summary>
+        public void EnsureVisible(Vector3 world, float minScreenX, float maxScreenX, float minScreenY, float maxScreenY)
+        {
+            var viewport = Camera.WorldToViewportPoint(world);
+            var targetX = Mathf.Clamp(viewport.x, minScreenX, maxScreenX);
+            var targetY = Mathf.Clamp(viewport.y, minScreenY, maxScreenY);
+            if (Mathf.Approximately(targetX, viewport.x) && Mathf.Approximately(targetY, viewport.y)) return;
+            var desired = Camera.ViewportToScreenPoint(new Vector3(targetX, targetY, 0f));
+            _focusTarget = _focus + GroundPoint(Camera.WorldToScreenPoint(world)) - GroundPoint(desired);
+            _focusStart = _focus;
+            _focusTime = 0f;
+            _velocity = Vector3.zero;
+        }
+
+        private void Update()
+        {
+            var dt = Time.unscaledDeltaTime;
+            if (_zoomingSmoothly)
+            {
+                var before = GroundPoint(_zoomAnchor);
+                Camera.orthographicSize = Mathf.Lerp(Camera.orthographicSize, _targetSize, 1f - Mathf.Exp(-12f * dt));
+                Apply();
+                _focus += before - GroundPoint(_zoomAnchor);
+                if (Mathf.Abs(Camera.orthographicSize - _targetSize) < 0.01f) _zoomingSmoothly = false;
+                Apply();
+            }
+
+            if (_focusTime >= 0f)
+            {
+                _focusTime += dt / 0.35f;
+                var t = Mathf.Clamp01(_focusTime);
+                _focus = Vector3.Lerp(_focusStart, _focusTarget, t * t * (3f - 2f * t));
+                if (t >= 1f) _focusTime = -1f;
+                Apply();
+            }
+
+            if (_velocity.sqrMagnitude > 0.01f)
+            {
+                _focus += _velocity * dt;
+                _velocity *= Mathf.Exp(-5f * dt);
+                Apply();
+            }
         }
 
         private void Apply()
@@ -108,6 +184,8 @@ namespace ShinobiDominion.Game
         private float _pinchDistance;
         private Vector3 _pinchGrab;
         private bool _secondaryPanning;
+        private Vector3 _lastGround;
+        private Vector3 _dragVelocity;
         private Vector3 _secondaryGrab;
 
         public void Initialize(IsoCamera isoCamera, IWorldGestureHandler handler)
@@ -211,7 +289,7 @@ namespace ShinobiDominion.Game
         {
             var scroll = mouse.scroll.ReadValue().y;
             if (Mathf.Abs(scroll) > 0.01f && !IsOverUi(position))
-                _camera.ZoomAt(scroll > 0f ? 0.9f : 1.1f, position);
+                _camera.ZoomSmooth(scroll > 0f ? 0.88f : 1.14f, position);
 
             // Right or middle drag always pans, even during the wall tool.
             var panHeld = mouse.rightButton.isPressed || mouse.middleButton.isPressed;
@@ -242,12 +320,16 @@ namespace ShinobiDominion.Game
 
             if (_handler.OnWorldPress(position))
             {
+                _camera.StopMotion();
                 _gesture = Gesture.Captured;
             }
             else
             {
                 _gesture = Gesture.PanCandidate;
+                _camera.StopMotion();
                 _grabbedWorld = _camera.GroundPoint(position);
+                _dragVelocity = Vector3.zero;
+                _lastGround = _camera.transform.position;
             }
         }
 
@@ -257,13 +339,21 @@ namespace ShinobiDominion.Game
             if (!_moved && Vector2.Distance(position, _pressPosition) > DragThreshold) _moved = true;
 
             if (_gesture == Gesture.Captured) _handler.OnWorldDrag(position);
-            else if (_moved) _camera.PanTo(_grabbedWorld, position);
+            else if (_moved)
+            {
+                _camera.PanTo(_grabbedWorld, position);
+                var dt = Mathf.Max(Time.unscaledDeltaTime, 0.001f);
+                var current = _camera.transform.position;
+                _dragVelocity = Vector3.Lerp(_dragVelocity, (current - _lastGround) / dt, 0.4f);
+                _lastGround = current;
+            }
         }
 
         private void End(Vector2 position)
         {
             if (_gesture == Gesture.Captured) _handler.OnWorldRelease(position);
             else if (_gesture == Gesture.PanCandidate && !_moved) _handler.OnWorldTap(position);
+            else if (_gesture == Gesture.PanCandidate) _camera.Fling(new Vector3(_dragVelocity.x, 0f, _dragVelocity.z) * 0.6f);
             _gesture = Gesture.None;
         }
 

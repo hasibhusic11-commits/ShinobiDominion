@@ -101,7 +101,8 @@ namespace ShinobiDominion.Game
         {
             var hero = Roster?.Find(instanceId);
             if (hero == null) return null;
-            return new HeroLook { Color = HeroColor(Roster.ArchetypeOf(hero), hero.EvolutionIndex), Evolution = hero.EvolutionIndex };
+            var archetype = Roster.ArchetypeOf(hero);
+            return new HeroLook { Color = HeroColor(archetype, hero.EvolutionIndex), Evolution = hero.EvolutionIndex, Role = archetype.role, Affinity = archetype.affinity };
         }
 
         private string FormName(HeroInstance hero)

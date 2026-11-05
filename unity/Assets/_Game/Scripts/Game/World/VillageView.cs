@@ -5,76 +5,6 @@ using UnityEngine.Rendering;
 
 namespace ShinobiDominion.Game
 {
-    /// <summary>The ground, boundary and decoration outside the buildable area. One merged mesh.</summary>
-    public static class VillageScenery
-    {
-        public static GameObject Create(Transform parent)
-        {
-            float size = VillageGrid.Size * GridSpace.CellSize;
-            const float outer = 45f;
-            const float border = 0.35f;
-
-            var mesh = new MeshBuilder();
-            mesh.Quad(new Vector3(-outer, -0.02f, -outer), new Vector3(size + outer, -0.02f, -outer),
-                new Vector3(size + outer, -0.02f, size + outer), new Vector3(-outer, -0.02f, size + outer), Vector3.up, Palette.OuterGrass);
-            mesh.Quad(new Vector3(0, 0, 0), new Vector3(size, 0, 0), new Vector3(size, 0, size), new Vector3(0, 0, size), Vector3.up, Palette.Grass);
-
-            // Subtle worn patches so the courtyard reads as packed earth rather than a flat sheet.
-            var patches = new System.Random(2718);
-            for (var i = 0; i < 70; i++)
-            {
-                var px = (float)patches.NextDouble() * (size - 5f);
-                var pz = (float)patches.NextDouble() * (size - 5f);
-                var pw = 1.5f + (float)patches.NextDouble() * 3.2f;
-                var pd = 1.5f + (float)patches.NextDouble() * 3.2f;
-                var tone = i % 2 == 0 ? Palette.GrassLight : Palette.GrassDark;
-                const float y = 0.004f;
-                mesh.Quad(new Vector3(px, y, pz), new Vector3(px + pw, y, pz), new Vector3(px + pw, y, pz + pd), new Vector3(px, y, pz + pd), Vector3.up, tone);
-            }
-
-            // Low stone kerb just outside the map, so the buildable boundary reads without a grid.
-            var mid = size * 0.5f;
-            var kerbLength = size + border * 2f;
-            mesh.Box(new Vector3(mid, 0, -border * 0.5f), new Vector3(kerbLength, 0.12f, border), Palette.Stone);
-            mesh.Box(new Vector3(mid, 0, size + border * 0.5f), new Vector3(kerbLength, 0.12f, border), Palette.Stone);
-            mesh.Box(new Vector3(-border * 0.5f, 0, mid), new Vector3(border, 0.12f, size), Palette.Stone);
-            mesh.Box(new Vector3(size + border * 0.5f, 0, mid), new Vector3(border, 0.12f, size), Palette.Stone);
-
-            // Pond in the north-east, entirely outside the map.
-            mesh.Quad(new Vector3(size + 3, 0.0f, size - 12), new Vector3(size + 16, 0.0f, size - 12),
-                new Vector3(size + 16, 0.0f, size + 6), new Vector3(size + 3, 0.0f, size + 6), Vector3.up, Palette.Water);
-
-            // Fixed seed: the same forest every launch.
-            var random = new System.Random(5150);
-            for (var i = 0; i < 380; i++)
-            {
-                var x = (float)(random.NextDouble() * (size + outer * 2f) - outer);
-                var z = (float)(random.NextDouble() * (size + outer * 2f) - outer);
-                const float margin = 1.5f;
-                if (x > -margin && x < size + margin && z > -margin && z < size + margin) continue;
-                if (x > size + 2 && x < size + 17 && z > size - 13 && z < size + 7) continue;
-                Tree(mesh, new Vector3(x, 0, z), 0.8f + (float)random.NextDouble() * 0.9f, random.Next(6) == 0);
-            }
-
-            var built = mesh.Build("VillageScenery");
-            var go = new GameObject("Scenery");
-            go.transform.SetParent(parent, false);
-            go.AddComponent<MeshFilter>().sharedMesh = built;
-            var renderer = go.AddComponent<MeshRenderer>();
-            renderer.sharedMaterials = mesh.LitMaterials();
-            renderer.shadowCastingMode = ShadowCastingMode.Off;
-            return go;
-        }
-
-        private static void Tree(MeshBuilder mesh, Vector3 at, float scale, bool sakura)
-        {
-            mesh.Box(at, new Vector3(0.25f, 0.8f, 0.25f) * scale, Palette.Wood);
-            var crown = sakura ? Palette.Sakura : Palette.Leaf;
-            mesh.Frustum(at + Vector3.up * 0.7f * scale, 1.9f * scale, 1.9f * scale, 0f, 0f, 1.6f * scale, crown);
-            mesh.Frustum(at + Vector3.up * 1.5f * scale, 1.4f * scale, 1.4f * scale, 0f, 0f, 1.4f * scale, crown);
-        }
-    }
-
     /// <summary>Construction-mode grid: one line mesh, not 2,500 objects.</summary>
     public sealed class GridOverlay
     {
@@ -203,12 +133,12 @@ namespace ShinobiDominion.Game
     }
 
     /// <summary>
-    /// Draws all walls as a single rebuilt mesh: a post per cell plus an arm toward each
-    /// connected neighbour, so straights, corners, ends and junctions all join correctly.
+    /// Draws all walls as one rebuilt mesh from modular parts: a stone footing, a plaster and timber
+    /// body and a tiled cap. Each neighbour adds an arm, so straights, corners, ends and junctions
+    /// all join up. Levels change the material, so upgrades show without new game logic.
     /// </summary>
     public sealed class WallView
     {
-        private readonly Mesh _mesh;
         private readonly MeshRenderer _renderer;
         private readonly MeshFilter _filter;
 
@@ -218,9 +148,7 @@ namespace ShinobiDominion.Game
             go.transform.SetParent(parent, false);
             _filter = go.AddComponent<MeshFilter>();
             _renderer = go.AddComponent<MeshRenderer>();
-            _mesh = new Mesh { name = "Walls", indexFormat = IndexFormat.UInt32 };
-            _mesh.MarkDynamic();
-            _filter.sharedMesh = _mesh;
+            _renderer.sharedMaterial = Mats.World;
         }
 
         public void Rebuild(Village village, int hiddenWallId)
@@ -232,54 +160,56 @@ namespace ShinobiDominion.Game
                 AddSegment(builder, village, building, hiddenWallId);
             }
 
-            var built = builder.Build("WallsTemp");
-            _mesh.Clear();
-            _mesh.subMeshCount = built.subMeshCount;
-            _mesh.SetVertices(built.vertices);
-            _mesh.SetNormals(built.normals);
-            for (var i = 0; i < built.subMeshCount; i++)
-                _mesh.SetTriangles(built.GetTriangles(i), i);
-            _mesh.RecalculateBounds();
-            Object.Destroy(built);
-            _renderer.sharedMaterials = builder.LitMaterials();
+            var old = _filter.sharedMesh;
+            _filter.sharedMesh = builder.Build("Walls");
+            if (old != null) Object.Destroy(old);
         }
 
         private static void AddSegment(MeshBuilder builder, Village village, BuildingInstance wall, int hiddenWallId)
         {
             var center = GridSpace.CellCenter(wall.Origin);
             var mask = ConnectionsExcluding(village, wall.Origin, hiddenWallId);
-            var body = 0.75f + 0.05f * (wall.Level - 1);
-            var stone = wall.Level >= 5 ? Palette.DarkStone : Palette.Stone;
+
+            // Upgrades read at a glance: higher levels get taller, darker stone and more trim.
+            var tier = wall.Level >= 7 ? 2 : wall.Level >= 4 ? 1 : 0;
+            var footing = tier == 2 ? Palette.DarkStone : Palette.Stone;
+            var body = tier == 2 ? Palette.DarkStone : Palette.Plaster;
+            var cap = tier == 0 ? Palette.Slate : tier == 1 ? Palette.RoofTeal : Palette.RoofRed;
+            var height = 0.82f + 0.03f * (wall.Level - 1);
             const float thickness = 0.56f;
-            const float arm = 0.25f;
-            const float capHeight = 0.2f;
+            const float arm = 0.27f;
 
-            // Castle-style wall: stone footing, pale plaster, and a dark tiled cap with brass
-            // finials on the posts. A straight run has no post, so it reads as continuous.
-            var straight = mask == (Village.WallNorth | Village.WallSouth) || mask == (Village.WallEast | Village.WallWest);
-            var postHeight = straight ? body : body + 0.2f;
+            var north = (mask & Village.WallNorth) != 0;
+            var south = (mask & Village.WallSouth) != 0;
+            var east = (mask & Village.WallEast) != 0;
+            var west = (mask & Village.WallWest) != 0;
+            var straight = (north && south && !east && !west) || (east && west && !north && !south);
+
+            // Corners, junctions and ends get a heavier post, so the wall has a rhythm.
+            var postHeight = straight ? height : height + 0.24f;
             var postWidth = straight ? thickness : thickness + 0.16f;
-            builder.Box(center, new Vector3(postWidth, postHeight * 0.45f, postWidth), stone);
-            builder.Box(center + Vector3.up * postHeight * 0.45f, new Vector3(postWidth - 0.06f, postHeight * 0.55f, postWidth - 0.06f), Palette.Plaster);
-            builder.Frustum(center + Vector3.up * postHeight, postWidth + 0.2f, postWidth + 0.2f, postWidth - 0.2f, postWidth - 0.2f, capHeight, Palette.Slate);
+            Section(builder, center, new Vector2(postWidth, postWidth), postHeight, footing, body, cap, tier);
             if (!straight)
-                builder.Frustum(center + Vector3.up * (postHeight + capHeight), 0.18f, 0.18f, 0f, 0f, 0.26f, Palette.Amber);
+            {
+                var top = center + Vector3.up * (postHeight + 0.2f);
+                builder.Cylinder(top, 0.05f, 0.015f, 0.2f, 5, Palette.Amber);
+                if (tier >= 1) builder.Box(center + new Vector3(0f, height * 0.75f, -postWidth * 0.5f - 0.01f), new Vector3(0.16f, 0.14f, 0.02f), Palette.WindowGlow, ArtSurface.Plain, 0f, 0.85f);
+            }
 
-            var offset = 0.25f + 0.25f * 0.5f;
-            if ((mask & Village.WallNorth) != 0) Arm(builder, center + new Vector3(0, 0, offset), new Vector2(thickness, arm), body, capHeight, stone);
-            if ((mask & Village.WallSouth) != 0) Arm(builder, center + new Vector3(0, 0, -offset), new Vector2(thickness, arm), body, capHeight, stone);
-            if ((mask & Village.WallEast) != 0) Arm(builder, center + new Vector3(offset, 0, 0), new Vector2(arm, thickness), body, capHeight, stone);
-            if ((mask & Village.WallWest) != 0) Arm(builder, center + new Vector3(-offset, 0, 0), new Vector2(arm, thickness), body, capHeight, stone);
+            var offset = 0.14f + arm * 0.5f + 0.09f;
+            if (north) Section(builder, center + new Vector3(0, 0, offset), new Vector2(thickness, arm + 0.04f), height, footing, body, cap, tier);
+            if (south) Section(builder, center + new Vector3(0, 0, -offset), new Vector2(thickness, arm + 0.04f), height, footing, body, cap, tier);
+            if (east) Section(builder, center + new Vector3(offset, 0, 0), new Vector2(arm + 0.04f, thickness), height, footing, body, cap, tier);
+            if (west) Section(builder, center + new Vector3(-offset, 0, 0), new Vector2(arm + 0.04f, thickness), height, footing, body, cap, tier);
         }
 
-        private static void Arm(MeshBuilder builder, Vector3 at, Vector2 size, float body, float capHeight, Color stone)
+        private static void Section(MeshBuilder builder, Vector3 at, Vector2 size, float height, Color footing, Color body, Color cap, int tier)
         {
-            builder.Box(at, new Vector3(size.x, body * 0.45f, size.y), stone);
-            builder.Box(at + Vector3.up * body * 0.45f, new Vector3(size.x - 0.04f, body * 0.55f, size.y - 0.04f), Palette.Plaster);
-            var wide = size.x > size.y;
-            var capX = wide ? size.x + 0.2f : size.x;
-            var capZ = wide ? size.y : size.y + 0.2f;
-            builder.Frustum(at + Vector3.up * body, capX, capZ, wide ? size.x - 0.2f : size.x, wide ? size.y : size.y - 0.2f, capHeight, Palette.Slate);
+            var foot = height * 0.42f;
+            builder.Box(at, new Vector3(size.x + 0.04f, foot, size.y + 0.04f), footing, ArtSurface.Stone);
+            builder.Box(at + Vector3.up * foot, new Vector3(size.x - 0.02f, height - foot, size.y - 0.02f), body, tier == 2 ? ArtSurface.Stone : ArtSurface.Plaster);
+            builder.Box(at + Vector3.up * (height - 0.08f), new Vector3(size.x, 0.08f, size.y), Palette.DarkWood, ArtSurface.Wood);
+            builder.Frustum(at + Vector3.up * height, size.x + 0.16f, size.y + 0.16f, Mathf.Max(size.x - 0.26f, 0.08f), Mathf.Max(size.y - 0.26f, 0.08f), 0.2f, cap, ArtSurface.Tile);
         }
 
         private static int ConnectionsExcluding(Village village, GridCoord cell, int hiddenWallId)
@@ -444,7 +374,25 @@ namespace ShinobiDominion.Game
             GetMesh(building.Definition, look, signature, out var mesh, out var materials);
             go.AddComponent<MeshFilter>().sharedMesh = mesh;
             go.AddComponent<MeshRenderer>().sharedMaterials = materials;
+            AddEffects(go.transform, building.Definition);
             return new Entry { Go = go, Signature = signature };
+        }
+
+        /// <summary>Small life for key buildings. Off at low quality, and never tied to any rule.</summary>
+        private static void AddEffects(Transform parent, BuildingDefinition definition)
+        {
+            switch (definition.function)
+            {
+                case BuildingFunction.Research:
+                    WorldEffects.Create(parent, "ChimneySmoke", new Vector3(0.62f, 2.0f, 0.3f), new Color(0.9f, 0.9f, 0.9f, 0.45f), new Color(1f, 1f, 1f, 0f), 3f, 3.2f, 0.5f, 0.5f, 0.05f);
+                    break;
+                case BuildingFunction.SummoningGate:
+                    WorldEffects.Create(parent, "PortalMotes", new Vector3(0f, 0.6f, -0.1f), new Color(0.7f, 0.6f, 1f, 0.9f), new Color(0.5f, 0.9f, 1f, 0f), 7f, 2.2f, 0.6f, 0.16f, 0.9f);
+                    break;
+                case BuildingFunction.HeroAltar:
+                    WorldEffects.Create(parent, "CrystalMotes", new Vector3(0f, 1.1f, 0f), new Color(0.6f, 0.95f, 1f, 0.9f), new Color(0.5f, 0.8f, 1f, 0f), 4f, 2f, 0.32f, 0.12f, 0.3f);
+                    break;
+            }
         }
 
         private void GetMesh(BuildingDefinition definition, HeroLook hero, string key, out Mesh mesh, out Material[] materials)
@@ -479,8 +427,9 @@ namespace ShinobiDominion.Game
         {
             var color = kind == ResourceKind.Crystals ? Palette.Crystal : Palette.Amber;
             var builder = new MeshBuilder();
-            builder.Box(new Vector3(0f, 2.2f, 0f), new Vector3(0.08f, 0.5f, 0.08f), Palette.Plaster);
-            builder.Frustum(new Vector3(0f, 2.7f, 0f), 0.8f, 0.8f, 0.6f, 0.6f, 0.28f, color);
+            builder.ContactShade = false;
+            builder.Blob(new Vector3(0f, 2.75f, 0f), new Vector3(0.24f, 0.24f, 0.24f), color, ArtSurface.Plain, 0.6f, 0.65f, 8, 5);
+            builder.Frustum(new Vector3(0f, 2.3f, 0f), 0f, 0f, 0.26f, 0.26f, 0.22f, color, ArtSurface.Plain, 0.6f, 0.65f);
             var marker = new GameObject("CollectMarker");
             marker.transform.SetParent(parent, false);
             marker.AddComponent<MeshFilter>().sharedMesh = builder.Build("CollectMarker");

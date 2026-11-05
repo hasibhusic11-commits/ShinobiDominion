@@ -29,7 +29,7 @@ namespace ShinobiDominion.EditorTools
             EditorApplication.delayCall += () =>
             {
                 if (EditorApplication.isPlayingOrWillChangePlaymode) return;
-                if (!File.Exists(ScenePath) || GraphicsSettings.defaultRenderPipeline == null) Run();
+                if (!File.Exists(ScenePath) || GraphicsSettings.defaultRenderPipeline == null || !ArtBaker.IsBaked) Run();
             };
         }
 
@@ -43,6 +43,7 @@ namespace ShinobiDominion.EditorTools
 
             ConfigurePipeline();
             CreateMaterials();
+            ArtBaker.Bake();
             ConfigurePlayer();
             CreateScene();
 
