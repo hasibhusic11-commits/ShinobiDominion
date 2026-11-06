@@ -35,6 +35,7 @@ namespace ShinobiDominion.Game
                 case BuildingFunction.HeroBase: Pedestal(mesh, w, hero); break;
                 case BuildingFunction.SummoningGate: Gate(mesh, w, d); break;
                 case BuildingFunction.Training: TrainingYard(mesh, w, d); break;
+                case BuildingFunction.TroopCamp: Camp(mesh, w, d); break;
                 case BuildingFunction.Research: ResearchHut(mesh, w, d); break;
                 case BuildingFunction.Collector: Mine(mesh, w, definition.produces); break;
                 case BuildingFunction.Storage: Vault(mesh, w, d); break;
@@ -110,6 +111,7 @@ namespace ShinobiDominion.Game
             switch (definition.function)
             {
                 case BuildingFunction.Training: return new Vector3(0f, 0f, 0.96f);
+                case BuildingFunction.TroopCamp: return new Vector3(0.62f, 0f, 0.62f);
                 case BuildingFunction.Collector: return new Vector3(0.2f, 0f, 0.3f);
                 case BuildingFunction.BuilderHall: return new Vector3(0.1f, 0f, 0.2f);
                 default: return Vector3.zero;

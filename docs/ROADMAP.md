@@ -39,7 +39,9 @@ The outside is a mountain with no houses. All buildings have 15 levels with thei
 ## Phase 4: combat vertical slice — in progress
 First slice built, awaiting your playtest: ATTACK opens a scripted raid, heroes from your bases deploy, walls and towers work, role abilities fire, and the server decides the result and reward (ADR-026).
 
-Still to do in this phase: troops, with 4 camps, a training hall and camp space by strength (ADR-021), plus defender heroes and battle sound.
+Troops are built too: 4 camps, a Training Hall, camp space by strength, and landing them in raids (ADR-027).
+
+Still to do in this phase: defender heroes and battle sound.
 
 ## Phase 5: polish and ship readiness — not started
 

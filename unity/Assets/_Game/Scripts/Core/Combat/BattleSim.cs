@@ -13,6 +13,7 @@ namespace ShinobiDominion.Core
         public long defense;
         public int x;
         public int z;
+        public bool isTroop;
     }
 
     public sealed class BattleBuildingInput
@@ -129,6 +130,7 @@ namespace ShinobiDominion.Core
             public int AttackTimer;
             public int AbilityTimer;
             public int GuardTimer;
+            public bool IsTroop;
         }
 
         private sealed class Structure
@@ -175,7 +177,8 @@ namespace ShinobiDominion.Core
                     Defense = h.defense,
                     Px = h.x * CellUnits + CellUnits / 2,
                     Pz = h.z * CellUnits + CellUnits / 2,
-                    AbilityTimer = Cooldowns[role] / 2
+                    AbilityTimer = Cooldowns[role] / 2,
+                    IsTroop = h.isTroop
                 };
             }).ToArray();
         }
@@ -191,14 +194,16 @@ namespace ShinobiDominion.Core
         public static string DeployError(IList<BattleBuildingInput> buildings, IList<BattleHeroInput> heroes)
         {
             if (heroes.Count < 1) return "NO_TEAM";
-            if (heroes.Count > 6) return "TOO_MANY_HEROES";
+            if (heroes.Count(h => !h.isTroop) > 6) return "TOO_MANY_HEROES";
             for (var i = 0; i < heroes.Count; i++)
             {
                 var h = heroes[i];
                 if (h.x < 0 || h.x >= GridSize || h.z < 0 || h.z >= GridSize) return "BAD_DEPLOY_CELL";
                 if (!CanDeployAt(buildings, h.x, h.z)) return "DEPLOY_TOO_CLOSE";
+                if (h.isTroop) continue;
                 for (var j = 0; j < i; j++)
                 {
+                    if (heroes[j].isTroop) continue;
                     if (heroes[j].id == h.id) return "DUPLICATE_HERO";
                     if (heroes[j].x == h.x && heroes[j].z == h.z) return "DEPLOY_CELL_TAKEN";
                 }
@@ -326,7 +331,7 @@ namespace ShinobiDominion.Core
 
         private void SelfAbility(Unit unit)
         {
-            if (unit.AbilityTimer > 0) return;
+            if (unit.AbilityTimer > 0 || unit.IsTroop) return;
             switch (unit.Role)
             {
                 case RoleTank:
@@ -387,7 +392,7 @@ namespace ShinobiDominion.Core
             var base_ = unit.Attack * DamagePercents[unit.Role] / 100;
             var percent = 100L;
             var splash = 0;
-            if (unit.AbilityTimer == 0)
+            if (unit.AbilityTimer == 0 && !unit.IsTroop)
             {
                 switch (unit.Role)
                 {
@@ -439,7 +444,7 @@ namespace ShinobiDominion.Core
                 _grid[z * GridSize + x] = 0;
             Log(BattleEventKind.BuildingDown, b.id);
             foreach (var other in _units)
-                if (b.isWall || other.Target == index || other.Blocker == index)
+                if (other.Target == index || other.Blocker == index)
                     other.NeedsPlan = true;
         }
 

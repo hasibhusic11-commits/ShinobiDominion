@@ -13,6 +13,7 @@ namespace ShinobiDominion.Core
         public string RosterJson;
         public Dictionary<int, string> HeroBySlot = new Dictionary<int, string>();
         public VillageSave Village;
+        public Dictionary<string, int> Troops = new Dictionary<string, int>();
 
         public static ServerState Parse(string json) => FromToken(ParseObject(json));
 
@@ -25,6 +26,13 @@ namespace ShinobiDominion.Core
             };
             if (state.Crystals < 0) throw new FormatException("Server returned negative crystals.");
             if (token["village"] is JObject village) state.Village = village.ToObject<VillageSave>();
+            if (token["troops"] is JObject troops)
+                foreach (var pair in troops)
+                {
+                    var count = pair.Value.Value<int>();
+                    if (count < 0) throw new FormatException("Server returned a negative troop count.");
+                    state.Troops[pair.Key] = count;
+                }
             if (token["heroes"] is JArray heroes)
             {
                 foreach (var hero in heroes)
@@ -129,6 +137,9 @@ namespace ShinobiDominion.Core
                 case "HERO_ALREADY_ASSIGNED": return "That hero is already on another base";
                 case "ALL_BASES_FULL": return "All six bases already have heroes";
                 case "BAD_SLOT": return "That is not one of your Hero Bases";
+                case "NOT_ENOUGH_TROOPS": return "You don't have that many troops";
+                case "BAD_TROOP_COUNT": return "That is not a valid number of troops";
+                case "TOO_MANY_TROOPS": return "Too many troops for one raid";
                 case "NO_TEAM": return "Put at least one hero on a Hero Base first";
                 case "RAID_NOT_FOUND": return "That raid is no longer available";
                 case "ATTACK_NOT_FOUND": return "That raid no longer exists";

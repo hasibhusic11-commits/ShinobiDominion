@@ -24,7 +24,11 @@ namespace ShinobiDominion.Core
         NothingToCollect,
         StorageFull,
         NotAWall,
-        DojoTooLow
+        DojoTooLow,
+        BadTroop,
+        NoTrainingHall,
+        TroopLocked,
+        CampsFull
     }
 
     public static class VillageErrorText
@@ -52,6 +56,10 @@ namespace ShinobiDominion.Core
                 case VillageError.StorageFull: return "Storage is full";
                 case VillageError.NotAWall: return "Not a wall";
                 case VillageError.DojoTooLow: return "Upgrade the Dojo first";
+                case VillageError.BadTroop: return "That troop can't be trained";
+                case VillageError.NoTrainingHall: return "Build a Training Hall first";
+                case VillageError.TroopLocked: return "Upgrade the Training Hall first";
+                case VillageError.CampsFull: return "Your Troop Camps are full";
                 default: return error.ToString();
             }
         }
@@ -123,6 +131,13 @@ namespace ShinobiDominion.Core
         public int CountOf(string definitionId) => _buildings.Values.Count(b => b.Definition.id == definitionId);
         public int LimitOf(BuildingDefinition definition) => definition.MaxCountAt(HqLevel);
         public bool CanAfford(long gold, long crystals) => Gold >= gold && Crystals >= crystals;
+
+        /// <summary>Takes gold the caller has already checked is available.</summary>
+        public void PayGold(long gold)
+        {
+            Gold -= gold;
+            Changed?.Invoke();
+        }
 
         // ---------- Placement ----------
 

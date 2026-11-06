@@ -20,6 +20,7 @@ namespace ShinobiDominion.Game
                 case BuildingFunction.HeroBase: PedestalDetails(mesh, w); break;
                 case BuildingFunction.SummoningGate: GateDetails(mesh); break;
                 case BuildingFunction.Training: TrainingDetails(mesh); break;
+                case BuildingFunction.TroopCamp: break;
                 case BuildingFunction.Research: ResearchDetails(mesh); break;
                 case BuildingFunction.Collector: MineDetails(mesh, definition.produces); break;
                 case BuildingFunction.Storage: VaultDetails(mesh); break;

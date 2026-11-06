@@ -13,6 +13,7 @@ namespace ShinobiDominion.Game
     public sealed class BattleStage : MonoBehaviour
     {
         private const float HeroScale = 1.9f;
+        private const float TroopScale = 1.45f;
         private const float BarHeight = 0.2f;
 
         private sealed class Figure
@@ -29,6 +30,7 @@ namespace ShinobiDominion.Game
             public long MaxHp;
             public float Kick;
             public Vector3 KickDirection;
+            public Vector3 Offset;
         }
 
         private sealed class Bar
@@ -60,6 +62,9 @@ namespace ShinobiDominion.Game
         private Village _village;
         private VillageView _view;
         private readonly Dictionary<string, Figure> _placed = new Dictionary<string, Figure>();
+        private readonly Dictionary<RaidTroopStack, GameObject> _stacks = new Dictionary<RaidTroopStack, GameObject>();
+        private readonly Dictionary<string, Mesh> _troopMeshes = new Dictionary<string, Mesh>();
+        private TroopCatalog _troops;
         private readonly List<Figure> _units = new List<Figure>();
         private readonly Dictionary<int, BattleBuildingInput> _buildings = new Dictionary<int, BattleBuildingInput>();
         private readonly Dictionary<int, Bar> _buildingBars = new Dictionary<int, Bar>();
@@ -82,9 +87,10 @@ namespace ShinobiDominion.Game
         public int SecondsLeft => Mathf.Max(0, Mathf.CeilToInt((BattleSim.TickLimit - _ticks) / BattleSim.TicksPerSecond));
         public event Action Finished;
 
-        public void Initialize(RaidSession session, BuildingCatalog catalog, Camera worldCamera, Func<string, HeroLook> lookFor)
+        public void Initialize(RaidSession session, BuildingCatalog catalog, TroopCatalog troops, Camera worldCamera, Func<string, HeroLook> lookFor)
         {
             _session = session;
+            _troops = troops;
             _camera = worldCamera;
             _lookFor = lookFor;
             foreach (var building in session.buildings)
@@ -123,6 +129,38 @@ namespace ShinobiDominion.Game
             _placed.Remove(instanceId);
         }
 
+        public void ShowStack(RaidTroopStack stack)
+        {
+            var at = new Vector3(stack.x + 0.5f, 0f, stack.z + 0.5f);
+            _stacks[stack] = CreateTroop(stack.troopId, at);
+        }
+
+        public void HideStack(RaidTroopStack stack)
+        {
+            if (!_stacks.TryGetValue(stack, out var go)) return;
+            Destroy(go);
+            _stacks.Remove(stack);
+        }
+
+        private GameObject CreateTroop(string troopId, Vector3 at)
+        {
+            if (!_troopMeshes.TryGetValue(troopId, out var mesh))
+            {
+                mesh = BuildingMeshes.Troop(troopId).Build(troopId);
+                _troopMeshes[troopId] = mesh;
+                _ownedMeshes.Add(mesh);
+            }
+            var go = new GameObject("BattleTroop");
+            go.transform.SetParent(transform, false);
+            go.transform.localPosition = at;
+            go.transform.localScale = Vector3.one * TroopScale;
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            var renderer = go.AddComponent<MeshRenderer>();
+            renderer.sharedMaterial = Mats.World;
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+            return go;
+        }
+
         private Figure CreateFigure(string instanceId, int x, int z)
         {
             var look = _lookFor(instanceId) ?? new HeroLook { Color = new Color(0.6f, 0.6f, 0.6f) };
@@ -152,12 +190,12 @@ namespace ShinobiDominion.Game
         private static void PlaceFigure(Figure figure)
         {
             var at = new Vector3(figure.Px / BattleSim.CellUnits, 0f, figure.Pz / BattleSim.CellUnits);
-            figure.Go.transform.localPosition = at + figure.KickDirection * figure.Kick;
+            figure.Go.transform.localPosition = at + figure.Offset + figure.KickDirection * figure.Kick;
         }
 
         // ---------- Playing the log back ----------
 
-        public void Play(BattleResult result, IList<RaidPlacement> placements)
+        public void Play(BattleResult result, IList<RaidPlacement> placements, IList<RaidTroopStack> stacks)
         {
             _result = result;
             foreach (var placement in placements)
@@ -169,6 +207,31 @@ namespace ShinobiDominion.Game
                 figure.Bar = CreateBar(figure.Go.transform.position + Vector3.up * 3.1f, 1.4f, new Color(0.35f, 0.85f, 0.35f));
                 figure.Bar.Root.transform.SetParent(figure.Go.transform, true);
                 _units.Add(figure);
+            }
+
+            // Same order as the battle: heroes first, then each stack.
+            foreach (var stack in stacks)
+            {
+                HideStack(stack);
+                var troop = _troops.Find(stack.troopId);
+                for (var i = 0; i < stack.count; i++)
+                {
+                    var angle = i * 2.4f;
+                    var offset = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * (0.12f + 0.09f * i);
+                    var px = stack.x * BattleSim.CellUnits + BattleSim.CellUnits / 2f;
+                    var pz = stack.z * BattleSim.CellUnits + BattleSim.CellUnits / 2f;
+                    _units.Add(new Figure
+                    {
+                        Go = CreateTroop(stack.troopId, new Vector3(px / BattleSim.CellUnits, 0f, pz / BattleSim.CellUnits) + offset),
+                        Px = px,
+                        Pz = pz,
+                        Tx = px,
+                        Tz = pz,
+                        Speed = BattleSim.SpeedOf(troop.role),
+                        MaxHp = troop.hp,
+                        Offset = offset
+                    });
+                }
             }
         }
 

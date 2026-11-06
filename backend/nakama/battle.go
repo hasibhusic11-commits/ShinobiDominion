@@ -70,6 +70,7 @@ type battleHeroInput struct {
 	Defense int64  `json:"defense"`
 	X       int    `json:"x"`
 	Z       int    `json:"z"`
+	IsTroop bool   `json:"isTroop"`
 }
 
 type battleBuildingInput struct {
@@ -115,6 +116,7 @@ type battleUnit struct {
 	attackTimer int
 	abilityTimer int
 	guardTimer  int
+	isTroop     bool
 }
 
 type battleStructure struct {
@@ -167,7 +169,7 @@ func runBattle(buildings []battleBuildingInput, heroes []battleHeroInput) (*batt
 		sim.units = append(sim.units, &battleUnit{
 			index: i, role: role, hp: h.Hp, maxHp: h.Hp, attack: h.Attack, defense: h.Defense,
 			px: h.X*cellUnits + cellUnits/2, pz: h.Z*cellUnits + cellUnits/2,
-			target: -1, blocker: -1, needsPlan: true, abilityTimer: roleCooldowns[role] / 2,
+			target: -1, blocker: -1, needsPlan: true, abilityTimer: roleCooldowns[role] / 2, isTroop: h.IsTroop,
 		})
 	}
 	sim.play()
@@ -188,7 +190,13 @@ func deployError(buildings []battleBuildingInput, heroes []battleHeroInput) stri
 	if len(heroes) < 1 {
 		return "NO_TEAM"
 	}
-	if len(heroes) > 6 {
+	heroCount := 0
+	for _, h := range heroes {
+		if !h.IsTroop {
+			heroCount++
+		}
+	}
+	if heroCount > 6 {
 		return "TOO_MANY_HEROES"
 	}
 	for i, h := range heroes {
@@ -198,7 +206,13 @@ func deployError(buildings []battleBuildingInput, heroes []battleHeroInput) stri
 		if !canDeployAt(buildings, h.X, h.Z) {
 			return "DEPLOY_TOO_CLOSE"
 		}
+		if h.IsTroop {
+			continue
+		}
 		for j := 0; j < i; j++ {
+			if heroes[j].IsTroop {
+				continue
+			}
 			if heroes[j].ID == h.ID {
 				return "DUPLICATE_HERO"
 			}
@@ -369,7 +383,7 @@ func (s *battleSim) logMove(unit *battleUnit) {
 }
 
 func (s *battleSim) selfAbility(unit *battleUnit) {
-	if unit.abilityTimer > 0 {
+	if unit.abilityTimer > 0 || unit.isTroop {
 		return
 	}
 	switch unit.role {
@@ -429,7 +443,7 @@ func (s *battleSim) strike(unit *battleUnit, focus int) {
 	base := unit.attack * roleDamagePercents[unit.role] / 100
 	percent := int64(100)
 	splash := 0
-	if unit.abilityTimer == 0 {
+	if unit.abilityTimer == 0 && !unit.isTroop {
 		switch unit.role {
 		case roleFighter:
 			percent = 150
@@ -489,7 +503,7 @@ func (s *battleSim) damage(unit *battleUnit, index int, amount int64) {
 	}
 	s.log(eventBuildingDown, int64(b.ID), 0, 0, 0)
 	for _, other := range s.units {
-		if b.IsWall || other.target == index || other.blocker == index {
+		if other.target == index || other.blocker == index {
 			other.needsPlan = true
 		}
 	}
@@ -915,8 +929,11 @@ func heroBattleStats(a Archetype, evolution, level int) (hp, attack, defense int
 	return a.BaseHp + a.GrowthHp*steps, a.BaseAttack + a.GrowthAttack*steps, a.BaseDefense + a.GrowthDefense*steps
 }
 
-func placementHash(attackID string, parts []deployPlacement) string {
+func placementHash(attackID string, parts []deployPlacement, stacks []troopStack) string {
 	joined := attackID + "|"
+	for _, stack := range stacks {
+		joined += stack.TroopID + ":" + strconv.Itoa(stack.X) + ":" + strconv.Itoa(stack.Z) + ":" + strconv.Itoa(stack.Count) + "|"
+	}
 	for _, part := range parts {
 		joined += part.InstanceID + ":" + strconv.Itoa(part.X) + ":" + strconv.Itoa(part.Z) + "|"
 	}

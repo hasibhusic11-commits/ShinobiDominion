@@ -16,6 +16,7 @@ $storageCurve = 1, 1.3, 1.6, 2, 2.4, 3, 3.6, 4.3, 5, 6, 7, 8, 9.5, 11, 13
 $vaultCurve = 1, 1.1, 1.3, 1.7, 2.2, 2.9, 3.6, 4.4, 5.3, 6.3, 7.5, 9, 10.5, 12.5, 15
 $rangeSteps = 0, 0, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5
 $baseRangeSteps = 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3
+$campCurve = 15, 17, 19, 21, 23, 25, 27, 29, 31, 33, 35, 36, 37, 38, 40
 
 function Round5([double]$value) {
     if ($value -lt 5) { return [long][math]::Round($value) }
@@ -42,6 +43,7 @@ function Levels($spec) {
             $row.range = $spec.range + $steps[$i]
         }
         if ($spec.bonus) { $row.bonusPercent = ($i + 1) * $spec.bonus }
+        if ($spec.camp) { $row.troopCapacity = $campCurve[$i] }
         $row.might = ($i + 1) * $spec.might
         $rows += ('{' + (($row.Keys | ForEach-Object { '"' + $_ + '":' + $row[$_] }) -join ',') + '}')
     }
@@ -53,7 +55,8 @@ $buildings = @(
     @{ head = '"id": "builder_hall", "displayName": "Builder Hall", "description": "Opens the build catalog.", "category": "Structures", "function": "BuilderHall", "width": 3, "depth": 3, "removable": false, "costGold": 0, "maxCountByHqLevel": [1]'; hp = 600; cost = 800; might = 3 }
     @{ head = '"id": "hero_altar", "displayName": "Hero Altar", "description": "Your hero roster, upgrades and evolution. Higher levels will shorten hero revival.", "category": "Structures", "function": "HeroAltar", "width": 4, "depth": 4, "removable": false, "costGold": 0, "maxCountByHqLevel": [1]'; hp = 800; cost = 1000; might = 10; bonus = 3 }
     @{ head = '"id": "summoning_gate", "displayName": "Summoning Gate", "description": "Summon heroes. Every roll is independent and random.", "category": "Structures", "function": "SummoningGate", "width": 4, "depth": 4, "removable": false, "costGold": 0, "maxCountByHqLevel": [1]'; hp = 800; cost = 1000; might = 5 }
-    @{ head = '"id": "training_grounds", "displayName": "Training Grounds", "description": "Train heroes. Available in a later phase.", "category": "Structures", "function": "Training", "width": 4, "depth": 3, "rotatable": true, "costGold": 1500, "maxCountByHqLevel": [1]'; hp = 500; cost = 800; might = 3 }
+    @{ head = '"id": "training_grounds", "displayName": "Training Hall", "description": "Trains troops, who wait in your Troop Camps. Higher levels unlock stronger troops.", "category": "Structures", "function": "Training", "width": 4, "depth": 3, "rotatable": true, "costGold": 1500, "maxCountByHqLevel": [1]'; hp = 500; cost = 800; might = 3 }
+    @{ head = '"id": "troop_camp", "displayName": "Troop Camp", "description": "Houses trained troops. Stronger troops take up more room. You can have up to four.", "category": "Structures", "function": "TroopCamp", "width": 3, "depth": 3, "costGold": 400, "maxCountByHqLevel": [1, 2, 3, 4]'; hp = 450; cost = 350; might = 3; camp = $true }
     @{ head = '"id": "research_hut", "displayName": "Research Hut", "description": "Research upgrades. Available in a later phase.", "category": "Structures", "function": "Research", "width": 3, "depth": 3, "costGold": 1200, "maxCountByHqLevel": [0, 1]'; hp = 400; cost = 700; might = 3 }
     @{ head = '"id": "defense_tower", "displayName": "Defense Tower", "description": "Fires on raiders in range.", "category": "Defense", "function": "Defense", "width": 2, "depth": 2, "costGold": 600, "maxCountByHqLevel": [2, 3, 4, 6, 8]'; hp = 700; cost = 400; might = 5; attack = 60; attackStep = 20; range = 13 }
     @{ head = '"id": "spirit_turret", "displayName": "Spirit Turret", "description": "Channels Spirit Force into bolts that strike raiders.", "category": "Defense", "function": "Defense", "width": 2, "depth": 2, "costGold": 900, "maxCountByHqLevel": [0, 1, 2, 3, 4]'; hp = 500; cost = 500; might = 6; attack = 90; attackStep = 30; range = 14 }

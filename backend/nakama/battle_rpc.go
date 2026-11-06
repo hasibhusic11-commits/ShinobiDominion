@@ -20,6 +20,9 @@ var (
 	errAttackExpired  = gameError("ATTACK_EXPIRED", codePrecondition)
 	errNoTeam         = gameError("NO_TEAM", codePrecondition)
 	errHeroNotInTeam  = gameError("HERO_NOT_IN_TEAM", codePrecondition)
+	errNotEnoughTroops = gameError("NOT_ENOUGH_TROOPS", codePrecondition)
+	errBadTroopCount  = gameError("BAD_TROOP_COUNT", codeInvalid)
+	errTooManyTroops  = gameError("TOO_MANY_TROOPS", codeInvalid)
 )
 
 type raidTeamMember struct {
@@ -53,6 +56,13 @@ type deployPlacement struct {
 	InstanceID string `json:"instanceId"`
 	X          int    `json:"x"`
 	Z          int    `json:"z"`
+}
+
+type troopStack struct {
+	TroopID string `json:"troopId"`
+	X       int    `json:"x"`
+	Z       int    `json:"z"`
+	Count   int    `json:"count"`
 }
 
 type raidDeployResponse struct {
@@ -218,6 +228,7 @@ func (s *Server) rpcRaidDeploy(ctx context.Context, logger runtime.Logger, db *s
 		Key        string            `json:"key"`
 		AttackID   string            `json:"attackId"`
 		Placements []deployPlacement `json:"placements"`
+		Troops     []troopStack      `json:"troops"`
 	}
 	if err := decodeStrict(payload, &request); err != nil {
 		return "", err
@@ -231,7 +242,7 @@ func (s *Server) rpcRaidDeploy(ctx context.Context, logger runtime.Logger, db *s
 	if !s.limiter.Allow(userID, time.Now()) {
 		return "", errRateLimited
 	}
-	requestHash := hashRequest(placementHash(request.AttackID, request.Placements))
+	requestHash := hashRequest(placementHash(request.AttackID, request.Placements, request.Troops))
 
 	var output string
 	err = withTx(ctx, db, func(tx *sql.Tx) error {
@@ -283,7 +294,31 @@ func (s *Server) rpcRaidDeploy(ctx context.Context, logger runtime.Logger, db *s
 			if member == nil {
 				return errHeroNotInTeam
 			}
-			heroes = append(heroes, battleHeroInput{member.InstanceID, member.Role, member.Hp, member.Attack, member.Defense, placement.X, placement.Z})
+			heroes = append(heroes, battleHeroInput{member.InstanceID, member.Role, member.Hp, member.Attack, member.Defense, placement.X, placement.Z, false})
+		}
+		// Troops come from the camps and are used up by landing, win or lose.
+		counts, err := loadTroopCounts(ctx, tx, userID)
+		if err != nil {
+			return err
+		}
+		landed := 0
+		used := map[string]int{}
+		for _, stack := range request.Troops {
+			if stack.Count < 1 || stack.Count > maxRaidTroops {
+				return errBadTroopCount
+			}
+			landed += stack.Count
+			if landed > maxRaidTroops {
+				return errTooManyTroops
+			}
+			troop, ok := s.troops.byID[stack.TroopID]
+			if !ok || used[stack.TroopID]+stack.Count > counts[stack.TroopID] {
+				return errNotEnoughTroops
+			}
+			used[stack.TroopID] += stack.Count
+			for i := 0; i < stack.Count; i++ {
+				heroes = append(heroes, battleHeroInput{troop.ID, troop.Role, troop.Hp, troop.Attack, troop.Defense, stack.X, stack.Z, true})
+			}
 		}
 		if refusal := deployError(buildings, heroes); refusal != "" {
 			return gameError(refusal, codePrecondition)
@@ -292,6 +327,11 @@ func (s *Server) rpcRaidDeploy(ctx context.Context, logger runtime.Logger, db *s
 		result, err := runBattle(buildings, heroes)
 		if err != nil {
 			return err
+		}
+		for id, count := range used {
+			if err := storeTroopCount(ctx, tx, userID, id, counts[id]-count); err != nil {
+				return err
+			}
 		}
 
 		// Gold is only paid for stars beyond the player's best, so a raid can't be farmed.

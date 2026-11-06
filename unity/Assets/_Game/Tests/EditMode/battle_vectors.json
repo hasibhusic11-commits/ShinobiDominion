@@ -2,7 +2,7 @@
   "scenarios": [
     {
       "name": "mixed team, strong",
-      "checksum": "8a8de4b1e0b418bd", "stars": 3, "damagePercent": 100, "endTick": 523, "heroesAlive": 6,
+      "checksum": "c0d4bab7cc1e9a81", "stars": 3, "damagePercent": 100, "endTick": 523, "heroesAlive": 6,
       "team": [
         { "id": "a", "role": "Tank", "hp": 6000, "attack": 240, "defense": 240, "x": 10, "z": 10 },
         { "id": "b", "role": "Fighter", "hp": 4800, "attack": 360, "defense": 160, "x": 11, "z": 10 },
@@ -14,7 +14,7 @@
     },
     {
       "name": "mixed team, weak",
-      "checksum": "d17a196caf4becc8", "stars": 3, "damagePercent": 100, "endTick": 1481, "heroesAlive": 3,
+      "checksum": "c4c91d4a3295718f", "stars": 3, "damagePercent": 100, "endTick": 1481, "heroesAlive": 3,
       "team": [
         { "id": "a", "role": "Tank", "hp": 1500, "attack": 60, "defense": 60, "x": 40, "z": 40 },
         { "id": "b", "role": "Fighter", "hp": 1200, "attack": 90, "defense": 40, "x": 41, "z": 41 },
@@ -22,6 +22,20 @@
         { "id": "d", "role": "Mage", "hp": 800, "attack": 100, "defense": 25, "x": 3, "z": 3 },
         { "id": "e", "role": "Control", "hp": 900, "attack": 80, "defense": 30, "x": 4, "z": 3 },
         { "id": "f", "role": "Support", "hp": 900, "attack": 60, "defense": 30, "x": 5, "z": 3 }
+      ]
+    },
+    {
+      "name": "heroes and troops together",
+      "checksum": "23b9e92b35a24c75", "stars": 0, "damagePercent": 15, "endTick": 381, "heroesAlive": 0,
+      "team": [
+        { "id": "a", "role": "Control", "hp": 2000, "attack": 200, "defense": 60, "x": 25, "z": 5 },
+        { "id": "militia", "role": "Fighter", "hp": 110, "attack": 14, "defense": 5, "x": 10, "z": 10, "isTroop": true },
+        { "id": "militia", "role": "Fighter", "hp": 110, "attack": 14, "defense": 5, "x": 10, "z": 10, "isTroop": true },
+        { "id": "militia", "role": "Fighter", "hp": 110, "attack": 14, "defense": 5, "x": 10, "z": 10, "isTroop": true },
+        { "id": "kunai_thrower", "role": "Mage", "hp": 90, "attack": 26, "defense": 3, "x": 40, "z": 25, "isTroop": true },
+        { "id": "kunai_thrower", "role": "Mage", "hp": 90, "attack": 26, "defense": 3, "x": 40, "z": 25, "isTroop": true },
+        { "id": "shield_bearer", "role": "Tank", "hp": 680, "attack": 24, "defense": 28, "x": 25, "z": 8, "isTroop": true },
+        { "id": "shadow_runner", "role": "Assassin", "hp": 190, "attack": 36, "defense": 8, "x": 8, "z": 25, "isTroop": true }
       ]
     },
     {

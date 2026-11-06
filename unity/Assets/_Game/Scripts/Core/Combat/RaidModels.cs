@@ -43,6 +43,22 @@ namespace ShinobiDominion.Core
         public List<BattleBuildingInput> buildings = new List<BattleBuildingInput>();
         public List<RaidTeamMember> team = new List<RaidTeamMember>();
 
+        /// <summary>
+        /// Everything that lands, in battle order: heroes, then each stack of troops. The server builds
+        /// its list the same way, so the log's unit numbers mean the same thing on both sides.
+        /// </summary>
+        public List<BattleHeroInput> ToUnits(IEnumerable<RaidPlacement> placements, IEnumerable<RaidTroopStack> stacks, TroopCatalog troops)
+        {
+            var units = ToHeroes(placements);
+            foreach (var stack in stacks)
+            {
+                var troop = troops.Find(stack.troopId);
+                for (var i = 0; i < stack.count; i++)
+                    units.Add(new BattleHeroInput { id = troop.id, role = troop.role, hp = troop.hp, attack = troop.attack, defense = troop.defense, x = stack.x, z = stack.z, isTroop = true });
+            }
+            return units;
+        }
+
         public static RaidSession Parse(string json) => ServerState.ParseObject(json).ToObject<RaidSession>();
 
         public List<BattleHeroInput> ToHeroes(IEnumerable<RaidPlacement> placements) =>

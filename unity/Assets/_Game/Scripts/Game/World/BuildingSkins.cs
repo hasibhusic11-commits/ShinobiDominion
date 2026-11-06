@@ -47,6 +47,7 @@ namespace ShinobiDominion.Game
                 case "hero_altar": return C(0.20f, 0.50f, 0.50f);
                 case "summoning_gate": return C(0.38f, 0.26f, 0.62f);
                 case "training_grounds": return C(0.26f, 0.46f, 0.28f);
+                case "troop_camp": return C(0.52f, 0.34f, 0.22f);
                 case "research_hut": return C(0.72f, 0.56f, 0.30f);
                 case "defense_tower": return C(0.66f, 0.16f, 0.12f);
                 case "spirit_turret": return C(0.20f, 0.42f, 0.86f);

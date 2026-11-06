@@ -108,6 +108,17 @@ namespace ShinobiDominion.Tests
             game.IsoCamera.ZoomAt(5f, new Vector2(texture.width * 0.5f, texture.height * 0.5f));
             yield return shot("08_zoomed_out_full_map");
 
+            var rich = village.ToSave();
+            rich.gold = 20000;
+            village.Restore(rich);
+            village.TryPlace("training_grounds", new GridCoord(40, 12), Rotation.R0, 0, out var hallId);
+            village.TryPlace("troop_camp", new GridCoord(35, 12), Rotation.R0, 0, out var campId);
+            for (var i = 0; i < 12; i++) controller.TrainTroop("militia", 1);
+            controller.Select(hallId);
+            yield return shot("18_training_hall");
+            controller.Select(campId);
+            yield return shot("19_troop_camp");
+            controller.CloseAll();
             controller.OpenAttack();
             yield return shot("20_raid_choose");
             controller.ScoutRaid("ridge_outpost");

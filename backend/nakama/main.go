@@ -82,6 +82,7 @@ type Server struct {
 	catalog *HeroCatalog
 	buildings *BuildingCatalog
 	raids   *raidCatalog
+	troops  *troopCatalog
 	pool    *SummonPool
 	dev     bool
 	limiter *rateLimiter
@@ -107,6 +108,10 @@ func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runti
 	if err != nil {
 		return fmt.Errorf("raid catalog: %w", err)
 	}
+	troops, err := loadTroopCatalog(troopsJSON)
+	if err != nil {
+		return fmt.Errorf("troop catalog: %w", err)
+	}
 	if err := migrate(ctx, db); err != nil {
 		return fmt.Errorf("migrations: %w", err)
 	}
@@ -115,6 +120,7 @@ func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runti
 		catalog: catalog,
 		buildings: buildings,
 		raids:   raids,
+		troops:  troops,
 		pool:    pool,
 		dev:     devModeEnabled(env),
 		limiter: newRateLimiter(envFloat(env, "SD_RATE_PER_SEC", 5), envFloat(env, "SD_RATE_BURST", 20)),
@@ -148,6 +154,7 @@ func (s *Server) register(initializer runtime.Initializer, logger runtime.Logger
 		"sd_village_remove": s.rpcRemove,
 		"sd_village_upgrade": s.rpcUpgrade,
 		"sd_village_collect": s.rpcCollect,
+		"sd_troop_train":  s.rpcTroopTrain,
 		"sd_raid_list":    s.rpcRaidList,
 		"sd_raid_start":   s.rpcRaidStart,
 		"sd_raid_deploy":  s.rpcRaidDeploy,
@@ -344,6 +351,7 @@ type playerState struct {
 	Heroes        []heroState      `json:"heroes"`
 	Items         map[string]int64 `json:"items"`
 	Village       *villageState    `json:"village"`
+	Troops        map[string]int   `json:"troops"`
 }
 
 func loadState(ctx context.Context, tx *sql.Tx, userID string, crystals int64) (*playerState, error) {
@@ -387,6 +395,10 @@ func loadState(ctx context.Context, tx *sql.Tx, userID string, crystals int64) (
 	itemRows.Close()
 	rows.Close()
 	state.Village, err = loadVillageState(ctx, tx, userID, crystals)
+	if err != nil {
+		return state, err
+	}
+	state.Troops, err = loadTroopCounts(ctx, tx, userID)
 	return state, err
 }
 
@@ -884,6 +896,7 @@ type devGrantRequest struct {
 	ClearItems  bool             `json:"clearItems"`
 	MaxLevelFor string           `json:"maxLevelFor"`
 	SetGold     *int64           `json:"setGold"`
+	SetDojoLevel *int `json:"setDojoLevel"`
 	ResetVillage bool            `json:"resetVillage"`
 	BackdateCollectHours int64   `json:"backdateCollectHours"`
 }
@@ -962,6 +975,14 @@ func (s *Server) rpcDevGrant(ctx context.Context, logger runtime.Logger, db *sql
 		}
 		if request.ResetVillage {
 			if err := s.createStarterVillage(ctx, tx, userID); err != nil {
+				return err
+			}
+		}
+		if request.SetDojoLevel != nil {
+			if *request.SetDojoLevel < 1 || *request.SetDojoLevel > levelsPerBuilding {
+				return errBadRequest
+			}
+			if _, err := tx.ExecContext(ctx, `UPDATE sd_building SET level = $1 WHERE user_id = $2 AND definition_id = 'dojo_hq'`, *request.SetDojoLevel, userID); err != nil {
 				return err
 			}
 		}

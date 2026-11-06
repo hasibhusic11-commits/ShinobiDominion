@@ -14,6 +14,16 @@ namespace ShinobiDominion.Tests
     /// </summary>
     public class RulesVectorTests
     {
+        private static string ReadConfig(string name)
+        {
+            var candidates = new[]
+            {
+                Path.Combine(AppContext.BaseDirectory, "Config", name),
+                Path.Combine("Assets", "_Game", "Resources", "Config", name)
+            };
+            return File.ReadAllText(candidates.First(File.Exists));
+        }
+
         private static JObject Vectors()
         {
             var candidates = new[]
@@ -51,6 +61,8 @@ namespace ShinobiDominion.Tests
             village.Restore(start);
 
             var labels = new Dictionary<string, int>();
+            var army = new Army();
+            var troops = TroopCatalog.FromJson(ReadConfig("troops.json"));
             long clock = TimeSpan.TicksPerHour * 1000;
             var step = 0;
             foreach (var op in scenario["ops"])
@@ -70,6 +82,11 @@ namespace ShinobiDominion.Tests
                         var levelId = TargetOf(village, op, labels);
                         levelSave.buildings.Find(b => b.id == levelId).level = op.Value<int>("level");
                         village.Restore(levelSave);
+                        continue;
+                    case "train":
+                        var trained = army.TryTrain(village, troops, op.Value<string>("troop"), op.Value<int>("count"));
+                        Assert.AreEqual(op.Value<string>("expect"), trained.ToString(), where);
+                        if (op["gold"] != null) Assert.AreEqual(op.Value<long>("gold"), village.Gold, where + " gold");
                         continue;
                     case "advanceHours":
                         clock += TimeSpan.TicksPerHour * op.Value<long>("hours");

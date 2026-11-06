@@ -164,6 +164,83 @@ namespace ShinobiDominion.Tests
             Assert.Throws<FormatException>(() => RaidCatalog.FromJson(json, TestCatalog.Load()));
         }
 
+        [Test]
+        public void Troops_FightWithoutAbilities_AndCanShareACell()
+        {
+            var units = MixedTeam(1).Take(1).ToList();
+            for (var i = 0; i < 10; i++) units.Add(new BattleHeroInput { id = "militia", role = "Fighter", hp = 110, attack = 14, defense = 5, x = 2, z = 2, isTroop = true });
+            Assert.AreEqual("", BattleSim.DeployError(Outpost(), units));
+            var result = BattleSim.Run(Outpost(), units);
+            Assert.IsFalse(result.events.Any(e => e[1] == (long)BattleEventKind.Ability && e[2] >= 1), "Only heroes use abilities");
+            Assert.IsTrue(result.events.Any(e => e[1] == (long)BattleEventKind.HeroHit && e[2] >= 1), "Troops must attack");
+        }
+
+        [Test]
+        public void Troops_AddToWhatHeroesCanDo()
+        {
+            var alone = MixedTeam(1).Take(1).ToList();
+            alone[0].hp = 300;
+            var helped = new List<BattleHeroInput>(alone) { };
+            for (var i = 0; i < 40; i++) helped.Add(new BattleHeroInput { id = "militia", role = "Fighter", hp = 110, attack = 14, defense = 5, x = 45, z = 3, isTroop = true });
+            var fresh = MixedTeam(1).Take(1).ToList();
+            fresh[0].hp = 300;
+            Assert.Greater(BattleSim.Run(Outpost(), helped).damagePercent, BattleSim.Run(Outpost(), fresh).damagePercent);
+        }
+
+        [Test]
+        public void BiggestArmy_RunsQuicklyEnoughForTheServer()
+        {
+            var units = MixedTeam(3);
+            for (var i = 0; i < 200; i++) units.Add(new BattleHeroInput { id = "militia", role = "Fighter", hp = 110, attack = 14, defense = 5, x = 2 + i % 10, z = 2, isTroop = true });
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+            var result = BattleSim.Run(Outpost(), units);
+            clock.Stop();
+            TestContext.Out.WriteLine($"200 troops: {clock.ElapsedMilliseconds} ms, {result.events.Count} events");
+            Assert.Less(clock.ElapsedMilliseconds, 3000);
+            Assert.Less(result.events.Count, 60000);
+        }
+
+        [Test]
+        public void Army_RulesForTraining()
+        {
+            var troops = TroopCatalog.FromJson(FindFile("troops.json", "Resources/Config"));
+            var village = TestCatalog.EmptyVillage();
+            var army = new Army();
+            Assert.AreEqual(VillageError.NoTrainingHall, army.TryTrain(village, troops, "militia", 1));
+            Assert.AreEqual(VillageError.BadTroop, army.TryTrain(village, troops, "dragon", 1));
+            Assert.AreEqual(VillageError.BadTroop, army.TryTrain(village, troops, "militia", 0));
+            Assert.AreEqual(VillageError.None, village.TryPlace("training_grounds", new GridCoord(1, 1), Rotation.R0, 0, out _));
+            Assert.AreEqual(VillageError.CampsFull, army.TryTrain(village, troops, "militia", 1));
+            Assert.AreEqual(VillageError.None, village.TryPlace("troop_camp", new GridCoord(10, 10), Rotation.R0, 0, out _));
+            Assert.AreEqual(15, Army.Capacity(village));
+            Assert.AreEqual(VillageError.TroopLocked, army.TryTrain(village, troops, "iron_ox_rider", 1));
+
+            var gold = village.Gold;
+            Assert.AreEqual(VillageError.None, army.TryTrain(village, troops, "kunai_thrower", 7));
+            Assert.AreEqual(gold - 7 * 60, village.Gold);
+            Assert.AreEqual(14, army.UsedSpace(troops), "Stronger troops take more room");
+            Assert.AreEqual(VillageError.CampsFull, army.TryTrain(village, troops, "kunai_thrower", 1));
+            Assert.AreEqual(VillageError.None, army.TryTrain(village, troops, "militia", 1));
+        }
+
+        [Test]
+        public void Army_SpaceGrowsWithStrength()
+        {
+            var troops = TroopCatalog.FromJson(FindFile("troops.json", "Resources/Config"));
+            var ordered = troops.All.OrderBy(t => t.space).ToList();
+            for (var i = 1; i < ordered.Count; i++)
+                Assert.Greater(ordered[i].hp * ordered[i].attack, ordered[i - 1].hp * ordered[i - 1].attack, ordered[i].id);
+        }
+
+        [Test]
+        public void Camps_AreLimitedToFour()
+        {
+            var camp = TestCatalog.Load().Get("troop_camp");
+            for (var level = 1; level <= 15; level++) Assert.LessOrEqual(camp.MaxCountAt(level), 4);
+            Assert.AreEqual(4, camp.MaxCountAt(15));
+            Assert.Greater(camp.At(15).troopCapacity, camp.At(1).troopCapacity);
+        }
+
         /// <summary>The server's Go copy of the battle must produce these exact logs too.</summary>
         [Test]
         public void SharedScenarios_MatchExpectedLogs()

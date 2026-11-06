@@ -32,6 +32,7 @@ type vectorOp struct {
 	CountDef string   `json:"countDef"`
 	Level    *int     `json:"level"`
 	Hours    int64    `json:"hours"`
+	Troop    string   `json:"troop"`
 }
 
 type vectorFile struct {
@@ -90,6 +91,11 @@ func TestSharedRuleScenarios(t *testing.T) {
 			v := newVillage(catalog, scenario.StartGold, scenario.StartCrystals, 1)
 			labels := map[string]int{}
 			clock := int64(3600000 * 1000)
+			troops, troopErr := loadTroopCatalog(troopsJSON)
+			if troopErr != nil {
+				t.Fatal(troopErr)
+			}
+			counts := map[string]int{}
 			for index, op := range scenario.Ops {
 				where := "step " + strconv.Itoa(index+1)
 				target := op.ID
@@ -105,6 +111,18 @@ func TestSharedRuleScenarios(t *testing.T) {
 					continue
 				case "setLevel":
 					v.byID[target].Level = *op.Level
+					continue
+				case "train":
+					want := op.Expect
+					if want == "None" {
+						want = ""
+					}
+					if got := train(v, troops, counts, op.Troop, *op.Count); string(got) != want {
+						t.Fatalf("%s train: got %q, want %q", where, got, op.Expect)
+					}
+					if op.Gold != nil && v.gold != *op.Gold {
+						t.Fatalf("%s: gold %d, want %d", where, v.gold, *op.Gold)
+					}
 					continue
 				case "advanceHours":
 					clock += op.Hours * 3600000

@@ -86,7 +86,7 @@
       ]
     },
     {
-      "id": "training_grounds", "displayName": "Training Grounds", "description": "Train heroes. Available in a later phase.", "category": "Structures", "function": "Training", "width": 4, "depth": 3, "rotatable": true, "costGold": 1500, "maxCountByHqLevel": [1],
+      "id": "training_grounds", "displayName": "Training Hall", "description": "Trains troops, who wait in your Troop Camps. Higher levels unlock stronger troops.", "category": "Structures", "function": "Training", "width": 4, "depth": 3, "rotatable": true, "costGold": 1500, "maxCountByHqLevel": [1],
       "levels": [
         {"hp":500,"upgradeCost":800,"requiredHq":1,"might":3},
         {"hp":575,"upgradeCost":1600,"requiredHq":1,"might":6},
@@ -103,6 +103,26 @@
         {"hp":3300,"upgradeCost":256000,"requiredHq":9,"might":39},
         {"hp":3850,"upgradeCost":360000,"requiredHq":12,"might":42},
         {"hp":4500,"upgradeCost":0,"requiredHq":12,"might":45}
+      ]
+    },
+    {
+      "id": "troop_camp", "displayName": "Troop Camp", "description": "Houses trained troops. Stronger troops take up more room. You can have up to four.", "category": "Structures", "function": "TroopCamp", "width": 3, "depth": 3, "costGold": 400, "maxCountByHqLevel": [1, 2, 3, 4],
+      "levels": [
+        {"hp":450,"upgradeCost":350,"requiredHq":1,"troopCapacity":15,"might":3},
+        {"hp":520,"upgradeCost":700,"requiredHq":1,"troopCapacity":17,"might":6},
+        {"hp":610,"upgradeCost":1400,"requiredHq":1,"troopCapacity":19,"might":9},
+        {"hp":720,"upgradeCost":2450,"requiredHq":1,"troopCapacity":21,"might":12},
+        {"hp":830,"upgradeCost":4200,"requiredHq":3,"troopCapacity":23,"might":15},
+        {"hp":990,"upgradeCost":7000,"requiredHq":3,"troopCapacity":25,"might":18},
+        {"hp":1170,"upgradeCost":11200,"requiredHq":3,"troopCapacity":27,"might":21},
+        {"hp":1370,"upgradeCost":17500,"requiredHq":6,"troopCapacity":29,"might":24},
+        {"hp":1600,"upgradeCost":26250,"requiredHq":6,"troopCapacity":31,"might":27},
+        {"hp":1870,"upgradeCost":38500,"requiredHq":6,"troopCapacity":33,"might":30},
+        {"hp":2180,"upgradeCost":56000,"requiredHq":9,"troopCapacity":35,"might":33},
+        {"hp":2540,"upgradeCost":80500,"requiredHq":9,"troopCapacity":36,"might":36},
+        {"hp":2970,"upgradeCost":112000,"requiredHq":9,"troopCapacity":37,"might":39},
+        {"hp":3465,"upgradeCost":157500,"requiredHq":12,"troopCapacity":38,"might":42},
+        {"hp":4050,"upgradeCost":0,"requiredHq":12,"troopCapacity":40,"might":45}
       ]
     },
     {

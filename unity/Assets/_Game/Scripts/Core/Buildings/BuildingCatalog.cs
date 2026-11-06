@@ -26,6 +26,7 @@ namespace ShinobiDominion.Core
         HeroBase,
         SummoningGate,
         Training,
+        TroopCamp,
         Research,
         Collector,
         Storage,
@@ -58,6 +59,7 @@ namespace ShinobiDominion.Core
         public long attack;
         public int range;
         public int bonusPercent;
+        public long troopCapacity;
         public int might;
     }
 

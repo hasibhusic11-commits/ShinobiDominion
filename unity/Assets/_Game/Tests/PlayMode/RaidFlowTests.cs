@@ -106,6 +106,58 @@ namespace ShinobiDominion.Tests
             yield return null;
         }
 
+        private void ReadyArmy()
+        {
+            var save = Controller.Village.ToSave();
+            save.gold = 20000;
+            Controller.Village.Restore(save);
+            Assert.AreEqual(VillageError.None, Controller.Village.TryPlace("training_grounds", new GridCoord(38, 30), Rotation.R0, 0, out _));
+            Assert.AreEqual(VillageError.None, Controller.Village.TryPlace("troop_camp", new GridCoord(38, 36), Rotation.R0, 0, out _));
+        }
+
+        [UnityTest]
+        public IEnumerator Troops_TrainInTheHall_LandInARaid_AndAreUsedUp()
+        {
+            ReadyArmy();
+            AssignTeam(1);
+            var gold = Controller.Village.Gold;
+            for (var i = 0; i < 8; i++) Controller.TrainTroop("militia", 1);
+            Assert.AreEqual(8, Controller.Army.CountOf("militia"));
+            Assert.AreEqual(gold - 8 * 25, Controller.Village.Gold);
+
+            Controller.OpenAttack();
+            Controller.ScoutRaid("ridge_outpost");
+            Controller.CycleTroop();
+            Controller.TapDeployCell(new GridCoord(3, 3));
+            Controller.CycleTroop();
+            Controller.AutoPlaceHeroes();
+            Controller.StartBattle();
+            Assert.AreEqual(RaidPhase.Battle, Controller.CurrentRaidPhase);
+            Assert.AreEqual(0, Controller.Army.CountOf("militia"), "Troops that land are used up");
+            yield return new WaitForSeconds(0.3f);
+            Assert.AreEqual(9, Object.FindObjectsByType<MeshRenderer>(FindObjectsSortMode.None).Count(r => r.name == "BattleTroop" || r.name == "BattleHero"));
+            Controller.SkipBattle();
+            Assert.AreEqual(RaidPhase.Resolved, Controller.CurrentRaidPhase);
+            Controller.FinishRaid();
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator Troops_PickedBackUp_AreNotUsed()
+        {
+            ReadyArmy();
+            AssignTeam(1);
+            Controller.TrainTroop("militia", 3);
+            Controller.OpenAttack();
+            Controller.ScoutRaid("ridge_outpost");
+            Controller.CycleTroop();
+            Controller.TapDeployCell(new GridCoord(3, 3));
+            Controller.TapDeployCell(new GridCoord(3, 3));
+            Controller.RetreatRaid();
+            yield return null;
+            Assert.AreEqual(3, Controller.Army.CountOf("militia"));
+        }
+
         [Test]
         public void NoHeroes_CannotScout()
         {

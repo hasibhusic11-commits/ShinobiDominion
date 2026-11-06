@@ -433,6 +433,11 @@ namespace ShinobiDominion.Game
                         panel.Action("OpenGateButton", "Open the Gate", ShowSummoningGate, true, Ui.AccentColor);
                     break;
                 case BuildingFunction.Training:
+                    TrainingActions(panel);
+                    break;
+                case BuildingFunction.TroopCamp:
+                    panel.Line($"All camps: {Army.UsedSpace(TroopData)} of {Army.Capacity(Village)} space used. Train troops at the Training Hall.");
+                    break;
                 case BuildingFunction.Research:
                     panel.Line("This building's features arrive in a later phase.", 20, Ui.AccentColor);
                     break;
@@ -484,6 +489,7 @@ namespace ShinobiDominion.Game
             Stat("Attack", now.attack, next?.attack ?? now.attack);
             Stat("Range", now.range, next?.range ?? now.range);
             Stat(definition.function == BuildingFunction.HeroAltar ? "Faster hero revival" : "Hero strength bonus", now.bonusPercent, next?.bonusPercent ?? now.bonusPercent, "%");
+            Stat("Holds troops", now.troopCapacity, next?.troopCapacity ?? now.troopCapacity);
             Stat("Might", now.might, next?.might ?? now.might);
         }
 

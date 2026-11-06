@@ -72,6 +72,7 @@ namespace ShinobiDominion.Game
         {
             Roster.ReplaceWithServerState(state.RosterJson);
             ServerCrystals = state.Crystals;
+            Army.Replace(state.Troops);
             if (state.Village != null) Village.Restore(state.Village);
             RefreshHud();
             if (_selectionCells != null && UiState.Screen == VillageScreen.BuildingPanel)

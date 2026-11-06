@@ -118,6 +118,26 @@
       ]
     },
     {
+      "name": "training needs a hall and room in the camps",
+      "startGold": 20000,
+      "ops": [
+        { "op": "train", "troop": "militia", "count": 1, "expect": "NoTrainingHall" },
+        { "op": "train", "troop": "dragon", "count": 1, "expect": "BadTroop" },
+        { "op": "train", "troop": "militia", "count": 0, "expect": "BadTroop" },
+        { "op": "train", "troop": "militia", "count": 101, "expect": "BadTroop" },
+        { "op": "place", "def": "training_grounds", "x": 1, "z": 1, "expect": "None", "gold": 18500 },
+        { "op": "train", "troop": "militia", "count": 1, "expect": "CampsFull" },
+        { "op": "place", "def": "troop_camp", "x": 10, "z": 10, "expect": "None", "gold": 18100 },
+        { "op": "train", "troop": "iron_ox_rider", "count": 1, "expect": "TroopLocked" },
+        { "op": "train", "troop": "kunai_thrower", "count": 7, "expect": "None", "gold": 17680 },
+        { "op": "train", "troop": "kunai_thrower", "count": 1, "expect": "CampsFull" },
+        { "op": "train", "troop": "militia", "count": 1, "expect": "None", "gold": 17655 },
+        { "op": "train", "troop": "militia", "count": 1, "expect": "CampsFull" },
+        { "op": "setGold", "gold": 1 },
+        { "op": "place", "def": "wall", "x": 40, "z": 40, "expect": "InsufficientFunds" }
+      ]
+    },
+    {
       "name": "the dojo gates upgrades, every 3 levels from level 5",
       "startGold": 20000,
       "ops": [

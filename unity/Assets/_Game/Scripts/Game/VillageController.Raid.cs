@@ -27,6 +27,8 @@ namespace ShinobiDominion.Game
             public RaidSession Session;
             public BattleStage Stage;
             public readonly List<RaidPlacement> Placements = new List<RaidPlacement>();
+            public readonly List<RaidTroopStack> Stacks = new List<RaidTroopStack>();
+            public string SelectedTroop;
             public RaidOutcome Outcome;
             public GameObject StatusBar;
             public Text StatusText;
@@ -37,7 +39,12 @@ namespace ShinobiDominion.Game
         private const float BattleCameraSize = 15f;
         private const float HomeCameraSize = 10f;
 
+        private const int TroopsPerTap = 5;
+
         private RaidCatalog _raidCatalog;
+        private TroopCatalog _troopCatalog;
+
+        public Army Army { get; } = new Army();
         private RaidRun _raid;
         private List<RaidSummary> _raidList;
         private CellHighlight _raidCells;
@@ -57,6 +64,49 @@ namespace ShinobiDominion.Game
                 _raidCatalog = RaidCatalog.FromJson(config.text, Village.Catalog);
                 return _raidCatalog;
             }
+        }
+
+        public TroopCatalog TroopData
+        {
+            get
+            {
+                if (_troopCatalog != null) return _troopCatalog;
+                var config = Resources.Load<TextAsset>("Config/troops");
+                if (config == null) throw new System.InvalidOperationException("Resources/Config/troops.json is missing.");
+                _troopCatalog = TroopCatalog.FromJson(config.text);
+                return _troopCatalog;
+            }
+        }
+
+        // ---------- Training ----------
+
+        private void TrainingActions(PanelView panel)
+        {
+            var hall = Army.HallLevel(Village);
+            panel.Line($"Army: {Army.UsedSpace(TroopData)} of {Army.Capacity(Village)} camp space used.");
+            if (Army.Capacity(Village) == 0) panel.Line("Build a Troop Camp to house them.", 20, Ui.AccentColor);
+            foreach (var troop in TroopData.All)
+            {
+                var name = $"Train{troop.id}Button";
+                if (hall < troop.requiredHall)
+                {
+                    panel.Line($"{troop.displayName}: needs a level {troop.requiredHall} Training Hall", 19, Ui.MutedText);
+                    continue;
+                }
+                var error = Army.CheckTrain(Village, TroopData, troop.id, 1);
+                panel.Action(name, $"{troop.displayName} ({Army.CountOf(troop.id)})   {troop.goldCost:N0} gold, {troop.space} space", () => TrainTroop(troop.id, 1), error == VillageError.None, null, 18);
+            }
+        }
+
+        public void TrainTroop(string troopId, int count)
+        {
+            if (RefuseWhenNoServer()) return;
+            if (IsOnline)
+            {
+                VillageRequest($"train|{troopId}|{count}|{Army.CountOf(troopId)}", key => _server.TrainTroopsAsync(key, troopId, count), ShowContextPanel, ShowContextPanel);
+                return;
+            }
+            RunAndRefresh(Army.TryTrain(Village, TroopData, troopId, count));
         }
 
         // ---------- Choosing a target ----------
@@ -163,7 +213,7 @@ namespace ShinobiDominion.Game
             var stageObject = new GameObject("BattleStage");
             stageObject.transform.SetParent(_worldRoot, false);
             var stage = stageObject.AddComponent<BattleStage>();
-            stage.Initialize(session, Village.Catalog, _camera.Camera, HeroLookFor);
+            stage.Initialize(session, Village.Catalog, TroopData, _camera.Camera, HeroLookFor);
             stage.Finished += ShowRaidResult;
             _raid = new RaidRun { Session = session, Stage = stage };
             _view.SetVisible(false);
@@ -189,23 +239,66 @@ namespace ShinobiDominion.Game
             _panel.Show(_raid.Session.raid.displayName, RetreatRaid, panel =>
             {
                 if (!string.IsNullOrEmpty(LastMessage)) panel.Line(LastMessage, 20, Ui.AccentColor);
-                panel.Line("Tap the map to place your heroes. Marked cells are too close to the enemy.");
-                foreach (var member in _raid.Session.team)
+                panel.Line("Tap the map to land. Shaded cells are too close to the enemy. Troops that land are used up.", 19);
+                panel.Line($"Heroes placed: {_raid.Placements.Count} of {_raid.Session.team.Count}");
+                var left = TroopData.All.Where(t => TroopsLeft(t.id) > 0).ToList();
+                if (Army.Counts.Count > 0)
+                    panel.Line(left.Count > 0 ? "Left: " + string.Join(", ", left.Select(t => $"{t.displayName} {TroopsLeft(t.id)}")) : "All troops placed.", 19);
+                if (left.Count > 0)
                 {
-                    var placed = _raid.Placements.Any(p => p.instanceId == member.instanceId);
-                    var name = Roster.Catalog.Get(member.archetypeId).displayName;
-                    panel.Line($"{(placed ? "Placed" : "Waiting")}: {name}, {member.role}", 19);
+                    var selected = TroopData.Find(_raid.SelectedTroop);
+                    var caption = selected != null ? $"Landing: {selected.displayName}" : "Landing: heroes. Tap to choose troops";
+                    panel.Action("NextTroopButton", caption, CycleTroop, true, null, 19);
                 }
-                panel.Action("AutoPlaceButton", "Place the rest for me", AutoPlaceHeroes, _raid.Placements.Count < _raid.Session.team.Count);
-                panel.Action("StartBattleButton", "Start battle", StartBattle, _raid.Placements.Count > 0, Ui.AttackColor);
+                var everything = _raid.Placements.Count == _raid.Session.team.Count && left.Count == 0;
+                panel.Action("AutoPlaceButton", "Place the rest for me", AutoPlaceHeroes, !everything);
+                panel.Action("StartBattleButton", "Start battle", StartBattle, _raid.Placements.Count + _raid.Stacks.Count > 0, Ui.AttackColor);
                 panel.Action("RetreatButton", "Retreat", RetreatRaid);
             });
         }
 
-        /// <summary>Tapping a placed hero picks it back up. Tapping open ground places the next one.</summary>
+        private int TroopsLeft(string troopId) =>
+            Army.CountOf(troopId) - _raid.Stacks.Where(s => s.troopId == troopId).Sum(s => s.count);
+
+        /// <summary>Steps through heroes and then each troop the player still has.</summary>
+        public void CycleTroop()
+        {
+            if (_raid == null) return;
+            var choices = new List<string> { null };
+            choices.AddRange(TroopData.All.Where(t => TroopsLeft(t.id) > 0).Select(t => t.id));
+            var at = choices.IndexOf(_raid.SelectedTroop);
+            _raid.SelectedTroop = choices[(at + 1) % choices.Count];
+            ShowPreparePanel();
+        }
+
+        private void AddStack(string troopId, int x, int z, int count)
+        {
+            var stack = new RaidTroopStack { troopId = troopId, x = x, z = z, count = count };
+            _raid.Stacks.Add(stack);
+            _raid.Stage.ShowStack(stack);
+        }
+
+        /// <summary>Tapping a placed hero or troop picks it back up. Tapping open ground lands the next one.</summary>
         public void TapDeployCell(GridCoord cell)
         {
             if (_raid == null || _raid.Phase != RaidPhase.Prepare) return;
+            var stacked = _raid.Stacks.FirstOrDefault(s => s.x == cell.X && s.z == cell.Z);
+            if (stacked != null)
+            {
+                _raid.Stacks.Remove(stacked);
+                _raid.Stage.HideStack(stacked);
+                ShowPreparePanel();
+                return;
+            }
+            if (_raid.SelectedTroop != null)
+            {
+                var ready = TroopsLeft(_raid.SelectedTroop);
+                if (ready > 0 && VillageGrid.InBounds(cell.X, cell.Z) && BattleSim.CanDeployAt(_raid.Session.buildings, cell.X, cell.Z))
+                    AddStack(_raid.SelectedTroop, cell.X, cell.Z, Mathf.Min(ready, TroopsPerTap));
+                if (_raid.SelectedTroop != null && TroopsLeft(_raid.SelectedTroop) <= 0) _raid.SelectedTroop = null;
+                ShowPreparePanel();
+                return;
+            }
             var existing = _raid.Placements.FirstOrDefault(p => p.x == cell.X && p.z == cell.Z);
             if (existing != null)
             {
@@ -246,6 +339,24 @@ namespace ShinobiDominion.Game
                     placed = true;
                 }
             }
+
+            // Troops land in groups along the two sides facing the camera, well spread out.
+            var spot = 0;
+            foreach (var troop in TroopData.All)
+            {
+                while (TroopsLeft(troop.id) > 0)
+                {
+                    var side = spot % 2 == 0;
+                    var along = 8 + (spot / 2 * 5) % 36;
+                    var x = side ? along : 11;
+                    var z = side ? 11 : along;
+                    spot++;
+                    if (!BattleSim.CanDeployAt(_raid.Session.buildings, x, z)) { x = side ? along : 4; z = side ? 4 : along; }
+                    if (!BattleSim.CanDeployAt(_raid.Session.buildings, x, z)) continue;
+                    AddStack(troop.id, x, z, Mathf.Min(TroopsLeft(troop.id), TroopsPerTap));
+                }
+            }
+            _raid.SelectedTroop = null;
             ShowPreparePanel();
         }
 
@@ -259,16 +370,17 @@ namespace ShinobiDominion.Game
 
         public void StartBattle()
         {
-            if (_raid == null || _raid.Phase != RaidPhase.Prepare || _raid.Placements.Count == 0) return;
+            if (_raid == null || _raid.Phase != RaidPhase.Prepare || _raid.Placements.Count + _raid.Stacks.Count == 0) return;
             if (IsOnline)
             {
                 var raid = _raid;
                 var placements = raid.Placements.ToList();
-                var signature = string.Join(",", placements.Select(p => $"{p.instanceId}:{p.x}:{p.z}"));
+                var stacks = raid.Stacks.ToList();
+                var signature = string.Join(",", placements.Select(p => $"{p.instanceId}:{p.x}:{p.z}")) + "|" + string.Join(",", stacks.Select(s => $"{s.troopId}:{s.x}:{s.z}:{s.count}"));
                 var key = KeyFor($"raid-deploy|{raid.Session.attackId}|{signature}");
                 Run(async () =>
                 {
-                    var outcome = await _server.RaidDeployAsync(key, raid.Session.attackId, placements);
+                    var outcome = await _server.RaidDeployAsync(key, raid.Session.attackId, placements, stacks);
                     ClearKey();
                     LastMessage = null;
                     if (_raid == raid) BeginPlayback(outcome);
@@ -276,7 +388,7 @@ namespace ShinobiDominion.Game
                 return;
             }
 
-            var heroes = _raid.Session.ToHeroes(_raid.Placements);
+            var heroes = _raid.Session.ToUnits(_raid.Placements, _raid.Stacks, TroopData);
             var refusal = BattleSim.DeployError(_raid.Session.buildings, heroes);
             if (refusal.Length > 0)
             {
@@ -284,6 +396,7 @@ namespace ShinobiDominion.Game
                 ShowPreparePanel();
                 return;
             }
+            foreach (var stack in _raid.Stacks) Army.Remove(stack.troopId, stack.count);
             BeginPlayback(new RaidOutcome { Result = BattleSim.Run(_raid.Session.buildings, heroes) });
         }
 
@@ -296,7 +409,7 @@ namespace ShinobiDominion.Game
             _raidCells?.Clear();
             _camera.StopMotion();
             _camera.Initialize(MapCenter, BattleCameraSize);
-            _raid.Stage.Play(outcome.Result, _raid.Placements);
+            _raid.Stage.Play(outcome.Result, _raid.Placements, _raid.Stacks);
             CreateBattleBar();
         }
 
@@ -343,7 +456,8 @@ namespace ShinobiDominion.Game
                 panel.Line($"{result.stars} of 3 stars", 30, Ui.AccentColor);
                 panel.Line($"Damage dealt: {result.damagePercent}%");
                 panel.Line(result.dojoDestroyed ? "The enemy Dojo fell." : "The enemy Dojo still stands.");
-                panel.Line($"Heroes still standing: {result.heroesAlive} of {_raid.Placements.Count}");
+                var landed = _raid.Placements.Count + _raid.Stacks.Sum(s => s.count);
+                panel.Line($"Still standing: {result.heroesAlive} of {landed}");
                 panel.Line($"Time: {result.endTick / BattleSim.TicksPerSecond} seconds");
                 if (_raid.Session.attackId == "practice") panel.Line("Practice battle: no reward.", 20, Ui.AccentColor);
                 else panel.Line(outcome.GoldEarned > 0 ? $"Earned {outcome.GoldEarned:N0} gold" : "No gold: only new stars pay, or your vault is full.");
