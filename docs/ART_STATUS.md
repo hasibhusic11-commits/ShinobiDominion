@@ -33,11 +33,14 @@ Your request asked for prefabs. The project generates models in code rather than
 - **Ambient occlusion:** a cheap darkening near the ground, with no screen-space effect, by design for phones.
 - **Phone performance: not measured.** See below.
 
+## Building detail
+Every building has its own props and trim in `BuildingDetails.cs`, such as tools, barrels, ropes, drums and rune stones. Roofs have tile colour variation, hip ridges, end tiles and rafter ends. Moss and loose stones fade away as a building is upgraded. The heaviest model, the Dojo, is about 6,200 vertices, and a test caps every model at 7,000.
+
 ## Outdoor detail
 The mountain has rock cracks, soft ledges, moss patches, shaded snow and rock spires. The forest floor has shrubs, ferns, mushrooms, pebbles, stumps and fallen logs. The pond has lily pads, reeds and stepping stones. Waterfall mist and cloud below the cliff are particles, and those were only built and rendered in stills, not watched moving.
 
 ## Measured cost (High quality)
-- About 218,000 vertices in view at most, in 17 mesh renderers on 3 materials, with the starter village at level 1. Higher tiers add a little per building. High quality uses 4x anti-aliasing; Low turns it off. Its cost on phones has not been measured.
+- About 227,000 vertices in view at most, in 17 mesh renderers on 3 materials, with the starter village at level 1. Higher tiers add a little per building. High quality uses 4x anti-aliasing; Low turns it off. Its cost on phones has not been measured.
 - Low quality halves plants, stops movement and particles, and turns off shadows. Plant density changes after a restart.
 - The world is built when the game starts, and that load time has not been measured on a phone. Baking it ahead of time is the likely fix if it is slow.
 - 4K shadow maps are set at High. These may be too heavy for mid-range phones, and Phase 5 should test them.

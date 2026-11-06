@@ -97,8 +97,8 @@ namespace ShinobiDominion.Game
                 case 2: // Cut stone: walls become masonry, timber darkens and brass appears.
                     skin.Plaster = C(0.84f, 0.84f, 0.82f);
                     skin.WallSurface = ArtSurface.Stone;
-                    skin.Stone = C(0.60f, 0.62f, 0.66f);
-                    skin.DarkStone = C(0.38f, 0.40f, 0.46f);
+                    skin.Stone = C(0.74f, 0.75f, 0.78f);
+                    skin.DarkStone = C(0.50f, 0.52f, 0.57f);
                     skin.Wood = C(0.40f, 0.25f, 0.16f);
                     skin.DarkWood = C(0.22f, 0.14f, 0.11f);
                     roof = Color.Lerp(signature, Color.white, 0.1f);

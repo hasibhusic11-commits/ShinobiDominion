@@ -110,7 +110,7 @@ Shader "ShinobiDominion/Toon"
 
                 // A restrained rim keeps silhouettes crisp at isometric distance.
                 half3 viewDir = normalize(GetWorldSpaceViewDir(input.positionWS));
-                half rim = pow(saturate(1.0 - dot(normal, viewDir)), 3.0);
+                half rim = pow(saturate(1.0 - dot(normal, viewDir)), 6.0);
                 color += _RimColor.rgb * rim * _RimStrength * (0.35 + 0.65 * lit);
 
                 if (input.glow > 0.0)

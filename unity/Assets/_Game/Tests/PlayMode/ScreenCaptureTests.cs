@@ -178,6 +178,35 @@ namespace ShinobiDominion.Tests
             camera.transform.position = new Vector3(25f, 0f, 25f) - camera.transform.forward * 70f;
             yield return Capture(camera, texture, Path.Combine(dir, "16_building_tiers.png"));
 
+            // Close-ups: every building on its own, at the first and last looks.
+            foreach (var gallery in root.GetComponentsInChildren<MeshRenderer>().Where(r => r.name == "gallery")) gallery.gameObject.SetActive(false);
+            var report = new System.Text.StringBuilder();
+            foreach (var level in new[] { 1, 7, 13 })
+            {
+                var shown = new System.Collections.Generic.List<GameObject>();
+                for (var i = 0; i < definitions.Count; i++)
+                {
+                    var column = i % 4;
+                    var row = i / 4;
+                    var along = (column - 1.5f) * 4.3f;
+                    var up = (1f - row) * 6.4f;
+                    var item = new GameObject("closeup");
+                    item.transform.SetParent(root.transform, false);
+                    item.transform.position = new Vector3(25f + along + up, 0f, 25f - along + up);
+                    var builder = BuildingMeshes.For(definitions[i], null, level);
+                    report.AppendLine($"{definitions[i].id} level {level}: {builder.VertexCount} vertices");
+                    item.AddComponent<MeshFilter>().sharedMesh = builder.Build("closeup");
+                    item.AddComponent<MeshRenderer>().sharedMaterials = builder.LitMaterials();
+                    shown.Add(item);
+                }
+                camera.orthographicSize = 9.5f;
+                camera.transform.position = new Vector3(25f, 0f, 25f) - camera.transform.forward * 70f;
+                yield return Capture(camera, texture, Path.Combine(dir, $"17_buildings_level_{level}.png"));
+                foreach (var item in shown) Object.Destroy(item);
+                yield return null;
+            }
+            File.WriteAllText(Path.Combine(dir, "building_vertices.txt"), report.ToString());
+
             camera.targetTexture = null;
             Object.Destroy(texture);
             Object.Destroy(root);

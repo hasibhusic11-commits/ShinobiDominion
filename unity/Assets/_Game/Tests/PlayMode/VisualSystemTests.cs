@@ -79,6 +79,24 @@ namespace ShinobiDominion.Tests
         }
 
         [Test]
+        public void BuildingDetail_StaysNearItsCells_AndWithinBudget()
+        {
+            foreach (var definition in Controller.Village.Catalog.All.Where(d => !d.IsWall))
+            foreach (var level in new[] { 1, 15 })
+            {
+                var builder = BuildingMeshes.For(definition, null, level);
+                Assert.Less(builder.VertexCount, 7000, definition.id + " is too heavy for a phone");
+                var bounds = builder.Build("t").bounds;
+                // Roofs and the Dojo's steps may overhang a little. Props may not wander off.
+                const float overhang = 0.25f;
+                Assert.LessOrEqual(Mathf.Abs(bounds.min.x), definition.width * 0.5f + overhang, definition.id);
+                Assert.LessOrEqual(bounds.max.x, definition.width * 0.5f + overhang, definition.id);
+                Assert.LessOrEqual(Mathf.Abs(bounds.min.z), definition.depth * 0.5f + overhang, definition.id);
+                Assert.LessOrEqual(bounds.max.z, definition.depth * 0.5f + overhang, definition.id);
+            }
+        }
+
+        [Test]
         public void TierDressing_StaysInsideTheFootprint()
         {
             foreach (var definition in Controller.Village.Catalog.All.Where(d => !d.IsWall))

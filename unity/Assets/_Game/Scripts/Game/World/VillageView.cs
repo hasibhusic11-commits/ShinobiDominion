@@ -207,6 +207,11 @@ namespace ShinobiDominion.Game
             builder.Box(at, new Vector3(size.x + 0.04f, foot, size.y + 0.04f), skin.Stone, skin.StoneSurface);
             builder.Box(at + Vector3.up * foot, new Vector3(size.x - 0.02f, height - foot, size.y - 0.02f), skin.Plaster, skin.WallSurface);
             builder.Box(at + Vector3.up * (height - 0.08f), new Vector3(size.x, 0.08f, size.y), skin.DarkWood, ArtSurface.Wood);
+            var rail = at + Vector3.up * (height * 0.7f);
+            var hx = size.x * 0.5f - 0.005f;
+            var hz = size.y * 0.5f - 0.005f;
+            builder.Quad(rail + new Vector3(-hx, -0.025f, -hz), rail + new Vector3(hx, -0.025f, -hz), rail + new Vector3(hx, 0.025f, -hz), rail + new Vector3(-hx, 0.025f, -hz), Vector3.back, skin.DarkWood, ArtSurface.Wood);
+            builder.Quad(rail + new Vector3(-hx, -0.025f, -hz), rail + new Vector3(-hx, -0.025f, hz), rail + new Vector3(-hx, 0.025f, hz), rail + new Vector3(-hx, 0.025f, -hz), Vector3.left, skin.DarkWood, ArtSurface.Wood);
             builder.Frustum(at + Vector3.up * height, size.x + 0.16f, size.y + 0.16f, Mathf.Max(size.x - 0.26f, 0.08f), Mathf.Max(size.y - 0.26f, 0.08f), 0.2f, skin.Slate, skin.RoofSurface);
         }
 

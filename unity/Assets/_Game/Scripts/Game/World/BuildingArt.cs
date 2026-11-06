@@ -8,7 +8,7 @@ namespace ShinobiDominion.Game
     /// with the ground at y = 0. Entrances face -Z and -X, the sides the camera sees. Game rules
     /// know nothing about this file, so any building can be replaced with real art later.
     /// </summary>
-    public static class BuildingMeshes
+    public static partial class BuildingMeshes
     {
         private static BuildingSkin S = new BuildingSkin();
 
@@ -36,7 +36,12 @@ namespace ShinobiDominion.Game
                     break;
                 default: WallPiece(mesh); break;
             }
-            if (!definition.IsWall) Dress(mesh, definition, w, d);
+            if (!definition.IsWall)
+            {
+                Details(mesh, definition, w, d);
+                Dress(mesh, definition, w, d);
+                mesh.ShadeByHeight(0.88f, 1.05f);
+            }
             return mesh;
         }
 
@@ -84,9 +89,23 @@ namespace ShinobiDominion.Game
             mesh.Box(new Vector3(0f, 0.06f, -z - 0.08f), new Vector3(w - 0.3f, 0.02f, 0.02f), glow, ArtSurface.Plain, 0f, 1f);
             mesh.Box(new Vector3(-x - 0.08f, 0.06f, 0f), new Vector3(0.02f, 0.02f, d - 0.3f), glow, ArtSurface.Plain, 0f, 1f);
             if (definition.function == BuildingFunction.HeroBase) return;
-            var top = mesh.MaxY - 0.03f;
-            mesh.Cylinder(new Vector3(0f, top, 0f), 0.09f, 0.03f, 0.42f, 6, S.Amber);
-            mesh.Blob(new Vector3(0f, top + 0.5f, 0f), Vector3.one * 0.13f, glow, ArtSurface.Plain, 0.2f, 1f, 6, 4);
+            var spot = FinialSpot(definition);
+            var top = mesh.MaxYNear(spot.x, spot.z, 0.55f) - 0.03f;
+            var foot = new Vector3(spot.x, top, spot.z);
+            mesh.Cylinder(foot, 0.09f, 0.03f, 0.42f, 6, S.Amber);
+            mesh.Blob(foot + Vector3.up * 0.5f, Vector3.one * 0.13f, glow, ArtSurface.Plain, 0.2f, 1f, 6, 4);
+        }
+
+        /// <summary>Where the top of this building is, away from cranes, poles and open yards.</summary>
+        private static Vector3 FinialSpot(BuildingDefinition definition)
+        {
+            switch (definition.function)
+            {
+                case BuildingFunction.Training: return new Vector3(0f, 0f, 0.96f);
+                case BuildingFunction.Collector: return new Vector3(0.2f, 0f, 0.3f);
+                case BuildingFunction.BuilderHall: return new Vector3(0.1f, 0f, 0.2f);
+                default: return Vector3.zero;
+            }
         }
 
         // ---------- Shared parts ----------
@@ -287,20 +306,19 @@ namespace ShinobiDominion.Game
             var bodyX = w - 1.0f;
             var bodyZ = d - 1.15f;
             var center = new Vector3(0.1f, y, 0.2f);
-            mesh.Box(center, new Vector3(bodyX, 0.95f, bodyZ), S.Wood, ArtSurface.Wood);
+            mesh.Box(center, new Vector3(bodyX, 1.2f, bodyZ), S.Wood, ArtSurface.Wood);
             // Exposed timber frame.
             foreach (var cx in new[] { -1f, 1f })
             foreach (var cz in new[] { -1f, 1f })
-                mesh.Box(center + new Vector3(cx * bodyX * 0.5f, 0f, cz * bodyZ * 0.5f), new Vector3(0.11f, 0.97f, 0.11f), S.DarkWood, ArtSurface.Wood);
-            mesh.Box(center + new Vector3(0f, 0.47f, -bodyZ * 0.5f), new Vector3(bodyX, 0.06f, 0.05f), S.DarkWood, ArtSurface.Wood);
-            mesh.Box(center + new Vector3(-bodyX * 0.5f, 0.47f, 0f), new Vector3(0.05f, 0.06f, bodyZ), S.DarkWood, ArtSurface.Wood);
+                mesh.Box(center + new Vector3(cx * bodyX * 0.5f, 0f, cz * bodyZ * 0.5f), new Vector3(0.11f, 1.22f, 0.11f), S.DarkWood, ArtSurface.Wood);
+            mesh.Box(center + new Vector3(0f, 0.72f, -bodyZ * 0.5f), new Vector3(bodyX, 0.06f, 0.05f), S.DarkWood, ArtSurface.Wood);
+            mesh.Box(center + new Vector3(-bodyX * 0.5f, 0.72f, 0f), new Vector3(0.05f, 0.06f, bodyZ), S.DarkWood, ArtSurface.Wood);
 
             var doorAt = center + new Vector3(0f, 0f, -bodyZ * 0.5f);
             Door(mesh, doorAt, Vector3.back, 0.7f, 0.72f, S.DarkWood);
             Window(mesh, center + new Vector3(-bodyX * 0.5f, 0.42f, 0f), Vector3.left, 0.42f, 0.34f);
 
-            var roofY = y + 0.95f;
-            mesh.Roof(center + Vector3.up * 0.95f, bodyX * 0.5f + 0.42f, bodyZ * 0.5f + 0.42f, 0.14f, bodyZ * 0.5f + 0.18f, 0.72f, 0.2f, S.RoofRed, S.DarkWood);
+                        mesh.Roof(center + Vector3.up * 1.2f, bodyX * 0.5f + 0.42f, bodyZ * 0.5f + 0.42f, 0.14f, bodyZ * 0.5f + 0.18f, 0.72f, 0.2f, S.RoofRed, S.DarkWood);
 
             // A crane with a hanging load: the Builder Hall's unmistakable silhouette.
             var craneBase = new Vector3(w * 0.5f - 0.32f, y, -(d * 0.5f - 0.32f));
@@ -336,10 +354,10 @@ namespace ShinobiDominion.Game
             var reach = 1.05f;
             foreach (var cx in new[] { -1f, 1f })
             foreach (var cz in new[] { -1f, 1f })
-                Pillar(mesh, new Vector3(cx * reach, y, cz * reach), 1.6f, 0.1f, S.DarkWood);
-            mesh.Box(new Vector3(0f, y + 1.56f, 0f), new Vector3(reach * 2f + 0.3f, 0.1f, reach * 2f + 0.3f), S.DarkWood, ArtSurface.Wood);
-            mesh.Roof(new Vector3(0, y + 1.64f, 0), 1.7f, 1.7f, 0.16f, 0.16f, 0.9f, 0.34f, S.RoofTeal, S.Amber);
-            mesh.Cylinder(new Vector3(0, y + 2.52f, 0), 0.05f, 0.02f, 0.45f, 6, S.Amber);
+                Pillar(mesh, new Vector3(cx * reach, y, cz * reach), 2.0f, 0.1f, S.DarkWood);
+            mesh.Box(new Vector3(0f, y + 1.96f, 0f), new Vector3(reach * 2f + 0.3f, 0.1f, reach * 2f + 0.3f), S.DarkWood, ArtSurface.Wood);
+            mesh.Roof(new Vector3(0, y + 2.04f, 0), 1.7f, 1.7f, 0.16f, 0.16f, 0.9f, 0.34f, S.RoofTeal, S.Amber);
+            mesh.Cylinder(new Vector3(0, y + 2.92f, 0), 0.05f, 0.02f, 0.45f, 6, S.Amber);
 
             mesh.Cylinder(new Vector3(0, y, 0), 0.34f, 0.26f, 0.42f, 8, S.DarkStone, S.StoneSurface);
             var crystal = new Vector3(0, y + 0.5f, 0);
@@ -349,7 +367,7 @@ namespace ShinobiDominion.Game
             foreach (var cx in new[] { -1f, 1f })
             {
                 Brazier(mesh, new Vector3(cx * (w * 0.5f - 0.3f), 0.22f, -(d * 0.5f - 0.3f)));
-                Banner(mesh, new Vector3(cx * 0.62f, y + 1.45f, -reach - 0.02f), Vector3.back, 0.28f, 0.6f, S.RoofTeal);
+                Banner(mesh, new Vector3(cx * 0.62f, y + 1.72f, -reach - 0.02f), Vector3.back, 0.28f, 0.6f, S.RoofTeal);
             }
             Brazier(mesh, new Vector3(-(w * 0.5f - 0.3f), 0.22f, d * 0.5f - 0.3f));
         }
@@ -672,14 +690,14 @@ namespace ShinobiDominion.Game
             var y = Foundation(mesh, w, d, 0.2f);
             var bx = w - 0.75f;
             var bz = d - 0.75f;
-            mesh.Frustum(new Vector3(0, y, 0), bx, bz, bx - 0.14f, bz - 0.14f, 1.05f, S.DarkStone, S.StoneSurface);
+            mesh.Frustum(new Vector3(0, y, 0), bx, bz, bx - 0.14f, bz - 0.14f, 1.4f, S.DarkStone, S.StoneSurface);
             foreach (var cx in new[] { -1f, 1f })
             foreach (var cz in new[] { -1f, 1f })
-                mesh.Box(new Vector3(cx * bx * 0.46f, y, cz * bz * 0.46f), new Vector3(0.18f, 1.05f, 0.18f), S.Iron);
+                mesh.Box(new Vector3(cx * bx * 0.46f, y, cz * bz * 0.46f), new Vector3(0.18f, 1.4f, 0.18f), S.Iron);
 
             // A heavy round vault door is what makes this building read as a treasury.
-            var front = -(bz - 0.14f) * 0.5f;
-            var center = new Vector3(0f, y + 0.5f, front - 0.04f);
+            var front = -bz * 0.5f;
+            var center = new Vector3(0f, y + 0.5f, front - 0.02f);
             const int points = 14;
             for (var i = 0; i < points; i++)
             {
@@ -693,7 +711,7 @@ namespace ShinobiDominion.Game
             mesh.Quad(hub + new Vector3(-0.28f, -0.025f, 0f), hub + new Vector3(0.28f, -0.025f, 0f), hub + new Vector3(0.28f, 0.025f, 0f), hub + new Vector3(-0.28f, 0.025f, 0f), Vector3.back, S.Amber);
             mesh.Quad(hub + new Vector3(-0.025f, -0.28f, 0f), hub + new Vector3(0.025f, -0.28f, 0f), hub + new Vector3(0.025f, 0.28f, 0f), hub + new Vector3(-0.025f, 0.28f, 0f), Vector3.back, S.Amber);
 
-            y += 1.05f;
+            y += 1.4f;
             mesh.Box(new Vector3(0, y - 0.05f, 0), new Vector3(bx + 0.1f, 0.12f, bz + 0.1f), S.Amber);
             mesh.Roof(new Vector3(0, y + 0.05f, 0), bx * 0.5f + 0.4f, bz * 0.5f + 0.4f, 0.2f, 0.2f, 0.7f, 0.22f, S.Slate, S.Amber);
             mesh.Blob(new Vector3(0, y + 0.82f, 0), new Vector3(0.14f, 0.14f, 0.14f), S.Amber, ArtSurface.Plain, 0f, 0.3f, 6, 4);
