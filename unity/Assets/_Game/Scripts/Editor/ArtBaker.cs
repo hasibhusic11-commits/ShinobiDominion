@@ -14,7 +14,7 @@ namespace ShinobiDominion.EditorTools
         private const string Folder = "Assets/_Game/Resources/Art";
         private const string ArrayPath = Folder + "/DetailArray.asset";
         private const int Size = 256;
-        private const int Layers = 12;
+        private const int Layers = 13;
 
         public static bool IsBaked =>
             File.Exists(ArrayPath) && AssetDatabase.LoadAssetAtPath<Texture2DArray>(ArrayPath)?.depth == Layers && File.Exists(Folder + "/WorldMat.mat") && File.Exists(Folder + "/GroundMat.mat") &&
@@ -112,6 +112,7 @@ namespace ShinobiDominion.EditorTools
                 case 9: return Metal(u, v);
                 case 10: return Thatch(u, v);
                 case 11: return Rock(u, v);
+                case 12: return Cracks(u, v);
                 default: return 1f;
             }
         }
@@ -201,10 +202,29 @@ namespace ShinobiDominion.EditorTools
 
         private static float Grass(float u, float v)
         {
-            var fine = Noise(u, v, 64, 17);
-            var blades = Noise(u * 1f, v * 1f, 128, 18);
             var clump = Fractal(u, v, 8, 19);
-            return 0.78f + clump * 0.18f + (fine - 0.5f) * 0.14f + (blades - 0.5f) * 0.12f;
+            var body = 0.82f + clump * 0.16f + (Noise(u, v, 64, 17) - 0.5f) * 0.07f;
+
+            // Short slanted blades, drawn as strokes. Each cell holds one, and they wrap to tile.
+            const int cells = 18;
+            var x = u * cells;
+            var y = v * cells;
+            var strokes = 0f;
+            for (var dy = -1; dy <= 1; dy++)
+            for (var dx = -1; dx <= 1; dx++)
+            {
+                var cellX = Mathf.FloorToInt(x) + dx;
+                var cellY = Mathf.FloorToInt(y) + dy;
+                var baseX = cellX + Lattice(cellX, cellY, cells, 81);
+                var baseY = cellY + Lattice(cellX, cellY, cells, 82);
+                var lean = (Lattice(cellX, cellY, cells, 83) - 0.5f) * 0.7f;
+                var along = Mathf.Clamp01((y - baseY) / 0.9f);
+                var across = Mathf.Abs(x - (baseX + lean * along));
+                var inside = y >= baseY && y <= baseY + 0.9f ? 1f : 0f;
+                var blade = (1f - Mathf.SmoothStep(0f, 0.1f * (1f - along) + 0.015f, across)) * inside;
+                strokes = Mathf.Max(strokes, blade * (0.5f + Lattice(cellX, cellY, cells, 84) * 0.5f));
+            }
+            return Mathf.Clamp01(body + strokes * 0.07f);
         }
 
         private static float Dirt(float u, float v)
@@ -258,6 +278,16 @@ namespace ShinobiDominion.EditorTools
             var body = Noise(u, v, 4, 72) * 0.6f + Noise(u, v, 8, 75) * 0.3f + Noise(u, v, 16, 74) * 0.1f;
             var crack = 1f - Mathf.SmoothStep(0f, 0.05f, Mathf.Abs(Noise(u, v, 5, 73) - 0.5f));
             return Mathf.Clamp01(0.72f + body * 0.32f - crack * 0.12f);
+        }
+
+        private static float Cracks(float u, float v)
+        {
+            // Branching fissures: dark, tapering lines where two noise fields meet. White is no crack.
+            var wide = Mathf.Abs(Noise(u, v, 4, 91) + (Noise(u, v, 16, 92) - 0.5f) * 0.2f - 0.5f);
+            var fine = Mathf.Abs(Noise(u, v, 9, 93) + (Noise(u, v, 32, 94) - 0.5f) * 0.2f - 0.5f);
+            var main = Mathf.SmoothStep(0.004f, 0.022f, wide);
+            var branch = Mathf.SmoothStep(0.002f, 0.014f, fine);
+            return main * Mathf.Lerp(0.55f, 1f, branch);
         }
 
         private static float WaterPattern(float u, float v)

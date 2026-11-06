@@ -115,6 +115,17 @@ namespace ShinobiDominion.Tests
         }
 
         [Test]
+        public void NothingOutside_RisesInFrontOfTheMap()
+        {
+            var nature = _root.GetComponentsInChildren<MeshFilter>(true).First(f => f.name == "Nature").sharedMesh;
+            foreach (var vertex in nature.vertices)
+            {
+                var inFront = (vertex.x < -3f || vertex.z < -3f) && Mathf.Abs(vertex.x - vertex.z) <= 50f;
+                if (inFront) Assert.Less(vertex.y, 1.2f, $"Something at {vertex} would hide part of the village");
+            }
+        }
+
+        [Test]
         public void AllVillageArt_SharesOneMaterial()
         {
             var materials = _root.GetComponentsInChildren<MeshRenderer>()

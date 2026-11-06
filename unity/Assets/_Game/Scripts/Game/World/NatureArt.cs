@@ -90,6 +90,11 @@ namespace ShinobiDominion.Game
             Attach(root.transform, "Ground", BuildGround(), Mats.Ground, false, true);
             Attach(root.transform, "Nature", BuildNature().Build("Nature"), Mats.World, true, true);
             Attach(root.transform, "Water", BuildWater(), Mats.Water, false, false);
+
+            // Spray where the falls land, and cloud drifting below the cliff. Off at low quality.
+            WorldEffects.Create(root.transform, "WaterfallMist", VillageTerrain.PondCenter + new Vector3(0f, 0.3f, 6.3f), new Color(1f, 1f, 1f, 0.34f), new Color(1f, 1f, 1f, 0f), 9f, 2.6f, 0.7f, 2.6f, 2.6f);
+            WorldEffects.Create(root.transform, "CliffCloudLeft", new Vector3(-21f, -12f, MapSize * 0.5f), new Color(1f, 1f, 1f, 0.2f), new Color(1f, 1f, 1f, 0f), 1.6f, 11f, 0.12f, 9f, 16f);
+            WorldEffects.Create(root.transform, "CliffCloudRight", new Vector3(MapSize * 0.5f, -12f, -21f), new Color(1f, 1f, 1f, 0.2f), new Color(1f, 1f, 1f, 0f), 1.6f, 11f, 0.12f, 9f, 16f);
             return root.gameObject;
         }
 
@@ -214,6 +219,9 @@ namespace ShinobiDominion.Game
 
             BoundaryKerb(mesh);
             AddWaterRocks(mesh);
+            AddPondLife(mesh);
+            AddUndergrowth(mesh);
+            AddRockSpires(mesh);
 
             // Trees grow in dense clumps and thin out towards the bare rock.
             var density = GameQuality.Current == VisualQuality.High ? 1f : 0.5f;
@@ -296,6 +304,202 @@ namespace ShinobiDominion.Game
                 Boulder(mesh, new Vector3(x, VillageTerrain.Height(x, z), z), 0.8f + (float)random.NextDouble() * 1.4f, random.Next());
             }
             return mesh;
+        }
+
+        /// <summary>True where something this tall may stand: never on the map, or above map level in front of it.</summary>
+        private static bool CanStand(float x, float z, float height, float tall)
+        {
+            var distance = Mathf.Max(Mathf.Max(-x, x - MapSize), Mathf.Max(-z, z - MapSize));
+            if (distance < 2f || InWaterArea(x, z)) return false;
+            var inFront = (x < 0f || z < 0f) && Mathf.Max(x, z) - MapSize < 6f;
+            return !inFront || height + tall < -0.3f;
+        }
+
+        /// <summary>Everything small on the forest floor, with its own seed so tree positions never shift.</summary>
+        private static void AddUndergrowth(MeshBuilder mesh)
+        {
+            var random = new System.Random(909);
+            var density = GameQuality.Current == VisualQuality.High ? 1f : 0.5f;
+            float Roll(float range) => (float)random.NextDouble() * range;
+
+            for (var i = 0; i < (int)(1500 * density); i++)
+            {
+                var x = Roll(MapSize + 90f) - 45f;
+                var z = Roll(MapSize + 90f) - 45f;
+                var height = VillageTerrain.Height(x, z);
+                if (height > 7f || VillageTerrain.Slope(x, z) > 1.1f) continue;
+                var kind = random.NextDouble();
+
+                if (kind < 0.42)
+                {
+                    if (CanStand(x, z, height, 0.8f)) Shrub(mesh, new Vector3(x, height, z), 0.5f + Roll(0.6f), random.Next());
+                }
+                else if (kind < 0.78)
+                {
+                    if (CanStand(x, z, height, 0.5f)) Fern(mesh, new Vector3(x, height, z), 0.5f + Roll(0.5f), random);
+                }
+                else if (kind < 0.88)
+                {
+                    if (CanStand(x, z, height, 0.3f)) Mushrooms(mesh, new Vector3(x, height, z), random);
+                }
+                else if (kind < 0.97)
+                {
+                    if (CanStand(x, z, height, 0.2f)) Pebbles(mesh, new Vector3(x, height, z), random);
+                }
+                else if (kind < 0.985)
+                {
+                    if (CanStand(x, z, height, 0.6f)) Stump(mesh, new Vector3(x, height, z), 0.8f + Roll(0.6f));
+                }
+                else if (CanStand(x, z, height, 0.5f) && VillageTerrain.Slope(x, z) < 0.3f)
+                {
+                    FallenLog(mesh, new Vector3(x, height, z), 1.5f + Roll(1.8f), random.NextDouble() < 0.5);
+                }
+            }
+        }
+
+        private static void Shrub(MeshBuilder mesh, Vector3 at, float scale, int seed)
+        {
+            var random = new System.Random(seed);
+            var tint = Color.Lerp(Palette.Leaf, Palette.Pine, (float)random.NextDouble());
+            var top = Color.Lerp(tint, Palette.LeafLight, 0.6f);
+            mesh.Blob(at + Vector3.up * 0.22f * scale, new Vector3(0.5f, 0.36f, 0.5f) * scale, tint, ArtSurface.Grass, 0.6f, 0f, 7, 4, 0.1f, seed, top);
+            mesh.Blob(at + new Vector3(0.3f, 0.14f, -0.2f) * scale, new Vector3(0.28f, 0.22f, 0.28f) * scale, tint, ArtSurface.Grass, 0.6f, 0f, 6, 3, 0.1f, seed + 1, top);
+        }
+
+        private static void Fern(MeshBuilder mesh, Vector3 at, float scale, System.Random random)
+        {
+            var tint = Color.Lerp(new Color(0.24f, 0.50f, 0.26f), new Color(0.42f, 0.62f, 0.28f), (float)random.NextDouble());
+            const int fronds = 6;
+            var turn = (float)random.NextDouble() * Mathf.PI;
+            for (var i = 0; i < fronds; i++)
+            {
+                var a = turn + i * Mathf.PI * 2f / fronds;
+                var reach = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * 0.5f * scale;
+                var side = new Vector3(-reach.z, 0f, reach.x) * 0.22f;
+                var rise = Vector3.up * 0.32f * scale;
+                var mid = at + reach * 0.45f + rise;
+                var tip = at + reach + rise * 0.55f;
+                mesh.Quad(at - side * 0.3f, at + side * 0.3f, mid + side, mid - side, Vector3.up, tint, ArtSurface.Plain, 0.6f);
+                mesh.Quad(mid - side, mid + side, tip, tip, Vector3.up, Color.Lerp(tint, Palette.LeafLight, 0.45f), ArtSurface.Plain, 0.8f);
+            }
+        }
+
+        private static void Mushrooms(MeshBuilder mesh, Vector3 at, System.Random random)
+        {
+            var count = 2 + random.Next(3);
+            var cap = random.NextDouble() < 0.6 ? new Color(0.82f, 0.22f, 0.16f) : new Color(0.92f, 0.76f, 0.46f);
+            for (var i = 0; i < count; i++)
+            {
+                var offset = new Vector3((float)random.NextDouble() - 0.5f, 0f, (float)random.NextDouble() - 0.5f) * 0.32f;
+                var size = 0.6f + (float)random.NextDouble() * 0.6f;
+                mesh.Cylinder(at + offset, 0.025f * size, 0.02f * size, 0.13f * size, 4, Palette.Plaster, ArtSurface.Plain, 0f, 0f, false);
+                mesh.Blob(at + offset + Vector3.up * 0.14f * size, new Vector3(0.08f, 0.05f, 0.08f) * size, cap, ArtSurface.Plain, 0f, 0f, 6, 3);
+            }
+        }
+
+        private static void Pebbles(MeshBuilder mesh, Vector3 at, System.Random random)
+        {
+            var count = 3 + random.Next(4);
+            for (var i = 0; i < count; i++)
+            {
+                var offset = new Vector3((float)random.NextDouble() - 0.5f, 0f, (float)random.NextDouble() - 0.5f) * 0.8f;
+                var size = 0.05f + (float)random.NextDouble() * 0.09f;
+                var tone = Color.Lerp(new Color(0.48f, 0.49f, 0.54f), new Color(0.70f, 0.68f, 0.64f), (float)random.NextDouble());
+                mesh.Blob(at + offset + Vector3.up * size * 0.4f, new Vector3(size * 1.2f, size * 0.7f, size), tone, ArtSurface.Rock, 0f, 0f, 5, 3);
+            }
+        }
+
+        private static void Stump(MeshBuilder mesh, Vector3 at, float scale)
+        {
+            mesh.Cylinder(at, 0.3f * scale, 0.2f * scale, 0.42f * scale, 8, Palette.DarkWood, ArtSurface.Wood, 0f, 0f, false);
+            mesh.Cylinder(at + Vector3.up * 0.42f * scale, 0.2f * scale, 0.2f * scale, 0.005f, 8, new Color(0.78f, 0.62f, 0.40f), ArtSurface.Plain);
+            mesh.Blob(at + new Vector3(0.14f, 0.34f, 0.12f) * scale, new Vector3(0.14f, 0.06f, 0.14f) * scale, Palette.Leaf, ArtSurface.Grass, 0f, 0f, 6, 3);
+        }
+
+        private static void FallenLog(MeshBuilder mesh, Vector3 at, float length, bool alongX)
+        {
+            const int sides = 7;
+            const float radius = 0.2f;
+            var along = alongX ? Vector3.right : Vector3.forward;
+            var across = alongX ? Vector3.forward : Vector3.right;
+            var center = at + Vector3.up * radius * 0.8f;
+            var cut = new Color(0.78f, 0.62f, 0.40f);
+            for (var i = 0; i < sides; i++)
+            {
+                var a0 = i * Mathf.PI * 2f / sides;
+                var a1 = (i + 1) * Mathf.PI * 2f / sides;
+                var d0 = across * Mathf.Cos(a0) + Vector3.up * Mathf.Sin(a0);
+                var d1 = across * Mathf.Cos(a1) + Vector3.up * Mathf.Sin(a1);
+                var color = (d0.y + d1.y) * 0.5f > 0.6f ? Color.Lerp(Palette.DarkWood, Palette.Leaf, 0.7f) : Palette.DarkWood;
+                var half = along * length * 0.5f;
+                mesh.Quad(center - half + d0 * radius, center + half + d0 * radius, center + half + d1 * radius, center - half + d1 * radius, d0 + d1, color, ArtSurface.Wood);
+                mesh.Quad(center + half, center + half, center + half + d1 * radius, center + half + d0 * radius, along, cut);
+                mesh.Quad(center - half, center - half, center - half + d1 * radius, center - half + d0 * radius, -along, cut);
+            }
+        }
+
+        /// <summary>Lily pads and flowers on the pond, reeds at its edge, and stepping stones in the stream.</summary>
+        private static void AddPondLife(MeshBuilder mesh)
+        {
+            var random = new System.Random(313);
+            var pond = VillageTerrain.PondCenter;
+            var radius = VillageTerrain.PondRadius;
+            for (var i = 0; i < 26; i++)
+            {
+                var a = (float)random.NextDouble() * Mathf.PI * 2f;
+                // The falls land on the far side, so the pads keep to the calmer near half.
+                if (Mathf.Sin(a) > 0.35f) continue;
+                var r = radius * Mathf.Lerp(0.45f, 0.82f, (float)random.NextDouble());
+                var at = pond + new Vector3(Mathf.Cos(a) * r, 0.04f, Mathf.Sin(a) * r);
+                var size = 0.28f + (float)random.NextDouble() * 0.28f;
+                mesh.Cylinder(at, size, size, 0.015f, 9, new Color(0.26f, 0.56f, 0.30f), ArtSurface.Plain, 0.2f);
+                if (random.NextDouble() < 0.35)
+                {
+                    var petal = random.NextDouble() < 0.5 ? Palette.Sakura : Palette.Plaster;
+                    mesh.Blob(at + Vector3.up * 0.06f, new Vector3(0.1f, 0.06f, 0.1f), petal, ArtSurface.Plain, 0.2f, 0f, 6, 3);
+                    mesh.Blob(at + Vector3.up * 0.09f, Vector3.one * 0.03f, Palette.Amber, ArtSurface.Plain, 0.2f, 0f, 4, 2);
+                }
+            }
+            for (var i = 0; i < 90; i++)
+            {
+                var a = (float)random.NextDouble() * Mathf.PI * 2f;
+                if (Mathf.Sin(a) > 0.5f) continue;
+                var r = radius + 0.1f + (float)random.NextDouble() * 0.9f;
+                var at = pond + new Vector3(Mathf.Cos(a) * r, 0f, Mathf.Sin(a) * r);
+                var height = 0.7f + (float)random.NextDouble() * 0.7f;
+                mesh.Cylinder(at, 0.02f, 0.006f, height, 3, Color.Lerp(Palette.Bamboo, Palette.Leaf, (float)random.NextDouble()), ArtSurface.Plain, 0.8f, 0f, false);
+                if (random.NextDouble() < 0.3)
+                    mesh.Cylinder(at + Vector3.up * height * 0.72f, 0.034f, 0.034f, 0.16f, 5, new Color(0.40f, 0.26f, 0.16f), ArtSurface.Plain, 0.8f);
+            }
+            for (var i = 0; i < 7; i++)
+            {
+                var x = 30f + i * 1.15f;
+                var z = MapSize + 5f + Mathf.Sin(x * 0.11f) * 1.3f + (i % 2 == 0 ? -0.35f : 0.35f);
+                mesh.Blob(new Vector3(x, 0.03f, z), new Vector3(0.42f, 0.13f, 0.36f), new Color(0.58f, 0.58f, 0.60f), ArtSurface.Rock, 0f, 0f, 8, 4, 0.08f, i + 700);
+            }
+        }
+
+        /// <summary>Tall rock outcrops up the mountainsides, which break up the long slopes.</summary>
+        private static void AddRockSpires(MeshBuilder mesh)
+        {
+            var random = new System.Random(616);
+            for (var placed = 0; placed < 34;)
+            {
+                var x = (float)random.NextDouble() * (MapSize + 110f) - 40f;
+                var z = (float)random.NextDouble() * (MapSize + 110f) - 40f;
+                var behind = Mathf.Max(x, z) - MapSize;
+                if (behind < 12f || behind > 48f || InWaterArea(x, z)) continue;
+                placed++;
+                var height = VillageTerrain.Height(x, z);
+                var scale = 1.8f + (float)random.NextDouble() * 2.2f;
+                var seed = random.Next();
+                var dark = new Color(0.42f, 0.43f, 0.49f);
+                var light = new Color(0.60f, 0.60f, 0.64f);
+                var at = new Vector3(x, height, z);
+                var capColor = height > 13f ? new Color(0.94f, 0.96f, 1f) : light;
+                mesh.Blob(at + Vector3.up * scale * 0.5f, new Vector3(0.8f, 2.1f, 0.8f) * scale, dark, ArtSurface.Rock, 0f, 0f, 9, 8, 0.14f, seed, capColor);
+                mesh.Blob(at + new Vector3(0.62f, -0.1f, -0.4f) * scale, new Vector3(0.62f, 1.2f, 0.62f) * scale, dark, ArtSurface.Rock, 0f, 0f, 8, 6, 0.14f, seed + 1, light);
+            }
         }
 
         private static void Crag(MeshBuilder mesh, Vector3 at, float scale, int seed)

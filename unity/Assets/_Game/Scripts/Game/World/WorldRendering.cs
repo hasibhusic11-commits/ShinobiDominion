@@ -40,7 +40,8 @@ namespace ShinobiDominion.Game
         Marble = 8,
         Metal = 9,
         Thatch = 10,
-        Rock = 11
+        Rock = 11,
+        Cracks = 12
     }
 
     /// <summary>
