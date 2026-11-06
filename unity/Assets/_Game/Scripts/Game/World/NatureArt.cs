@@ -30,7 +30,7 @@ namespace ShinobiDominion.Game
         {
             var a = 1f - Mathf.Abs(2f * Noise(x, z, 0.045f, 17.3f) - 1f);
             var b = 1f - Mathf.Abs(2f * Noise(x, z, 0.11f, 3.7f) - 1f);
-            return a * a * 0.62f + b * b * 0.28f + Noise(x, z, 0.27f, 41.1f) * 0.1f;
+            return a * a * 0.68f + b * b * 0.32f;
         }
 
         public static float Height(float x, float z)
@@ -68,9 +68,9 @@ namespace ShinobiDominion.Game
 
         public static Vector3 Normal(float x, float z)
         {
-            var dx = Height(x + 1f, z) - Height(x - 1f, z);
-            var dz = Height(x, z + 1f) - Height(x, z - 1f);
-            return new Vector3(-dx, 2f, -dz).normalized;
+            var dx = Height(x + 2f, z) - Height(x - 2f, z);
+            var dz = Height(x, z + 2f) - Height(x, z - 2f);
+            return new Vector3(-dx, 4f, -dz).normalized;
         }
     }
 
@@ -301,7 +301,7 @@ namespace ShinobiDominion.Game
         private static void Crag(MeshBuilder mesh, Vector3 at, float scale, int seed)
         {
             var tone = new Color(0.50f, 0.51f, 0.56f);
-            mesh.Blob(at, new Vector3(0.9f, 0.8f, 0.9f) * scale, tone * 0.82f + new Color(0f, 0f, 0f, 0.18f), ArtSurface.Rock, 0f, 0f, 6, 4, 0.22f, seed, tone);
+            mesh.Blob(at, new Vector3(0.9f, 0.8f, 0.9f) * scale, tone * 0.82f + new Color(0f, 0f, 0f, 0.18f), ArtSurface.Rock, 0f, 0f, 10, 6, 0.1f, seed, tone);
         }
         private static void BoundaryKerb(MeshBuilder mesh)
         {
@@ -383,9 +383,9 @@ namespace ShinobiDominion.Game
         {
             var random = new System.Random(seed);
             var tone = Color.Lerp(new Color(0.46f, 0.47f, 0.52f), new Color(0.58f, 0.58f, 0.60f), (float)random.NextDouble());
-            mesh.Blob(at + Vector3.up * 0.2f * scale, new Vector3(0.62f, 0.5f, 0.54f) * scale, tone, ArtSurface.Rock, 0f, 0f, 7, 4, 0.16f, seed, Color.Lerp(tone, Color.white, 0.2f));
+            mesh.Blob(at + Vector3.up * 0.2f * scale, new Vector3(0.62f, 0.5f, 0.54f) * scale, tone, ArtSurface.Rock, 0f, 0f, 9, 5, 0.08f, seed, Color.Lerp(tone, Color.white, 0.2f));
             if (random.NextDouble() < 0.6)
-                mesh.Blob(at + new Vector3(0.42f, 0.08f, 0.2f) * scale, new Vector3(0.34f, 0.26f, 0.3f) * scale, tone, ArtSurface.Rock, 0f, 0f, 6, 3, 0.16f, seed + 1);
+                mesh.Blob(at + new Vector3(0.42f, 0.08f, 0.2f) * scale, new Vector3(0.34f, 0.26f, 0.3f) * scale, tone, ArtSurface.Rock, 0f, 0f, 8, 4, 0.08f, seed + 1);
             if (random.NextDouble() < 0.5)
                 mesh.Blob(at + new Vector3(0f, 0.5f, 0f) * scale, new Vector3(0.36f, 0.14f, 0.32f) * scale, Palette.Leaf, ArtSurface.Grass, 0f, 0f, 5, 3);
         }

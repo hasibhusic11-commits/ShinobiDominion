@@ -35,6 +35,7 @@ namespace ShinobiDominion.Game
             _targetSize = Camera.orthographicSize;
             Camera.nearClipPlane = 0.1f;
             Camera.farClipPlane = 400f;
+            Camera.allowMSAA = GameQuality.Current == VisualQuality.High;
             Camera.clearFlags = CameraClearFlags.SolidColor;
             Camera.backgroundColor = Palette.Sky.linear;
             transform.rotation = Quaternion.Euler(35.264f, 45f, 0f);

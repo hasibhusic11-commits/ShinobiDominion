@@ -36,7 +36,7 @@ namespace ShinobiDominion.Tests
             var controller = game.Controller;
             var camera = game.IsoCamera.Camera;
             var canvas = root.GetComponentInChildren<Canvas>();
-            var texture = new RenderTexture(1600, 900, 24);
+            var texture = new RenderTexture(1600, 900, 24) { antiAliasing = 4 };
             camera.targetTexture = texture;
             canvas.renderMode = RenderMode.ScreenSpaceCamera;
             canvas.worldCamera = camera;
@@ -116,7 +116,7 @@ namespace ShinobiDominion.Tests
             // Common phone and tablet shapes, zoomed out, to check layout and framing.
             foreach (var shape in new[] { new Vector2Int(2340, 1080), new Vector2Int(1600, 1200) })
             {
-                var other = new RenderTexture(shape.x, shape.y, 24);
+                var other = new RenderTexture(shape.x, shape.y, 24) { antiAliasing = 4 };
                 camera.targetTexture = other;
                 yield return null;
                 yield return Capture(camera, other, Path.Combine(dir, $"15_aspect_{shape.x}x{shape.y}.png"));
@@ -148,7 +148,7 @@ namespace ShinobiDominion.Tests
             yield return null;
 
             var camera = game.IsoCamera.Camera;
-            var texture = new RenderTexture(2000, 1400, 24);
+            var texture = new RenderTexture(2000, 1400, 24) { antiAliasing = 4 };
             camera.targetTexture = texture;
             root.GetComponentInChildren<Canvas>().enabled = false;
             foreach (var renderer in root.GetComponentsInChildren<MeshRenderer>())

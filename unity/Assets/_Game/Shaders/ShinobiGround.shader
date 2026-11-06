@@ -1,5 +1,6 @@
-// The mountain and the village ground. Vertex colour holds blend weights: red = dirt, green = bare
-// rock, blue = dark moss, alpha = snow. Grass is what remains. The map itself is flat, so placement
+// The mountain and the village ground. Vertex colour holds blend weights: red = dirt, blue = dark
+// moss. Grass is what remains. Rock and snow come from each pixel's height and slope, so their
+// edges are smooth whatever the mesh's resolution. The map itself is flat, so placement
 // is unaffected. Slopes are lit by the sun; flat ground comes out exactly as if unlit by slope.
 Shader "ShinobiDominion/Ground"
 {
@@ -100,18 +101,25 @@ Shader "ShinobiDominion/Ground"
                 half dirtMask = saturate((input.color.r + (grassDetail - 0.85) * 0.5 - 0.3) * 2.2);
                 color = lerp(color, _DirtColor.rgb * Sample(uv * 0.8, LAYER_DIRT), dirtMask);
 
-                // Rock runs in horizontal strata on steep faces, so it never looks stretched.
+                // Mapped so it never stretches from this fixed camera, with no seam between faces.
                 float3 normal = normalize(input.normalWS);
-                float2 rockUv = normal.y > 0.75
-                    ? input.positionWS.xz * 0.22
-                    : float2((input.positionWS.x - input.positionWS.z) * 0.16, input.positionWS.y * 0.28);
+                float3 p = input.positionWS;
+                float2 rockUv = float2(p.x - p.z, p.y + (p.x + p.z) * 0.5) * 0.1;
                 half rockDetail = Sample(rockUv, LAYER_ROCK);
-                half tone = 0.82 + macroB * 0.26;
-                half rockMask = saturate((input.color.g + (macro - 0.85) * 0.6 - 0.4) * 5.0);
-                color = lerp(color, _RockColor.rgb * rockDetail * tone, rockMask);
+                // Large soft patches and faint layers give the rock form, without any fine noise.
+                half patches = Sample(rockUv * 0.23 + 0.31, LAYER_ROCK);
+                half layers = 0.5 + 0.5 * sin(p.y * 0.9 + patches * 6.0);
+                half tone = lerp(0.68, 1.04, saturate((patches - 0.72) * 2.6)) * lerp(0.92, 1.03, layers);
+                half3 rockTint = lerp(_RockColor.rgb, _RockColor.rgb * half3(1.12, 0.98, 0.84), saturate((macroB - 0.8) * 4.0));
 
-                half snowMask = saturate((input.color.a + (macro - 0.85) * 0.8 - 0.42) * 6.0);
-                color = lerp(color, _SnowColor.rgb * lerp(0.92, 1.0, rockDetail), snowMask);
+                half wobble = (macro - 0.9) * 10.0 + (macroB - 0.9) * 6.0;
+                half steep = smoothstep(0.76, 0.66, normal.y);
+                half high = smoothstep(6.0, 9.0, p.y + wobble);
+                half rockMask = max(steep, high);
+                color = lerp(color, rockTint * rockDetail * tone, rockMask);
+
+                half snowMask = smoothstep(13.0, 16.0, p.y + wobble) * smoothstep(0.3, 0.45, normal.y);
+                color = lerp(color, _SnowColor.rgb, snowMask);
 
                 Light light = GetMainLight(TransformWorldToShadowCoord(input.positionWS));
                 half shadow = lerp(0.42, 1.0, light.shadowAttenuation);

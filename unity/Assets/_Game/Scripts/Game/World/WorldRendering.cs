@@ -312,7 +312,10 @@ namespace ShinobiDominion.Game
                 var normal = new Vector3(direction.x / Mathf.Max(radius.x, 0.001f), direction.y / Mathf.Max(radius.y, 0.001f), direction.z / Mathf.Max(radius.z, 0.001f)).normalized;
                 var position = center + Vector3.Scale(direction, radius) * offsets[r * (segments + 1) + s];
                 var tint = Color.Lerp(color, upper, Mathf.InverseLerp(center.y - radius.y, center.y + radius.y, position.y));
-                Vertex(position, normal, tint, new Vector2(position.x, position.z) * scale, surface, sway, glow);
+                var uv = surface == ArtSurface.Rock
+                    ? new Vector2(position.x - position.z, position.y + (position.x + position.z) * 0.5f)
+                    : new Vector2(position.x, position.z);
+                Vertex(position, normal, tint, uv * scale, surface, sway, glow);
             }
             for (var r = 0; r < rings; r++)
             for (var s = 0; s < segments; s++)

@@ -40,6 +40,7 @@ namespace ShinobiDominion.Game
             Current = quality;
             Shader.SetGlobalFloat(AnimStrength, quality == VisualQuality.High ? 1f : 0f);
             if (Sun != null) Sun.shadows = quality == VisualQuality.High ? LightShadows.Soft : LightShadows.None;
+            foreach (var camera in Camera.allCameras) camera.allowMSAA = quality == VisualQuality.High;
             foreach (var system in Object.FindObjectsByType<ParticleSystem>(FindObjectsSortMode.None))
             {
                 if (quality == VisualQuality.High) system.Play();

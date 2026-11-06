@@ -138,9 +138,13 @@ namespace ShinobiDominion.EditorTools
         {
             x = ((x % cells) + cells) % cells;
             y = ((y % cells) + cells) % cells;
-            var hash = (x * 73856093) ^ (y * 19349663) ^ (seed * 83492791);
-            hash = (hash ^ (hash >> 13)) * 1274126177;
-            return ((hash ^ (hash >> 16)) & 0xFFFF) / 65535f;
+            unchecked
+            {
+                var hash = (uint)(x * 374761393 + y * 668265263 + seed * 2147483647 + 1013);
+                hash = (hash ^ (hash >> 13)) * 1274126177u;
+                hash = (hash ^ (hash >> 16)) * 2246822519u;
+                return ((hash ^ (hash >> 13)) & 0xFFFF) / 65535f;
+            }
         }
 
         private static float Fractal(float u, float v, int cells, int seed)
@@ -250,10 +254,10 @@ namespace ShinobiDominion.EditorTools
 
         private static float Rock(float u, float v)
         {
-            // Broken facets in flat steps, with cracks between them: painted rock, with no courses or mortar.
-            var facets = Mathf.Floor((Noise(u, v, 5, 72) * 0.7f + Noise(u, v, 10, 75) * 0.3f) * 7f) / 7f;
-            var crack = 1f - Mathf.SmoothStep(0f, 0.022f, Mathf.Abs(Noise(u, v, 8, 73) - 0.5f));
-            return Mathf.Clamp01(0.52f + facets * 0.62f + Noise(u, v, 32, 74) * 0.04f - crack * 0.3f);
+            // Soft mottling with faint, wide cracks, so it stays calm when zoomed out.
+            var body = Noise(u, v, 4, 72) * 0.6f + Noise(u, v, 8, 75) * 0.3f + Noise(u, v, 16, 74) * 0.1f;
+            var crack = 1f - Mathf.SmoothStep(0f, 0.05f, Mathf.Abs(Noise(u, v, 5, 73) - 0.5f));
+            return Mathf.Clamp01(0.72f + body * 0.32f - crack * 0.12f);
         }
 
         private static float WaterPattern(float u, float v)
