@@ -54,3 +54,6 @@ Rolls use Go's `crypto/rand` with integer weights. The roll function takes only 
 - There is no anomaly telemetry yet, and no independent security review has been done.
 - Device-ID sign-in means losing the device loses the account. Account linking is not built.
 - Paid summoning needs platform, age and regional law review first. Nothing here charges real money.
+
+## Raids
+The client sends only a raid id and where its heroes stand. The server reads the team from the bases, stores the defender and team as a snapshot, validates each placement, runs the battle itself, and pays gold once per attack inside one transaction with a ledger entry. Strict decoding refuses claimed results. Retries with the same key return the stored result, and a second key is refused. This covers scripted raids only. Player-versus-player raids are not built and not claimed as secure.

@@ -12,6 +12,14 @@ namespace ShinobiDominion.Game
     {
         private static BuildingSkin S = new BuildingSkin();
 
+        /// <summary>A hero on its own, for walking around in battle.</summary>
+        public static MeshBuilder Figure(HeroLook hero)
+        {
+            var mesh = new MeshBuilder { ContactShade = false };
+            HeroFigure(mesh, Vector3.zero, hero);
+            return mesh;
+        }
+
         public static MeshBuilder For(BuildingDefinition definition, HeroLook hero, int level = 1)
         {
             S = BuildingSkin.For(definition.id, level);

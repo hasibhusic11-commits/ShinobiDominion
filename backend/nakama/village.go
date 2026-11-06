@@ -45,6 +45,9 @@ type BuildingLevel struct {
 	Production   int64 `json:"production"`
 	StoredCap    int64 `json:"storedCap"`
 	GoldCapacity int64 `json:"goldCapacity"`
+	Hp           int64 `json:"hp"`
+	Attack       int64 `json:"attack"`
+	Range        int   `json:"range"`
 }
 
 // BuildingDef is read from the same buildings.json the game ships.

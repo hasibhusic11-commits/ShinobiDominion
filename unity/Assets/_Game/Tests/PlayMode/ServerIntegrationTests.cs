@@ -285,6 +285,41 @@ namespace ShinobiDominion.Tests
             });
         }
 
+        /// <summary>The whole raid through the real server, whose battle must match this device's rules.</summary>
+        [UnityTest]
+        public IEnumerator Raid_ThroughTheServer_MatchesTheLocalRules()
+        {
+            var heroBase = First("hero_base").Id;
+            var hero = Controller.Roster.Heroes.First();
+            Controller.AssignHero(heroBase, hero.InstanceId);
+            yield return WaitFor(() => Controller.Village.Find(heroBase).AssignedHeroInstanceId == hero.InstanceId);
+
+            Controller.OpenAttack();
+            yield return ClickWhenReady("ScoutButton");
+            yield return WaitFor(() => Controller.CurrentRaidPhase == RaidPhase.Prepare);
+            var session = Controller.CurrentRaidSession;
+            Assert.AreEqual(1, session.team.Count, "The team comes from the server, from the bases");
+            Assert.AreEqual(hero.InstanceId, session.team[0].instanceId);
+
+            Controller.AutoPlaceHeroes();
+            var placements = Controller.RaidPlacements.ToList();
+            Controller.StartBattle();
+            yield return WaitFor(() => Controller.CurrentRaidPhase == RaidPhase.Battle);
+
+            var server = Controller.LastRaidOutcome.Result;
+            var local = BattleSim.Run(session.buildings, session.ToHeroes(placements));
+            Assert.AreEqual(local.checksum, server.checksum, "Server and client battles must be identical");
+            Assert.AreEqual(local.stars, server.stars);
+
+            Controller.SkipBattle();
+            Assert.AreEqual(RaidPhase.Resolved, Controller.CurrentRaidPhase);
+            var gold = Controller.Village.Gold;
+            yield return ServerState(state => Assert.AreEqual(gold, state.Village.gold, "Gold must match the server after a raid"));
+            Controller.FinishRaid();
+            yield return null;
+            Assert.AreEqual(VillageScreen.Home, Controller.UiState.Screen);
+        }
+
         [UnityTest]
         public IEnumerator ServerRefusal_IsShown_AndChangesNothing()
         {

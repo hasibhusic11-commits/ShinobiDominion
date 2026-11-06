@@ -81,6 +81,7 @@ var (
 type Server struct {
 	catalog *HeroCatalog
 	buildings *BuildingCatalog
+	raids   *raidCatalog
 	pool    *SummonPool
 	dev     bool
 	limiter *rateLimiter
@@ -102,6 +103,10 @@ func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runti
 	if err != nil {
 		return fmt.Errorf("building catalog: %w", err)
 	}
+	raids, err := loadRaidCatalog(raidsJSON, buildings)
+	if err != nil {
+		return fmt.Errorf("raid catalog: %w", err)
+	}
 	if err := migrate(ctx, db); err != nil {
 		return fmt.Errorf("migrations: %w", err)
 	}
@@ -109,6 +114,7 @@ func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runti
 	server := &Server{
 		catalog: catalog,
 		buildings: buildings,
+		raids:   raids,
 		pool:    pool,
 		dev:     devModeEnabled(env),
 		limiter: newRateLimiter(envFloat(env, "SD_RATE_PER_SEC", 5), envFloat(env, "SD_RATE_BURST", 20)),
@@ -142,6 +148,9 @@ func (s *Server) register(initializer runtime.Initializer, logger runtime.Logger
 		"sd_village_remove": s.rpcRemove,
 		"sd_village_upgrade": s.rpcUpgrade,
 		"sd_village_collect": s.rpcCollect,
+		"sd_raid_list":    s.rpcRaidList,
+		"sd_raid_start":   s.rpcRaidStart,
+		"sd_raid_deploy":  s.rpcRaidDeploy,
 	}
 	if s.dev {
 		logger.Warn("DEVELOPMENT MODE: dev grant and audit calls are enabled. Never use this in production.")

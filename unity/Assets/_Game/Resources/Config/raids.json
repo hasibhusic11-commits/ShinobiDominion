@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "balanceStatus": "PROPOSED TEST VALUES AND PROVISIONAL NAMES - NOT APPROVED",
+  "raids": [
+    {
+      "id": "ridge_outpost",
+      "displayName": "Ridge Outpost",
+      "description": "A walled bandit camp high on the ridge, guarded by two towers and a spirit turret.",
+      "version": 1,
+      "goldPerStar": 800,
+      "buildings": [
+        { "def": "dojo_hq", "level": 3, "x": 22, "z": 22 },
+        { "def": "defense_tower", "level": 2, "x": 18, "z": 18 },
+        { "def": "defense_tower", "level": 2, "x": 30, "z": 30 },
+        { "def": "spirit_turret", "level": 1, "x": 30, "z": 18 },
+        { "def": "gold_vault", "level": 2, "x": 18, "z": 29 },
+        { "def": "gold_mine", "level": 2, "x": 28, "z": 23 },
+        { "def": "builder_hall", "level": 1, "x": 18, "z": 23 },
+        { "def": "gold_mine", "level": 1, "x": 40, "z": 8 },
+        { "def": "crystal_mine", "level": 1, "x": 8, "z": 40 }
+      ],
+      "walls": [
+        { "level": 2, "x1": 16, "z1": 16, "x2": 33, "z2": 16 },
+        { "level": 2, "x1": 33, "z1": 16, "x2": 33, "z2": 33 },
+        { "level": 2, "x1": 33, "z1": 33, "x2": 16, "z2": 33 },
+        { "level": 2, "x1": 16, "z1": 33, "x2": 16, "z2": 16 }
+      ]
+    }
+  ]
+}

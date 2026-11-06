@@ -40,6 +40,13 @@ type Archetype struct {
 	DisplayName     string `json:"displayName"`
 	Rarity          string `json:"rarity"`
 	ContentComplete bool   `json:"contentComplete"`
+	Role            string `json:"role"`
+	BaseHp          int64  `json:"baseHp"`
+	BaseAttack      int64  `json:"baseAttack"`
+	BaseDefense     int64  `json:"baseDefense"`
+	GrowthHp        int64  `json:"growthHp"`
+	GrowthAttack    int64  `json:"growthAttack"`
+	GrowthDefense   int64  `json:"growthDefense"`
 }
 
 type HeroCatalog struct {

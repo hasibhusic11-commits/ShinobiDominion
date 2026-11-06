@@ -129,6 +129,17 @@ namespace ShinobiDominion.Core
                 case "HERO_ALREADY_ASSIGNED": return "That hero is already on another base";
                 case "ALL_BASES_FULL": return "All six bases already have heroes";
                 case "BAD_SLOT": return "That is not one of your Hero Bases";
+                case "NO_TEAM": return "Put at least one hero on a Hero Base first";
+                case "RAID_NOT_FOUND": return "That raid is no longer available";
+                case "ATTACK_NOT_FOUND": return "That raid no longer exists";
+                case "ATTACK_ALREADY_RESOLVED": return "This raid is already over";
+                case "ATTACK_EXPIRED": return "This raid timed out. Please start again.";
+                case "HERO_NOT_IN_TEAM": return "That hero is not in this raid";
+                case "TOO_MANY_HEROES": return "Only six heroes can raid";
+                case "BAD_DEPLOY_CELL": return "That spot is off the map";
+                case "DEPLOY_TOO_CLOSE": return "Too close to the enemy";
+                case "DUPLICATE_HERO": return "That hero is already placed";
+                case "DEPLOY_CELL_TAKEN": return "Another hero is standing there";
                 default: return "Could not reach the server. Your request is safe to retry.";
             }
         }

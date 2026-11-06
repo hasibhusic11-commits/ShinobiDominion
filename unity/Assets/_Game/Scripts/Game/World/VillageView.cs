@@ -83,7 +83,7 @@ namespace ShinobiDominion.Game
             _root.SetActive(false);
         }
 
-        public void Show(IEnumerable<KeyValuePair<GridCoord, bool>> cells)
+        public void Show(IEnumerable<KeyValuePair<GridCoord, bool>> cells, bool marks = true)
         {
             _vertices.Clear();
             _good.Clear();
@@ -100,6 +100,7 @@ namespace ShinobiDominion.Game
                 else
                 {
                     AddQuad(c, 0.46f, 0.46f, 0f, _bad);
+                    if (!marks) continue;
                     AddQuad(c + Vector3.up * 0.005f, 0.5f, 0.06f, 45f, _marks);
                     AddQuad(c + Vector3.up * 0.005f, 0.5f, 0.06f, -45f, _marks);
                 }
@@ -151,13 +152,21 @@ namespace ShinobiDominion.Game
             _renderer.sharedMaterial = Mats.World;
         }
 
-        public void Rebuild(Village village, int hiddenWallId)
+        public void SetVisible(bool visible) => _renderer.gameObject.SetActive(visible);
+
+        public void Dispose()
+        {
+            if (_filter.sharedMesh != null) Object.Destroy(_filter.sharedMesh);
+        }
+
+        public void Rebuild(Village village, int hiddenWallId, HashSet<int> gone = null)
         {
             var builder = new MeshBuilder();
             foreach (var building in village.Buildings)
             {
                 if (!building.Definition.IsWall || building.Id == hiddenWallId) continue;
-                AddSegment(builder, village, building, hiddenWallId);
+                if (gone != null && gone.Contains(building.Id)) continue;
+                AddSegment(builder, village, building, hiddenWallId, gone);
             }
 
             var old = _filter.sharedMesh;
@@ -165,10 +174,11 @@ namespace ShinobiDominion.Game
             if (old != null) Object.Destroy(old);
         }
 
-        private static void AddSegment(MeshBuilder builder, Village village, BuildingInstance wall, int hiddenWallId)
+        private static void AddSegment(MeshBuilder builder, Village village, BuildingInstance wall, int hiddenWallId, HashSet<int> gone)
         {
             var center = GridSpace.CellCenter(wall.Origin);
             var mask = ConnectionsExcluding(village, wall.Origin, hiddenWallId);
+            if (gone != null) mask = WithoutFallen(village, wall.Origin, mask, gone);
 
             // Upgrades read at a glance: each level is taller, and each tier changes the materials.
             var skin = BuildingSkin.For("wall", wall.Level);
@@ -213,6 +223,23 @@ namespace ShinobiDominion.Game
             builder.Quad(rail + new Vector3(-hx, -0.025f, -hz), rail + new Vector3(hx, -0.025f, -hz), rail + new Vector3(hx, 0.025f, -hz), rail + new Vector3(-hx, 0.025f, -hz), Vector3.back, skin.DarkWood, ArtSurface.Wood);
             builder.Quad(rail + new Vector3(-hx, -0.025f, -hz), rail + new Vector3(-hx, -0.025f, hz), rail + new Vector3(-hx, 0.025f, hz), rail + new Vector3(-hx, 0.025f, -hz), Vector3.left, skin.DarkWood, ArtSurface.Wood);
             builder.Frustum(at + Vector3.up * height, size.x + 0.16f, size.y + 0.16f, Mathf.Max(size.x - 0.26f, 0.08f), Mathf.Max(size.y - 0.26f, 0.08f), 0.2f, skin.Slate, skin.RoofSurface);
+        }
+
+        /// <summary>A wall stops joining up to a neighbour that has been destroyed.</summary>
+        private static int WithoutFallen(Village village, GridCoord cell, int mask, HashSet<int> gone)
+        {
+            bool Fallen(int x, int z)
+            {
+                if (!VillageGrid.InBounds(x, z)) return false;
+                var neighbour = village.BuildingAt(new GridCoord(x, z));
+                return neighbour != null && gone.Contains(neighbour.Id);
+            }
+
+            if (Fallen(cell.X, cell.Z + 1)) mask &= ~Village.WallNorth;
+            if (Fallen(cell.X + 1, cell.Z)) mask &= ~Village.WallEast;
+            if (Fallen(cell.X, cell.Z - 1)) mask &= ~Village.WallSouth;
+            if (Fallen(cell.X - 1, cell.Z)) mask &= ~Village.WallWest;
+            return mask;
         }
 
         private static int ConnectionsExcluding(Village village, GridCoord cell, int hiddenWallId)
@@ -314,6 +341,7 @@ namespace ShinobiDominion.Game
         private readonly Dictionary<string, Material[]> _materialCache = new Dictionary<string, Material[]>();
         private readonly System.Func<string, HeroLook> _heroLook;
         private int _hiddenId;
+        private readonly HashSet<int> _gone = new HashSet<int>();
 
         public int ViewCount => _views.Count;
 
@@ -334,12 +362,33 @@ namespace ShinobiDominion.Game
             Sync();
         }
 
+        public void SetVisible(bool visible)
+        {
+            _root.gameObject.SetActive(visible);
+            _walls.SetVisible(visible);
+        }
+
+        /// <summary>Removes a destroyed building from view. The village data itself is untouched.</summary>
+        public void SetGone(int instanceId)
+        {
+            _gone.Add(instanceId);
+            Sync();
+        }
+
+        public void Dispose()
+        {
+            _walls.Dispose();
+            foreach (var mesh in _meshCache.Values)
+                if (mesh != null) Object.Destroy(mesh);
+            _meshCache.Clear();
+        }
+
         public void Sync()
         {
             var alive = new HashSet<int>();
             foreach (var building in _village.Buildings)
             {
-                if (building.Definition.IsWall) continue;
+                if (building.Definition.IsWall || _gone.Contains(building.Id)) continue;
                 alive.Add(building.Id);
                 var look = building.AssignedHeroInstanceId != null ? _heroLook(building.AssignedHeroInstanceId) : null;
                 var tier = BuildingSkin.TierForLevel(building.Level);
@@ -368,7 +417,7 @@ namespace ShinobiDominion.Game
                 _views.Remove(id);
             }
 
-            _walls.Rebuild(_village, _hiddenId);
+            _walls.Rebuild(_village, _hiddenId, _gone);
         }
 
         private Entry Create(BuildingInstance building, HeroLook look, string signature)

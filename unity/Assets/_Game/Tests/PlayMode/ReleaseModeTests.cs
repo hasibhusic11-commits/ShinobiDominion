@@ -36,6 +36,9 @@ namespace ShinobiDominion.Tests
             public Task<ServerState> RemoveAsync(string key, int id) => Fail();
             public Task<ServerState> UpgradeAsync(string key, int id, bool group) => Fail();
             public Task<ServerState> CollectAsync(string key, int id) => Fail();
+            public Task<System.Collections.Generic.List<RaidSummary>> RaidListAsync() => Task.FromException<System.Collections.Generic.List<RaidSummary>>(new GameServerException("UNREACHABLE"));
+            public Task<RaidSession> RaidStartAsync(string key, string raidId) => Task.FromException<RaidSession>(new GameServerException("UNREACHABLE"));
+            public Task<RaidOutcome> RaidDeployAsync(string key, string attackId, System.Collections.Generic.IList<RaidPlacement> placements) => Task.FromException<RaidOutcome>(new GameServerException("UNREACHABLE"));
         }
 
         private string _savePath;

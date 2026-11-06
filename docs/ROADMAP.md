@@ -36,8 +36,11 @@ Layout, gold, limits, walls, moves, upgrades, removal and collection are all ser
 ## Phase 3c: mountain and 15 building levels — done, awaiting your review
 The outside is a mountain with no houses. All buildings have 15 levels with their own stats and five texture packs. See ADR-024 and ADR-025.
 
-## Phase 4: combat vertical slice — not started
-Now includes troops: 4 camps, a training hall, and camp space by troop strength (ADR-021).
+## Phase 4: combat vertical slice — in progress
+First slice built, awaiting your playtest: ATTACK opens a scripted raid, heroes from your bases deploy, walls and towers work, role abilities fire, and the server decides the result and reward (ADR-026).
+
+Still to do in this phase: troops, with 4 camps, a training hall and camp space by strength (ADR-021), plus defender heroes and battle sound.
+
 ## Phase 5: polish and ship readiness — not started
 
 ## Visual overhaul — done as temporary art, awaiting your review

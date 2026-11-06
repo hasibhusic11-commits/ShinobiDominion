@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System;
 using System.Threading.Tasks;
 using Nakama;
@@ -25,6 +26,9 @@ namespace ShinobiDominion.Game
         Task<ServerState> RemoveAsync(string key, int id);
         Task<ServerState> UpgradeAsync(string key, int id, bool group);
         Task<ServerState> CollectAsync(string key, int id);
+        Task<List<RaidSummary>> RaidListAsync();
+        Task<RaidSession> RaidStartAsync(string key, string raidId);
+        Task<RaidOutcome> RaidDeployAsync(string key, string attackId, IList<RaidPlacement> placements);
     }
 
     public sealed class GameServerException : Exception
@@ -119,6 +123,14 @@ namespace ShinobiDominion.Game
         public Task<ServerState> ConnectAsync() => GetStateAsync();
 
         public async Task<ServerState> GetStateAsync() => ServerState.Parse(await CallAsync("sd_get_state", null));
+
+        public async Task<List<RaidSummary>> RaidListAsync() => RaidListing.Parse(await CallAsync("sd_raid_list", null));
+
+        public async Task<RaidSession> RaidStartAsync(string key, string raidId) =>
+            RaidSession.Parse(await CallAsync("sd_raid_start", new { key, raidId }));
+
+        public async Task<RaidOutcome> RaidDeployAsync(string key, string attackId, IList<RaidPlacement> placements) =>
+            RaidOutcome.Parse(await CallAsync("sd_raid_deploy", new { key, attackId, placements }));
 
         public async Task<ServerOdds> GetOddsAsync() => ServerOdds.Parse(await CallAsync("sd_summon_odds", null));
 

@@ -108,6 +108,22 @@ namespace ShinobiDominion.Tests
             game.IsoCamera.ZoomAt(5f, new Vector2(texture.width * 0.5f, texture.height * 0.5f));
             yield return shot("08_zoomed_out_full_map");
 
+            controller.OpenAttack();
+            yield return shot("20_raid_choose");
+            controller.ScoutRaid("ridge_outpost");
+            controller.AutoPlaceHeroes();
+            yield return shot("21_raid_prepare");
+            controller.StartBattle();
+            yield return new WaitForSeconds(6f);
+            yield return shot("22_raid_battle");
+            yield return new WaitForSeconds(8f);
+            yield return shot("23_raid_battle_later");
+            controller.SkipBattle();
+            yield return shot("24_raid_result");
+            controller.FinishRaid();
+            yield return null;
+            game.IsoCamera.ZoomAt(5f, new Vector2(texture.width * 0.5f, texture.height * 0.5f));
+
             var renderers = root.GetComponentsInChildren<MeshRenderer>();
             var vertices = renderers.Sum(r => r.GetComponent<MeshFilter>().sharedMesh.vertexCount);
             var materials = renderers.SelectMany(r => r.sharedMaterials).Distinct().Count();

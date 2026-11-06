@@ -71,6 +71,7 @@ namespace ShinobiDominion.Game
         private FileVillageStore _store;
         private IsoCamera _camera;
         private VillageView _view;
+        private Transform _worldRoot;
         private GridOverlay _grid;
         private CellHighlight _placementCells;
         private CellHighlight _selectionCells;
@@ -119,6 +120,7 @@ namespace ShinobiDominion.Game
             _rosterStore = rosterStore;
             _camera = isoCamera;
             _uiRoot = ui.Safe;
+            _worldRoot = worldRoot;
 
             _view = new VillageView(village, worldRoot, HeroLookFor);
             _thumbnails = new BuildingThumbnails(worldRoot);
@@ -146,6 +148,7 @@ namespace ShinobiDominion.Game
 
         private void Update()
         {
+            UpdateRaid();
             // Keep trying to reach the server, but never swap the village out mid-action.
             if (_server != null && !IsOnline && !_connecting && UiState.Screen == VillageScreen.Home)
             {
@@ -270,8 +273,11 @@ namespace ShinobiDominion.Game
                     if (hit != null) CollectOrSelect(hit.Id);
                     else CloseAll();
                     break;
-                case VillageScreen.BuildCatalog:
                 case VillageScreen.AttackFlow:
+                    if (_raid != null) TapDeployCell(CellAt(screen));
+                    else CloseAll();
+                    break;
+                case VillageScreen.BuildCatalog:
                     CloseAll();
                     break;
                 case VillageScreen.PlacingBuilding:
@@ -349,6 +355,7 @@ namespace ShinobiDominion.Game
 
         public void CloseAll()
         {
+            EndRaid();
             _panel.Hide();
             _selectionCells.Clear();
             _history.Clear();
@@ -437,7 +444,7 @@ namespace ShinobiDominion.Game
                     panel.Line($"Total gold capacity: {Village.GoldCapacity:N0}");
                     break;
                 case BuildingFunction.Defense:
-                    panel.Line("Attack and range take effect with combat in Phase 4.", 20, Ui.AccentColor);
+                    panel.Line("Defends this village when raids against players arrive.", 20, Ui.AccentColor);
                     break;
             }
         }
@@ -523,16 +530,6 @@ namespace ShinobiDominion.Game
         }
 
         // ---------- Attack and settings ----------
-
-        public void OpenAttack()
-        {
-            if (!UiState.TryOpenAttack()) return;
-            _selectionCells.Clear();
-            _panel.Show("Attack", CloseAll, panel =>
-            {
-                panel.Line("Raids arrive in Phase 4. Heroes will deploy from your assigned Hero Bases.");
-            });
-        }
 
         private void OpenSettings()
         {

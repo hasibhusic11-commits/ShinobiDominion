@@ -4,3 +4,5 @@
 !unity/Assets/_Game/Resources/Config/heroes.json
 !unity/Assets/_Game/Resources/Config/buildings.json
 !unity/Assets/_Game/Tests/EditMode/rules_vectors.json
+!unity/Assets/_Game/Resources/Config/raids.json
+!unity/Assets/_Game/Tests/EditMode/battle_vectors.json
