@@ -132,6 +132,60 @@ namespace ShinobiDominion.Tests
             if (File.Exists(savePath)) File.Delete(savePath);
         }
 
+        /// <summary>Every building in each of its five looks, in rows, for art review.</summary>
+        [UnityTest]
+        public IEnumerator CaptureBuildingTiers()
+        {
+            var dir = Environment.GetEnvironmentVariable("SD_CAPTURE_DIR");
+            if (string.IsNullOrEmpty(dir)) Assert.Ignore("SD_CAPTURE_DIR not set.");
+            Directory.CreateDirectory(dir);
+            LogAssert.ignoreFailingMessages = true;
+
+            var savePath = Path.Combine(Application.temporaryCachePath, "capture_" + Guid.NewGuid().ToString("N") + ".json");
+            VillageBootstrap.SavePathOverride = savePath;
+            var root = new GameObject("VillageBootstrapUnderTest");
+            var game = root.AddComponent<VillageBootstrap>();
+            yield return null;
+
+            var camera = game.IsoCamera.Camera;
+            var texture = new RenderTexture(2000, 1400, 24);
+            camera.targetTexture = texture;
+            root.GetComponentInChildren<Canvas>().enabled = false;
+            foreach (var renderer in root.GetComponentsInChildren<MeshRenderer>())
+                if (renderer.name.Contains("_") || renderer.name == "Walls") renderer.enabled = false;
+
+            var definitions = game.Controller.Village.Catalog.All.Where(d => !d.IsWall).ToList();
+            var levels = new[] { 1, 4, 7, 10, 13 };
+            for (var row = 0; row < definitions.Count; row++)
+            for (var column = 0; column < levels.Length; column++)
+            {
+                var item = new GameObject($"gallery");
+                item.transform.SetParent(root.transform, false);
+                // Along the screen's horizontal for tiers, up the screen for building types.
+                var along = (column - 2) * 3.6f;
+                var up = (row - definitions.Count * 0.5f) * 3.1f;
+                item.transform.position = new Vector3(25f + along + up, 0f, 25f - along + up);
+                var builder = BuildingMeshes.For(definitions[row], null, levels[column]);
+                item.AddComponent<MeshFilter>().sharedMesh = builder.Build("gallery");
+                item.AddComponent<MeshRenderer>().sharedMaterials = builder.LitMaterials();
+            }
+
+            game.IsoCamera.StopMotion();
+            camera.orthographicSize = 26f;
+            camera.transform.position = new Vector3(25f, 0f, 25f) - camera.transform.forward * 70f;
+            yield return null;
+            camera.orthographicSize = 26f;
+            camera.transform.position = new Vector3(25f, 0f, 25f) - camera.transform.forward * 70f;
+            yield return Capture(camera, texture, Path.Combine(dir, "16_building_tiers.png"));
+
+            camera.targetTexture = null;
+            Object.Destroy(texture);
+            Object.Destroy(root);
+            VillageBootstrap.SavePathOverride = null;
+            yield return null;
+            if (File.Exists(savePath)) File.Delete(savePath);
+        }
+
         internal static IEnumerator Capture(Camera camera, RenderTexture texture, string path)
         {
             yield return null;

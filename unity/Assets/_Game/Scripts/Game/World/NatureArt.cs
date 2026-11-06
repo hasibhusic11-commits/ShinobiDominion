@@ -5,13 +5,82 @@ using UnityEngine.Rendering;
 namespace ShinobiDominion.Game
 {
     /// <summary>
+    /// The mountain the village is built on. Height is 0 across the whole map, so it never affects
+    /// placement. Behind the map the ground climbs through forest and bare rock to snow. In front,
+    /// on the camera's side, it falls away as a cliff, so nothing out there can hide the village.
+    /// </summary>
+    public static class VillageTerrain
+    {
+        private const float MapSize = VillageGrid.Size * GridSpace.CellSize;
+        public const float TreeLine = 10f;
+
+        public static readonly Vector3 PondCenter = new Vector3(13f, 0f, MapSize + 12f);
+        public const float PondRadius = 8.5f;
+
+        public static float Smooth(float edge0, float edge1, float x)
+        {
+            var t = Mathf.Clamp01((x - edge0) / (edge1 - edge0));
+            return t * t * (3f - 2f * t);
+        }
+
+        private static float Noise(float x, float z, float scale, float seed) =>
+            Mathf.PerlinNoise(x * scale + 200f + seed, z * scale + 200f + seed * 1.7f);
+
+        private static float Ridged(float x, float z)
+        {
+            var a = 1f - Mathf.Abs(2f * Noise(x, z, 0.045f, 17.3f) - 1f);
+            var b = 1f - Mathf.Abs(2f * Noise(x, z, 0.11f, 3.7f) - 1f);
+            return a * a * 0.62f + b * b * 0.28f + Noise(x, z, 0.27f, 41.1f) * 0.1f;
+        }
+
+        public static float Height(float x, float z)
+        {
+            var behind = Mathf.Max(x - MapSize, z - MapSize);
+            var front = Mathf.Max(-x, -z);
+            var warp = Noise(x, z, 0.035f, 3.1f) - 0.5f;
+
+            // The climb. Warp is at most 3 here, so the ground stays flat for 8 units behind the map.
+            var climb = behind + warp * 6f;
+            var rise = 30f * Smooth(10f, 28f, climb) + 26f * Smooth(26f, 60f, climb);
+            rise = Mathf.Max(0f, rise + (Ridged(x, z) - 0.38f) * 30f * Smooth(12f, 30f, climb));
+
+            // A level basin for the pond, opening up the slope to the waterfall's cliff.
+            var alongFall = Mathf.Clamp(z, PondCenter.z, PondCenter.z + 14f);
+            var toFall = new Vector2(x - PondCenter.x, z - alongFall).magnitude;
+            rise *= Smooth(PondRadius + 3f, PondRadius + 9f, toFall);
+
+            // The drop, in ledges. It fades out to the sides, where the slopes wrap around the map.
+            var edge = front + warp * 3f;
+            var drop = 13f * Smooth(4.5f, 10f, edge) + 7f * Smooth(16f, 22f, edge) + 4f * Smooth(30f, 50f, edge);
+            drop += (Noise(x, z, 0.09f, 11.9f) - 0.5f) * 3.5f * Smooth(5f, 11f, edge);
+            drop *= 1f - Smooth(2f, 28f, behind);
+
+            return rise - drop;
+        }
+
+        /// <summary>Rise over run: 1 is a 45 degree slope.</summary>
+        public static float Slope(float x, float z)
+        {
+            var dx = Height(x + 1f, z) - Height(x - 1f, z);
+            var dz = Height(x, z + 1f) - Height(x, z - 1f);
+            return new Vector2(dx, dz).magnitude * 0.5f;
+        }
+
+        public static Vector3 Normal(float x, float z)
+        {
+            var dx = Height(x + 1f, z) - Height(x - 1f, z);
+            var dz = Height(x, z + 1f) - Height(x, z - 1f);
+            return new Vector3(-dx, 2f, -dz).normalized;
+        }
+    }
+
+    /// <summary>
     /// The ground and everything outside the 50 x 50 map. All decoration sits outside the buildable
     /// area, except flat tufts that a building simply covers. Fixed seeds keep the world the same.
     /// </summary>
     public static class VillageScenery
     {
         private const float MapSize = VillageGrid.Size * GridSpace.CellSize;
-        private const float GroundExtent = 110f;
 
         public static GameObject Create(Transform parent)
         {
@@ -20,7 +89,6 @@ namespace ShinobiDominion.Game
 
             Attach(root.transform, "Ground", BuildGround(), Mats.Ground, false, true);
             Attach(root.transform, "Nature", BuildNature().Build("Nature"), Mats.World, true, true);
-            Attach(root.transform, "Mountains", BuildMountains().Build("Mountains"), Mats.World, false, false);
             Attach(root.transform, "Water", BuildWater(), Mats.Water, false, false);
             return root.gameObject;
         }
@@ -38,18 +106,14 @@ namespace ShinobiDominion.Game
 
         // ---------- Ground ----------
 
-        private static float Smooth(float edge0, float edge1, float x)
-        {
-            var t = Mathf.Clamp01((x - edge0) / (edge1 - edge0));
-            return t * t * (3f - 2f * t);
-        }
+        private static float Smooth(float edge0, float edge1, float x) => VillageTerrain.Smooth(edge0, edge1, x);
 
         private static Mesh BuildGround()
         {
             const int step = 1;
-            var min = -(int)GroundExtent;
-            var max = (int)(MapSize + GroundExtent);
-            var coarse = 4;
+            const int coarse = 2;
+            const int min = -70;
+            var max = (int)MapSize + 110;
             var size = (max - min) / coarse + 1;
             var vertices = new Vector3[size * size];
             var colors = new Color[size * size];
@@ -61,11 +125,10 @@ namespace ShinobiDominion.Game
                 var x = min + ix * coarse;
                 var z = min + iz * coarse;
                 var index = iz * size + ix;
-                vertices[index] = new Vector3(x, x >= 0 && x <= MapSize && z >= 0 && z <= MapSize ? -0.02f : -0.02f, z);
-                normals[index] = Vector3.up;
+                vertices[index] = new Vector3(x, VillageTerrain.Height(x, z) - 0.02f, z);
+                normals[index] = VillageTerrain.Normal(x, z);
                 colors[index] = GroundWeights(x, z);
             }
-
             var triangles = new System.Collections.Generic.List<int>((size - 1) * (size - 1) * 6);
             for (var iz = 0; iz < size - 1; iz++)
             for (var ix = 0; ix < size - 1; ix++)
@@ -115,7 +178,10 @@ namespace ShinobiDominion.Game
             return mesh;
         }
 
-        /// <summary>Red = dirt, green = stone, blue = moss. Paths are decoration: they never affect placement.</summary>
+        /// <summary>
+        /// Red = dirt, green = bare rock, blue = moss, alpha = snow. Paths are decoration: they never
+        /// affect placement.
+        /// </summary>
         private static Color GroundWeights(float x, float z)
         {
             var c = new Vector2(x - MapSize * 0.5f, z - MapSize * 0.5f);
@@ -132,7 +198,11 @@ namespace ShinobiDominion.Game
 
             var distance = Mathf.Max(Mathf.Max(-x, x - MapSize), Mathf.Max(-z, z - MapSize));
             var moss = Mathf.Clamp01(Smooth(0.5f, 7f, distance) * 0.8f + Smooth(0.62f, 0.85f, noise) * 0.2f);
-            return new Color(dirt, 0f, moss, 1f);
+            var height = VillageTerrain.Height(x, z);
+            var slope = VillageTerrain.Slope(x, z);
+            var rock = Mathf.Max(Smooth(1.05f, 1.7f, slope), Smooth(6f, 11f, height + noise * 4f));
+            var snow = Smooth(14f, 19f, height + noise * 5f) * (1f - Smooth(1.6f, 2.4f, slope) * 0.7f);
+            return new Color(dirt, rock, moss, snow);
         }
 
         // ---------- Plants, rocks and the map's edge ----------
@@ -144,42 +214,65 @@ namespace ShinobiDominion.Game
 
             BoundaryKerb(mesh);
             AddWaterRocks(mesh);
-            AddHiddenVillage(mesh);
 
-            // Trees grow in dense clumps, with room to see through them.
+            // Trees grow in dense clumps and thin out towards the bare rock.
             var density = GameQuality.Current == VisualQuality.High ? 1f : 0.5f;
-            for (var i = 0; i < (int)(1700 * density); i++)
+            for (var i = 0; i < (int)(2600 * density); i++)
             {
-                var x = (float)(random.NextDouble() * (MapSize + 76f) - 38f);
-                var z = (float)(random.NextDouble() * (MapSize + 76f) - 38f);
+                var x = (float)(random.NextDouble() * (MapSize + 120f) - 60f);
+                var z = (float)(random.NextDouble() * (MapSize + 120f) - 60f);
                 var distance = Mathf.Max(Mathf.Max(-x, x - MapSize), Mathf.Max(-z, z - MapSize));
                 if (distance < (x < 0f || z < 0f ? 4f : 1.8f)) continue;
-                if (InWaterArea(x, z) || InSettlement(x, z)) continue;
-                // Thick forest near the map, thinning out only in occasional clearings.
-                var clump = Mathf.PerlinNoise(x * 0.07f + 11f, z * 0.07f + 4f);
+                if (InWaterArea(x, z)) continue;
+                var clump = Mathf.PerlinNoise(x * 0.07f + 111f, z * 0.07f + 104f);
                 if (clump < 0.36f) continue;
+                var height = VillageTerrain.Height(x, z);
+                if (height > VillageTerrain.TreeLine || VillageTerrain.Slope(x, z) > 1.5f) continue;
+                if (height > 5f && random.NextDouble() < (height - 5f) / 5f) continue;
 
-                // Tall trees on the camera's side would hide the village, so they are held back.
-                var inFront = x < 0f || z < 0f;
-                var scale = (0.9f + (float)random.NextDouble() * 0.9f) * (inFront ? Mathf.Lerp(0.4f, 0.95f, Smooth(4f, 18f, distance)) : 1.25f);
-                var at = new Vector3(x, 0f, z);
+                // In front of the map, only trees whose tops stay below the map's level are allowed,
+                // down in the forest under the cliff. Those can never hide the village.
+                var inFront = (x < 0f || z < 0f) && Mathf.Max(x, z) - MapSize < 6f;
+                if (inFront && height > -7f) continue;
+
+                var scale = (0.9f + (float)random.NextDouble() * 0.9f) * (inFront ? 0.95f : 1.25f);
+                var at = new Vector3(x, height, z);
                 var seed = random.Next();
-                var kind = random.NextDouble();
-                var region = Mathf.PerlinNoise(x * 0.03f + 2f, z * 0.03f + 9f);
+                var kind = height > 3f ? 0.0 : random.NextDouble();
+                var region = Mathf.PerlinNoise(x * 0.03f + 102f, z * 0.03f + 109f);
                 if (kind < 0.48f) PineTree(mesh, at, scale, seed);
                 else if (kind < 0.72f) BroadTree(mesh, at, scale, seed, region > 0.56f ? Palette.Autumn : Palette.Leaf, region > 0.56f ? new Color(1f, 0.72f, 0.28f) : Palette.LeafLight);
                 else if (kind < 0.88f) BroadTree(mesh, at, scale * 0.9f, seed, Palette.Sakura, Palette.SakuraLight);
                 else Bamboo(mesh, at, scale, seed);
             }
 
-            // Rock formations along the map's edge.
-            for (var i = 0; i < 90; i++)
+            // Rock: scattered across the slopes, larger the higher it sits.
+            for (var i = 0; i < 300; i++)
             {
-                var x = (float)(random.NextDouble() * (MapSize + 70f) - 35f);
-                var z = (float)(random.NextDouble() * (MapSize + 70f) - 35f);
+                var x = (float)(random.NextDouble() * (MapSize + 120f) - 60f);
+                var z = (float)(random.NextDouble() * (MapSize + 120f) - 60f);
                 var distance = Mathf.Max(Mathf.Max(-x, x - MapSize), Mathf.Max(-z, z - MapSize));
-                if (distance < 1.3f || InWaterArea(x, z) || InSettlement(x, z)) continue;
-                Boulder(mesh, new Vector3(x, 0f, z), 0.35f + (float)random.NextDouble() * 0.85f, random.Next());
+                if (distance < 2.5f || InWaterArea(x, z)) continue;
+                var height = VillageTerrain.Height(x, z);
+                var scale = (0.35f + (float)random.NextDouble() * 0.85f) * (1f + Mathf.Clamp01(height / 10f) * 2.5f);
+                var inFront = (x < 0f || z < 0f) && Mathf.Max(x, z) - MapSize < 6f;
+                if (inFront && height > -0.5f) scale = Mathf.Min(scale, 0.5f);
+                else if (inFront && height + scale * 0.9f > -0.2f) continue;
+                Boulder(mesh, new Vector3(x, height, z), scale, random.Next());
+            }
+
+            // Crags jutting from the cliff face below the map's front edges.
+            for (var i = 0; i < 160; i++)
+            {
+                var along = (float)random.NextDouble() * (MapSize + 12f) - 6f;
+                var out_ = 5.5f + (float)random.NextDouble() * 7f;
+                var onLeft = random.NextDouble() < 0.5;
+                var x = onLeft ? -out_ : along;
+                var z = onLeft ? along : -out_;
+                var height = VillageTerrain.Height(x, z);
+                var scale = 1.2f + (float)random.NextDouble() * 1.5f;
+                if (height + scale * 0.8f > -0.2f) continue;
+                Crag(mesh, new Vector3(x, height, z), scale, random.Next());
             }
 
             // Flowers and tufts. Inside the map they are flat enough for any building to cover.
@@ -189,14 +282,27 @@ namespace ShinobiDominion.Game
                 var z = (float)(random.NextDouble() * (MapSize + 40f) - 20f);
                 if (InWaterArea(x, z)) continue;
                 var weights = GroundWeights(x, z);
-                if (weights.r > 0.35f) continue;
-                var at = new Vector3(x, 0f, z);
+                if (weights.r > 0.35f || weights.g > 0.3f) continue;
+                var at = new Vector3(x, VillageTerrain.Height(x, z), z);
                 if (random.NextDouble() < 0.72f) Tuft(mesh, at, random);
                 else Flower(mesh, at, random);
+            }
+
+            // Boulders where the stream comes out of the mountainside.
+            for (var i = 0; i < 12; i++)
+            {
+                var x = MapSize + 7f + (float)random.NextDouble() * 4f;
+                var z = MapSize + 2f + (float)random.NextDouble() * 6f;
+                Boulder(mesh, new Vector3(x, VillageTerrain.Height(x, z), z), 0.8f + (float)random.NextDouble() * 1.4f, random.Next());
             }
             return mesh;
         }
 
+        private static void Crag(MeshBuilder mesh, Vector3 at, float scale, int seed)
+        {
+            var tone = new Color(0.50f, 0.51f, 0.56f);
+            mesh.Blob(at, new Vector3(0.9f, 0.8f, 0.9f) * scale, tone * 0.82f + new Color(0f, 0f, 0f, 0.18f), ArtSurface.Rock, 0f, 0f, 6, 4, 0.22f, seed, tone);
+        }
         private static void BoundaryKerb(MeshBuilder mesh)
         {
             // A low stone kerb with lantern posts marks the buildable edge without a visible grid.
@@ -276,10 +382,10 @@ namespace ShinobiDominion.Game
         private static void Boulder(MeshBuilder mesh, Vector3 at, float scale, int seed)
         {
             var random = new System.Random(seed);
-            var tone = Color.Lerp(new Color(0.52f, 0.52f, 0.54f), new Color(0.66f, 0.62f, 0.56f), (float)random.NextDouble());
-            mesh.Blob(at + Vector3.up * 0.2f * scale, new Vector3(0.62f, 0.5f, 0.54f) * scale, tone, ArtSurface.Stone, 0f, 0f, 7, 4, 0.16f, seed, Color.Lerp(tone, Color.white, 0.2f));
+            var tone = Color.Lerp(new Color(0.46f, 0.47f, 0.52f), new Color(0.58f, 0.58f, 0.60f), (float)random.NextDouble());
+            mesh.Blob(at + Vector3.up * 0.2f * scale, new Vector3(0.62f, 0.5f, 0.54f) * scale, tone, ArtSurface.Rock, 0f, 0f, 7, 4, 0.16f, seed, Color.Lerp(tone, Color.white, 0.2f));
             if (random.NextDouble() < 0.6)
-                mesh.Blob(at + new Vector3(0.42f, 0.08f, 0.2f) * scale, new Vector3(0.34f, 0.26f, 0.3f) * scale, tone, ArtSurface.Stone, 0f, 0f, 6, 3, 0.16f, seed + 1);
+                mesh.Blob(at + new Vector3(0.42f, 0.08f, 0.2f) * scale, new Vector3(0.34f, 0.26f, 0.3f) * scale, tone, ArtSurface.Rock, 0f, 0f, 6, 3, 0.16f, seed + 1);
             if (random.NextDouble() < 0.5)
                 mesh.Blob(at + new Vector3(0f, 0.5f, 0f) * scale, new Vector3(0.36f, 0.14f, 0.32f) * scale, Palette.Leaf, ArtSurface.Grass, 0f, 0f, 5, 3);
         }
@@ -306,207 +412,10 @@ namespace ShinobiDominion.Game
             mesh.Blob(at + Vector3.up * 0.15f, new Vector3(0.08f, 0.04f, 0.08f), color, ArtSurface.Plain, 0.5f, 0f, 5, 2);
         }
 
-        // ---------- The hidden village around the map ----------
-
-        // Districts are decoration only: every one of them sits outside the 50 x 50 grid.
-        private static bool InSettlement(float x, float z)
-        {
-            var backDistrict = x > 22f && x < 62f && z > MapSize + 9f && z < MapSize + 27f;
-            var sideDistrict = x > MapSize + 5f && x < MapSize + 25f && z > 2f && z < 44f;
-            var gateRoad = x > 18f && x < 32f && z > -26f && z < -1f;
-            var trainingYard = x > -24f && x < -5f && z > 16f && z < 38f;
-            return backDistrict || sideDistrict || gateRoad || trainingYard;
-        }
-
-        private static void AddHiddenVillage(MeshBuilder mesh)
-        {
-            var random = new System.Random(4242);
-
-            // Rooftop districts spread behind the map, so the village feels part of a larger settlement.
-            for (var row = 0; row < 3; row++)
-            for (var i = 0; i < 7; i++)
-            {
-                var at = new Vector3(25f + i * 5.2f + row * 1.6f, 0f, MapSize + 11f + row * 5.5f);
-                TownHouse(mesh, at, random);
-            }
-            for (var column = 0; column < 3; column++)
-            for (var i = 0; i < 7; i++)
-            {
-                var at = new Vector3(MapSize + 7f + column * 5.5f, 0f, 5f + i * 5.4f + column * 1.4f);
-                TownHouse(mesh, at, random);
-            }
-
-            VillageGate(mesh, new Vector3(25f, 0f, -11f));
-
-            // A training yard of wooden posts and targets, kept low so it never hides the map.
-            for (var i = 0; i < 12; i++)
-            {
-                var at = new Vector3(-8f - (i % 4) * 4.2f, 0f, 19f + (i / 4) * 6.5f + (i % 2) * 1.2f);
-                mesh.Cylinder(at, 0.2f, 0.17f, 1.3f, 6, Palette.Wood, ArtSurface.Wood, 0f, 0f, false);
-                mesh.Cylinder(at + Vector3.up * 0.55f, 0.27f, 0.27f, 0.35f, 6, new Color(0.88f, 0.74f, 0.42f), ArtSurface.Wood);
-                mesh.Box(at + Vector3.up * 0.95f, new Vector3(1.1f, 0.11f, 0.11f), Palette.DarkWood, ArtSurface.Wood);
-            }
-
-            // Ancient giants tower over the forest. They are the setting's real signature.
-            var giants = new[]
-            {
-                new Vector3(-12f, 0f, MapSize + 15f), new Vector3(66f, 0f, MapSize + 16f), new Vector3(MapSize + 30f, 0f, 58f),
-                new Vector3(MapSize + 31f, 0f, -2f), new Vector3(-20f, 0f, MapSize + 2f), new Vector3(14f, 0f, MapSize + 31f),
-                new Vector3(44f, 0f, MapSize + 33f), new Vector3(MapSize + 32f, 0f, 26f)
-            };
-            for (var i = 0; i < giants.Length; i++) GiantTree(mesh, giants[i], 1.5f + i % 3 * 0.25f, 300 + i);
-
-            // A wooden footbridge over the stream, joining the map to the back district.
-            var bridge = new Vector3(36f, 0f, MapSize + 5f);
-            mesh.Box(bridge + new Vector3(0f, 0.3f, 0f), new Vector3(2.6f, 0.16f, 5.6f), Palette.Wood, ArtSurface.Wood);
-            foreach (var side in new[] { -1.25f, 1.25f })
-            {
-                mesh.Box(bridge + new Vector3(side, 0.46f, 0f), new Vector3(0.1f, 0.5f, 5.6f), Palette.AccentRed, ArtSurface.Wood);
-                foreach (var along in new[] { -2.7f, 2.7f })
-                    mesh.Cylinder(bridge + new Vector3(side, 0f, along), 0.13f, 0.11f, 1.2f, 6, Palette.AccentRed, ArtSurface.Wood);
-            }
-        }
-
-        private static void TownHouse(MeshBuilder mesh, Vector3 at, System.Random random)
-        {
-            Color[] roofs = { Palette.RoofRed, Palette.RoofTeal, Palette.Slate, new Color(0.78f, 0.46f, 0.20f) };
-            Color[] walls = { Palette.Plaster, new Color(0.90f, 0.78f, 0.60f), new Color(0.72f, 0.54f, 0.36f) };
-            var roof = roofs[random.Next(roofs.Length)];
-            var wall = walls[random.Next(walls.Length)];
-            var w = 3f + (float)random.NextDouble() * 1.2f;
-            var d = 3f + (float)random.NextDouble() * 1.2f;
-            var h = 1.7f + (float)random.NextDouble() * 1.6f;
-
-            mesh.Box(at, new Vector3(w, h, d), wall, ArtSurface.Plaster);
-            mesh.Box(at, new Vector3(w + 0.1f, 0.34f, d + 0.1f), Palette.Stone, ArtSurface.Stone);
-            mesh.Box(at + Vector3.up * (h - 0.14f), new Vector3(w + 0.14f, 0.16f, d + 0.14f), Palette.DarkWood, ArtSurface.Wood);
-
-            // Lit windows on the two sides the camera sees.
-            var y = at.y + h * 0.5f;
-            for (var i = -1; i <= 1; i += 2)
-            {
-                var a = new Vector3(at.x + i * w * 0.24f, y, at.z - d * 0.5f - 0.02f);
-                mesh.Quad(a + new Vector3(-0.27f, -0.24f, 0f), a + new Vector3(0.27f, -0.24f, 0f), a + new Vector3(0.27f, 0.24f, 0f), a + new Vector3(-0.27f, 0.24f, 0f), Vector3.back, Palette.WindowGlow, ArtSurface.Plain, 0f, 0.95f);
-                var b = new Vector3(at.x - w * 0.5f - 0.02f, y, at.z + i * d * 0.24f);
-                mesh.Quad(b + new Vector3(0f, -0.24f, -0.27f), b + new Vector3(0f, -0.24f, 0.27f), b + new Vector3(0f, 0.24f, 0.27f), b + new Vector3(0f, 0.24f, -0.27f), Vector3.left, Palette.WindowGlow, ArtSurface.Plain, 0f, 0.95f);
-            }
-
-            // A simple tiled hip roof: distant houses don't need the full curved model.
-            var top = at + Vector3.up * h;
-            mesh.Frustum(top, w + 0.9f, d + 0.9f, w * 0.34f, d * 0.34f, 1f, roof, ArtSurface.Tile);
-            mesh.Box(top + Vector3.up * 1f, new Vector3(w * 0.36f, 0.1f, d * 0.36f), Palette.DarkWood, ArtSurface.Wood);
-
-            if (random.NextDouble() < 0.3)
-            {
-                var tank = top + new Vector3(0f, 1.1f, 0f);
-                mesh.Cylinder(tank, 0.4f, 0.4f, 0.7f, 8, new Color(0.58f, 0.42f, 0.26f), ArtSurface.Wood);
-                mesh.Cylinder(tank + Vector3.up * 0.7f, 0.5f, 0f, 0.26f, 8, roof, ArtSurface.Tile);
-            }
-        }
-
-        /// <summary>The village's main gate, with a plain red disc rather than any borrowed crest.</summary>
-        private static void VillageGate(MeshBuilder mesh, Vector3 at)
-        {
-            const float span = 3.6f;
-            const float height = 4.6f;
-            foreach (var side in new[] { -1f, 1f })
-            {
-                var post = at + new Vector3(side * span, 0f, 0f);
-                mesh.Box(post, new Vector3(1.3f, 0.7f, 1.3f), Palette.Stone, ArtSurface.Stone);
-                mesh.Cylinder(post + Vector3.up * 0.7f, 0.46f, 0.4f, height - 0.7f, 8, Palette.AccentRed, ArtSurface.Wood);
-                mesh.Box(post + new Vector3(side * 2.2f, 0f, 0f), new Vector3(3.2f, 2.2f, 0.7f), Palette.Plaster, ArtSurface.Plaster);
-                mesh.Frustum(post + new Vector3(side * 2.2f, 2.2f, 0f), 3.8f, 1.4f, 2.9f, 0.3f, 0.5f, Palette.Slate, ArtSurface.Tile);
-            }
-            var lintel = at + Vector3.up * height;
-            mesh.Box(lintel - Vector3.up * 1.15f, new Vector3(span * 2f + 0.8f, 0.34f, 0.46f), Palette.AccentRed, ArtSurface.Wood);
-            mesh.Box(lintel - Vector3.up * 0.3f, new Vector3(span * 2f + 1.4f, 0.34f, 0.6f), Palette.DarkWood, ArtSurface.Wood);
-            mesh.Roof(lintel + Vector3.up * 0.04f, span + 2.3f, 1.2f, span + 0.6f, 0.2f, 0.72f, 0.82f, Palette.Slate, Palette.Amber);
-            mesh.Box(lintel - new Vector3(0f, 0.95f, 0.27f), new Vector3(2.1f, 0.68f, 0.05f), Palette.Plaster, ArtSurface.Plaster);
-            mesh.Blob(lintel - new Vector3(0f, 0.58f, 0.32f), new Vector3(0.28f, 0.28f, 0.03f), Palette.AccentRed, ArtSurface.Plain, 0f, 0f, 8, 4);
-        }
-
-        private static void GiantTree(MeshBuilder mesh, Vector3 at, float scale, int seed)
-        {
-            var random = new System.Random(seed);
-            var trunkHeight = 7.5f * scale;
-            mesh.Cylinder(at, 2.1f * scale, 1.15f * scale, trunkHeight, 9, Palette.DarkWood, ArtSurface.Wood, 0.03f, 0f, false);
-            for (var i = 0; i < 5; i++)
-            {
-                var a = i / 5f * Mathf.PI * 2f + 0.4f;
-                var root = at + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * 2f * scale;
-                mesh.Frustum(root, 1.5f * scale, 1.5f * scale, 0.2f, 0.2f, 1.3f * scale, Palette.DarkWood, ArtSurface.Wood);
-            }
-            var crown = at + Vector3.up * (trunkHeight + 2f * scale);
-            mesh.Blob(crown, new Vector3(5.2f, 3.3f, 5.2f) * scale, Palette.Leaf, ArtSurface.Grass, 0.4f, 0f, 8, 5, 0.1f, seed, Palette.LeafLight);
-            for (var i = 0; i < 5; i++)
-            {
-                var a = (float)random.NextDouble() * Mathf.PI * 2f;
-                var offset = new Vector3(Mathf.Cos(a) * 4f, (float)random.NextDouble() * 2f - 0.8f, Mathf.Sin(a) * 4f) * scale;
-                mesh.Blob(crown + offset, Vector3.one * (2.2f + (float)random.NextDouble()) * scale, Palette.Leaf, ArtSurface.Grass, 0.5f, 0f, 7, 4, 0.1f, seed + i + 1, Palette.LeafLight);
-            }
-        }
-
-        // ---------- Mountains ----------
-
-        private static MeshBuilder BuildMountains()
-        {
-            var mesh = new MeshBuilder { ContactShade = false };
-            var random = new System.Random(808);
-
-            // Distant ridges behind the map, fading into the haze.
-            for (var i = 0; i < 60; i++)
-            {
-                var along = (float)random.NextDouble();
-                var depth = (float)random.NextDouble();
-                var back = random.NextDouble() < 0.5;
-                var x = back ? Mathf.Lerp(-70f, MapSize + 70f, along) : MapSize + 38f + depth * 36f;
-                var z = back ? MapSize + 38f + depth * 36f : Mathf.Lerp(-70f, MapSize + 70f, along);
-                Peak(mesh, new Vector3(x, -0.1f, z), 10f + (float)random.NextDouble() * 12f, 14f + (float)random.NextDouble() * 16f + depth * 8f, depth, random.Next());
-            }
-            return mesh;
-        }
-
-        private static void Peak(MeshBuilder mesh, Vector3 at, float radius, float height, float haze, int seed)
-        {
-            var random = new System.Random(seed);
-            const int sides = 9;
-            const int rows = 4;
-            var offsets = new float[sides, rows + 1];
-            for (var s = 0; s < sides; s++)
-            for (var r = 0; r <= rows; r++)
-                offsets[s, r] = 1f + (float)(random.NextDouble() - 0.5) * 0.3f;
-
-            var lowColor = Color.Lerp(new Color(0.26f, 0.48f, 0.38f), Palette.Sky, 0.12f + haze * 0.5f);
-            var midColor = Color.Lerp(new Color(0.40f, 0.46f, 0.62f), Palette.Sky, 0.12f + haze * 0.5f);
-            var snow = Color.Lerp(new Color(0.96f, 0.97f, 1f), Palette.Sky, haze * 0.25f);
-
-            Vector3 Point(int s, int r)
-            {
-                var t = (float)r / rows;
-                var a = (float)s / sides * Mathf.PI * 2f;
-                var ring = radius * (1f - t) * offsets[s % sides, r];
-                return at + new Vector3(Mathf.Cos(a) * ring, height * t * (r == rows ? 1f : offsets[s % sides, r]), Mathf.Sin(a) * ring);
-            }
-
-            for (var r = 0; r < rows; r++)
-            for (var s = 0; s < sides; s++)
-            {
-                var t = (float)r / rows;
-                var color = t < 0.3f ? lowColor : t < 0.7f ? midColor : snow;
-                var a = Point(s, r);
-                var b = Point(s + 1, r);
-                var c = Point(s + 1, r + 1);
-                var d = Point(s, r + 1);
-                var outward = (a + b) * 0.5f - at;
-                outward.y = 0f;
-                mesh.Quad(a, b, c, d, outward + Vector3.up, color, r < rows - 1 ? ArtSurface.Stone : ArtSurface.Plain);
-            }
-        }
-
         // ---------- Water: a stream, a pond and a waterfall behind the village ----------
 
-        private static readonly Vector3 PondCenter = new Vector3(13f, 0f, MapSize + 12f);
-        private const float PondRadius = 8.5f;
+        private static readonly Vector3 PondCenter = VillageTerrain.PondCenter;
+        private const float PondRadius = VillageTerrain.PondRadius;
 
         private static bool InWaterArea(float x, float z)
         {
@@ -601,17 +510,26 @@ namespace ShinobiDominion.Game
         {
             var random = new System.Random(77);
             var cliff = PondCenter + new Vector3(0f, -0.1f, 15f);
-            var rock = new Color(0.64f, 0.60f, 0.54f);
-            mesh.Frustum(cliff, 22f, 15f, 12f, 7f, 12.5f, rock, ArtSurface.Stone);
+            var rock = new Color(0.50f, 0.51f, 0.56f);
+            mesh.Frustum(cliff, 22f, 15f, 12f, 7f, 12.5f, rock, ArtSurface.Rock);
             mesh.Frustum(cliff + Vector3.up * 12.5f, 13f, 8f, 10f, 6f, 0.6f, Palette.Leaf, ArtSurface.Grass);
             // Layered rock shelves and foliage break up the slab either side of the falls.
             foreach (var side in new[] { -1f, 1f })
             {
-                mesh.Frustum(cliff + new Vector3(side * 7.5f, 0f, -6f), 7f, 6f, 4f, 4f, 7.5f, rock * 0.92f + new Color(0f, 0f, 0f, 0.08f), ArtSurface.Stone);
+                mesh.Frustum(cliff + new Vector3(side * 7.5f, 0f, -6f), 7f, 6f, 4f, 4f, 7.5f, rock * 0.92f + new Color(0f, 0f, 0f, 0.08f), ArtSurface.Rock);
                 mesh.Frustum(cliff + new Vector3(side * 7.5f, 7.5f, -6f), 4.6f, 4.6f, 3.4f, 3.4f, 0.5f, Palette.Leaf, ArtSurface.Grass);
                 PineTree(mesh, cliff + new Vector3(side * 7.5f, 8f, -6f), 1.1f, 40 + (int)side);
                 BroadTree(mesh, cliff + new Vector3(side * 5f, 13f, 0f), 1.1f, 50 + (int)side, Palette.Sakura, Palette.SakuraLight);
                 PineTree(mesh, cliff + new Vector3(side * 3.2f, 13f, 2f), 1.2f, 60 + (int)side);
+            }
+            // Crags break up the block so the falls come down a real rock face, leaving the water clear.
+            for (var i = 0; i < 46; i++)
+            {
+                var side = random.NextDouble() < 0.5 ? -1f : 1f;
+                var across = side * (4.2f + (float)random.NextDouble() * 9f);
+                var depth = 6f + (float)random.NextDouble() * 12f;
+                var rise = (float)random.NextDouble() * 12f;
+                Crag(mesh, PondCenter + new Vector3(across, rise, depth), 1.6f + (float)random.NextDouble() * 1.8f, random.Next());
             }
             for (var i = 0; i < 30; i++)
             {

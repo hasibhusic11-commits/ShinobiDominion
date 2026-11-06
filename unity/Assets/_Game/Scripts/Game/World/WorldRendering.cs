@@ -36,7 +36,11 @@ namespace ShinobiDominion.Game
         Plaster = 4,
         Grass = 5,
         Dirt = 6,
-        Water = 7
+        Water = 7,
+        Marble = 8,
+        Metal = 9,
+        Thatch = 10,
+        Rock = 11
     }
 
     /// <summary>
@@ -126,6 +130,19 @@ namespace ShinobiDominion.Game
         /// <summary>Darkens geometry close to the ground, a cheap stand-in for ambient occlusion.</summary>
         public bool ContactShade = true;
 
+        /// <summary>What curved roofs are made of. Set by the building's skin.</summary>
+        public ArtSurface RoofSurface = ArtSurface.Tile;
+
+        public float MaxY
+        {
+            get
+            {
+                var max = 0f;
+                foreach (var vertex in _vertices) max = Mathf.Max(max, vertex.y);
+                return max;
+            }
+        }
+
         public int VertexCount => _vertices.Count;
 
         private static float ScaleFor(ArtSurface surface)
@@ -138,6 +155,10 @@ namespace ShinobiDominion.Game
                 case ArtSurface.Plaster: return 0.6f;
                 case ArtSurface.Grass: return 1.1f;
                 case ArtSurface.Dirt: return 0.7f;
+                case ArtSurface.Marble: return 0.5f;
+                case ArtSurface.Metal: return 0.7f;
+                case ArtSurface.Thatch: return 0.8f;
+                case ArtSurface.Rock: return 0.45f;
                 default: return 1f;
             }
         }
@@ -346,7 +367,7 @@ namespace ShinobiDominion.Game
                     var u0 = (float)segment / segments;
                     var u1 = (float)(segment + 1) / segments;
                     Quad(Point(side, u0, t0), Point(side, u1, t0), Point(side, u1, t1), Point(side, u0, t1),
-                        outwards[side] + Vector3.up, color, ArtSurface.Tile);
+                        outwards[side] + Vector3.up, color, RoofSurface);
                 }
 
                 // The eave board: a pale edge that picks the roof line out from a distance.
@@ -371,7 +392,7 @@ namespace ShinobiDominion.Game
             {
                 for (var i = 0; i < _colors.Count; i++)
                 {
-                    var factor = Mathf.Lerp(0.62f, 1f, Mathf.Clamp01(_vertices[i].y / 0.55f));
+                    var factor = _vertices[i].y < -0.05f ? 1f : Mathf.Lerp(0.62f, 1f, Mathf.Clamp01(_vertices[i].y / 0.55f));
                     var c = _colors[i];
                     _colors[i] = new Color(c.r * factor, c.g * factor, c.b * factor, c.a);
                 }

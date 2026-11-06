@@ -193,14 +193,14 @@ namespace ShinobiDominion.Tests
             Assert.AreEqual(VillageError.NothingToCollect, village.TryCollect(id, Now, out _));
 
             var oneHour = Now + System.TimeSpan.TicksPerHour;
-            Assert.AreEqual(mine.Definition.productionPerHour, village.PendingCollection(mine, oneHour));
+            Assert.AreEqual(mine.Definition.ProductionAt(1), village.PendingCollection(mine, oneHour));
 
             var longTime = Now + 1000 * System.TimeSpan.TicksPerHour;
-            Assert.AreEqual(mine.Definition.storedProductionCap, village.PendingCollection(mine, longTime));
+            Assert.AreEqual(mine.Definition.StoredCapAt(1), village.PendingCollection(mine, longTime));
 
             var goldBefore = village.Gold;
             Assert.AreEqual(VillageError.None, village.TryCollect(id, longTime, out var collected));
-            Assert.AreEqual(mine.Definition.storedProductionCap, collected);
+            Assert.AreEqual(mine.Definition.StoredCapAt(1), collected);
             Assert.AreEqual(goldBefore + collected, village.Gold);
             Assert.AreEqual(0, village.PendingCollection(mine, longTime));
         }

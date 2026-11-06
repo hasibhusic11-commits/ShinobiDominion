@@ -34,7 +34,8 @@ Material:
     - _GrassColor: {r: 0.29999998, g: 0.4699999, b: 0.21999997, a: 1}
     - _GrassColorB: {r: 0.39999998, g: 0.53999996, b: 0.24999997, a: 1}
     - _MossColor: {r: 0.23999995, g: 0.37999994, b: 0.21999997, a: 1}
+    - _RockColor: {r: 0.5, g: 0.50999993, b: 0.56, a: 1}
     - _ShadowTint: {r: 0.52, g: 0.58, b: 0.72, a: 1}
-    - _StoneColor: {r: 0.6, g: 0.59, b: 0.56, a: 1}
+    - _SnowColor: {r: 0.93, g: 0.95, b: 1, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

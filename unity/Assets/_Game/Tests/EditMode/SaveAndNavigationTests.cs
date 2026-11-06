@@ -182,6 +182,40 @@ namespace ShinobiDominion.Tests
         }
 
         [Test]
+        public void EveryBuilding_HasFifteenLevels_WithHpThatNeverFalls()
+        {
+            foreach (var definition in TestCatalog.Load().All)
+            {
+                Assert.AreEqual(15, definition.maxLevel, definition.id);
+                for (var level = 2; level <= 15; level++)
+                    Assert.GreaterOrEqual(definition.HpAtLevel(level), definition.HpAtLevel(level - 1), definition.id);
+            }
+        }
+
+        [Test]
+        public void Stats_FollowTheirCurves()
+        {
+            var catalog = TestCatalog.Load();
+            var tower = catalog.Get("defense_tower");
+            Assert.AreEqual(20, tower.At(2).attack - tower.At(1).attack, "Attack rises by a fixed amount");
+            Assert.AreEqual(tower.At(2).attack - tower.At(1).attack, tower.At(15).attack - tower.At(14).attack);
+            Assert.Greater(tower.At(15).range, tower.At(1).range);
+            Assert.AreEqual(tower.At(1).range, tower.At(2).range, "Range rises in steps");
+            Assert.Greater(tower.UpgradeCost(14) - tower.UpgradeCost(13), tower.UpgradeCost(2) - tower.UpgradeCost(1), "Cost accelerates");
+            Assert.Greater(catalog.Get("wall").At(15).hp / catalog.Get("wall").At(1).hp, 100, "Walls grow fastest");
+            Assert.Greater(catalog.Get("gold_mine").ProductionAt(15), catalog.Get("gold_mine").ProductionAt(1));
+            Assert.Greater(catalog.Get("gold_vault").At(15).goldCapacity, catalog.Get("gold_vault").At(1).goldCapacity);
+            Assert.AreEqual(2, catalog.Get("hero_base").At(1).bonusPercent);
+            Assert.AreEqual(30, catalog.Get("hero_base").At(15).bonusPercent);
+        }
+
+        [Test]
+        public void Catalog_RejectsWrongLevelCount()
+        {
+            Assert.Throws<System.FormatException>(() => BuildingCatalog.FromJson("{\"schemaVersion\":2,\"buildings\":[{\"id\":\"a\",\"levels\":[{\"hp\":1}]}]}"));
+        }
+
+        [Test]
         public void HeroBaseLimit_IsSixAtEveryHqLevel()
         {
             var heroBase = TestCatalog.Load().Get("hero_base");
@@ -207,9 +241,9 @@ namespace ShinobiDominion.Tests
         public void Catalog_RejectsDuplicateIdsAndBadFootprints()
         {
             Assert.Throws<System.FormatException>(() => BuildingCatalog.FromJson(
-                "{\"schemaVersion\":1,\"buildings\":[{\"id\":\"a\"},{\"id\":\"a\"}]}"));
+                "{\"schemaVersion\":2,\"buildings\":[{\"id\":\"a\"},{\"id\":\"a\"}]}"));
             Assert.Throws<System.FormatException>(() => BuildingCatalog.FromJson(
-                "{\"schemaVersion\":1,\"buildings\":[{\"id\":\"a\",\"width\":0}]}"));
+                "{\"schemaVersion\":2,\"buildings\":[{\"id\":\"a\",\"width\":0}]}"));
         }
     }
 

@@ -14,10 +14,10 @@ namespace ShinobiDominion.EditorTools
         private const string Folder = "Assets/_Game/Resources/Art";
         private const string ArrayPath = Folder + "/DetailArray.asset";
         private const int Size = 256;
-        private const int Layers = 8;
+        private const int Layers = 12;
 
         public static bool IsBaked =>
-            File.Exists(ArrayPath) && File.Exists(Folder + "/WorldMat.mat") && File.Exists(Folder + "/GroundMat.mat") &&
+            File.Exists(ArrayPath) && AssetDatabase.LoadAssetAtPath<Texture2DArray>(ArrayPath)?.depth == Layers && File.Exists(Folder + "/WorldMat.mat") && File.Exists(Folder + "/GroundMat.mat") &&
             File.Exists(Folder + "/WaterMat.mat") && File.Exists(Folder + "/ParticleMat.mat");
 
         public static void Bake()
@@ -108,6 +108,10 @@ namespace ShinobiDominion.EditorTools
                 case 5: return Grass(u, v);
                 case 6: return Dirt(u, v);
                 case 7: return WaterPattern(u, v);
+                case 8: return Marble(u, v);
+                case 9: return Metal(u, v);
+                case 10: return Thatch(u, v);
+                case 11: return Rock(u, v);
                 default: return 1f;
             }
         }
@@ -204,6 +208,52 @@ namespace ShinobiDominion.EditorTools
             var body = Fractal(u, v, 10, 27);
             var pebbles = Mathf.SmoothStep(0.68f, 0.76f, Noise(u, v, 48, 28));
             return 0.74f + body * 0.24f - pebbles * 0.1f + Noise(u, v, 96, 29) * 0.05f;
+        }
+
+        private static float Marble(float u, float v)
+        {
+            // Large polished slabs with soft, thin veins.
+            const int slabs = 2;
+            var cellU = Mathf.Repeat(u * slabs, 1f);
+            var cellV = Mathf.Repeat(v * slabs, 1f);
+            var seam = Mathf.SmoothStep(0f, 0.012f, Mathf.Min(Mathf.Min(cellU, 1f - cellU), Mathf.Min(cellV, 1f - cellV)));
+            var vein = Mathf.SmoothStep(0f, 0.035f, Mathf.Abs(Fractal(u, v, 5, 51) - 0.5f));
+            var body = 0.93f + Fractal(u, v, 4, 53) * 0.07f;
+            return body * Mathf.Lerp(0.76f, 1f, vein) * Mathf.Lerp(0.7f, 1f, seam);
+        }
+
+        private static float Metal(float u, float v)
+        {
+            // Riveted plates with a faint hammered dimple.
+            const int plates = 2;
+            var cellU = Mathf.Repeat(u * plates, 1f);
+            var cellV = Mathf.Repeat(v * plates, 1f);
+            var seam = Mathf.SmoothStep(0f, 0.02f, Mathf.Min(Mathf.Min(cellU, 1f - cellU), Mathf.Min(cellV, 1f - cellV)));
+            var rivetX = Mathf.Min(cellU, 1f - cellU) - 0.07f;
+            var rivetY = Mathf.Min(cellV, 1f - cellV) - 0.07f;
+            var rivet = 1f - Mathf.SmoothStep(0.02f, 0.035f, Mathf.Sqrt(rivetX * rivetX + rivetY * rivetY));
+            var hammered = Noise(u, v, 16, 57);
+            return Mathf.Clamp01((0.8f + hammered * 0.14f + Noise(u, v, 64, 58) * 0.06f + rivet * 0.25f) * Mathf.Lerp(0.55f, 1f, seam));
+        }
+
+        private static float Thatch(float u, float v)
+        {
+            // Bundled straw in rows, each row overhanging the one below.
+            const int rows = 5;
+            const int strands = 48;
+            var row = Mathf.FloorToInt(v * rows);
+            var cellV = Mathf.Repeat(v * rows, 1f);
+            var strand = Mathf.FloorToInt(u * strands) + row * 7;
+            var tone = 0.62f + Lattice(strand, row, strands, 61) * 0.38f;
+            return tone * Mathf.Lerp(0.66f, 1f, Mathf.SmoothStep(0f, 0.4f, cellV));
+        }
+
+        private static float Rock(float u, float v)
+        {
+            // Broken facets in flat steps, with cracks between them: painted rock, with no courses or mortar.
+            var facets = Mathf.Floor((Noise(u, v, 5, 72) * 0.7f + Noise(u, v, 10, 75) * 0.3f) * 7f) / 7f;
+            var crack = 1f - Mathf.SmoothStep(0f, 0.022f, Mathf.Abs(Noise(u, v, 8, 73) - 0.5f));
+            return Mathf.Clamp01(0.52f + facets * 0.62f + Noise(u, v, 32, 74) * 0.04f - crack * 0.3f);
         }
 
         private static float WaterPattern(float u, float v)

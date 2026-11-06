@@ -33,6 +33,9 @@ Layout, gold, limits, walls, moves, upgrades, removal and collection are all ser
 
 **Not done:** build timers, and online undo.
 
+## Phase 3c: mountain and 15 building levels — done, awaiting your review
+The outside is a mountain with no houses. All buildings have 15 levels with their own stats and five texture packs. See ADR-024 and ADR-025.
+
 ## Phase 4: combat vertical slice — not started
 Now includes troops: 4 camps, a training hall, and camp space by troop strength (ADR-021).
 ## Phase 5: polish and ship readiness — not started

@@ -1,22 +1,269 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "balanceStatus": "PROPOSED TEST VALUES - NOT APPROVED",
   "startingGold": 5000,
   "startingCrystals": 100,
   "baseGoldCapacity": 20000,
   "buildings": [
-    { "id": "dojo_hq", "displayName": "Dojo HQ", "description": "The heart of the village. Its level sets building limits.", "category": "Structures", "function": "Headquarters", "width": 5, "depth": 5, "removable": false, "maxHp": 2000, "maxLevel": 5, "costGold": 0, "upgradeCostGoldPerLevel": 2000, "maxCountByHqLevel": [1] },
-    { "id": "builder_hall", "displayName": "Builder Hall", "description": "Opens the build catalog.", "category": "Structures", "function": "BuilderHall", "width": 3, "depth": 3, "removable": false, "maxHp": 600, "maxLevel": 5, "costGold": 0, "upgradeCostGoldPerLevel": 800, "maxCountByHqLevel": [1] },
-    { "id": "hero_altar", "displayName": "Hero Altar", "description": "Your hero roster, upgrades and evolution.", "category": "Structures", "function": "HeroAltar", "width": 4, "depth": 4, "removable": false, "maxHp": 800, "maxLevel": 5, "costGold": 0, "upgradeCostGoldPerLevel": 1000, "maxCountByHqLevel": [1] },
-    { "id": "summoning_gate", "displayName": "Summoning Gate", "description": "Summon heroes. Every roll is independent and random.", "category": "Structures", "function": "SummoningGate", "width": 4, "depth": 4, "removable": false, "maxHp": 800, "maxLevel": 1, "costGold": 0, "upgradeCostGoldPerLevel": 0, "maxCountByHqLevel": [1] },
-    { "id": "training_grounds", "displayName": "Training Grounds", "description": "Train heroes. Available in a later phase.", "category": "Structures", "function": "Training", "width": 4, "depth": 3, "rotatable": true, "maxHp": 500, "maxLevel": 5, "costGold": 1500, "upgradeCostGoldPerLevel": 800, "maxCountByHqLevel": [1] },
-    { "id": "research_hut", "displayName": "Research Hut", "description": "Research upgrades. Available in a later phase.", "category": "Structures", "function": "Research", "width": 3, "depth": 3, "maxHp": 400, "maxLevel": 5, "costGold": 1200, "upgradeCostGoldPerLevel": 700, "maxCountByHqLevel": [0, 1] },
-    { "id": "defense_tower", "displayName": "Defense Tower", "description": "Fires on raiders in range.", "category": "Defense", "function": "Defense", "width": 2, "depth": 2, "maxHp": 700, "maxLevel": 10, "costGold": 600, "upgradeCostGoldPerLevel": 400, "maxCountByHqLevel": [2, 3, 4, 6, 8] },
-    { "id": "spirit_turret", "displayName": "Spirit Turret", "description": "Channels Spirit Force into bolts that strike raiders.", "category": "Defense", "function": "Defense", "width": 2, "depth": 2, "maxHp": 500, "maxLevel": 10, "costGold": 900, "upgradeCostGoldPerLevel": 500, "maxCountByHqLevel": [0, 1, 2, 3, 4] },
-    { "id": "gold_mine", "displayName": "Gold Mine", "description": "Produces gold over time.", "category": "Resources", "function": "Collector", "width": 3, "depth": 3, "maxHp": 400, "maxLevel": 10, "costGold": 300, "upgradeCostGoldPerLevel": 300, "maxCountByHqLevel": [2, 3, 4, 5, 6], "produces": "Gold", "productionPerHour": 600, "storedProductionCap": 2400 },
-    { "id": "gold_vault", "displayName": "Gold Vault", "description": "Raises how much gold you can hold.", "category": "Resources", "function": "Storage", "width": 3, "depth": 3, "maxHp": 500, "maxLevel": 10, "costGold": 500, "upgradeCostGoldPerLevel": 400, "maxCountByHqLevel": [1, 2, 3, 4, 4], "goldCapacityBonus": 15000 },
-    { "id": "crystal_mine", "displayName": "Crystal Mine", "description": "Slowly produces crystals.", "category": "Resources", "function": "Collector", "width": 3, "depth": 3, "maxHp": 400, "maxLevel": 5, "costGold": 1500, "upgradeCostGoldPerLevel": 1200, "maxCountByHqLevel": [0, 1, 1, 2, 2], "produces": "Crystals", "productionPerHour": 4, "storedProductionCap": 16 },
-    { "id": "hero_base", "displayName": "Hero Base", "description": "A pedestal that holds one hero for raids and defense.", "category": "HeroBases", "function": "HeroBase", "width": 2, "depth": 2, "maxHp": 500, "maxLevel": 10, "costGold": 400, "upgradeCostGoldPerLevel": 400, "maxCountByHqLevel": [6] },
-    { "id": "wall", "displayName": "Stone Wall", "description": "Drag to build a straight run of wall.", "category": "Walls", "function": "Wall", "width": 1, "depth": 1, "maxHp": 300, "maxLevel": 10, "costGold": 25, "upgradeCostGoldPerLevel": 20, "maxCountByHqLevel": [60, 100, 150, 220, 300] }
+    {
+      "id": "dojo_hq", "displayName": "Dojo HQ", "description": "The heart of the village. Its level sets building limits and how far others can be upgraded.", "category": "Structures", "function": "Headquarters", "width": 5, "depth": 5, "removable": false, "costGold": 0, "maxCountByHqLevel": [1],
+      "levels": [
+        {"hp":2000,"upgradeCost":2000,"requiredHq":1,"might":50},
+        {"hp":2300,"upgradeCost":4000,"requiredHq":1,"might":100},
+        {"hp":2700,"upgradeCost":8000,"requiredHq":1,"might":150},
+        {"hp":3200,"upgradeCost":14000,"requiredHq":1,"might":200},
+        {"hp":3700,"upgradeCost":24000,"requiredHq":1,"might":250},
+        {"hp":4400,"upgradeCost":40000,"requiredHq":1,"might":300},
+        {"hp":5200,"upgradeCost":64000,"requiredHq":1,"might":350},
+        {"hp":6100,"upgradeCost":100000,"requiredHq":1,"might":400},
+        {"hp":7100,"upgradeCost":150000,"requiredHq":1,"might":450},
+        {"hp":8300,"upgradeCost":220000,"requiredHq":1,"might":500},
+        {"hp":9700,"upgradeCost":320000,"requiredHq":1,"might":550},
+        {"hp":11300,"upgradeCost":460000,"requiredHq":1,"might":600},
+        {"hp":13200,"upgradeCost":640000,"requiredHq":1,"might":650},
+        {"hp":15400,"upgradeCost":900000,"requiredHq":1,"might":700},
+        {"hp":18000,"upgradeCost":0,"requiredHq":1,"might":750}
+      ]
+    },
+    {
+      "id": "builder_hall", "displayName": "Builder Hall", "description": "Opens the build catalog.", "category": "Structures", "function": "BuilderHall", "width": 3, "depth": 3, "removable": false, "costGold": 0, "maxCountByHqLevel": [1],
+      "levels": [
+        {"hp":600,"upgradeCost":800,"requiredHq":1,"might":3},
+        {"hp":690,"upgradeCost":1600,"requiredHq":1,"might":6},
+        {"hp":810,"upgradeCost":3200,"requiredHq":1,"might":9},
+        {"hp":960,"upgradeCost":5600,"requiredHq":1,"might":12},
+        {"hp":1110,"upgradeCost":9600,"requiredHq":3,"might":15},
+        {"hp":1320,"upgradeCost":16000,"requiredHq":3,"might":18},
+        {"hp":1560,"upgradeCost":25600,"requiredHq":3,"might":21},
+        {"hp":1830,"upgradeCost":40000,"requiredHq":6,"might":24},
+        {"hp":2130,"upgradeCost":60000,"requiredHq":6,"might":27},
+        {"hp":2490,"upgradeCost":88000,"requiredHq":6,"might":30},
+        {"hp":2910,"upgradeCost":128000,"requiredHq":9,"might":33},
+        {"hp":3390,"upgradeCost":184000,"requiredHq":9,"might":36},
+        {"hp":3960,"upgradeCost":256000,"requiredHq":9,"might":39},
+        {"hp":4620,"upgradeCost":360000,"requiredHq":12,"might":42},
+        {"hp":5400,"upgradeCost":0,"requiredHq":12,"might":45}
+      ]
+    },
+    {
+      "id": "hero_altar", "displayName": "Hero Altar", "description": "Your hero roster, upgrades and evolution. Higher levels will shorten hero revival.", "category": "Structures", "function": "HeroAltar", "width": 4, "depth": 4, "removable": false, "costGold": 0, "maxCountByHqLevel": [1],
+      "levels": [
+        {"hp":800,"upgradeCost":1000,"requiredHq":1,"bonusPercent":3,"might":10},
+        {"hp":920,"upgradeCost":2000,"requiredHq":1,"bonusPercent":6,"might":20},
+        {"hp":1080,"upgradeCost":4000,"requiredHq":1,"bonusPercent":9,"might":30},
+        {"hp":1280,"upgradeCost":7000,"requiredHq":1,"bonusPercent":12,"might":40},
+        {"hp":1480,"upgradeCost":12000,"requiredHq":3,"bonusPercent":15,"might":50},
+        {"hp":1760,"upgradeCost":20000,"requiredHq":3,"bonusPercent":18,"might":60},
+        {"hp":2080,"upgradeCost":32000,"requiredHq":3,"bonusPercent":21,"might":70},
+        {"hp":2440,"upgradeCost":50000,"requiredHq":6,"bonusPercent":24,"might":80},
+        {"hp":2840,"upgradeCost":75000,"requiredHq":6,"bonusPercent":27,"might":90},
+        {"hp":3320,"upgradeCost":110000,"requiredHq":6,"bonusPercent":30,"might":100},
+        {"hp":3880,"upgradeCost":160000,"requiredHq":9,"bonusPercent":33,"might":110},
+        {"hp":4520,"upgradeCost":230000,"requiredHq":9,"bonusPercent":36,"might":120},
+        {"hp":5280,"upgradeCost":320000,"requiredHq":9,"bonusPercent":39,"might":130},
+        {"hp":6160,"upgradeCost":450000,"requiredHq":12,"bonusPercent":42,"might":140},
+        {"hp":7200,"upgradeCost":0,"requiredHq":12,"bonusPercent":45,"might":150}
+      ]
+    },
+    {
+      "id": "summoning_gate", "displayName": "Summoning Gate", "description": "Summon heroes. Every roll is independent and random.", "category": "Structures", "function": "SummoningGate", "width": 4, "depth": 4, "removable": false, "costGold": 0, "maxCountByHqLevel": [1],
+      "levels": [
+        {"hp":800,"upgradeCost":1000,"requiredHq":1,"might":5},
+        {"hp":920,"upgradeCost":2000,"requiredHq":1,"might":10},
+        {"hp":1080,"upgradeCost":4000,"requiredHq":1,"might":15},
+        {"hp":1280,"upgradeCost":7000,"requiredHq":1,"might":20},
+        {"hp":1480,"upgradeCost":12000,"requiredHq":3,"might":25},
+        {"hp":1760,"upgradeCost":20000,"requiredHq":3,"might":30},
+        {"hp":2080,"upgradeCost":32000,"requiredHq":3,"might":35},
+        {"hp":2440,"upgradeCost":50000,"requiredHq":6,"might":40},
+        {"hp":2840,"upgradeCost":75000,"requiredHq":6,"might":45},
+        {"hp":3320,"upgradeCost":110000,"requiredHq":6,"might":50},
+        {"hp":3880,"upgradeCost":160000,"requiredHq":9,"might":55},
+        {"hp":4520,"upgradeCost":230000,"requiredHq":9,"might":60},
+        {"hp":5280,"upgradeCost":320000,"requiredHq":9,"might":65},
+        {"hp":6160,"upgradeCost":450000,"requiredHq":12,"might":70},
+        {"hp":7200,"upgradeCost":0,"requiredHq":12,"might":75}
+      ]
+    },
+    {
+      "id": "training_grounds", "displayName": "Training Grounds", "description": "Train heroes. Available in a later phase.", "category": "Structures", "function": "Training", "width": 4, "depth": 3, "rotatable": true, "costGold": 1500, "maxCountByHqLevel": [1],
+      "levels": [
+        {"hp":500,"upgradeCost":800,"requiredHq":1,"might":3},
+        {"hp":575,"upgradeCost":1600,"requiredHq":1,"might":6},
+        {"hp":675,"upgradeCost":3200,"requiredHq":1,"might":9},
+        {"hp":800,"upgradeCost":5600,"requiredHq":1,"might":12},
+        {"hp":925,"upgradeCost":9600,"requiredHq":3,"might":15},
+        {"hp":1100,"upgradeCost":16000,"requiredHq":3,"might":18},
+        {"hp":1300,"upgradeCost":25600,"requiredHq":3,"might":21},
+        {"hp":1525,"upgradeCost":40000,"requiredHq":6,"might":24},
+        {"hp":1775,"upgradeCost":60000,"requiredHq":6,"might":27},
+        {"hp":2075,"upgradeCost":88000,"requiredHq":6,"might":30},
+        {"hp":2425,"upgradeCost":128000,"requiredHq":9,"might":33},
+        {"hp":2825,"upgradeCost":184000,"requiredHq":9,"might":36},
+        {"hp":3300,"upgradeCost":256000,"requiredHq":9,"might":39},
+        {"hp":3850,"upgradeCost":360000,"requiredHq":12,"might":42},
+        {"hp":4500,"upgradeCost":0,"requiredHq":12,"might":45}
+      ]
+    },
+    {
+      "id": "research_hut", "displayName": "Research Hut", "description": "Research upgrades. Available in a later phase.", "category": "Structures", "function": "Research", "width": 3, "depth": 3, "costGold": 1200, "maxCountByHqLevel": [0, 1],
+      "levels": [
+        {"hp":400,"upgradeCost":700,"requiredHq":1,"might":3},
+        {"hp":460,"upgradeCost":1400,"requiredHq":1,"might":6},
+        {"hp":540,"upgradeCost":2800,"requiredHq":1,"might":9},
+        {"hp":640,"upgradeCost":4900,"requiredHq":1,"might":12},
+        {"hp":740,"upgradeCost":8400,"requiredHq":3,"might":15},
+        {"hp":880,"upgradeCost":14000,"requiredHq":3,"might":18},
+        {"hp":1040,"upgradeCost":22400,"requiredHq":3,"might":21},
+        {"hp":1220,"upgradeCost":35000,"requiredHq":6,"might":24},
+        {"hp":1420,"upgradeCost":52500,"requiredHq":6,"might":27},
+        {"hp":1660,"upgradeCost":77000,"requiredHq":6,"might":30},
+        {"hp":1940,"upgradeCost":112000,"requiredHq":9,"might":33},
+        {"hp":2260,"upgradeCost":161000,"requiredHq":9,"might":36},
+        {"hp":2640,"upgradeCost":224000,"requiredHq":9,"might":39},
+        {"hp":3080,"upgradeCost":315000,"requiredHq":12,"might":42},
+        {"hp":3600,"upgradeCost":0,"requiredHq":12,"might":45}
+      ]
+    },
+    {
+      "id": "defense_tower", "displayName": "Defense Tower", "description": "Fires on raiders in range.", "category": "Defense", "function": "Defense", "width": 2, "depth": 2, "costGold": 600, "maxCountByHqLevel": [2, 3, 4, 6, 8],
+      "levels": [
+        {"hp":700,"upgradeCost":400,"requiredHq":1,"attack":60,"range":13,"might":5},
+        {"hp":805,"upgradeCost":800,"requiredHq":1,"attack":80,"range":13,"might":10},
+        {"hp":945,"upgradeCost":1600,"requiredHq":1,"attack":100,"range":14,"might":15},
+        {"hp":1120,"upgradeCost":2800,"requiredHq":1,"attack":120,"range":14,"might":20},
+        {"hp":1295,"upgradeCost":4800,"requiredHq":3,"attack":140,"range":15,"might":25},
+        {"hp":1540,"upgradeCost":8000,"requiredHq":3,"attack":160,"range":15,"might":30},
+        {"hp":1820,"upgradeCost":12800,"requiredHq":3,"attack":180,"range":15,"might":35},
+        {"hp":2135,"upgradeCost":20000,"requiredHq":6,"attack":200,"range":16,"might":40},
+        {"hp":2485,"upgradeCost":30000,"requiredHq":6,"attack":220,"range":16,"might":45},
+        {"hp":2905,"upgradeCost":44000,"requiredHq":6,"attack":240,"range":16,"might":50},
+        {"hp":3395,"upgradeCost":64000,"requiredHq":9,"attack":260,"range":17,"might":55},
+        {"hp":3955,"upgradeCost":92000,"requiredHq":9,"attack":280,"range":17,"might":60},
+        {"hp":4620,"upgradeCost":128000,"requiredHq":9,"attack":300,"range":17,"might":65},
+        {"hp":5390,"upgradeCost":180000,"requiredHq":12,"attack":320,"range":18,"might":70},
+        {"hp":6300,"upgradeCost":0,"requiredHq":12,"attack":340,"range":18,"might":75}
+      ]
+    },
+    {
+      "id": "spirit_turret", "displayName": "Spirit Turret", "description": "Channels Spirit Force into bolts that strike raiders.", "category": "Defense", "function": "Defense", "width": 2, "depth": 2, "costGold": 900, "maxCountByHqLevel": [0, 1, 2, 3, 4],
+      "levels": [
+        {"hp":500,"upgradeCost":500,"requiredHq":1,"attack":90,"range":14,"might":6},
+        {"hp":575,"upgradeCost":1000,"requiredHq":1,"attack":120,"range":14,"might":12},
+        {"hp":675,"upgradeCost":2000,"requiredHq":1,"attack":150,"range":15,"might":18},
+        {"hp":800,"upgradeCost":3500,"requiredHq":1,"attack":180,"range":15,"might":24},
+        {"hp":925,"upgradeCost":6000,"requiredHq":3,"attack":210,"range":16,"might":30},
+        {"hp":1100,"upgradeCost":10000,"requiredHq":3,"attack":240,"range":16,"might":36},
+        {"hp":1300,"upgradeCost":16000,"requiredHq":3,"attack":270,"range":16,"might":42},
+        {"hp":1525,"upgradeCost":25000,"requiredHq":6,"attack":300,"range":17,"might":48},
+        {"hp":1775,"upgradeCost":37500,"requiredHq":6,"attack":330,"range":17,"might":54},
+        {"hp":2075,"upgradeCost":55000,"requiredHq":6,"attack":360,"range":17,"might":60},
+        {"hp":2425,"upgradeCost":80000,"requiredHq":9,"attack":390,"range":18,"might":66},
+        {"hp":2825,"upgradeCost":115000,"requiredHq":9,"attack":420,"range":18,"might":72},
+        {"hp":3300,"upgradeCost":160000,"requiredHq":9,"attack":450,"range":18,"might":78},
+        {"hp":3850,"upgradeCost":225000,"requiredHq":12,"attack":480,"range":19,"might":84},
+        {"hp":4500,"upgradeCost":0,"requiredHq":12,"attack":510,"range":19,"might":90}
+      ]
+    },
+    {
+      "id": "gold_mine", "displayName": "Gold Mine", "description": "Produces gold over time.", "category": "Resources", "function": "Collector", "width": 3, "depth": 3, "costGold": 300, "maxCountByHqLevel": [2, 3, 4, 5, 6], "produces": "Gold",
+      "levels": [
+        {"hp":400,"upgradeCost":300,"requiredHq":1,"production":600,"storedCap":2400,"might":3},
+        {"hp":460,"upgradeCost":600,"requiredHq":1,"production":840,"storedCap":3120,"might":6},
+        {"hp":540,"upgradeCost":1200,"requiredHq":1,"production":1080,"storedCap":3840,"might":9},
+        {"hp":640,"upgradeCost":2100,"requiredHq":1,"production":1320,"storedCap":4800,"might":12},
+        {"hp":740,"upgradeCost":3600,"requiredHq":3,"production":1620,"storedCap":5760,"might":15},
+        {"hp":880,"upgradeCost":6000,"requiredHq":3,"production":1920,"storedCap":7200,"might":18},
+        {"hp":1040,"upgradeCost":9600,"requiredHq":3,"production":2280,"storedCap":8640,"might":21},
+        {"hp":1220,"upgradeCost":15000,"requiredHq":6,"production":2640,"storedCap":10320,"might":24},
+        {"hp":1420,"upgradeCost":22500,"requiredHq":6,"production":3000,"storedCap":12000,"might":27},
+        {"hp":1660,"upgradeCost":33000,"requiredHq":6,"production":3420,"storedCap":14400,"might":30},
+        {"hp":1940,"upgradeCost":48000,"requiredHq":9,"production":3900,"storedCap":16800,"might":33},
+        {"hp":2260,"upgradeCost":69000,"requiredHq":9,"production":4380,"storedCap":19200,"might":36},
+        {"hp":2640,"upgradeCost":96000,"requiredHq":9,"production":4920,"storedCap":22800,"might":39},
+        {"hp":3080,"upgradeCost":135000,"requiredHq":12,"production":5460,"storedCap":26400,"might":42},
+        {"hp":3600,"upgradeCost":0,"requiredHq":12,"production":6000,"storedCap":31200,"might":45}
+      ]
+    },
+    {
+      "id": "gold_vault", "displayName": "Gold Vault", "description": "Raises how much gold you can hold.", "category": "Resources", "function": "Storage", "width": 3, "depth": 3, "costGold": 500, "maxCountByHqLevel": [1, 2, 3, 4, 4],
+      "levels": [
+        {"hp":500,"upgradeCost":400,"requiredHq":1,"goldCapacity":15000,"might":3},
+        {"hp":575,"upgradeCost":800,"requiredHq":1,"goldCapacity":16500,"might":6},
+        {"hp":675,"upgradeCost":1600,"requiredHq":1,"goldCapacity":19500,"might":9},
+        {"hp":800,"upgradeCost":2800,"requiredHq":1,"goldCapacity":25500,"might":12},
+        {"hp":925,"upgradeCost":4800,"requiredHq":3,"goldCapacity":33000,"might":15},
+        {"hp":1100,"upgradeCost":8000,"requiredHq":3,"goldCapacity":43500,"might":18},
+        {"hp":1300,"upgradeCost":12800,"requiredHq":3,"goldCapacity":54000,"might":21},
+        {"hp":1525,"upgradeCost":20000,"requiredHq":6,"goldCapacity":66000,"might":24},
+        {"hp":1775,"upgradeCost":30000,"requiredHq":6,"goldCapacity":79500,"might":27},
+        {"hp":2075,"upgradeCost":44000,"requiredHq":6,"goldCapacity":94500,"might":30},
+        {"hp":2425,"upgradeCost":64000,"requiredHq":9,"goldCapacity":112500,"might":33},
+        {"hp":2825,"upgradeCost":92000,"requiredHq":9,"goldCapacity":135000,"might":36},
+        {"hp":3300,"upgradeCost":128000,"requiredHq":9,"goldCapacity":157500,"might":39},
+        {"hp":3850,"upgradeCost":180000,"requiredHq":12,"goldCapacity":187500,"might":42},
+        {"hp":4500,"upgradeCost":0,"requiredHq":12,"goldCapacity":225000,"might":45}
+      ]
+    },
+    {
+      "id": "crystal_mine", "displayName": "Crystal Mine", "description": "Slowly produces crystals.", "category": "Resources", "function": "Collector", "width": 3, "depth": 3, "costGold": 1500, "maxCountByHqLevel": [0, 1, 1, 2, 2], "produces": "Crystals",
+      "levels": [
+        {"hp":400,"upgradeCost":1200,"requiredHq":1,"production":4,"storedCap":16,"might":3},
+        {"hp":460,"upgradeCost":2400,"requiredHq":1,"production":6,"storedCap":21,"might":6},
+        {"hp":540,"upgradeCost":4800,"requiredHq":1,"production":7,"storedCap":26,"might":9},
+        {"hp":640,"upgradeCost":8400,"requiredHq":1,"production":9,"storedCap":32,"might":12},
+        {"hp":740,"upgradeCost":14400,"requiredHq":3,"production":11,"storedCap":38,"might":15},
+        {"hp":880,"upgradeCost":24000,"requiredHq":3,"production":13,"storedCap":48,"might":18},
+        {"hp":1040,"upgradeCost":38400,"requiredHq":3,"production":15,"storedCap":58,"might":21},
+        {"hp":1220,"upgradeCost":60000,"requiredHq":6,"production":18,"storedCap":69,"might":24},
+        {"hp":1420,"upgradeCost":90000,"requiredHq":6,"production":20,"storedCap":80,"might":27},
+        {"hp":1660,"upgradeCost":132000,"requiredHq":6,"production":23,"storedCap":96,"might":30},
+        {"hp":1940,"upgradeCost":192000,"requiredHq":9,"production":26,"storedCap":112,"might":33},
+        {"hp":2260,"upgradeCost":276000,"requiredHq":9,"production":29,"storedCap":128,"might":36},
+        {"hp":2640,"upgradeCost":384000,"requiredHq":9,"production":33,"storedCap":152,"might":39},
+        {"hp":3080,"upgradeCost":540000,"requiredHq":12,"production":36,"storedCap":176,"might":42},
+        {"hp":3600,"upgradeCost":0,"requiredHq":12,"production":40,"storedCap":208,"might":45}
+      ]
+    },
+    {
+      "id": "hero_base", "displayName": "Hero Base", "description": "A pedestal that holds one hero for raids and defense. Higher levels strengthen its hero.", "category": "HeroBases", "function": "HeroBase", "width": 2, "depth": 2, "costGold": 400, "maxCountByHqLevel": [6],
+      "levels": [
+        {"hp":500,"upgradeCost":400,"requiredHq":1,"range":14,"bonusPercent":2,"might":1},
+        {"hp":575,"upgradeCost":800,"requiredHq":1,"range":14,"bonusPercent":4,"might":2},
+        {"hp":675,"upgradeCost":1600,"requiredHq":1,"range":14,"bonusPercent":6,"might":3},
+        {"hp":800,"upgradeCost":2800,"requiredHq":1,"range":14,"bonusPercent":8,"might":4},
+        {"hp":925,"upgradeCost":4800,"requiredHq":3,"range":15,"bonusPercent":10,"might":5},
+        {"hp":1100,"upgradeCost":8000,"requiredHq":3,"range":15,"bonusPercent":12,"might":6},
+        {"hp":1300,"upgradeCost":12800,"requiredHq":3,"range":15,"bonusPercent":14,"might":7},
+        {"hp":1525,"upgradeCost":20000,"requiredHq":6,"range":15,"bonusPercent":16,"might":8},
+        {"hp":1775,"upgradeCost":30000,"requiredHq":6,"range":15,"bonusPercent":18,"might":9},
+        {"hp":2075,"upgradeCost":44000,"requiredHq":6,"range":16,"bonusPercent":20,"might":10},
+        {"hp":2425,"upgradeCost":64000,"requiredHq":9,"range":16,"bonusPercent":22,"might":11},
+        {"hp":2825,"upgradeCost":92000,"requiredHq":9,"range":16,"bonusPercent":24,"might":12},
+        {"hp":3300,"upgradeCost":128000,"requiredHq":9,"range":16,"bonusPercent":26,"might":13},
+        {"hp":3850,"upgradeCost":180000,"requiredHq":12,"range":16,"bonusPercent":28,"might":14},
+        {"hp":4500,"upgradeCost":0,"requiredHq":12,"range":17,"bonusPercent":30,"might":15}
+      ]
+    },
+    {
+      "id": "wall", "displayName": "Stone Wall", "description": "Drag to build a straight run of wall.", "category": "Walls", "function": "Wall", "width": 1, "depth": 1, "costGold": 25, "maxCountByHqLevel": [60, 100, 150, 220, 300],
+      "levels": [
+        {"hp":300,"upgradeCost":20,"requiredHq":1,"might":0},
+        {"hp":900,"upgradeCost":40,"requiredHq":1,"might":0},
+        {"hp":1800,"upgradeCost":80,"requiredHq":1,"might":0},
+        {"hp":3000,"upgradeCost":140,"requiredHq":1,"might":0},
+        {"hp":4800,"upgradeCost":240,"requiredHq":3,"might":0},
+        {"hp":8400,"upgradeCost":400,"requiredHq":3,"might":0},
+        {"hp":13500,"upgradeCost":640,"requiredHq":3,"might":0},
+        {"hp":21000,"upgradeCost":1000,"requiredHq":6,"might":0},
+        {"hp":30000,"upgradeCost":1500,"requiredHq":6,"might":0},
+        {"hp":40500,"upgradeCost":2200,"requiredHq":6,"might":0},
+        {"hp":52500,"upgradeCost":3200,"requiredHq":9,"might":0},
+        {"hp":66000,"upgradeCost":4600,"requiredHq":9,"might":0},
+        {"hp":81000,"upgradeCost":6400,"requiredHq":9,"might":0},
+        {"hp":99000,"upgradeCost":9000,"requiredHq":12,"might":0},
+        {"hp":120000,"upgradeCost":0,"requiredHq":12,"might":0}
+      ]
+    }
   ]
 }

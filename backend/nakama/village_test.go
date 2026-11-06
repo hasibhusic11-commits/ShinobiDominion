@@ -103,6 +103,9 @@ func TestSharedRuleScenarios(t *testing.T) {
 				case "setGold":
 					v.gold = *op.Gold
 					continue
+				case "setLevel":
+					v.byID[target].Level = *op.Level
+					continue
 				case "advanceHours":
 					clock += op.Hours * 3600000
 					continue
@@ -165,7 +168,7 @@ func TestSharedRuleScenarios(t *testing.T) {
 						t.Fatalf("%s: count %d, want %d", where, got, *op.Count)
 					}
 				}
-				if op.Level != nil && v.byID[target].Level != *op.Level {
+				if op.Level != nil && target != 0 && v.byID[target] != nil && v.byID[target].Level != *op.Level {
 					t.Fatalf("%s: level %d, want %d", where, v.byID[target].Level, *op.Level)
 				}
 			}
@@ -206,8 +209,8 @@ func TestPending_ClockSetBackward_EarnsNothing(t *testing.T) {
 
 func TestPending_VeryLongTime_DoesNotOverflow(t *testing.T) {
 	_, catalog := loadVectors(t)
-	b := &building{Def: catalog.byID["gold_mine"], Level: 10, LastCollectedMs: 0}
-	if got := pendingCollection(b, int64(1)<<62); got != b.Def.StoredProductionCap*10 {
+	b := &building{Def: catalog.byID["gold_mine"], Level: 15, LastCollectedMs: 0}
+	if got := pendingCollection(b, int64(1)<<62); got != b.Def.at(15).StoredCap {
 		t.Fatalf("got %d", got)
 	}
 }

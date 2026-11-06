@@ -110,10 +110,46 @@
         { "op": "place", "def": "hero_base", "x": 1, "z": 1, "expect": "None", "label": "a", "gold": 4600 },
         { "op": "upgrade", "target": "a", "expect": "None", "gold": 4200, "level": 2 },
         { "op": "place", "def": "summoning_gate", "x": 10, "z": 10, "expect": "None", "label": "g" },
+        { "op": "setLevel", "target": "g", "level": 15 },
         { "op": "upgrade", "target": "g", "expect": "MaxLevel" },
         { "op": "upgrade", "id": 999, "expect": "NotFound" },
         { "op": "setGold", "gold": 100 },
         { "op": "upgrade", "target": "a", "expect": "InsufficientFunds", "gold": 100, "level": 2 }
+      ]
+    },
+    {
+      "name": "the dojo gates upgrades, every 3 levels from level 5",
+      "startGold": 20000,
+      "ops": [
+        { "op": "place", "def": "hero_base", "x": 1, "z": 1, "expect": "None", "label": "b" },
+        { "op": "setLevel", "target": "b", "level": 4 },
+        { "op": "upgrade", "target": "b", "expect": "DojoTooLow", "level": 4 },
+        { "op": "place", "def": "dojo_hq", "x": 22, "z": 22, "expect": "None", "label": "d" },
+        { "op": "setLevel", "target": "d", "level": 3 },
+        { "op": "upgrade", "target": "b", "expect": "None", "level": 5 },
+        { "op": "setLevel", "target": "b", "level": 7 },
+        { "op": "upgrade", "target": "b", "expect": "DojoTooLow", "level": 7 },
+        { "op": "setLevel", "target": "d", "level": 6 },
+        { "op": "upgrade", "target": "b", "expect": "None", "level": 8 },
+        { "op": "walls", "x": 30, "z": 40, "x2": 31, "z2": 40, "expect": "None" },
+        { "op": "setLevel", "atX": 30, "atZ": 40, "level": 10 },
+        { "op": "setLevel", "atX": 31, "atZ": 40, "level": 10 },
+        { "op": "upgradeGroup", "atX": 30, "atZ": 40, "expect": "DojoTooLow", "level": 10 },
+        { "op": "setLevel", "atX": 31, "atZ": 40, "level": 9 },
+        { "op": "upgradeGroup", "atX": 30, "atZ": 40, "expect": "None", "level": 10 },
+        { "op": "levelAt", "x": 31, "z": 40, "expect": "10" }
+      ]
+    },
+    {
+      "name": "upgrades use each building's own table",
+      "startGold": 20000,
+      "ops": [
+        { "op": "place", "def": "gold_mine", "x": 1, "z": 1, "expect": "None", "label": "m" },
+        { "op": "upgrade", "target": "m", "expect": "None", "gold": 19400, "level": 2 },
+        { "op": "advanceHours", "hours": 1 },
+        { "op": "collect", "target": "m", "expect": "None", "gold": 20000 },
+        { "op": "place", "def": "gold_vault", "x": 10, "z": 10, "expect": "None", "gold": 19500, "label": "v" },
+        { "op": "upgrade", "target": "v", "expect": "None", "gold": 19100, "level": 2 }
       ]
     },
     {

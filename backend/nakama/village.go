@@ -35,25 +35,45 @@ const (
 	vNothingCollect vErr = "NothingToCollect"
 	vStorageFull    vErr = "StorageFull"
 	vNotAWall       vErr = "NotAWall"
+	vDojoTooLow     vErr = "DojoTooLow"
 )
+
+// BuildingLevel is one row of a building's level table.
+type BuildingLevel struct {
+	UpgradeCost  int64 `json:"upgradeCost"`
+	RequiredHq   int   `json:"requiredHq"`
+	Production   int64 `json:"production"`
+	StoredCap    int64 `json:"storedCap"`
+	GoldCapacity int64 `json:"goldCapacity"`
+}
 
 // BuildingDef is read from the same buildings.json the game ships.
 type BuildingDef struct {
-	ID                 string `json:"id"`
-	Function           string `json:"function"`
-	Width              int    `json:"width"`
-	Depth              int    `json:"depth"`
-	Rotatable          bool   `json:"rotatable"`
-	Removable          *bool  `json:"removable"`
-	MaxLevel           int    `json:"maxLevel"`
-	CostGold           int64  `json:"costGold"`
-	CostCrystals       int64  `json:"costCrystals"`
-	UpgradeCostPer     int64  `json:"upgradeCostGoldPerLevel"`
-	MaxCountByHQ       []int  `json:"maxCountByHqLevel"`
-	Produces           string `json:"produces"`
-	ProductionPerHour  int64  `json:"productionPerHour"`
-	StoredProductionCap int64 `json:"storedProductionCap"`
-	GoldCapacityBonus  int64  `json:"goldCapacityBonus"`
+	ID           string          `json:"id"`
+	Function     string          `json:"function"`
+	Width        int             `json:"width"`
+	Depth        int             `json:"depth"`
+	Rotatable    bool            `json:"rotatable"`
+	Removable    *bool           `json:"removable"`
+	CostGold     int64           `json:"costGold"`
+	CostCrystals int64           `json:"costCrystals"`
+	MaxCountByHQ []int           `json:"maxCountByHqLevel"`
+	Produces     string          `json:"produces"`
+	Levels       []BuildingLevel `json:"levels"`
+}
+
+const levelsPerBuilding = 15
+
+func (d *BuildingDef) maxLevel() int { return len(d.Levels) }
+
+func (d *BuildingDef) at(level int) BuildingLevel {
+	if level < 1 {
+		level = 1
+	}
+	if level > len(d.Levels) {
+		level = len(d.Levels)
+	}
+	return d.Levels[level-1]
 }
 
 func (d *BuildingDef) isWall() bool    { return d.Function == "Wall" }
@@ -86,7 +106,7 @@ func loadBuildingCatalog(data []byte) (*BuildingCatalog, error) {
 	if err := json.Unmarshal(data, &catalog); err != nil {
 		return nil, err
 	}
-	if catalog.SchemaVersion != 1 {
+	if catalog.SchemaVersion != 2 {
 		return nil, errors.New("unsupported building catalog schema")
 	}
 	catalog.byID = map[string]*BuildingDef{}
@@ -98,10 +118,15 @@ func loadBuildingCatalog(data []byte) (*BuildingCatalog, error) {
 		if def.Depth == 0 {
 			def.Depth = 1
 		}
-		if def.MaxLevel == 0 {
-			def.MaxLevel = 1
+		if len(def.Levels) != levelsPerBuilding {
+			return nil, fmt.Errorf("%s needs exactly %d levels", def.ID, levelsPerBuilding)
 		}
-		if def.Width < 0 || def.Depth < 0 || def.CostGold < 0 || def.CostCrystals < 0 || def.UpgradeCostPer < 0 {
+		for _, row := range def.Levels {
+			if row.UpgradeCost < 0 || row.RequiredHq < 1 {
+				return nil, fmt.Errorf("%s has an invalid level", def.ID)
+			}
+		}
+		if def.Width < 0 || def.Depth < 0 || def.CostGold < 0 || def.CostCrystals < 0 {
 			return nil, fmt.Errorf("%s has invalid values", def.ID)
 		}
 		if _, dup := catalog.byID[def.ID]; dup {
@@ -214,7 +239,7 @@ func (v *village) countOf(id string) int {
 func (v *village) goldCapacity() int64 {
 	capacity := v.catalog.BaseGoldCapacity
 	for _, b := range v.byID {
-		capacity += b.Def.GoldCapacityBonus * int64(b.Level)
+		capacity += b.Def.at(b.Level).GoldCapacity
 	}
 	return capacity
 }
@@ -375,10 +400,13 @@ func (v *village) upgrade(id int) vErr {
 	if !ok {
 		return vNotFound
 	}
-	if b.Level >= b.Def.MaxLevel {
+	if b.Level >= b.Def.maxLevel() {
 		return vMaxLevel
 	}
-	cost := b.Def.UpgradeCostPer * int64(b.Level)
+	if v.hqLevel() < b.Def.at(b.Level+1).RequiredHq {
+		return vDojoTooLow
+	}
+	cost := b.Def.at(b.Level).UpgradeCost
 	if v.gold < cost {
 		return vFunds
 	}
@@ -414,14 +442,22 @@ func (v *village) upgradeWallGroup(id int) vErr {
 	}
 	var total int64
 	upgradable := []*building{}
+	belowMax := 0
+	hq := v.hqLevel()
 	for _, wall := range group {
-		if wall.Level < wall.Def.MaxLevel {
-			upgradable = append(upgradable, wall)
-			total += wall.Def.UpgradeCostPer * int64(wall.Level)
+		if wall.Level < wall.Def.maxLevel() {
+			belowMax++
+			if hq >= wall.Def.at(wall.Level+1).RequiredHq {
+				upgradable = append(upgradable, wall)
+				total += wall.Def.at(wall.Level).UpgradeCost
+			}
 		}
 	}
-	if len(upgradable) == 0 {
+	if belowMax == 0 {
 		return vMaxLevel
+	}
+	if len(upgradable) == 0 {
+		return vDojoTooLow
 	}
 	if v.gold < total {
 		return vFunds
@@ -436,15 +472,16 @@ func (v *village) upgradeWallGroup(id int) vErr {
 
 func pendingCollection(b *building, nowMs int64) int64 {
 	def := b.Def
-	if def.Produces == "" || def.Produces == "None" || def.ProductionPerHour <= 0 {
+	row := def.at(b.Level)
+	if def.Produces == "" || def.Produces == "None" || row.Production <= 0 {
 		return 0
 	}
 	elapsed := nowMs - b.LastCollectedMs
 	if elapsed <= 0 {
 		return 0
 	}
-	rate := def.ProductionPerHour * int64(b.Level)
-	capacity := def.StoredProductionCap * int64(b.Level)
+	rate := row.Production
+	capacity := row.StoredCap
 	// Past this much time the mine is full anyway, which also rules out overflow below.
 	if capacity > 0 && elapsed >= capacity*3600000/rate+3600000 {
 		return capacity
@@ -486,7 +523,7 @@ func (v *village) collect(id int, nowMs int64) (int64, vErr) {
 	}
 	// Anything that did not fit stays in the building by moving the timer back.
 	leftover := pending - collected
-	rate := b.Def.ProductionPerHour * int64(b.Level)
+	rate := b.Def.at(b.Level).Production
 	b.LastCollectedMs = nowMs - leftover*3600000/rate
 	v.updated[id] = b
 	return collected, vOK

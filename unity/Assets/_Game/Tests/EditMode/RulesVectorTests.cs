@@ -65,6 +65,12 @@ namespace ShinobiDominion.Tests
                         save.gold = op.Value<long>("gold");
                         village.Restore(save);
                         continue;
+                    case "setLevel":
+                        var levelSave = village.ToSave();
+                        var levelId = TargetOf(village, op, labels);
+                        levelSave.buildings.Find(b => b.id == levelId).level = op.Value<int>("level");
+                        village.Restore(levelSave);
+                        continue;
                     case "advanceHours":
                         clock += TimeSpan.TicksPerHour * op.Value<long>("hours");
                         continue;

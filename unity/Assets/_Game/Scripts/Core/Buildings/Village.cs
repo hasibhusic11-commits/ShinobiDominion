@@ -23,7 +23,8 @@ namespace ShinobiDominion.Core
         NotACollector,
         NothingToCollect,
         StorageFull,
-        NotAWall
+        NotAWall,
+        DojoTooLow
     }
 
     public static class VillageErrorText
@@ -50,6 +51,7 @@ namespace ShinobiDominion.Core
                 case VillageError.NothingToCollect: return "Nothing to collect yet";
                 case VillageError.StorageFull: return "Storage is full";
                 case VillageError.NotAWall: return "Not a wall";
+                case VillageError.DojoTooLow: return "Upgrade the Dojo first";
                 default: return error.ToString();
             }
         }
@@ -104,7 +106,7 @@ namespace ShinobiDominion.Core
             {
                 var capacity = Catalog.BaseGoldCapacity;
                 foreach (var building in _buildings.Values)
-                    capacity += building.Definition.goldCapacityBonus * building.Level;
+                    capacity += building.Definition.At(building.Level).goldCapacity;
                 return capacity;
             }
         }
@@ -195,6 +197,7 @@ namespace ShinobiDominion.Core
             var building = Find(id);
             if (building == null) return VillageError.NotFound;
             if (building.Level >= building.Definition.maxLevel) return VillageError.MaxLevel;
+            if (HqLevel < building.Definition.At(building.Level + 1).requiredHq) return VillageError.DojoTooLow;
             var cost = building.Definition.UpgradeCost(building.Level);
             if (!CanAfford(cost, 0)) return VillageError.InsufficientFunds;
             Gold -= cost;
@@ -320,8 +323,11 @@ namespace ShinobiDominion.Core
             if (first == null) return VillageError.NotFound;
             if (!first.Definition.IsWall) return VillageError.NotAWall;
 
-            var upgradable = ConnectedWalls(wallId).Where(w => w.Level < w.Definition.maxLevel).ToList();
-            if (upgradable.Count == 0) return VillageError.MaxLevel;
+            var below = ConnectedWalls(wallId).Where(w => w.Level < w.Definition.maxLevel).ToList();
+            if (below.Count == 0) return VillageError.MaxLevel;
+            // Segments the Dojo can't support yet are left out. If that's all of them, say why.
+            var upgradable = below.Where(w => HqLevel >= w.Definition.At(w.Level + 1).requiredHq).ToList();
+            if (upgradable.Count == 0) return VillageError.DojoTooLow;
             var total = upgradable.Sum(w => w.Definition.UpgradeCost(w.Level));
             if (!CanAfford(total, 0)) return VillageError.InsufficientFunds;
 
@@ -366,11 +372,13 @@ namespace ShinobiDominion.Core
         public long PendingCollection(BuildingInstance building, long nowUtcTicks)
         {
             var definition = building.Definition;
-            if (definition.produces == ResourceKind.None || definition.productionPerHour <= 0) return 0;
+            if (definition.produces == ResourceKind.None) return 0;
+            var row = definition.At(building.Level);
+            if (row.production <= 0) return 0;
             var elapsed = Math.Max(0, nowUtcTicks - building.LastCollectedUtcTicks);
             var hours = (decimal)elapsed / TimeSpan.TicksPerHour;
-            var cap = definition.storedProductionCap * building.Level;
-            var produced = hours * definition.productionPerHour * building.Level;
+            var cap = row.storedCap;
+            var produced = hours * row.production;
             return (long)Math.Min(produced, cap);
         }
 
@@ -398,7 +406,7 @@ namespace ShinobiDominion.Core
 
             // Anything that did not fit stays in the building by moving the timer back.
             var leftover = pending - collected;
-            var rate = building.Definition.productionPerHour * building.Level;
+            var rate = building.Definition.ProductionAt(building.Level);
             building.LastCollectedUtcTicks = nowUtcTicks - leftover * TimeSpan.TicksPerHour / rate;
             Changed?.Invoke();
             return VillageError.None;

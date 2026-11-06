@@ -25,3 +25,20 @@ No pity, no guarantee, no duplicate protection, no selector, no scripted first s
 
 ## Decisions still yours
 Final rates, prices, crystal income, how catalysts are earned (there is no source yet), and how XP is earned (only a development button exists).
+
+## Building levels (test values)
+Every building has 15 levels. Edit `tools/balance/generate_building_levels.ps1` and rerun it to change them. Full tables are in `buildings.json`.
+
+| Stat | Level 1 | Level 15 | Growth |
+|---|---|---|---|
+| HP (most buildings) | base | 9x | Faster and faster |
+| HP (walls) | 300 | 120,000 | Fastest of all |
+| Upgrade cost | base | 450x base, for 14 to 15 | Faster and faster |
+| Gold mine, per hour | 600 | 6,000 | Steady |
+| Gold mine, holds | 2,400 | 31,200 | Faster and faster |
+| Vault capacity | 15,000 | 225,000 | Faster and faster |
+| Tower attack | 60 | 340 | +20 per level |
+| Tower range | 13 | 18 | Steps |
+| Hero base bonus | 2% | 30% | +2% per level |
+
+Dojo level needed: 3 for level 5, 6 for level 8, 9 for level 11, 12 for level 14.

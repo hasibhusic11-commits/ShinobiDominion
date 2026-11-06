@@ -388,7 +388,8 @@ namespace ShinobiDominion.Game
             _panel.Show(definition.displayName, CloseAll, panel =>
             {
                 panel.Line(definition.description);
-                panel.Line($"Level {building.Level} of {definition.maxLevel}     HP {building.MaxHp:N0}");
+                panel.Line($"Level {building.Level} of {definition.maxLevel}");
+                StatLines(panel, building);
                 FunctionActions(panel, building);
                 UpgradeAction(panel, building);
                 if (definition.IsWall)
@@ -436,21 +437,47 @@ namespace ShinobiDominion.Game
                     panel.Line($"Total gold capacity: {Village.GoldCapacity:N0}");
                     break;
                 case BuildingFunction.Defense:
-                    panel.Line("Attack stats arrive with combat in Phase 4.", 20, Ui.AccentColor);
+                    panel.Line("Attack and range take effect with combat in Phase 4.", 20, Ui.AccentColor);
                     break;
             }
         }
 
         private void UpgradeAction(PanelView panel, BuildingInstance building)
         {
-            if (building.Definition.maxLevel <= 1) return;
             if (building.Level >= building.Definition.maxLevel)
             {
                 panel.Line("Maximum level reached.");
                 return;
             }
             var cost = building.Definition.UpgradeCost(building.Level);
-            panel.Action("UpgradeButton", $"Upgrade ({cost:N0} gold)", () => Upgrade(building.Id, false), Village.CanAfford(cost, 0));
+            var needsDojo = building.Definition.At(building.Level + 1).requiredHq;
+            if (Village.HqLevel < needsDojo) panel.Line($"Next level needs Dojo level {needsDojo}.", 20, Ui.AccentColor);
+            panel.Action("UpgradeButton", $"Upgrade ({cost:N0} gold)", () => Upgrade(building.Id, false), Village.CanAfford(cost, 0) && Village.HqLevel >= needsDojo);
+        }
+
+        /// <summary>Each stat this building has, as now -> next level. Stats a building lacks stay hidden.</summary>
+        private static void StatLines(PanelView panel, BuildingInstance building)
+        {
+            var definition = building.Definition;
+            var now = definition.At(building.Level);
+            var next = building.Level < definition.maxLevel ? definition.At(building.Level + 1) : null;
+
+            void Stat(string name, long current, long upcoming, string unit = "")
+            {
+                if (current == 0 && upcoming == 0) return;
+                panel.Line(next == null || upcoming == current
+                    ? $"{name}: {current:N0}{unit}"
+                    : $"{name}: {current:N0}{unit}  ->  {upcoming:N0}{unit}");
+            }
+
+            Stat("HP", now.hp, next?.hp ?? now.hp);
+            Stat($"{definition.produces} per hour", now.production, next?.production ?? now.production);
+            Stat("Holds", now.storedCap, next?.storedCap ?? now.storedCap);
+            Stat("Gold capacity", now.goldCapacity, next?.goldCapacity ?? now.goldCapacity);
+            Stat("Attack", now.attack, next?.attack ?? now.attack);
+            Stat("Range", now.range, next?.range ?? now.range);
+            Stat(definition.function == BuildingFunction.HeroAltar ? "Faster hero revival" : "Hero strength bonus", now.bonusPercent, next?.bonusPercent ?? now.bonusPercent, "%");
+            Stat("Might", now.might, next?.might ?? now.might);
         }
 
         private void RunAndRefresh(VillageError error)

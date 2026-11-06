@@ -135,7 +135,7 @@ namespace ShinobiDominion.Game
     /// <summary>
     /// Draws all walls as one rebuilt mesh from modular parts: a stone footing, a plaster and timber
     /// body and a tiled cap. Each neighbour adds an arm, so straights, corners, ends and junctions
-    /// all join up. Levels change the material, so upgrades show without new game logic.
+    /// all join up. Levels change the materials, so upgrades show without new game logic.
     /// </summary>
     public sealed class WallView
     {
@@ -170,11 +170,8 @@ namespace ShinobiDominion.Game
             var center = GridSpace.CellCenter(wall.Origin);
             var mask = ConnectionsExcluding(village, wall.Origin, hiddenWallId);
 
-            // Upgrades read at a glance: higher levels get taller, darker stone and more trim.
-            var tier = wall.Level >= 7 ? 2 : wall.Level >= 4 ? 1 : 0;
-            var footing = tier == 2 ? Palette.DarkStone : Palette.Stone;
-            var body = tier == 2 ? Palette.DarkStone : Palette.Plaster;
-            var cap = tier == 0 ? Palette.Slate : tier == 1 ? Palette.RoofTeal : Palette.RoofRed;
+            // Upgrades read at a glance: each level is taller, and each tier changes the materials.
+            var skin = BuildingSkin.For("wall", wall.Level);
             var height = 0.82f + 0.03f * (wall.Level - 1);
             const float thickness = 0.56f;
             const float arm = 0.27f;
@@ -188,28 +185,29 @@ namespace ShinobiDominion.Game
             // Corners, junctions and ends get a heavier post, so the wall has a rhythm.
             var postHeight = straight ? height : height + 0.24f;
             var postWidth = straight ? thickness : thickness + 0.16f;
-            Section(builder, center, new Vector2(postWidth, postWidth), postHeight, footing, body, cap, tier);
+            Section(builder, center, new Vector2(postWidth, postWidth), postHeight, skin);
             if (!straight)
             {
                 var top = center + Vector3.up * (postHeight + 0.2f);
-                builder.Cylinder(top, 0.05f, 0.015f, 0.2f, 5, Palette.Amber);
-                if (tier >= 1) builder.Box(center + new Vector3(0f, height * 0.75f, -postWidth * 0.5f - 0.01f), new Vector3(0.16f, 0.14f, 0.02f), Palette.WindowGlow, ArtSurface.Plain, 0f, 0.85f);
+                builder.Cylinder(top, 0.05f, 0.015f, 0.2f, 5, skin.Amber);
+                if (skin.Tier >= 1) builder.Box(center + new Vector3(0f, height * 0.75f, -postWidth * 0.5f - 0.01f), new Vector3(0.16f, 0.14f, 0.02f), skin.WindowGlow, ArtSurface.Plain, 0f, 0.85f);
+                if (skin.Tier >= 4) builder.Blob(top + Vector3.up * 0.26f, Vector3.one * 0.07f, skin.Crystal, ArtSurface.Plain, 0f, 1f, 5, 3);
             }
 
             var offset = 0.14f + arm * 0.5f + 0.09f;
-            if (north) Section(builder, center + new Vector3(0, 0, offset), new Vector2(thickness, arm + 0.04f), height, footing, body, cap, tier);
-            if (south) Section(builder, center + new Vector3(0, 0, -offset), new Vector2(thickness, arm + 0.04f), height, footing, body, cap, tier);
-            if (east) Section(builder, center + new Vector3(offset, 0, 0), new Vector2(arm + 0.04f, thickness), height, footing, body, cap, tier);
-            if (west) Section(builder, center + new Vector3(-offset, 0, 0), new Vector2(arm + 0.04f, thickness), height, footing, body, cap, tier);
+            if (north) Section(builder, center + new Vector3(0, 0, offset), new Vector2(thickness, arm + 0.04f), height, skin);
+            if (south) Section(builder, center + new Vector3(0, 0, -offset), new Vector2(thickness, arm + 0.04f), height, skin);
+            if (east) Section(builder, center + new Vector3(offset, 0, 0), new Vector2(arm + 0.04f, thickness), height, skin);
+            if (west) Section(builder, center + new Vector3(-offset, 0, 0), new Vector2(arm + 0.04f, thickness), height, skin);
         }
 
-        private static void Section(MeshBuilder builder, Vector3 at, Vector2 size, float height, Color footing, Color body, Color cap, int tier)
+        private static void Section(MeshBuilder builder, Vector3 at, Vector2 size, float height, BuildingSkin skin)
         {
             var foot = height * 0.42f;
-            builder.Box(at, new Vector3(size.x + 0.04f, foot, size.y + 0.04f), footing, ArtSurface.Stone);
-            builder.Box(at + Vector3.up * foot, new Vector3(size.x - 0.02f, height - foot, size.y - 0.02f), body, tier == 2 ? ArtSurface.Stone : ArtSurface.Plaster);
-            builder.Box(at + Vector3.up * (height - 0.08f), new Vector3(size.x, 0.08f, size.y), Palette.DarkWood, ArtSurface.Wood);
-            builder.Frustum(at + Vector3.up * height, size.x + 0.16f, size.y + 0.16f, Mathf.Max(size.x - 0.26f, 0.08f), Mathf.Max(size.y - 0.26f, 0.08f), 0.2f, cap, ArtSurface.Tile);
+            builder.Box(at, new Vector3(size.x + 0.04f, foot, size.y + 0.04f), skin.Stone, skin.StoneSurface);
+            builder.Box(at + Vector3.up * foot, new Vector3(size.x - 0.02f, height - foot, size.y - 0.02f), skin.Plaster, skin.WallSurface);
+            builder.Box(at + Vector3.up * (height - 0.08f), new Vector3(size.x, 0.08f, size.y), skin.DarkWood, ArtSurface.Wood);
+            builder.Frustum(at + Vector3.up * height, size.x + 0.16f, size.y + 0.16f, Mathf.Max(size.x - 0.26f, 0.08f), Mathf.Max(size.y - 0.26f, 0.08f), 0.2f, skin.Slate, skin.RoofSurface);
         }
 
         private static int ConnectionsExcluding(Village village, GridCoord cell, int hiddenWallId)
@@ -339,7 +337,8 @@ namespace ShinobiDominion.Game
                 if (building.Definition.IsWall) continue;
                 alive.Add(building.Id);
                 var look = building.AssignedHeroInstanceId != null ? _heroLook(building.AssignedHeroInstanceId) : null;
-                var signature = $"{building.Definition.id}|{look?.Key}";
+                var tier = BuildingSkin.TierForLevel(building.Level);
+                var signature = $"{building.Definition.id}|{tier}|{look?.Key}";
                 if (!_views.TryGetValue(building.Id, out var entry) || entry.Signature != signature)
                 {
                     if (entry != null) Object.Destroy(entry.Go);
@@ -371,7 +370,7 @@ namespace ShinobiDominion.Game
         {
             var go = new GameObject($"{building.Definition.id}_{building.Id}");
             go.transform.SetParent(_root, false);
-            GetMesh(building.Definition, look, signature, out var mesh, out var materials);
+            GetMesh(building.Definition, look, building.Level, signature, out var mesh, out var materials);
             go.AddComponent<MeshFilter>().sharedMesh = mesh;
             go.AddComponent<MeshRenderer>().sharedMaterials = materials;
             AddEffects(go.transform, building.Definition);
@@ -395,14 +394,14 @@ namespace ShinobiDominion.Game
             }
         }
 
-        private void GetMesh(BuildingDefinition definition, HeroLook hero, string key, out Mesh mesh, out Material[] materials)
+        private void GetMesh(BuildingDefinition definition, HeroLook hero, int level, string key, out Mesh mesh, out Material[] materials)
         {
             if (_meshCache.TryGetValue(key, out mesh))
             {
                 materials = _materialCache[key];
                 return;
             }
-            var builder = BuildingMeshes.For(definition, hero);
+            var builder = BuildingMeshes.For(definition, hero, level);
             mesh = builder.Build(definition.id);
             materials = builder.LitMaterials();
             _meshCache[key] = mesh;
@@ -442,8 +441,8 @@ namespace ShinobiDominion.Game
         /// <summary>A ghost for placement: the same silhouette in a see-through tint.</summary>
         public GameObject CreateGhost(BuildingDefinition definition, Color tint)
         {
-            var key = $"{definition.id}|";
-            GetMesh(definition, null, key, out var mesh, out var materials);
+            var key = $"{definition.id}|0|";
+            GetMesh(definition, null, 1, key, out var mesh, out var materials);
             var go = new GameObject("PlacementGhost");
             go.transform.SetParent(_root, false);
             go.AddComponent<MeshFilter>().sharedMesh = mesh;

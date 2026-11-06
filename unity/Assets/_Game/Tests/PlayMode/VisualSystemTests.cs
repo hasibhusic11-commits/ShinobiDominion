@@ -52,6 +52,68 @@ namespace ShinobiDominion.Tests
             Assert.Greater(sizes.Values.Distinct().Count(), catalog.All.Count - 2);
         }
 
+        private static string ColourKey(Mesh mesh) =>
+            string.Join(",", mesh.colors.Select(c => ColorUtility.ToHtmlStringRGB(c)).Distinct().OrderBy(s => s));
+
+        [Test]
+        public void EveryBuilding_LooksDifferentInEachOfItsFiveTiers()
+        {
+            foreach (var definition in Controller.Village.Catalog.All.Where(d => !d.IsWall))
+            {
+                var looks = new[] { 1, 4, 7, 10, 13 }.Select(level => ColourKey(BuildingMeshes.For(definition, null, level).Build("t"))).Distinct().Count();
+                Assert.AreEqual(5, looks, definition.id);
+                Assert.AreEqual(ColourKey(BuildingMeshes.For(definition, null, 13).Build("t")), ColourKey(BuildingMeshes.For(definition, null, 15).Build("t")), "Levels in one tier share a look");
+            }
+        }
+
+        [Test]
+        public void TwoBuildings_NeverShareATexturePack()
+        {
+            var ids = Controller.Village.Catalog.All.Select(d => d.id).ToList();
+            for (var level = 1; level <= 13; level += 3)
+            {
+                var level0 = level;
+                var roofs = ids.Select(id => ColorUtility.ToHtmlStringRGB(BuildingSkin.For(id, level0).Slate)).ToList();
+                Assert.GreaterOrEqual(roofs.Distinct().Count(), ids.Count - 1, "level " + level);
+            }
+        }
+
+        [Test]
+        public void TierDressing_StaysInsideTheFootprint()
+        {
+            foreach (var definition in Controller.Village.Catalog.All.Where(d => !d.IsWall))
+            {
+                var plain = BuildingMeshes.For(definition, null, 1).Build("t").bounds;
+                var dressed = BuildingMeshes.For(definition, null, 15).Build("t").bounds;
+                // Some models already reach past their cells, such as the Dojo's front steps. Dressing must add nothing beyond that.
+                Assert.GreaterOrEqual(dressed.min.x, Mathf.Min(plain.min.x, -definition.width * 0.5f) - 0.02f, definition.id);
+                Assert.LessOrEqual(dressed.max.x, Mathf.Max(plain.max.x, definition.width * 0.5f) + 0.02f, definition.id);
+                Assert.GreaterOrEqual(dressed.min.z, Mathf.Min(plain.min.z, -definition.depth * 0.5f) - 0.02f, definition.id);
+                Assert.LessOrEqual(dressed.max.z, Mathf.Max(plain.max.z, definition.depth * 0.5f) + 0.02f, definition.id);
+            }
+        }
+
+        [Test]
+        public void Outside_IsMountain_WithNoHouses()
+        {
+            for (var x = 0; x <= 50; x += 5)
+            for (var z = 0; z <= 50; z += 5)
+                Assert.AreEqual(0f, VillageTerrain.Height(x, z), "The map must stay flat");
+
+            // The ground just outside is level too, so the pond, stream and paths have somewhere to be.
+            Assert.AreEqual(0f, VillageTerrain.Height(25f, 57f));
+            Assert.AreEqual(0f, VillageTerrain.Height(-2f, 25f));
+
+            // Behind the map it climbs. In front it drops, so it can never hide the village.
+            Assert.Greater(VillageTerrain.Height(25f, 90f), 15f);
+            Assert.Greater(VillageTerrain.Height(90f, 25f), 15f);
+            Assert.Less(VillageTerrain.Height(25f, -14f), -8f);
+            Assert.Less(VillageTerrain.Height(-14f, 25f), -8f);
+
+            var scenery = _root.GetComponentsInChildren<MeshFilter>(true).Where(f => f.transform.parent != null && f.transform.parent.name == "Scenery").Select(f => f.name).OrderBy(n => n);
+            CollectionAssert.AreEqual(new[] { "Ground", "Nature", "Water" }, scenery.ToArray());
+        }
+
         [Test]
         public void AllVillageArt_SharesOneMaterial()
         {
