@@ -48,6 +48,7 @@ namespace ShinobiDominion.Game
         private RaidRun _raid;
         private List<RaidSummary> _raidList;
         private CellHighlight _raidCells;
+        private HeroPortraits _portraits;
 
         public RaidPhase? CurrentRaidPhase => _raid?.Phase;
         public RaidSession CurrentRaidSession => _raid?.Session;
@@ -419,7 +420,7 @@ namespace ShinobiDominion.Game
             var rect = (RectTransform)bar.transform;
             rect.SetParent(_uiRoot, false);
             Ui.Anchor(rect, new Vector2(0.5f, 1f), new Vector2(430f, 64f), new Vector2(0f, -104f));
-            bar.AddComponent<Image>().color = new Color(0.08f, 0.09f, 0.13f, 0.86f);
+            Ui.Framed(rect, Ui.PillSprite);
             var text = Ui.Label(bar.transform, "", 24, TextAnchor.MiddleLeft);
             Ui.Anchor((RectTransform)text.transform, new Vector2(0f, 0.5f), new Vector2(270f, 56f), new Vector2(14f, 0f));
             var skip = Ui.Button(bar.transform, "SkipBattleButton", "Skip", SkipBattle, true, null, 22);

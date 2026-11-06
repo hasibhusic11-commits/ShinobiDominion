@@ -79,9 +79,89 @@
         { "formName": "Moonfang Oracle", "summary": "A striking crescent mantle and full silver moonlight.", "primaryColor": "#B4D3E6", "vfxBudget": 3, "portraitAssetId": "portrait_moon_3", "modelAssetId": "model_moon_3" }
       ]
     },
-    { "id": "crimson_eye_prodigy", "displayName": "Crimson Eye Prodigy", "rarity": "Legendary", "role": "Assassin", "affinity": "Fire", "contentComplete": false, "baseHp": 1, "baseAttack": 0, "baseDefense": 0, "primaryColor": "#8A3030" },
-    { "id": "void_sovereign", "displayName": "Void Sovereign", "rarity": "Legendary", "role": "Mage", "affinity": "Void", "contentComplete": false, "baseHp": 1, "baseAttack": 0, "baseDefense": 0, "primaryColor": "#4A3A6A" },
-    { "id": "ashen_flame_lord", "displayName": "Ashen Flame Lord", "rarity": "Legendary", "role": "Mage", "affinity": "Fire", "contentComplete": false, "baseHp": 1, "baseAttack": 0, "baseDefense": 0, "primaryColor": "#A04A20" },
-    { "id": "storm_crow_shinobi", "displayName": "Storm Crow Shinobi", "rarity": "Legendary", "role": "Assassin", "affinity": "Storm", "contentComplete": false, "baseHp": 1, "baseAttack": 0, "baseDefense": 0, "primaryColor": "#3A4A5A" }
+    {
+      "id": "crimson_eye_prodigy", "displayName": "Crimson Eye Prodigy", "rarity": "Legendary", "role": "Assassin", "affinity": "Fire", "contentComplete": false,
+      "baseHp": 935, "baseAttack": 175, "baseDefense": 35, "growthHp": 26, "growthAttack": 7, "growthDefense": 2, "primaryColor": "#7A2230",
+      "skills": [
+        { "id": "blind_cut", "displayName": "Blind Cut", "description": "A precise strike at the weakest point.", "unlockEvolution": 0 },
+        { "id": "glass_sight", "displayName": "Glass Sight", "description": "A floating eye reveals and marks a target.", "unlockEvolution": 1 },
+        { "id": "mirror_step", "displayName": "Mirror Step", "description": "Strikes from where she seemed not to be.", "unlockEvolution": 2 },
+        { "id": "hall_of_glass", "displayName": "Hall of Glass", "description": "Illusions make enemies strike at nothing.", "unlockEvolution": 3 }
+      ],
+      "forms": [
+        { "formName": "Veiled Student", "summary": "A dark red training coat and a plain cloth blindfold over both eyes.", "primaryColor": "#7A2230", "vfxBudget": 0, "portraitAssetId": "portrait_crimson_eye_prodigy_0", "modelAssetId": "model_crimson_eye_prodigy_0" },
+        { "formName": "Glass Seer", "summary": "A single floating glass orb orbits her, showing what she can't see.", "primaryColor": "#8A2835", "vfxBudget": 1, "portraitAssetId": "portrait_crimson_eye_prodigy_1", "modelAssetId": "model_crimson_eye_prodigy_1" },
+        { "formName": "Mirror Duelist", "summary": "A fitted long coat with silver stitching, and three glass orbs turning in a ring.", "primaryColor": "#9C2E3A", "vfxBudget": 2, "portraitAssetId": "portrait_crimson_eye_prodigy_2", "modelAssetId": "model_crimson_eye_prodigy_2" },
+        { "formName": "Crimson Witness", "summary": "A tall collared mantle of red glass shards, a full ring of orbs, and an illusory second blade.", "primaryColor": "#B3323F", "vfxBudget": 3, "portraitAssetId": "portrait_crimson_eye_prodigy_3", "modelAssetId": "model_crimson_eye_prodigy_3" }
+      ]
+    },
+    {
+      "id": "void_sovereign", "displayName": "Void Sovereign", "rarity": "Legendary", "role": "Mage", "affinity": "Void", "contentComplete": false,
+      "baseHp": 880, "baseAttack": 182, "baseDefense": 30, "growthHp": 24, "growthAttack": 7, "growthDefense": 2, "primaryColor": "#2C2440",
+      "skills": [
+        { "id": "dark_bolt", "displayName": "Dark Bolt", "description": "A bolt of nothing.", "unlockEvolution": 0 },
+        { "id": "rift_step", "displayName": "Rift Step", "description": "Steps through a tear in the air.", "unlockEvolution": 1 },
+        { "id": "shard_ring", "displayName": "Shard Ring", "description": "Black shards cut everything nearby.", "unlockEvolution": 2 },
+        { "id": "open_door", "displayName": "Open Door", "description": "A door of dark glass pulls enemies in.", "unlockEvolution": 3 }
+      ],
+      "forms": [
+        { "formName": "Exiled Scholar", "summary": "A scuffed scholar's robe, ink-stained sleeves and a small dark orb.", "primaryColor": "#3B3448", "vfxBudget": 0, "portraitAssetId": "portrait_void_sovereign_0", "modelAssetId": "model_void_sovereign_0" },
+        { "formName": "Riftwalker", "summary": "Hooded, with mirror-black shards drifting at the shoulders.", "primaryColor": "#33294F", "vfxBudget": 1, "portraitAssetId": "portrait_void_sovereign_1", "modelAssetId": "model_void_sovereign_1" },
+        { "formName": "Hollow Regent", "summary": "A high collar, a broken ring of shards, and the first hint of a crown.", "primaryColor": "#2C2440", "vfxBudget": 2, "portraitAssetId": "portrait_void_sovereign_2", "modelAssetId": "model_void_sovereign_2" },
+        { "formName": "Void Sovereign", "summary": "A vast black mantle, a floating hollow crown, and a door of dark glass open behind him.", "primaryColor": "#1E1830", "vfxBudget": 3, "portraitAssetId": "portrait_void_sovereign_3", "modelAssetId": "model_void_sovereign_3" }
+      ]
+    },
+    {
+      "id": "ashen_flame_lord", "displayName": "Ashen Flame Lord", "rarity": "Legendary", "role": "Mage", "affinity": "Fire", "contentComplete": false,
+      "baseHp": 880, "baseAttack": 182, "baseDefense": 30, "growthHp": 24, "growthAttack": 7, "growthDefense": 2, "primaryColor": "#6A625E",
+      "skills": [
+        { "id": "ember_blow", "displayName": "Ember Blow", "description": "A burning strike from a charred staff.", "unlockEvolution": 0 },
+        { "id": "smoulder", "displayName": "Smoulder", "description": "Leaves burning ground behind.", "unlockEvolution": 1 },
+        { "id": "pyre_march", "displayName": "Pyre March", "description": "Every step sets the ground alight.", "unlockEvolution": 2 },
+        { "id": "field_of_ash", "displayName": "Field of Ash", "description": "Pale cursed flame covers a wide area.", "unlockEvolution": 3 }
+      ],
+      "forms": [
+        { "formName": "Banner Burner", "summary": "A soot-grey campaign robe, cracked gauntlets and a charred banner pole.", "primaryColor": "#6A625E", "vfxBudget": 0, "portraitAssetId": "portrait_ashen_flame_lord_0", "modelAssetId": "model_ashen_flame_lord_0" },
+        { "formName": "Ember Marshal", "summary": "Blackened plates, with embers glowing through the seams.", "primaryColor": "#5C5450", "vfxBudget": 1, "portraitAssetId": "portrait_ashen_flame_lord_1", "modelAssetId": "model_ashen_flame_lord_1" },
+        { "formName": "Pyre Warlord", "summary": "A horned iron helm and a torn burning cape.", "primaryColor": "#4C4340", "vfxBudget": 2, "portraitAssetId": "portrait_ashen_flame_lord_2", "modelAssetId": "model_ashen_flame_lord_2" },
+        { "formName": "Ashen Flame Lord", "summary": "A crown of horns, a mantle of living ash and a field of pale cursed flame at his feet.", "primaryColor": "#38302E", "vfxBudget": 3, "portraitAssetId": "portrait_ashen_flame_lord_3", "modelAssetId": "model_ashen_flame_lord_3" }
+      ]
+    },
+    {
+      "id": "storm_crow_shinobi", "displayName": "Storm Crow Shinobi", "rarity": "Legendary", "role": "Assassin", "affinity": "Storm", "contentComplete": false,
+      "baseHp": 935, "baseAttack": 175, "baseDefense": 35, "growthHp": 26, "growthAttack": 7, "growthDefense": 2, "primaryColor": "#3B4A5E",
+      "skills": [
+        { "id": "talon_cut", "displayName": "Talon Cut", "description": "Two quick blade strikes.", "unlockEvolution": 0 },
+        { "id": "crow_call", "displayName": "Crow Call", "description": "A crow marks the nearest tower.", "unlockEvolution": 1 },
+        { "id": "storm_dash", "displayName": "Storm Dash", "description": "Dashes through targets, leaving sparks.", "unlockEvolution": 2 },
+        { "id": "thousand_feathers", "displayName": "Thousand Feathers", "description": "Afterimages strike all at once.", "unlockEvolution": 3 }
+      ],
+      "forms": [
+        { "formName": "Ridge Fledgling", "summary": "A slate scout's wrap, a cloth face cover and short practice blades.", "primaryColor": "#3B4A5E", "vfxBudget": 0, "portraitAssetId": "portrait_storm_crow_shinobi_0", "modelAssetId": "model_storm_crow_shinobi_0" },
+        { "formName": "Crow Runner", "summary": "A short feathered capelet and a single crow on the shoulder.", "primaryColor": "#34435A", "vfxBudget": 1, "portraitAssetId": "portrait_storm_crow_shinobi_1", "modelAssetId": "model_storm_crow_shinobi_1" },
+        { "formName": "Storm Talon", "summary": "A longer feather cloak and curved blades trailing blue sparks.", "primaryColor": "#2C3A50", "vfxBudget": 2, "portraitAssetId": "portrait_storm_crow_shinobi_2", "modelAssetId": "model_storm_crow_shinobi_2" },
+        { "formName": "Storm Crow", "summary": "Great storm-feather wings, a full beak helm, and afterimages trailing behind him.", "primaryColor": "#1F2A3C", "vfxBudget": 3, "portraitAssetId": "portrait_storm_crow_shinobi_3", "modelAssetId": "model_storm_crow_shinobi_3" }
+      ]
+    },
+    { "id": "ember_recruit", "displayName": "Ember Recruit", "rarity": "Common", "role": "Fighter", "affinity": "Fire", "contentComplete": false, "baseHp": 504, "baseAttack": 58, "baseDefense": 24, "growthHp": 14, "growthAttack": 2, "growthDefense": 2, "primaryColor": "#B4532E", "skills": [ { "id": "burning_jab", "displayName": "Burning Jab", "description": "A wrapped fist strikes the nearest target.", "unlockEvolution": 0 } ] },
+    { "id": "reed_archer", "displayName": "Reed Archer", "rarity": "Common", "role": "Mage", "affinity": "Storm", "contentComplete": false, "baseHp": 336, "baseAttack": 75, "baseDefense": 13, "growthHp": 9, "growthAttack": 3, "growthDefense": 1, "primaryColor": "#7C8F4E", "skills": [ { "id": "wind_shot", "displayName": "Wind Shot", "description": "A long arrow carried on the wind.", "unlockEvolution": 0 } ] },
+    { "id": "stone_apprentice", "displayName": "Stone Apprentice", "rarity": "Common", "role": "Tank", "affinity": "Earth", "contentComplete": false, "baseHp": 630, "baseAttack": 46, "baseDefense": 35, "growthHp": 17, "growthAttack": 2, "growthDefense": 2, "primaryColor": "#8A7A62", "skills": [ { "id": "hold_fast", "displayName": "Hold Fast", "description": "Braces behind a hand-cut shield.", "unlockEvolution": 0 } ] },
+    { "id": "talisman_novice", "displayName": "Talisman Novice", "rarity": "Common", "role": "Support", "affinity": "Lunar", "contentComplete": false, "baseHp": 399, "baseAttack": 46, "baseDefense": 20, "growthHp": 11, "growthAttack": 2, "growthDefense": 1, "primaryColor": "#EDE7DA", "skills": [ { "id": "paper_salve", "displayName": "Paper Salve", "description": "A charm that closes small wounds.", "unlockEvolution": 0 } ] },
+    { "id": "bell_guard", "displayName": "Bell Guard", "rarity": "Common", "role": "Tank", "affinity": "Steel", "contentComplete": false, "baseHp": 630, "baseAttack": 46, "baseDefense": 35, "growthHp": 17, "growthAttack": 2, "growthDefense": 2, "primaryColor": "#6C7078", "skills": [ { "id": "alarm_bell", "displayName": "Alarm Bell", "description": "Rings out and draws the enemy's attention.", "unlockEvolution": 0 } ] },
+    { "id": "mist_courier", "displayName": "Mist Courier", "rarity": "Common", "role": "Assassin", "affinity": "Water", "contentComplete": false, "baseHp": 357, "baseAttack": 72, "baseDefense": 15, "growthHp": 10, "growthAttack": 3, "growthDefense": 1, "primaryColor": "#7E8D97", "skills": [ { "id": "slip_past", "displayName": "Slip Past", "description": "Darts behind a target in a veil of mist.", "unlockEvolution": 0 } ] },
+    { "id": "spark_tinkerer", "displayName": "Spark Tinkerer", "rarity": "Common", "role": "Control", "affinity": "Lightning", "contentComplete": false, "baseHp": 378, "baseAttack": 61, "baseDefense": 18, "growthHp": 10, "growthAttack": 3, "growthDefense": 1, "primaryColor": "#8B6A3C", "skills": [ { "id": "snap_wire", "displayName": "Snap Wire", "description": "A sprung wire briefly stuns a target.", "unlockEvolution": 0 } ] },
+    { "id": "ash_monk", "displayName": "Ash Monk", "rarity": "Common", "role": "Fighter", "affinity": "Fire", "contentComplete": false, "baseHp": 504, "baseAttack": 58, "baseDefense": 24, "growthHp": 14, "growthAttack": 2, "growthDefense": 2, "primaryColor": "#8A8580", "skills": [ { "id": "sweeping_blow", "displayName": "Sweeping Blow", "description": "A wide sweep across nearby targets.", "unlockEvolution": 0 } ] },
+    { "id": "moth_herbalist", "displayName": "Moth Herbalist", "rarity": "Common", "role": "Support", "affinity": "Lunar", "contentComplete": false, "baseHp": 399, "baseAttack": 46, "baseDefense": 20, "growthHp": 11, "growthAttack": 2, "growthDefense": 1, "primaryColor": "#6F8C72", "skills": [ { "id": "moth_dust", "displayName": "Moth Dust", "description": "Pale dust that slowly heals an ally.", "unlockEvolution": 0 } ] },
+    { "id": "gale_runner", "displayName": "Gale Runner", "rarity": "Common", "role": "Assassin", "affinity": "Storm", "contentComplete": false, "baseHp": 357, "baseAttack": 72, "baseDefense": 15, "growthHp": 10, "growthAttack": 3, "growthDefense": 1, "primaryColor": "#4C9A95", "skills": [ { "id": "tailwind", "displayName": "Tailwind", "description": "Rushes the nearest tower at speed.", "unlockEvolution": 0 } ] },
+    { "id": "dusk_lookout", "displayName": "Dusk Lookout", "rarity": "Common", "role": "Mage", "affinity": "Void", "contentComplete": false, "baseHp": 336, "baseAttack": 75, "baseDefense": 13, "growthHp": 9, "growthAttack": 3, "growthDefense": 1, "primaryColor": "#3E3A5A", "skills": [ { "id": "thrown_shadow", "displayName": "Thrown Shadow", "description": "Hurls a bolt of gathered shadow.", "unlockEvolution": 0 } ] },
+    { "id": "scarlet_fan_dancer", "displayName": "Scarlet Fan Dancer", "rarity": "Elite", "role": "Control", "affinity": "Fire", "contentComplete": false, "baseHp": 765, "baseAttack": 89, "baseDefense": 36, "growthHp": 20, "growthAttack": 4, "growthDefense": 2, "primaryColor": "#A62B2B", "skills": [ { "id": "fan_gale", "displayName": "Fan Gale", "description": "A sweep of iron fans staggers a target.", "unlockEvolution": 0 } ] },
+    { "id": "twin_chain_reaper", "displayName": "Twin Chain Reaper", "rarity": "Elite", "role": "Assassin", "affinity": "Steel", "contentComplete": false, "baseHp": 722, "baseAttack": 106, "baseDefense": 31, "growthHp": 19, "growthAttack": 4, "growthDefense": 2, "primaryColor": "#3E444C", "skills": [ { "id": "reaping_chain", "displayName": "Reaping Chain", "description": "A chain and sickle strike at range.", "unlockEvolution": 0 } ] },
+    { "id": "frost_lake_monk", "displayName": "Frost Lake Monk", "rarity": "Elite", "role": "Support", "affinity": "Water", "contentComplete": false, "baseHp": 808, "baseAttack": 68, "baseDefense": 40, "growthHp": 21, "growthAttack": 3, "growthDefense": 2, "primaryColor": "#BFD6E2", "skills": [ { "id": "still_water", "displayName": "Still Water", "description": "A calm that heals allies nearby.", "unlockEvolution": 0 } ] },
+    { "id": "boulder_fist_elder", "displayName": "Boulder Fist Elder", "rarity": "Elite", "role": "Fighter", "affinity": "Earth", "contentComplete": false, "baseHp": 1020, "baseAttack": 85, "baseDefense": 50, "growthHp": 27, "growthAttack": 3, "growthDefense": 3, "primaryColor": "#6E5A43", "skills": [ { "id": "mountain_breaker", "displayName": "Mountain Breaker", "description": "Stone fists crack buildings apart.", "unlockEvolution": 0 } ] },
+    { "id": "mask_carver", "displayName": "Mask Carver", "rarity": "Elite", "role": "Control", "affinity": "Void", "contentComplete": false, "baseHp": 765, "baseAttack": 89, "baseDefense": 36, "growthHp": 20, "growthAttack": 4, "growthDefense": 2, "primaryColor": "#4B2E5C", "skills": [ { "id": "borrowed_face", "displayName": "Borrowed Face", "description": "A spirit mask confuses a tower.", "unlockEvolution": 0 } ] },
+    { "id": "thunder_drum_monk", "displayName": "Thunder Drum Monk", "rarity": "Elite", "role": "Control", "affinity": "Lightning", "contentComplete": false, "baseHp": 765, "baseAttack": 89, "baseDefense": 36, "growthHp": 20, "growthAttack": 4, "growthDefense": 2, "primaryColor": "#5D57A6", "skills": [ { "id": "drum_of_storms", "displayName": "Drum of Storms", "description": "A drumbeat stuns what stands nearby.", "unlockEvolution": 0 } ] },
+    { "id": "salt_wind_nomad", "displayName": "Salt Wind Nomad", "rarity": "Elite", "role": "Mage", "affinity": "Storm", "contentComplete": false, "baseHp": 680, "baseAttack": 110, "baseDefense": 27, "growthHp": 18, "growthAttack": 4, "growthDefense": 2, "primaryColor": "#C7B28A", "skills": [ { "id": "dry_gale", "displayName": "Dry Gale", "description": "A cutting wind from a long glaive.", "unlockEvolution": 0 } ] },
+    { "id": "silver_moon_archer", "displayName": "Silver Moon Archer", "rarity": "Elite", "role": "Mage", "affinity": "Lunar", "contentComplete": false, "baseHp": 680, "baseAttack": 110, "baseDefense": 27, "growthHp": 18, "growthAttack": 4, "growthDefense": 2, "primaryColor": "#5F7B9C", "skills": [ { "id": "moon_arrow", "displayName": "Moon Arrow", "description": "An arrow of light that pierces its target.", "unlockEvolution": 0 } ] },
+    { "id": "cinder_shield_captain", "displayName": "Cinder Shield Captain", "rarity": "Elite", "role": "Tank", "affinity": "Fire", "contentComplete": false, "baseHp": 1275, "baseAttack": 68, "baseDefense": 72, "growthHp": 33, "growthAttack": 3, "growthDefense": 4, "primaryColor": "#7E3A2A", "skills": [ { "id": "red_wall", "displayName": "Red Wall", "description": "A red-hot shield holds the line.", "unlockEvolution": 0 } ] }
   ]
 }

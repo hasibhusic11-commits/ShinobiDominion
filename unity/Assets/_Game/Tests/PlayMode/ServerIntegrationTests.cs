@@ -77,7 +77,7 @@ namespace ShinobiDominion.Tests
             var stateTask = _direct.GetStateAsync();
             yield return WaitFor(() => stateTask.IsCompleted);
             Assert.AreEqual(stateTask.Result.Crystals, Controller.ServerCrystals);
-            StringAssert.Contains($"Crystals {stateTask.Result.Crystals:N0}", string.Join(" ", _root.GetComponentsInChildren<Text>().Select(t => t.text)));
+            StringAssert.Contains($"{stateTask.Result.Crystals:N0}", string.Join(" ", _root.GetComponentsInChildren<Text>().Select(t => t.text)));
             Assert.Greater(Controller.Roster.HeroCount, 0, "Dev-mode server seeds heroes");
         }
 
@@ -226,7 +226,7 @@ namespace ShinobiDominion.Tests
                 Assert.AreEqual(state.Village.gold, Controller.Village.Gold);
                 Assert.AreEqual(state.Village.buildings.Count, Controller.Village.BuildingCount);
             });
-            StringAssert.Contains($"Gold {Controller.Village.Gold:N0}", string.Join(" ", _root.GetComponentsInChildren<Text>().Select(t => t.text)));
+            StringAssert.Contains($"{Controller.Village.Gold:N0}", string.Join(" ", _root.GetComponentsInChildren<Text>().Select(t => t.text)));
         }
 
         [UnityTest]

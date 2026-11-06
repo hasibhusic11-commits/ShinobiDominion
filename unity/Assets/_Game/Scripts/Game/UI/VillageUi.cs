@@ -22,75 +22,175 @@ namespace ShinobiDominion.Game
 
         private static readonly Dictionary<string, Sprite> Cache = new Dictionary<string, Sprite>();
 
-        /// <summary>A sliceable rounded frame with a brass border, for panels and cards.</summary>
+        // Sprites are drawn at twice the size they appear, so they stay crisp on high-resolution phones.
+        private const float PixelsPerUnit = 200f;
+
+        private static Color Shade(Color color, float amount) =>
+            new Color(Mathf.Clamp01(color.r * amount), Mathf.Clamp01(color.g * amount), Mathf.Clamp01(color.b * amount), color.a);
+
+        /// <summary>Steps from one band to the next over one pixel, so edges are clean and not jagged.</summary>
+        private static Color Band(Color outer, Color inner, float depth, float edge) =>
+            Color.Lerp(outer, inner, Mathf.Clamp01(depth - edge + 0.5f));
+
+        /// <summary>
+        /// A sliceable frame for panels and cards: a dark outline, a metal band lit from above, a dark
+        /// inner line, then the fill with a thin highlight along its top.
+        /// </summary>
         public static Sprite Frame(Color top, Color bottom, Color border, int borderPixels = 4)
         {
             var key = $"frame{top}{bottom}{border}{borderPixels}";
             if (Cache.TryGetValue(key, out var cached) && cached != null) return cached;
-            const int size = 64;
-            const float radius = 14f;
+            const int size = 112;
+            const float radius = 13f;
+            const float outline = 3f;
+            var band = borderPixels * 1.6f;
+            const float line = 2.5f;
             var texture = NewTexture(size);
             for (var y = 0; y < size; y++)
             for (var x = 0; x < size; x++)
             {
                 var distance = RoundedDistance(x + 0.5f, y + 0.5f, size, radius);
-                var fill = Color.Lerp(bottom, top, (float)y / (size - 1));
-                var color = distance > -borderPixels ? border : fill;
+                var depth = -distance;
+                var height = (float)y / (size - 1);
+                var metal = Shade(border, Mathf.Lerp(0.72f, 1.22f, height));
+                var fill = Color.Lerp(bottom, top, height);
+                var inner = Band(fill, fill, depth, 0f);
+                // A hairline of light where the fill meets the frame's top edge.
+                if (y > size * 0.5f) inner = Band(Shade(fill, 1.5f), fill, depth, outline + band + line + 2f);
+
+                var color = Band(Ink, metal, depth, outline);
+                color = Band(color, Ink, depth, outline + band);
+                color = Band(color, inner, depth, outline + band + line);
                 color.a *= Mathf.Clamp01(0.5f - distance);
                 texture.SetPixel(x, y, color);
             }
             texture.Apply();
-            var sprite = Sprite.Create(texture, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(22, 22, 22, 22));
+            var slice = Mathf.Ceil(radius + outline + band + line + 4f);
+            var sprite = Sprite.Create(texture, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), PixelsPerUnit, 0, SpriteMeshType.FullRect, new Vector4(slice, slice, slice, slice));
             Cache[key] = sprite;
             return sprite;
         }
 
-        /// <summary>A bevelled white button that takes its colour from the Image tint.</summary>
-        public static Sprite ButtonFace => Frame(new Color(1f, 1f, 1f), new Color(0.68f, 0.68f, 0.68f), new Color(0.16f, 0.13f, 0.09f), 3);
+        /// <summary>A white button that takes its colour from the Image tint: a raised face with a dark lip.</summary>
+        public static Sprite ButtonFace
+        {
+            get
+            {
+                const string key = "buttonface";
+                if (Cache.TryGetValue(key, out var cached) && cached != null) return cached;
+                const int size = 96;
+                const float radius = 11f;
+                const float outline = 3f;
+                const float lip = 7f;
+                var texture = NewTexture(size);
+                for (var y = 0; y < size; y++)
+                for (var x = 0; x < size; x++)
+                {
+                    var distance = RoundedDistance(x + 0.5f, y + 0.5f, size, radius);
+                    var depth = -distance;
+                    var height = (float)y / (size - 1);
+                    var face = Color.Lerp(new Color(0.74f, 0.74f, 0.74f), Color.white, height);
+                    // The raised face is inset from the bottom, leaving a darker lip beneath it.
+                    var fromBottom = y + 0.5f;
+                    var color = Band(new Color(0.42f, 0.42f, 0.42f), face, fromBottom, outline + lip);
+                    if (y > size - outline - 5f) color = Band(color, new Color(1f, 1f, 1f), size - y, outline + 5f);
+                    color = Band(Ink, color, depth, outline);
+                    color.a = Mathf.Clamp01(0.5f - distance);
+                    texture.SetPixel(x, y, color);
+                }
+                texture.Apply();
+                var slice = radius + outline + lip + 3f;
+                var sprite = Sprite.Create(texture, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), PixelsPerUnit, 0, SpriteMeshType.FullRect, new Vector4(slice, slice, slice, slice));
+                Cache[key] = sprite;
+                return sprite;
+            }
+        }
 
-        /// <summary>A filled circle with a ring, for the ATTACK badge, avatar and coin icon.</summary>
+        /// <summary>A round badge: a dark edge, a metal ring lit from above, and a glossy centre.</summary>
         public static Sprite Disc(Color fillTop, Color fillBottom, Color ring, float ringFraction = 0.11f)
         {
             var key = $"disc{fillTop}{fillBottom}{ring}{ringFraction}";
             if (Cache.TryGetValue(key, out var cached) && cached != null) return cached;
-            const int size = 128;
+            const int size = 256;
             var texture = NewTexture(size);
             var center = (size - 1) * 0.5f;
             var outer = size * 0.5f - 1f;
+            var ringEdge = outer * (1f - ringFraction);
             for (var y = 0; y < size; y++)
             for (var x = 0; x < size; x++)
             {
                 var distance = Mathf.Sqrt((x - center) * (x - center) + (y - center) * (y - center));
-                var color = distance > outer * (1f - ringFraction) ? ring : Color.Lerp(fillBottom, fillTop, (float)y / (size - 1));
-                color.a *= Mathf.Clamp01(outer + 0.5f - distance);
+                var height = (float)y / (size - 1);
+                var metal = Shade(ring, Mathf.Lerp(0.68f, 1.25f, height));
+                var fill = Color.Lerp(fillBottom, fillTop, height);
+                // A soft gloss across the top half of the centre.
+                var glossX = (x - center) / outer;
+                var glossY = (y - center * 1.42f) / (outer * 0.62f);
+                var gloss = Mathf.Clamp01(1f - (glossX * glossX + glossY * glossY)) * 0.22f;
+                fill = Color.Lerp(fill, Color.white, gloss);
+
+                var depth = outer - distance;
+                var color = Band(Ink, metal, depth, 5f);
+                color = Band(color, Ink, depth, outer - ringEdge);
+                color = Band(color, fill, depth, outer - ringEdge + 3f);
+                color.a *= Mathf.Clamp01(depth + 0.5f);
                 texture.SetPixel(x, y, color);
             }
             texture.Apply();
-            var sprite = Sprite.Create(texture, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
+            var sprite = Sprite.Create(texture, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), PixelsPerUnit);
             Cache[key] = sprite;
             return sprite;
         }
 
-        /// <summary>A diamond, for the crystal icon and crown shapes.</summary>
+        /// <summary>A cut gem, with a lighter facet on the upper left and a dark edge.</summary>
         public static Sprite Diamond(Color top, Color bottom)
         {
             var key = $"diamond{top}{bottom}";
             if (Cache.TryGetValue(key, out var cached) && cached != null) return cached;
-            const int size = 64;
+            const int size = 128;
             var texture = NewTexture(size);
             var center = (size - 1) * 0.5f;
             for (var y = 0; y < size; y++)
             for (var x = 0; x < size; x++)
             {
                 var distance = Mathf.Abs(x - center) + Mathf.Abs(y - center);
+                var depth = center - distance;
                 var color = Color.Lerp(bottom, top, (float)y / (size - 1));
-                color.a *= Mathf.Clamp01(center + 0.5f - distance);
+                var facet = x < center ? (y > center ? 1.25f : 0.9f) : (y > center ? 1.05f : 0.72f);
+                color = Shade(color, facet);
+                color = Band(Ink, color, depth, 5f);
+                color.a *= Mathf.Clamp01(depth + 0.5f);
                 texture.SetPixel(x, y, color);
             }
             texture.Apply();
-            var sprite = Sprite.Create(texture, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
+            var sprite = Sprite.Create(texture, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), PixelsPerUnit);
             Cache[key] = sprite;
             return sprite;
+        }
+
+        /// <summary>A flat line with soft ends, for dividing panel sections.</summary>
+        public static Sprite Divider
+        {
+            get
+            {
+                const string key = "divider";
+                if (Cache.TryGetValue(key, out var cached) && cached != null) return cached;
+                const int width = 256;
+                const int height = 8;
+                var texture = new Texture2D(width, height, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
+                for (var y = 0; y < height; y++)
+                for (var x = 0; x < width; x++)
+                {
+                    var along = Mathf.Min(x, width - 1 - x) / 40f;
+                    var color = y >= 4 ? Brass : Shade(Ink, 1f);
+                    color.a = Mathf.Clamp01(along) * (y == 0 || y == height - 1 ? 0.3f : 1f);
+                    texture.SetPixel(x, y, color);
+                }
+                texture.Apply();
+                var sprite = Sprite.Create(texture, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f), PixelsPerUnit);
+                Cache[key] = sprite;
+                return sprite;
+            }
         }
 
         private static Texture2D NewTexture(int size) =>
@@ -117,7 +217,7 @@ namespace ShinobiDominion.Game
         public static readonly Color AccentColor = new Color(0.82f, 0.58f, 0.18f, 1f);
         public static readonly Color AttackColor = UiSkin.Vermilion;
         public static readonly Color TextColor = new Color(0.98f, 0.96f, 0.90f, 1f);
-        public static readonly Color MutedText = new Color(0.80f, 0.80f, 0.80f, 1f);
+        public static readonly Color MutedText = new Color(0.86f, 0.85f, 0.82f, 1f);
 
         private const float MinTouchHeight = 56f;
         private static Font _font;
@@ -196,8 +296,8 @@ namespace ShinobiDominion.Game
         {
             text.fontStyle = FontStyle.Bold;
             var outline = text.gameObject.AddComponent<Outline>();
-            outline.effectColor = new Color(0f, 0f, 0f, 0.75f);
-            outline.effectDistance = new Vector2(1.5f, -1.5f);
+            outline.effectColor = new Color(0f, 0f, 0f, 0.92f);
+            outline.effectDistance = new Vector2(1.4f, -1.4f);
             return text;
         }
 
@@ -222,38 +322,6 @@ namespace ShinobiDominion.Game
             return button;
         }
 
-        /// <summary>
-        /// A placeholder hero figure from plain shapes. It matches the pedestal figure: the same
-        /// body in every form, with each evolution adding to the silhouette. Not final art.
-        /// </summary>
-        public static void Figure(RectTransform parent, Color color, int evolution, float unit, Vector2 feet)
-        {
-            void Part(string name, float x, float y, float w, float h, Color c, Sprite sprite = null)
-            {
-                var rect = Rect(name, parent);
-                rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0f);
-                rect.pivot = new Vector2(0.5f, 0f);
-                rect.sizeDelta = new Vector2(w, h) * unit;
-                rect.anchoredPosition = feet + new Vector2(x, y) * unit;
-                var image = Background(rect, c, false);
-                image.sprite = sprite;
-            }
-
-            if (evolution >= 3)
-                Part("Aura", 0f, -0.1f, 1.7f, 1.7f, new Color(color.r, color.g, color.b, 0.35f), UiSkin.Disc(Color.white, Color.white, Color.white));
-            if (evolution >= 1)
-                Part("Cape", 0f, 0.1f, 0.62f, 0.85f, color * 0.7f + new Color(0, 0, 0, 0.3f));
-            Part("Legs", 0f, 0f, 0.3f, 0.45f, Palette.Slate);
-            Part("Torso", 0f, 0.45f, 0.42f, 0.5f, color);
-            Part("Head", 0f, 0.95f, 0.26f, 0.26f, Palette.Plaster);
-            if (evolution >= 2)
-            {
-                Part("ShoulderL", -0.29f, 0.82f, 0.2f, 0.15f, Palette.Amber);
-                Part("ShoulderR", 0.29f, 0.82f, 0.2f, 0.15f, Palette.Amber);
-            }
-            if (evolution >= 3)
-                Part("Crown", 0f, 1.15f, 0.36f, 0.36f, Color.white, UiSkin.Diamond(Palette.Amber, Palette.Amber));
-        }
     }
 
     /// <summary>Canvas root, event system and safe-area container.</summary>
@@ -268,6 +336,7 @@ namespace ShinobiDominion.Game
             canvasObject.transform.SetParent(parent, false);
             Canvas = canvasObject.AddComponent<Canvas>();
             Canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            Canvas.pixelPerfect = true;
             var scaler = canvasObject.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1280f, 720f);
@@ -347,15 +416,15 @@ namespace ShinobiDominion.Game
             Ui.Anchor(pill, new Vector2(1f, 1f), new Vector2(204f, 50f), offset);
             Ui.Framed(pill, Ui.PillSprite);
             Ui.Icon(pill, icon, new Vector2(0f, 0.5f), new Vector2(38f, 38f), new Vector2(7f, 0f));
-            var text = Ui.Strong(Ui.Label(pill, string.Empty, 18, TextAnchor.MiddleLeft));
-            Ui.Stretch(text.rectTransform, 50f, 0f, 6f, 0f);
+            var text = Ui.Strong(Ui.Label(pill, string.Empty, 21, TextAnchor.MiddleRight));
+            Ui.Stretch(text.rectTransform, 50f, 0f, 14f, 0f);
             return text;
         }
 
         public void SetWallet(long gold, long crystals)
         {
-            _gold.text = $"Gold {gold:N0}";
-            _crystals.text = $"Crystals {crystals:N0}";
+            _gold.text = gold.ToString("N0");
+            _crystals.text = crystals.ToString("N0");
         }
 
         public void SetIdentity(string displayName, int level) => _identity.text = $"{displayName}  ·  Lv {level}";
@@ -394,17 +463,25 @@ namespace ShinobiDominion.Game
             _card.anchoredPosition = new Vector2(16f, -44f);
             Ui.Framed(_card, Ui.PanelSprite);
 
-            var header = Ui.Strong(Ui.Label(_card, title, 28));
+            var header = Ui.Strong(Ui.Label(_card, title, 27, TextAnchor.MiddleLeft, new Color(1f, 0.9f, 0.66f)));
             header.rectTransform.anchorMin = new Vector2(0f, 1f);
             header.rectTransform.anchorMax = new Vector2(1f, 1f);
             header.rectTransform.pivot = new Vector2(0f, 1f);
-            header.rectTransform.sizeDelta = new Vector2(-110f, 64f);
-            header.rectTransform.anchoredPosition = new Vector2(20f, -6f);
+            header.rectTransform.sizeDelta = new Vector2(-92f, 60f);
+            header.rectTransform.anchoredPosition = new Vector2(20f, -8f);
 
-            var close = Ui.Button(_card, "CloseButton", "Close", onClose, true, Ui.ButtonColor, 18);
-            Ui.Anchor((RectTransform)close.transform, new Vector2(1f, 1f), new Vector2(84f, 54f), new Vector2(-10f, -10f));
+            var divider = Ui.Rect("HeaderDivider", _card);
+            divider.anchorMin = new Vector2(0f, 1f);
+            divider.anchorMax = new Vector2(1f, 1f);
+            divider.pivot = new Vector2(0.5f, 1f);
+            divider.sizeDelta = new Vector2(-28f, 4f);
+            divider.anchoredPosition = new Vector2(0f, -68f);
+            Ui.Background(divider, Color.white, false).sprite = UiSkin.Divider;
 
-            BuildScrollArea(14f, 16f, 14f, 72f);
+            var close = Ui.Button(_card, "CloseButton", "X", onClose, true, UiSkin.Vermilion, 24);
+            Ui.Anchor((RectTransform)close.transform, new Vector2(1f, 1f), new Vector2(56f, 56f), new Vector2(-12f, -10f));
+
+            BuildScrollArea(14f, 16f, 14f, 78f);
             fill(this);
         }
 

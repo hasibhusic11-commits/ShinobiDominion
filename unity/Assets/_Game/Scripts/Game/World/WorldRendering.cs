@@ -309,6 +309,38 @@ namespace ShinobiDominion.Game
             }
         }
 
+        /// <summary>A tapered rod between any two points: limbs, weapons, feathers. A negative end radius means no taper.</summary>
+        public void Rod(Vector3 a, Vector3 b, float radius, int sides, Color color, ArtSurface surface = ArtSurface.Plain, float sway = 0f, float endRadius = -1f, float glow = 0f)
+        {
+            var axis = b - a;
+            if (axis.sqrMagnitude < 0.000001f) return;
+            var end = endRadius < 0f ? radius : endRadius;
+            var forward = axis.normalized;
+            var side = Vector3.Cross(forward, Mathf.Abs(forward.y) > 0.9f ? Vector3.forward : Vector3.up).normalized;
+            var up = Vector3.Cross(side, forward);
+            var scale = ScaleFor(surface);
+            var length = axis.magnitude * scale;
+            var first = _vertices.Count;
+            for (var i = 0; i <= sides; i++)
+            {
+                var angle = (float)i / sides * Mathf.PI * 2f;
+                var direction = side * Mathf.Cos(angle) + up * Mathf.Sin(angle);
+                var u = i * radius * 2f * scale;
+                Vertex(a + direction * radius, direction, color, new Vector2(u, 0f), surface, sway, glow);
+                Vertex(b + direction * end, direction, color, new Vector2(u, length), surface, sway, glow);
+            }
+            for (var i = 0; i < sides; i++)
+            {
+                var v = first + i * 2;
+                _triangles.Add(v);
+                _triangles.Add(v + 1);
+                _triangles.Add(v + 3);
+                _triangles.Add(v);
+                _triangles.Add(v + 3);
+                _triangles.Add(v + 2);
+            }
+        }
+
         /// <summary>A soft rounded lump: foliage, heads, boulders. Jitter roughens the surface.</summary>
         public void Blob(Vector3 center, Vector3 radius, Color color, ArtSurface surface = ArtSurface.Plain,
             float sway = 0f, float glow = 0f, int segments = 8, int rings = 5, float jitter = 0f, int seed = 0, Color? top = null)
@@ -503,6 +535,7 @@ namespace ShinobiDominion.Game
         public int Evolution;
         public HeroRole Role;
         public HeroAffinity Affinity;
-        public string Key => $"{ColorUtility.ToHtmlStringRGB(Color)}_{Evolution}_{Role}_{Affinity}";
+        public string DesignId;
+        public string Key => $"{DesignId}_{ColorUtility.ToHtmlStringRGB(Color)}_{Evolution}_{Role}_{Affinity}";
     }
 }

@@ -112,7 +112,7 @@ namespace ShinobiDominion.Tests
             rich.gold = 20000;
             village.Restore(rich);
             village.TryPlace("training_grounds", new GridCoord(40, 12), Rotation.R0, 0, out var hallId);
-            village.TryPlace("troop_camp", new GridCoord(35, 12), Rotation.R0, 0, out var campId);
+            village.TryPlace("troop_camp", new GridCoord(40, 7), Rotation.R0, 0, out var campId);
             for (var i = 0; i < 12; i++) controller.TrainTroop("militia", 1);
             controller.Select(hallId);
             yield return shot("18_training_hall");

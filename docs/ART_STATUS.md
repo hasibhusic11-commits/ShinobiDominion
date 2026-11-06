@@ -18,7 +18,7 @@ Art never touches game rules. `BuildingMeshes.For` is the single point to swap i
 ## Needs a professional artist
 | Asset | Today | Why replace it |
 |---|---|---|
-| **Heroes** | Tiny block-built figures | Highest priority. Your evolution rule needs four striking forms that keep one identity, and code can't deliver that. Portraits don't exist yet either. |
+| **Heroes** | All 30 have designs and generated models, from a shared kit of parts. See `HERO_DESIGNS.md` | Highest priority. Your evolution rule needs four striking forms that keep one identity, and code can't deliver that. Portraits don't exist yet either. |
 | **Dojo HQ and key buildings** | Generated, fairly detailed | Hand modelling adds character and asymmetry. |
 | **Textures** | Generated grayscale patterns | Fine at this distance, simple up close. |
 | **Icons and UI** | Generated shapes | Currency icons and the avatar are plain. |

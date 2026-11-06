@@ -81,8 +81,10 @@ namespace ShinobiDominion.Tests
             var all = string.Join(" ", _root.GetComponentsInChildren<Text>(true).Select(t => t.text)).ToLowerInvariant();
             StringAssert.DoesNotContain("energy", all);
             StringAssert.DoesNotContain("stamina", all);
-            StringAssert.Contains("gold", all);
-            StringAssert.Contains("crystals", all);
+            // The wallet shows icons and numbers, so check the pieces are there and not their words.
+            var names = _root.GetComponentsInChildren<RectTransform>(true).Select(r => r.name).ToList();
+            CollectionAssert.Contains(names, "GoldPill");
+            CollectionAssert.Contains(names, "CrystalsPill");
         }
 
         [Test]

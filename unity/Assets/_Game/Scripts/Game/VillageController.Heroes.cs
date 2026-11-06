@@ -97,12 +97,29 @@ namespace ShinobiDominion.Game
             return color;
         }
 
+        private HeroLook LookOf(HeroArchetype archetype, int evolution) =>
+            new HeroLook { DesignId = archetype.id, Color = HeroColor(archetype, evolution), Evolution = evolution, Role = archetype.role, Affinity = archetype.affinity };
+
+        /// <summary>Shows the hero's actual model, standing with its feet at the given height.</summary>
+        private void HeroPicture(RectTransform parent, HeroArchetype archetype, int evolution, float size, float feet)
+        {
+            _portraits = _portraits ?? new HeroPortraits(_worldRoot);
+            var picture = Ui.Rect("HeroPicture", parent);
+            picture.anchorMin = picture.anchorMax = new Vector2(0.5f, 0f);
+            picture.pivot = new Vector2(0.5f, 0f);
+            picture.sizeDelta = new Vector2(size, size);
+            picture.anchoredPosition = new Vector2(0f, feet);
+            var image = picture.gameObject.AddComponent<UnityEngine.UI.RawImage>();
+            image.texture = _portraits.For(LookOf(archetype, evolution));
+            image.raycastTarget = false;
+        }
+
         private HeroLook HeroLookFor(string instanceId)
         {
             var hero = Roster?.Find(instanceId);
             if (hero == null) return null;
             var archetype = Roster.ArchetypeOf(hero);
-            return new HeroLook { Color = HeroColor(archetype, hero.EvolutionIndex), Evolution = hero.EvolutionIndex, Role = archetype.role, Affinity = archetype.affinity };
+            return LookOf(archetype, hero.EvolutionIndex);
         }
 
         private string FormName(HeroInstance hero)
@@ -143,7 +160,7 @@ namespace ShinobiDominion.Game
             button.colors = colors;
             if (onClick != null) button.onClick.AddListener(() => onClick());
 
-            Ui.Figure(rect, HeroColor(archetype, hero.EvolutionIndex), hero.EvolutionIndex, 96f, new Vector2(0f, 74f));
+            HeroPicture(rect, archetype, hero.EvolutionIndex, 150f, 52f);
 
             var level = Ui.Strong(Ui.Label(rect, $"Lv {hero.Level}", 19, TextAnchor.UpperRight));
             Ui.Anchor(level.rectTransform, new Vector2(1f, 1f), new Vector2(110f, 28f), new Vector2(-10f, -8f));
@@ -297,7 +314,7 @@ namespace ShinobiDominion.Game
             var stage = Ui.Rect("Stage", column);
             Ui.Stretch(stage);
             Ui.Framed(stage, UiSkin.Frame(new Color(0.24f, 0.20f, 0.36f), new Color(0.09f, 0.08f, 0.15f), RarityColor(archetype.rarity), 5), false);
-            Ui.Figure(stage, HeroColor(archetype, evolution), evolution, 210f, new Vector2(0f, 96f));
+            HeroPicture(stage, archetype, evolution, 430f, 70f);
             var title = Ui.Strong(Ui.Label(stage, caption, 24, TextAnchor.MiddleCenter));
             title.rectTransform.anchorMin = new Vector2(0f, 0f);
             title.rectTransform.anchorMax = new Vector2(1f, 0f);
@@ -323,7 +340,7 @@ namespace ShinobiDominion.Game
                     var stats = Roster.StatsOf(hero);
                     panel.Line($"HP {stats.Hp:N0}     Attack {stats.Attack:N0}     Defense {stats.Defense:N0}", 24, Ui.TextColor);
                     if (Village.IsHeroAssigned(hero.InstanceId)) panel.Line("Assigned to a Hero Base.");
-                    panel.Line("Figure is placeholder art. Equipment arrives in a later phase.", 17);
+                    panel.Line("Equipment arrives in a later phase.", 17);
 
                     panel.Line("Skills", 24, Ui.TextColor);
                     foreach (var skill in archetype.skills)
@@ -369,7 +386,7 @@ namespace ShinobiDominion.Game
             var rect = Ui.Rect("Form" + evolution, parent);
             var border = current ? Color.white : RarityColor(archetype.rarity);
             Ui.Framed(rect, UiSkin.Frame(new Color(0.24f, 0.20f, 0.36f), new Color(0.09f, 0.08f, 0.15f), border, current ? 6 : 3), false);
-            Ui.Figure(rect, HeroColor(archetype, evolution), evolution, 84f, new Vector2(0f, 104f));
+            HeroPicture(rect, archetype, evolution, 190f, 84f);
             var form = archetype.forms[evolution];
             var title = Ui.Strong(Ui.Label(rect, (current ? "Current: " : string.Empty) + EvolutionLabel(evolution), 16, TextAnchor.UpperCenter));
             Ui.Anchor(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(190f, 24f), new Vector2(0f, -8f));

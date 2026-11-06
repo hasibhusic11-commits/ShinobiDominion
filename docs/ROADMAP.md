@@ -43,6 +43,9 @@ Troops are built too: 4 camps, a Training Hall, camp space by strength, and land
 
 Still to do in this phase: defender heroes and battle sound.
 
+## Hero designs and sharper UI: awaiting your review
+All 30 heroes have an original design and a generated model, and only Legendaries have four looks. See `HERO_DESIGNS.md` and `docs/hero_designs/`. The 24 heroes outside the current pool are not summonable until you approve them, because adding them changes the odds. The interface was redrawn with crisper frames, buttons and icons.
+
 ## Phase 5: polish and ship readiness — not started
 
 ## Visual overhaul — done as temporary art, awaiting your review
