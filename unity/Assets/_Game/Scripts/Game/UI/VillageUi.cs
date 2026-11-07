@@ -280,7 +280,7 @@ namespace ShinobiDominion.Game
         {
             var rect = Rect("Label", parent);
             var text = rect.gameObject.AddComponent<Text>();
-            text.font = Font;
+            text.font = HudArt.Numbers;
             text.text = content;
             text.fontSize = size;
             text.alignment = alignment;

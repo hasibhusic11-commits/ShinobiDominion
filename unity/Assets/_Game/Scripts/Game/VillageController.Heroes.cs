@@ -214,7 +214,8 @@ namespace ShinobiDominion.Game
 
             var frameRect = Ui.Rect("Frame", rect);
             Ui.Stretch(frameRect);
-            var frame = Ui.Framed(frameRect, HeroArt.CardFrame(archetype.rarity), false);
+            var frame = Ui.Framed(frameRect, HudArt.Sprite(archetype.rarity == HeroRarity.Legendary ? "heroframe_gold_s30" : archetype.rarity == HeroRarity.Elite ? "heroframe_silver_s30" : "heroframe_bronze_s30"), false);
+            frame.pixelsPerUnitMultiplier = 1.15f;
             // Legendary heroes catch the light, and wear a gem on the frame.
             if (archetype.rarity == HeroRarity.Legendary)
             {
@@ -222,13 +223,14 @@ namespace ShinobiDominion.Game
                 Ui.Icon(rect, UiSkin.Diamond(new Color(1f, 0.55f, 0.35f), new Color(0.7f, 0.12f, 0.08f)), new Vector2(0.5f, 1f), new Vector2(26f, 26f), new Vector2(0f, 10f));
             }
 
-            var level = Ui.Strong(Ui.Label(rect, $"Lv {hero.Level}", 21, TextAnchor.UpperRight));
+            var level = HudArt.Label(rect, $"Lv {hero.Level}", HudArt.Numbers, 21, TextAnchor.UpperRight, HudArt.Ivory, HudArt.LacquerDeep);
             Ui.Anchor(level.rectTransform, new Vector2(1f, 1f), new Vector2(110f, 28f), new Vector2(-14f, -12f));
-            var role = Ui.Icon(rect, UiSkin.Disc(Color.Lerp(HeroColor(archetype, 0), Color.white, 0.25f), HeroColor(archetype, 0) * 0.6f, UiSkin.Brass), new Vector2(0f, 1f), new Vector2(34f, 34f), new Vector2(10f, -10f));
-            var roleLetter = Ui.Strong(Ui.Label(role.transform, archetype.role.ToString().Substring(0, 1), 16, TextAnchor.MiddleCenter));
+            var role = Ui.Icon(rect, HudArt.Sprite("medal_face_lacquer"), new Vector2(0f, 1f), new Vector2(34f, 34f), new Vector2(10f, -10f));
+            HudArt.Picture(role.transform, "Ring", "medal_ring_thin", new Vector2(0.5f, 0.5f), role.rectTransform.sizeDelta, Vector2.zero);
+            var roleLetter = HudArt.Label(role.transform, archetype.role.ToString().Substring(0, 1), HudArt.Display, 16, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.LacquerDeep);
             Ui.Stretch(roleLetter.rectTransform);
 
-            var title = Ui.Strong(Ui.Label(rect, archetype.displayName, 16, TextAnchor.MiddleCenter));
+            var title = HudArt.Label(rect, archetype.displayName, HudArt.Display, 15, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.LacquerDeep);
             Ui.Anchor(title.rectTransform, new Vector2(0.5f, 0f), new Vector2(166f, 26f), new Vector2(0f, 36f));
             var rarity = Ui.Strong(Ui.Label(rect, string.IsNullOrEmpty(tag) ? archetype.rarity.ToString() : tag, 14, TextAnchor.MiddleCenter, RarityColor(archetype.rarity)));
             Ui.Anchor(rarity.rectTransform, new Vector2(0.5f, 0f), new Vector2(166f, 22f), new Vector2(0f, 14f));
@@ -237,7 +239,7 @@ namespace ShinobiDominion.Game
             if (hero.EvolutionIndex > 0)
             {
                 var badge = Ui.Icon(rect, UiSkin.Diamond(new Color(1f, 0.87f, 0.4f), new Color(0.9f, 0.55f, 0.12f)), new Vector2(0.5f, 0f), new Vector2(36f, 36f), new Vector2(0f, -14f));
-                var stage = Ui.Strong(Ui.Label(badge.transform, new string('I', hero.EvolutionIndex), 14, TextAnchor.MiddleCenter));
+                var stage = HudArt.Label(badge.transform, new string('I', hero.EvolutionIndex), HudArt.Display, 14, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.CrimsonDark);
                 Ui.Stretch(stage.rectTransform);
             }
             return button;
@@ -380,14 +382,26 @@ namespace ShinobiDominion.Game
         private void FormCard(Transform parent, HeroArchetype archetype, int evolution, bool current)
         {
             var rect = Ui.Rect("Form" + evolution, parent);
-            var border = current ? Color.white : RarityColor(archetype.rarity);
-            Ui.Framed(rect, UiSkin.Frame(new Color(0.24f, 0.20f, 0.36f), new Color(0.09f, 0.08f, 0.15f), border, current ? 6 : 3), false);
-            HeroPicture(rect, archetype, evolution, 190f, 84f);
+            Ui.Framed(rect, HudArt.Sprite("card_s34"), false).pixelsPerUnitMultiplier = 1.15f;
+            var well = Ui.Rect("Well", rect);
+            Ui.Anchor(well, new Vector2(0.5f, 1f), new Vector2(176f, 150f), new Vector2(0f, -40f));
+            Ui.Framed(well, HudArt.Sprite("well_s18"), false);
+            if (current)
+            {
+                var halo = HudArt.Picture(rect, "Glow", "glow", new Vector2(0.5f, 1f), new Vector2(200f, 160f), new Vector2(0f, -36f));
+                halo.color = new Color(1f, 0.85f, 0.45f, 0.45f);
+            }
+            var art = Ui.Rect("Art", well);
+            Ui.Stretch(art, 4f, 4f, 4f, 4f);
+            art.gameObject.AddComponent<RectMask2D>();
+            HeroPicture(art, archetype, evolution, 150f, 0f);
             var form = archetype.forms[evolution];
-            var title = Ui.Strong(Ui.Label(rect, (current ? "Current: " : string.Empty) + EvolutionLabel(evolution), 16, TextAnchor.UpperCenter));
-            Ui.Anchor(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(190f, 24f), new Vector2(0f, -8f));
-            var summary = Ui.Label(rect, $"{form.formName}\n{form.summary}", 13, TextAnchor.LowerCenter, Ui.MutedText);
-            Ui.Anchor(summary.rectTransform, new Vector2(0.5f, 0f), new Vector2(190f, 96f), new Vector2(0f, 10f));
+            var title = HudArt.Label(rect, (current ? "Now: " : string.Empty) + EvolutionLabel(evolution), HudArt.Display, 17, TextAnchor.MiddleCenter, current ? HudArt.BrassLight : HudArt.Ivory, HudArt.LacquerDeep);
+            Ui.Anchor(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(190f, 28f), new Vector2(0f, -10f));
+            var name = HudArt.Label(rect, form.formName, HudArt.Display, 15, TextAnchor.MiddleCenter, HudArt.BrassLight, HudArt.LacquerDeep);
+            Ui.Anchor(name.rectTransform, new Vector2(0.5f, 0f), new Vector2(180f, 24f), new Vector2(0f, 62f));
+            var summary = Ui.Label(rect, form.summary, 13, TextAnchor.UpperCenter, Ui.MutedText);
+            Ui.Anchor(summary.rectTransform, new Vector2(0.5f, 0f), new Vector2(178f, 54f), new Vector2(0f, 10f));
         }
 
         public void ShowEvolution(string instanceId)
@@ -416,10 +430,9 @@ namespace ShinobiDominion.Game
                 var owned = Roster.ItemCount(catalyst);
                 var duplicates = Roster.EligibleDuplicates(instanceId, Village.IsHeroAssigned);
 
-                panel.Line("Requirements", 24, Ui.TextColor);
-                panel.Line($"{Check(hero.Level == HeroMath.MaxLevel)} Level 200 in this form (now {hero.Level})");
-                panel.Line($"{Check(duplicates.Count > 0)} One extra copy of {archetype.displayName} ({duplicates.Count} available)");
-                panel.Line($"{Check(owned > 0)} One {ItemName(catalyst)} (you have {owned})");
+                Requirement(panel, hero.Level == HeroMath.MaxLevel, $"Level 200 in this form (now {hero.Level})");
+                Requirement(panel, duplicates.Count > 0, $"One extra copy of {archetype.displayName} ({duplicates.Count} available)");
+                Requirement(panel, owned > 0, $"One {ItemName(catalyst)} (you have {owned})");
 
                 var mainError = Roster.CheckEvolutionMain(instanceId);
                 if (mainError != HeroError.None)
@@ -440,7 +453,18 @@ namespace ShinobiDominion.Game
             });
         }
 
-        private static string Check(bool met) => met ? "[Met]" : "[Not met]";
+        /// <summary>One evolution requirement on its own plaque: a green check or a red cross, then what is needed.</summary>
+        private static void Requirement(PanelView panel, bool met, string text)
+        {
+            var row = panel.Block(50f);
+            var plate = Ui.Rect("Requirement", row);
+            Ui.Stretch(plate, 0f, 0f, 380f, 0f);
+            HudArt.Plate(plate);
+            HudArt.Picture(plate, met ? "Met" : "NotMet", met ? "icon_check" : "icon_cross", new Vector2(0f, 0.5f), new Vector2(30f, 30f), new Vector2(16f, 1f));
+            var label = HudArt.Label(plate, text, HudArt.Numbers, 18, TextAnchor.MiddleLeft, met ? HudArt.Ivory : HudArt.IvoryMuted, HudArt.LacquerDeep);
+            Ui.Stretch(label.rectTransform, 58f, 4f, 16f, 2f);
+            label.text = (met ? "Met: " : "Not met: ") + text;
+        }
 
         private static string ItemName(string itemId) =>
             string.Join(" ", itemId.Split('_').Select(word => char.ToUpperInvariant(word[0]) + word.Substring(1)));

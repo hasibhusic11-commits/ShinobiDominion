@@ -146,8 +146,11 @@ namespace ShinobiDominion.Game
             if (!interactable) ring.color = new Color(0.75f, 0.75f, 0.75f, 1f);
 
             var iconSize = kind == MedalKind.Attack ? size * 0.34f : size * 0.5f;
-            var picture = HudArt.Picture(rect, "Icon", "icon_" + icon, new Vector2(0.5f, 0.5f), new Vector2(iconSize, iconSize), new Vector2(0f, kind == MedalKind.Attack ? size * 0.13f : 0f));
-            if (!interactable) picture.color = new Color(1f, 1f, 1f, 0.45f);
+            if (!string.IsNullOrEmpty(icon))
+            {
+                var picture = HudArt.Picture(rect, "Icon", "icon_" + icon, new Vector2(0.5f, 0.5f), new Vector2(iconSize, iconSize), new Vector2(0f, kind == MedalKind.Attack ? size * 0.13f : 0f));
+                if (!interactable) picture.color = new Color(1f, 1f, 1f, 0.45f);
+            }
 
             if (kind == MedalKind.Attack)
             {

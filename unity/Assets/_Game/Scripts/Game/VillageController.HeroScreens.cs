@@ -70,9 +70,9 @@ namespace ShinobiDominion.Game
                 HeroPicture(holder, archetype, hero.EvolutionIndex, 460f, 0f);
             }
 
-            var ribbon = Ui.Icon(scene, HeroArt.Ribbon, new Vector2(centre, 0f), new Vector2(420f, 54f), new Vector2(0f, 78f));
-            var name = Ui.Strong(Ui.Label(ribbon.transform, FormName(hero), 25, TextAnchor.MiddleCenter));
-            Ui.Stretch(name.rectTransform);
+            var ribbon = HudArt.Picture(scene, "Ribbon", "ribbon", new Vector2(centre, 0f), new Vector2(430f, 72f), new Vector2(0f, 74f));
+            var name = HudArt.Label(ribbon.transform, FormName(hero).ToUpperInvariant(), HudArt.Display, 25, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.CrimsonDark);
+            Ui.Stretch(name.rectTransform, 40f, 6f, 40f, 2f);
 
             if (archetype.CanEvolve)
             {
@@ -89,10 +89,10 @@ namespace ShinobiDominion.Game
             if (list.Count < 2 || index < 0) return;
             var previous = list[(index - 1 + list.Count) % list.Count].InstanceId;
             var next = list[(index + 1) % list.Count].InstanceId;
-            var left = Ui.Button(scene, "PreviousHeroButton", "<", () => ShowHeroDetail(previous), true, Ui.AccentColor, 34);
-            Ui.Anchor((RectTransform)left.transform, new Vector2(0.23f, 0.5f), new Vector2(64f, 84f), new Vector2(0f, 20f));
-            var right = Ui.Button(scene, "NextHeroButton", ">", () => ShowHeroDetail(next), true, Ui.AccentColor, 34);
-            Ui.Anchor((RectTransform)right.transform, new Vector2(0.59f, 0.5f), new Vector2(64f, 84f), new Vector2(0f, 20f));
+            var left = Medal.Create(scene, "PreviousHeroButton", MedalKind.Primary, "back", null, () => ShowHeroDetail(previous), true, 76f);
+            Ui.Anchor((RectTransform)left.transform, new Vector2(0.23f, 0.5f), new Vector2(76f, 76f), new Vector2(0f, 20f));
+            var right = Medal.Create(scene, "NextHeroButton", MedalKind.Primary, "next", null, () => ShowHeroDetail(next), true, 76f);
+            Ui.Anchor((RectTransform)right.transform, new Vector2(0.59f, 0.5f), new Vector2(76f, 76f), new Vector2(0f, 20f));
         }
 
         private void DrawHeroStats(RectTransform scene, HeroInstance hero, HeroArchetype archetype)
@@ -101,32 +101,39 @@ namespace ShinobiDominion.Game
             // The box hugs its contents, top left under the title.
             Ui.Anchor(box, new Vector2(0f, 1f), new Vector2(250f, 0f), new Vector2(16f, -84f));
             box.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-            Ui.Framed(box, Ui.PillSprite, false);
+            HudArt.Plate(box).pixelsPerUnitMultiplier = 1.1f;
             var layout = box.gameObject.AddComponent<VerticalLayoutGroup>();
-            layout.padding = new RectOffset(16, 16, 14, 14);
+            layout.padding = new RectOffset(24, 24, 22, 22);
             layout.spacing = 8f;
             layout.childControlWidth = true;
             layout.childControlHeight = true;
             layout.childForceExpandWidth = true;
             layout.childForceExpandHeight = false;
 
-            Ui.Strong(Ui.Label(box, $"{EvolutionLabel(hero.EvolutionIndex)}   Lv {hero.Level}/{HeroMath.MaxLevel}", 22));
+            HudArt.Label(box, $"{EvolutionLabel(hero.EvolutionIndex)}   Lv {hero.Level}/{HeroMath.MaxLevel}", HudArt.Display, 21, TextAnchor.MiddleLeft, HudArt.BrassLight, HudArt.LacquerDeep);
             var bar = Ui.Rect("LevelBar", box);
-            bar.gameObject.AddComponent<LayoutElement>().preferredHeight = 12f;
-            Ui.Background(bar, new Color(0f, 0f, 0f, 0.6f), false);
+            bar.gameObject.AddComponent<LayoutElement>().preferredHeight = 14f;
+            var track = bar.gameObject.AddComponent<Image>();
+            track.sprite = HudArt.Sprite("track_s8");
+            track.type = Image.Type.Sliced;
+            track.raycastTarget = false;
             var fill = Ui.Rect("Fill", bar);
             fill.anchorMin = Vector2.zero;
             fill.anchorMax = new Vector2((float)hero.Level / HeroMath.MaxLevel, 1f);
-            fill.offsetMin = fill.offsetMax = Vector2.zero;
-            Ui.Background(fill, new Color(0.35f, 0.85f, 0.3f), false);
+            fill.offsetMin = new Vector2(1f, 1f);
+            fill.offsetMax = new Vector2(-1f, -1f);
+            var fillImage = fill.gameObject.AddComponent<Image>();
+            fillImage.sprite = HudArt.Sprite("fill_s8");
+            fillImage.type = Image.Type.Sliced;
+            fillImage.color = new Color(0.45f, 0.9f, 0.35f);
+            fillImage.raycastTarget = false;
 
             var stats = Roster.StatsOf(hero);
-            Ui.Strong(Ui.Label(box, $"HP   {stats.Hp:N0}", 21, TextAnchor.MiddleLeft, new Color(0.6f, 1f, 0.6f)));
-            Ui.Strong(Ui.Label(box, $"Attack   {stats.Attack:N0}", 21, TextAnchor.MiddleLeft, new Color(1f, 0.7f, 0.55f)));
-            Ui.Strong(Ui.Label(box, $"Defense   {stats.Defense:N0}", 21, TextAnchor.MiddleLeft, new Color(0.65f, 0.85f, 1f)));
-            Ui.Label(box, $"{archetype.rarity} {archetype.role}, {archetype.affinity}", 17, TextAnchor.MiddleLeft, Ui.MutedText);
-            if (Village.IsHeroAssigned(hero.InstanceId)) Ui.Strong(Ui.Label(box, "On your Hero Base", 18, TextAnchor.MiddleLeft, Ui.AccentColor));
-            Ui.Label(box, "Equipment arrives in a later phase.", 15, TextAnchor.MiddleLeft, Ui.MutedText);
+            HudArt.Label(box, $"HP   {stats.Hp:N0}", HudArt.Numbers, 21, TextAnchor.MiddleLeft, new Color(0.6f, 1f, 0.6f), HudArt.LacquerDeep);
+            HudArt.Label(box, $"Attack   {stats.Attack:N0}", HudArt.Numbers, 21, TextAnchor.MiddleLeft, new Color(1f, 0.7f, 0.55f), HudArt.LacquerDeep);
+            HudArt.Label(box, $"Defense   {stats.Defense:N0}", HudArt.Numbers, 21, TextAnchor.MiddleLeft, new Color(0.65f, 0.85f, 1f), HudArt.LacquerDeep);
+            HudArt.Label(box, $"{archetype.rarity} {archetype.role}, {archetype.affinity}", HudArt.Numbers, 16, TextAnchor.MiddleLeft, HudArt.IvoryMuted, HudArt.LacquerDeep);
+            if (Village.IsHeroAssigned(hero.InstanceId)) HudArt.Label(box, "On your Hero Base", HudArt.Numbers, 17, TextAnchor.MiddleLeft, HudArt.BrassLight, HudArt.LacquerDeep);
 
             var instanceId = hero.InstanceId;
             Ui.Button(box, "LockButton", hero.Locked ? "Unlock" : "Lock", () =>
@@ -162,7 +169,8 @@ namespace ShinobiDominion.Game
             paper.pivot = new Vector2(1f, 1f);
             paper.sizeDelta = new Vector2(440f, -214f);
             paper.anchoredPosition = new Vector2(-16f, -84f);
-            Ui.Framed(paper, HeroArt.Parchment, false);
+            Ui.Framed(paper, HudArt.Sprite("parchment_s40"), false).pixelsPerUnitMultiplier = 1.1f;
+            HudArt.DropShadow(paper);
 
             var skills = archetype.skills;
             if (skills.Count == 0)
@@ -175,6 +183,7 @@ namespace ShinobiDominion.Game
             var unlocked = skill.unlockEvolution <= hero.EvolutionIndex;
 
             var title = Ui.Label(paper, skill.displayName, 27, TextAnchor.MiddleCenter, PaperTitle);
+            title.font = HudArt.Display;
             title.fontStyle = FontStyle.Bold;
             Ui.Anchor(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(380f, 48f), new Vector2(0f, -18f));
             var rule = Ui.Rect("Rule", paper);
@@ -194,26 +203,25 @@ namespace ShinobiDominion.Game
             // The icons sit on a wooden shelf under the scroll.
             var shelf = Ui.Rect("SkillShelf", scene);
             Ui.Anchor(shelf, new Vector2(1f, 0f), new Vector2(440f, 112f), new Vector2(-16f, 12f));
-            Ui.Framed(shelf, UiSkin.Frame(new Color(0.42f, 0.26f, 0.14f), new Color(0.26f, 0.15f, 0.08f), UiSkin.Brass, 3), false);
+            HudArt.Plate(shelf).pixelsPerUnitMultiplier = 1.1f;
+            HudArt.DropShadow(shelf);
             var spacing = 440f / skills.Count;
             for (var i = 0; i < skills.Count; i++)
             {
                 var index = i;
                 var open = skills[i].unlockEvolution <= hero.EvolutionIndex;
-                var tint = open ? HeroColor(archetype, 0) : new Color(0.3f, 0.3f, 0.32f);
-                var icon = Ui.Button(shelf, "Skill" + i, skills[i].displayName.Substring(0, 1), () =>
+                var icon = Medal.Create(shelf, "Skill" + i, open ? MedalKind.Primary : MedalKind.Secondary, null, null, () =>
                 {
                     _selectedSkill = index;
                     ShowHeroDetail(hero.InstanceId);
-                }, true, Color.white, 28);
+                }, true, 72f, i == _selectedSkill);
                 var iconRect = (RectTransform)icon.transform;
-                Ui.Anchor(iconRect, new Vector2(0f, 0.5f), new Vector2(76f, 76f), new Vector2(spacing * (i + 0.5f) - 38f, 6f));
-                var face = icon.GetComponent<Image>();
-                face.sprite = UiSkin.Disc(Color.Lerp(tint, Color.white, 0.3f), tint * 0.55f, i == _selectedSkill ? new Color(1f, 0.85f, 0.4f) : UiSkin.Brass, i == _selectedSkill ? 0.16f : 0.1f);
-                face.type = Image.Type.Simple;
-                var caption = Ui.Strong(Ui.Label(shelf, open ? "Ready" : EvolutionLabel(skills[i].unlockEvolution), 13, TextAnchor.MiddleCenter));
+                Ui.Anchor(iconRect, new Vector2(0f, 0.5f), new Vector2(72f, 72f), new Vector2(spacing * (i + 0.5f) - 36f, 8f));
+                var letter = HudArt.Label(iconRect, skills[i].displayName.Substring(0, 1), HudArt.Display, 28, TextAnchor.MiddleCenter, open ? new Color32(0x2A, 0x1A, 0x08, 0xFF) : HudArt.Ivory, open ? new Color(1f, 0.92f, 0.7f, 0.5f) : HudArt.LacquerDeep);
+                Ui.Stretch(letter.rectTransform);
+                var caption = HudArt.Label(shelf, open ? "Ready" : EvolutionLabel(skills[i].unlockEvolution), HudArt.Numbers, 13, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.LacquerDeep);
                 Ui.Anchor(caption.rectTransform, new Vector2(0f, 0f), new Vector2(90f, 20f), new Vector2(spacing * (i + 0.5f) - 45f, 2f));
-                if (i == _selectedSkill) UiMotion.Pulse(iconRect, 0.05f, 1.4f);
+
             }
         }
 
@@ -244,7 +252,8 @@ namespace ShinobiDominion.Game
                 // The odds stay on screen, as the rules require, with every hero one tap away.
                 var rates = Ui.Rect("GateRates", scene);
                 Ui.Anchor(rates, new Vector2(0f, 1f), new Vector2(300f, 220f), new Vector2(16f, -84f));
-                Ui.Framed(rates, Ui.PillSprite, false);
+                HudArt.Plate(rates).pixelsPerUnitMultiplier = 1.1f;
+                HudArt.DropShadow(rates);
                 var lines = $"{odds.status}\n\n";
                 foreach (var rarity in new[] { "Legendary", "Elite", "Common" })
                     if (odds.rarityChance.TryGetValue(rarity, out var chance))

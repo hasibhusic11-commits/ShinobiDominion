@@ -488,7 +488,53 @@ def gem_frame(size, thick, cap, folder, name):
     save(name, img, folder)
 
 
+def metal_band(across, v, hi, mid, lo):
+    col = np.where((across < 0.3)[..., None], lerp(hi, mid, across / 0.3), lerp(mid, lo, (across - 0.3) / 0.7))
+    out = col.copy()
+    out[..., :3] = np.clip(col[..., :3] * (1.12 - 0.32 * v)[..., None], 0, 1)
+    return out
+
+
+def hollow_frame(w, h, radius, outline, rim, hi, mid, lo, folder, name):
+    """A heavy frame with an empty middle, for a hero card whose painting shows through."""
+    x, y = grid(w, h)
+    img = np.zeros(x.shape + (4,), np.float32)
+    sd = rounded_rect_sd(x, y, 0, 0, w, h, radius)
+    depth = -sd
+    v = y / h
+    hole = rounded_rect_sd(x, y, outline + rim + 2, outline + rim + 2, w - outline - rim - 2, h - outline - rim - 2, max(radius - outline - rim, 3))
+    ring = smooth(sd) * (1 - smooth(hole))
+    paint(img, np.broadcast_to(INK_DARK, x.shape + (4,)).copy(), ring)
+    across = np.clip((depth - outline) / rim, 0, 1)
+    paint(img, metal_band(across, v, hi, mid, lo), smooth(sd + outline) * (1 - smooth(hole - 2)))
+    # A thin inner shadow falls onto the picture from the frame.
+    over(img, hexc('000000', 0.45), smooth(hole) * np.clip(1 + hole / 6, 0, 1) * (hole < 0))
+    save(name, img, folder)
+
+
+def parchment(folder, name, w=200, h=200):
+    """Warm paper in a heavy brass-and-wood frame, for long text such as skill descriptions."""
+    def paper(x, y):
+        n = (np.sin(x * 0.11) * np.cos(y * 0.07) + np.sin(x * 0.031 + y * 0.047)) * 0.012
+        col = lerp(hexc('F1E3BF'), hexc('D9C291'), np.clip((y - 16) / (h - 32), 0, 1))
+        col[..., :3] += n[..., None]
+        return col
+    framed(w, h, 14, 3, 11, 2, paper, folder, name)
+
+
 def heavy_kit(folder):
+    hollow_frame(160, 220, 14, 3, 9, BRASS_HI, BRASS, BRASS_LO, folder, 'heroframe_gold_s30')
+    hollow_frame(160, 220, 14, 3, 9, hexc('F2EEFF'), hexc('A49BC4'), hexc('4A4266'), folder, 'heroframe_silver_s30')
+    hollow_frame(160, 220, 14, 3, 9, hexc('E9C3A0'), hexc('9A6A45'), hexc('4A2E1A'), folder, 'heroframe_bronze_s30')
+    parchment(folder, 'parchment_s40')
+    icon('next', [(lambda x, y: poly_mask(x, y, [(112, 64), (68, 20), (68, 46), (18, 46), (18, 82), (68, 82), (68, 108)]), IVORY)], folder)
+    icon('check', [(lambda x, y: poly_mask(x, y, [(14, 66), (34, 46), (54, 66), (98, 18), (118, 38), (54, 104)]), hexc('8FE07A'))], folder)
+    icon('cross', [(lambda x, y: poly_mask(x, y, rot([(54, 12), (74, 12), (74, 116), (54, 116)], math.radians(45))), hexc('E06A5A')),
+                   (lambda x, y: poly_mask(x, y, rot([(54, 12), (74, 12), (74, 116), (54, 116)], math.radians(-45))), hexc('E06A5A'))], folder)
+    heavy_kit_v2(folder)
+
+
+def heavy_kit_v2(folder):
     navy = vertical(LACQUER_LIGHT, LACQUER_DEEP, 10, 74)
     framed(128, 84, 16, 3, 9, 2, navy, folder, 'plate_s30', gloss=0.10)
     framed(128, 84, 16, 3, 9, 2, vertical(hexc('2A52A0'), hexc('0D1D42'), 10, 74), folder, 'counter_s30', gloss=0.16)
