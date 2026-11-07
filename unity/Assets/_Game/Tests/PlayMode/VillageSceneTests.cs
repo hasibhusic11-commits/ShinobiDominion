@@ -99,16 +99,20 @@ namespace ShinobiDominion.Tests
         [Test]
         public void SpatialUi_CoversLittleOfTheScreen()
         {
-            var total = (float)Screen.width * Screen.height;
-            var covered = 0f;
-            foreach (var graphic in _root.GetComponentsInChildren<Graphic>(false))
+            // Sample the screen on a grid and count points under any UI picture, so layered parts of one button
+            // (face, ring, icon) count once. Soft glows and drop shadows are light, not panels, and are skipped.
+            var rects = _root.GetComponentsInChildren<Graphic>(false)
+                .Where(g => !(g is Text) && g.name != "Glow" && g.name != "Shadow")
+                .Select(g => ScreenRect(g.rectTransform)).ToList();
+            const int columns = 128, rows = 72;
+            var covered = 0;
+            for (var i = 0; i < columns; i++)
+            for (var j = 0; j < rows; j++)
             {
-                if (graphic is Text) continue;
-                if (graphic.transform.parent != null && graphic.transform.parent.GetComponent<Graphic>() != null) continue;
-                var rect = ScreenRect(graphic.rectTransform);
-                covered += rect.width * rect.height;
+                var point = new Vector2((i + 0.5f) * Screen.width / columns, (j + 0.5f) * Screen.height / rows);
+                if (rects.Any(r => r.Contains(point))) covered++;
             }
-            Assert.Less(covered / total, 0.15f, "The village must keep at least 85% of the visible space");
+            Assert.Less(covered / (float)(columns * rows), 0.15f, "The village must keep at least 85% of the visible space");
         }
 
         [Test]

@@ -171,6 +171,7 @@ namespace ShinobiDominion.Game
         private void Update()
         {
             UpdateRaid();
+            UpdateActionBar();
             UpdateGoldPopups();
             // Keep trying to reach the server, but never swap the village out mid-action.
             if (_server != null && !IsOnline && !_connecting && UiState.Screen == VillageScreen.Home)
@@ -232,7 +233,7 @@ namespace ShinobiDominion.Game
 
         private void RefreshHud()
         {
-            _hud.SetWallet(Village.Gold, ServerCrystals ?? Village.Crystals);
+            _hud.SetWallet(Village.Gold, ServerCrystals ?? Village.Crystals, Village.GoldCapacity);
             _hud.SetIdentity("Player", Village.HqLevel);
         }
 
@@ -379,6 +380,7 @@ namespace ShinobiDominion.Game
         public void CloseAll()
         {
             EndRaid();
+            HideActionBar();
             _panel.Hide();
             _selectionCells.Clear();
             _history.Clear();
@@ -414,8 +416,21 @@ namespace ShinobiDominion.Game
                 return;
             }
             _showAltarBuildingOptions = false;
+            _panel.Hide();
+            ShowActionBar(building);
+        }
 
-            _panel.Show(definition.displayName, CloseAll, panel =>
+        /// <summary>Everything about a building: description, stats now and next, and every action, behind Info.</summary>
+        public void ShowBuildingDetails(int buildingId)
+        {
+            var building = Village.Find(buildingId);
+            if (building == null)
+            {
+                CloseAll();
+                return;
+            }
+            var definition = building.Definition;
+            _panel.Show(definition.displayName, ShowContextPanel, panel =>
             {
                 panel.Line(definition.description);
                 panel.Line($"Level {building.Level} of {definition.maxLevel}");

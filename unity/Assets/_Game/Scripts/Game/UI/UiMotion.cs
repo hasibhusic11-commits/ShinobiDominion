@@ -50,6 +50,36 @@ namespace ShinobiDominion.Game
             LMotion.Punch.Create(1f, strength, duration).WithScheduler(Clock).BindToLocalScaleXYZ(target).AddTo(target.gameObject);
         }
 
+        /// <summary>A quick side-to-side shake, for a refused tap. Returns exactly to where it started.</summary>
+        public static void Shake(RectTransform target)
+        {
+            var start = target.anchoredPosition;
+            LMotion.Shake.Create(start.x, 7f, 0.28f).WithScheduler(Clock).WithOnComplete(() => { if (target != null) target.anchoredPosition = start; })
+                .Bind(x => target.anchoredPosition = new Vector2(x, start.y)).AddTo(target.gameObject);
+        }
+
+        /// <summary>A slow endless swell of a glow's opacity up to the given alpha.</summary>
+        public static void Breathe(Graphic graphic, float peak, float period)
+        {
+            var color = graphic.color;
+            LMotion.Create(0.05f, peak, period * 0.5f).WithEase(Ease.InOutSine).WithLoops(-1, LoopType.Yoyo).WithScheduler(Clock)
+                .Bind(a => graphic.color = new Color(color.r, color.g, color.b, a)).AddTo(graphic.gameObject);
+        }
+
+        /// <summary>Turns text one colour for a moment, then fades it back.</summary>
+        public static void Flash(Graphic graphic, Color flash, Color rest)
+        {
+            graphic.color = flash;
+            LMotion.Create(0f, 1f, 0.5f).WithScheduler(Clock).Bind(t => graphic.color = Color.Lerp(flash, rest, t)).AddTo(graphic.gameObject);
+        }
+
+        /// <summary>Counts a number from one value to another, calling back with each whole step.</summary>
+        public static void Count(GameObject owner, long from, long to, float duration, System.Action<long> show)
+        {
+            LMotion.Create((double)from, (double)to, duration).WithEase(Ease.OutCubic).WithScheduler(Clock)
+                .Bind(v => show((long)System.Math.Round(v))).AddTo(owner);
+        }
+
         /// <summary>A gentle endless breathing, for the one thing the player should press next.</summary>
         public static void Pulse(Transform target, float amount = 0.05f, float period = 1.4f)
         {

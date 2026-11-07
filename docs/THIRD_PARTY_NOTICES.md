@@ -14,6 +14,9 @@ Consumed as packages, not vendored:
 | LitMotion v2.0.2, with Burst, Collections and Mathematics from Unity | GitHub, pinned by tag | MIT |
 | UIEffect 5.11.8 | GitHub, pinned by tag | MIT |
 | SoftMaskForUGUI 3.6.6 | GitHub, pinned by tag | MIT |
+| Kenney Fantasy UI Borders 1.0 (one border, `Resources/UI/kenney_fret_s16.png`, tinted brass) | kenney.nl, downloaded 2026-11-07 | CC0 1.0; licence in `unity/Assets/_Game/Art/UI/Licences/` |
+| Cinzel (variable) | Google Fonts, github.com/google/fonts | SIL Open Font License 1.1; licence in `unity/Assets/_Game/Art/UI/Licences/` |
+| Rubik (variable) | Google Fonts, github.com/google/fonts | SIL Open Font License 1.1; licence in `unity/Assets/_Game/Art/UI/Licences/` |
 | NUnit, NUnit3TestAdapter, Microsoft.NET.Test.Sdk (`tools/core-tests` only, not shipped) | NuGet | MIT |
 
 Add an entry here whenever code is copied or a package is added.

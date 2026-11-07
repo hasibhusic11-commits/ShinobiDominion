@@ -1,0 +1,119 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>HUD mockup</title>
+<style>
+  :root {
+    --lacquer: #16203A; --lacquer-deep: #0C1222; --lacquer-light: #2B3B63;
+    --brass: #B08A47; --brass-light: #E8C77E; --brass-dark: #6B4F22;
+    --charcoal: #2A2A30; --crimson: #8E2A26; --crimson-light: #C2483C; --crimson-dark: #4E1310;
+    --ivory: #EFE6D0; --ivory-muted: #B9AF98;
+  }
+  body { margin: 0; background: #111; }
+  @media (max-height: 700px) { .screen { zoom: 0.86; } }
+  .screen { position: relative; width: 1280px; height: 720px; overflow: hidden; font-family: Georgia, "Times New Roman", serif;
+    background: url(bg_village.png) center / cover; }
+  .screen::after { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.35)); pointer-events: none; }
+  .num { font-family: "Arial Black", Arial, sans-serif; font-weight: 900; color: var(--ivory);
+    text-shadow: -1.5px -1.5px 0 var(--lacquer-deep), 1.5px -1.5px 0 var(--lacquer-deep), -1.5px 1.5px 0 var(--lacquer-deep), 1.5px 1.5px 0 var(--lacquer-deep), 0 2px 2px rgba(0,0,0,.6); }
+  .display { font-weight: 700; letter-spacing: 1px; color: var(--ivory); }
+
+  /* Brass ring medallion */
+  .medal { position: absolute; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, var(--brass-light), var(--brass) 45%, var(--brass-dark) 100%);
+    box-shadow: 0 6px 10px rgba(0,0,0,.45), inset 0 -3px 4px rgba(0,0,0,.4), inset 0 2px 2px rgba(255,240,200,.6); }
+  .medal .face { position: absolute; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-direction: column;
+    box-shadow: inset 0 4px 8px rgba(0,0,0,.55), 0 0 0 2px var(--brass-dark); }
+  .medal .face::before { content: ""; position: absolute; left: 14%; right: 14%; top: 6%; height: 34%; border-radius: 50%;
+    background: linear-gradient(rgba(255,255,255,.35), rgba(255,255,255,0)); }
+  .rivet { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #fff3c8, var(--brass-dark)); }
+
+  /* ATTACK */
+  .attack { width: 168px; height: 168px; right: 18px; bottom: 14px; }
+  .attack .face { inset: 18px; background: radial-gradient(circle at 50% 30%, var(--crimson-light), var(--crimson) 55%, var(--crimson-dark)); }
+  .attack .glow { position: absolute; inset: -14px; border-radius: 50%; box-shadow: 0 0 26px 8px rgba(232,199,126,.45); }
+  .attack .label { font-size: 26px; margin-top: 4px;
+    text-shadow: -2px -2px 0 var(--crimson-dark), 2px -2px 0 var(--crimson-dark), -2px 2px 0 var(--crimson-dark), 2px 2px 0 var(--crimson-dark), 0 3px 3px rgba(0,0,0,.6); }
+
+  /* Counters */
+  .counter { position: absolute; top: 14px; width: 188px; height: 46px; border-radius: 10px;
+    background: linear-gradient(var(--lacquer-light), var(--lacquer) 40%, var(--lacquer-deep));
+    border: 3px solid var(--brass); box-shadow: 0 4px 8px rgba(0,0,0,.45), inset 0 3px 5px rgba(0,0,0,.5), inset 0 0 0 1px var(--brass-dark); box-sizing: border-box; }
+  .counter .value { position: absolute; right: 14px; top: 7px; font-size: 22px; }
+  .counter .track { position: absolute; left: 42px; right: 12px; bottom: 5px; height: 5px; border-radius: 3px; background: #05080F; box-shadow: 0 0 0 1px var(--brass-dark); }
+  .counter .fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--brass), var(--brass-light)); }
+  .counter .icon { width: 54px; height: 54px; left: -18px; top: -7px; }
+  .counter .icon .face { inset: 5px; background: radial-gradient(circle at 50% 35%, #3a4f80, var(--lacquer-deep)); }
+
+  /* Profile (unchanged in scope, restyled only to match) */
+  .profile { position: absolute; left: 50px; top: 14px; width: 230px; height: 46px; border-radius: 10px; box-sizing: border-box;
+    background: linear-gradient(var(--lacquer-light), var(--lacquer) 40%, var(--lacquer-deep)); border: 3px solid var(--brass); }
+  .profile .name { position: absolute; left: 44px; top: 9px; font-size: 21px; }
+  .avatar { width: 72px; height: 72px; left: 10px; top: 4px; }
+  .avatar .face { inset: 7px; background: radial-gradient(circle at 50% 35%, #3a4f80, var(--lacquer-deep)); font-size: 30px; }
+  .lvl { position: absolute; left: 56px; top: 56px; width: 30px; height: 30px; transform: rotate(45deg); background: linear-gradient(var(--crimson-light), var(--crimson-dark)); border: 2px solid var(--brass-light); }
+  .lvl span { display: block; transform: rotate(-45deg); text-align: center; line-height: 26px; font-size: 14px; }
+  .menu { width: 52px; height: 52px; left: 292px; top: 11px; }
+  .menu .face { inset: 5px; background: radial-gradient(circle at 50% 35%, #3a4f80, var(--lacquer-deep)); }
+
+  /* Building actions */
+  .plate { position: absolute; left: 50%; transform: translateX(-50%); bottom: 150px; width: 420px; height: 46px; border-radius: 10px; box-sizing: border-box;
+    background: linear-gradient(var(--lacquer-light), var(--lacquer) 40%, var(--lacquer-deep)); border: 3px solid var(--brass);
+    box-shadow: 0 4px 8px rgba(0,0,0,.45); display: flex; align-items: center; justify-content: space-between; padding: 0 18px; }
+  .plate .bname { font-size: 24px; } .plate .blvl { font-size: 18px; color: var(--brass-light); }
+  .row { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; gap: 18px; align-items: flex-end; }
+  .act { position: relative; width: 96px; height: 128px; }
+  .act.small { width: 72px; }
+  .act .medal { width: 96px; height: 96px; left: 0; top: 0; }
+  .act.small .medal { width: 72px; height: 72px; top: 24px; }
+  .act .medal .face { inset: 8px; }
+  .act.small .medal .face { inset: 6px; }
+  .face.lacquer { background: radial-gradient(circle at 50% 30%, #3a4f80, var(--lacquer) 60%, var(--lacquer-deep)); }
+  .face.gold { background: radial-gradient(circle at 50% 30%, #f7dc93, #c99a45 60%, #7a5523); }
+  .face.crimson { background: radial-gradient(circle at 50% 30%, var(--crimson-light), var(--crimson) 60%, var(--crimson-dark)); }
+  .act .lbl { position: absolute; bottom: 0; left: -10px; right: -10px; text-align: center; font-size: 16px; }
+  .cost { position: absolute; top: 78px; left: 50%; transform: translateX(-50%); padding: 1px 8px 1px 4px; border-radius: 10px; font-size: 15px;
+    background: var(--lacquer-deep); border: 2px solid var(--brass); display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+  .coin { width: 14px; height: 14px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #fff1b0, #c99a45 60%, #7a5523); }
+  svg { position: relative; z-index: 1; }
+  .note { position: absolute; color: #fff; font: 12px Arial; background: rgba(0,0,0,.65); padding: 4px 6px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="screen">
+  <!-- Profile -->
+  <div class="profile"><div class="name display">Player</div></div>
+  <div class="medal avatar"><div class="face display">P</div></div>
+  <div class="lvl"><span class="num">1</span></div>
+  <div class="medal menu"><div class="face"><svg width="24" height="24" viewBox="0 0 24 24"><g fill="#EFE6D0"><rect x="3" y="5" width="18" height="3" rx="1"/><rect x="3" y="11" width="18" height="3" rx="1"/><rect x="3" y="17" width="18" height="3" rx="1"/></g></svg></div></div>
+
+  <!-- Counters -->
+  <div class="counter" style="right:216px">
+    <div class="medal icon"><div class="face"><svg width="30" height="30" viewBox="0 0 30 30"><g stroke="#6B4F22" stroke-width="1.5"><ellipse cx="15" cy="22" rx="10" ry="4" fill="#C99A45"/><ellipse cx="15" cy="17" rx="10" ry="4" fill="#E0B25A"/><ellipse cx="15" cy="12" rx="10" ry="4" fill="#F2CF7A"/><ellipse cx="15" cy="7" rx="10" ry="4" fill="#FFE7A6"/></g></svg></div></div>
+    <div class="value num">5,000</div>
+    <div class="track"><div class="fill" style="width:25%"></div></div>
+  </div>
+  <div class="counter" style="right:18px">
+    <div class="medal icon"><div class="face"><svg width="30" height="30" viewBox="0 0 30 30"><polygon points="15,2 26,11 15,28 4,11" fill="#8FE3FF" stroke="#1F5E86" stroke-width="1.5"/><polygon points="15,2 20,11 15,28 10,11" fill="#C8F3FF"/><line x1="4" y1="11" x2="26" y2="11" stroke="#1F5E86" stroke-width="1.2"/></svg></div></div>
+    <div class="value num">100</div>
+  </div>
+
+  <!-- Building actions -->
+  <div class="plate"><span class="bname display">Builder Hall</span><span class="blvl num">Lv 1 / 15</span></div>
+  <div class="row">
+    <div class="act small"><div class="medal"><div class="face lacquer"><svg width="30" height="30" viewBox="0 0 30 30"><circle cx="15" cy="7" r="3" fill="#EFE6D0"/><rect x="12" y="12" width="6" height="14" rx="2" fill="#EFE6D0"/></svg></div></div><div class="lbl display">Info</div></div>
+    <div class="act"><div class="medal"><div class="face gold"><svg width="44" height="44" viewBox="0 0 44 44"><g stroke="#4E3417" stroke-width="2"><rect x="8" y="9" width="22" height="10" rx="2" fill="#EFE6D0" transform="rotate(-30 19 14)"/><rect x="18" y="16" width="5" height="24" rx="2" fill="#8B5A2B" transform="rotate(-30 20 28)"/></g></svg></div></div><div class="lbl display">Build</div></div>
+    <div class="act"><div class="medal"><div class="face lacquer"><svg width="40" height="40" viewBox="0 0 40 40"><polygon points="20,5 34,21 25,21 25,34 15,34 15,21 6,21" fill="#EFE6D0" stroke="#0C1222" stroke-width="2"/></svg></div><div class="cost num"><div class="coin"></div>800</div></div><div class="lbl display">Upgrade</div></div>
+    <div class="act"><div class="medal"><div class="face lacquer"><svg width="40" height="40" viewBox="0 0 40 40"><g fill="#EFE6D0" stroke="#0C1222" stroke-width="1.5"><polygon points="20,3 26,10 22,10 22,18 18,18 18,10 14,10"/><polygon points="20,37 26,30 22,30 22,22 18,22 18,30 14,30"/><polygon points="3,20 10,14 10,18 18,18 18,22 10,22 10,26"/><polygon points="37,20 30,14 30,18 22,18 22,22 30,22 30,26"/></g></svg></div></div><div class="lbl display">Move</div></div>
+  </div>
+
+  <!-- ATTACK -->
+  <div class="medal attack"><div class="glow"></div>
+    <div class="rivet" style="left:80px;top:4px"></div><div class="rivet" style="left:80px;bottom:4px"></div><div class="rivet" style="left:4px;top:80px"></div><div class="rivet" style="right:4px;top:80px"></div>
+    <div class="rivet" style="left:24px;top:24px"></div><div class="rivet" style="right:24px;top:24px"></div><div class="rivet" style="left:24px;bottom:24px"></div><div class="rivet" style="right:24px;bottom:24px"></div>
+    <div class="face"><svg width="64" height="50" viewBox="0 0 64 50"><g stroke="#4E1310" stroke-width="2.5" fill="#EFE6D0"><polygon points="8,44 12,48 44,10 48,2 40,6"/><polygon points="56,44 52,48 20,10 16,2 24,6"/></g></svg><div class="label display">ATTACK</div></div>
+  </div>
+</div>
+</body>
+</html>

@@ -123,14 +123,61 @@ namespace ShinobiDominion.Tests
         }
 
         [UnityTest]
-        public IEnumerator Tap_OnEmptyGround_ClosesPanel()
+        public IEnumerator Tap_OnEmptyGround_ClosesTheActionRow()
         {
             yield return Click(ScreenOf(First("dojo_hq")));
-            Assert.IsTrue(Controller.Panel.IsOpen);
+            Assert.IsTrue(Controller.ActionBarOpen, "A building shows its action row");
+            Assert.IsFalse(Controller.Panel.IsOpen, "and not a big panel over the village");
 
             yield return Click(ScreenOf(36, 20));
             Assert.AreEqual(VillageScreen.Home, Controller.UiState.Screen);
+            Assert.IsFalse(Controller.ActionBarOpen);
             Assert.IsFalse(Controller.Panel.IsOpen);
+        }
+
+        [UnityTest]
+        public IEnumerator ActionRow_InfoOpensDetails_AndClosingReturnsToTheRow()
+        {
+            yield return Click(ScreenOf(First("builder_hall")));
+            Assert.IsNotNull(Find("BuildButton"));
+            Assert.IsNotNull(Find("UpgradeButton"));
+            Assert.IsNotNull(Find("MoveButton"));
+            yield return Click(ScreenOf(Find("InfoButton")));
+            Assert.IsTrue(Controller.Panel.IsOpen);
+            Assert.IsFalse(Controller.ActionBarOpen);
+            yield return Click(ScreenOf(Find("CloseButton")));
+            Assert.IsTrue(Controller.ActionBarOpen, "Closing the details goes back to the row");
+            Assert.AreEqual(VillageScreen.BuildingPanel, Controller.UiState.Screen);
+        }
+
+        [UnityTest]
+        public IEnumerator ActionRow_StaysClearOfAttack_AndInsideTheScreen()
+        {
+            foreach (var building in Controller.Village.Buildings.ToList())
+            {
+                if (building.Definition.function == BuildingFunction.HeroAltar || building.Definition.function == BuildingFunction.SummoningGate) continue;
+                Controller.Select(building.Id);
+                yield return null;
+                if (!Controller.ActionBarOpen) continue;
+                var attack = ScreenRectOf((RectTransform)Controller.Hud.AttackButton.transform);
+                foreach (var button in Object.FindObjectsByType<Button>(FindObjectsSortMode.None).Where(b => b.transform.parent != null && b.transform.parent.name == "ActionBar"))
+                {
+                    var rect = ScreenRectOf((RectTransform)button.transform);
+                    Assert.IsFalse(rect.Overlaps(attack), $"{button.name} for {building.Definition.id} overlaps ATTACK");
+                    Assert.GreaterOrEqual(rect.xMin, 0f, button.name);
+                    Assert.LessOrEqual(rect.xMax, Screen.width, button.name);
+                    Assert.GreaterOrEqual(rect.yMin, 0f, button.name);
+                }
+                Controller.CloseAll();
+                yield return null;
+            }
+        }
+
+        private static Rect ScreenRectOf(RectTransform rect)
+        {
+            var corners = new Vector3[4];
+            rect.GetWorldCorners(corners);
+            return new Rect(corners[0].x, corners[0].y, corners[2].x - corners[0].x, corners[2].y - corners[0].y);
         }
 
         [UnityTest]

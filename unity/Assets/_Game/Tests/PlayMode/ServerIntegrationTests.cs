@@ -77,6 +77,8 @@ namespace ShinobiDominion.Tests
             var stateTask = _direct.GetStateAsync();
             yield return WaitFor(() => stateTask.IsCompleted);
             Assert.AreEqual(stateTask.Result.Crystals, Controller.ServerCrystals);
+            // The counter rolls up to its new value over 0.4 s.
+            yield return new WaitForSecondsRealtime(0.6f);
             StringAssert.Contains($"{stateTask.Result.Crystals:N0}", string.Join(" ", _root.GetComponentsInChildren<Text>().Select(t => t.text)));
             Assert.Greater(Controller.Roster.HeroCount, 0, "Dev-mode server seeds heroes");
         }
