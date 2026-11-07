@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"sort"
 	"time"
 
 	"github.com/heroiclabs/nakama-common/runtime"
@@ -12,6 +14,14 @@ import (
 
 // A raid has to be fought soon after it starts, from the team it started with.
 const raidPrepareLimit = 15 * time.Minute
+
+const (
+	rivalRaidID = "rival"
+	// Test values. A rival pays once a day, and only so many rival raids pay each day.
+	rivalGoldPerDojoLevel = 150
+	rivalPaidRaidsPerDay  = 10
+	rivalPayCooldown      = "24 hours"
+)
 
 var (
 	errRaidNotFound   = gameError("RAID_NOT_FOUND", codeNotFound)
@@ -23,6 +33,8 @@ var (
 	errNotEnoughTroops = gameError("NOT_ENOUGH_TROOPS", codePrecondition)
 	errBadTroopCount  = gameError("BAD_TROOP_COUNT", codeInvalid)
 	errTooManyTroops  = gameError("TOO_MANY_TROOPS", codeInvalid)
+	errNoRivals       = gameError("NO_RIVALS", codePrecondition)
+	errRivalChoice    = gameError("RIVAL_NOT_ALLOWED", codeInvalid)
 )
 
 type raidTeamMember struct {
@@ -35,6 +47,20 @@ type raidTeamMember struct {
 	Attack         int64  `json:"attack"`
 	Defense        int64  `json:"defense"`
 	Speed          int    `json:"speed"`
+}
+
+// raidDefender is a hero guarding the target, with the stats fixed when the raid started.
+type raidDefender struct {
+	ID             string `json:"id"`
+	ArchetypeID    string `json:"archetypeId"`
+	EvolutionIndex int    `json:"evolutionIndex"`
+	Level          int    `json:"level"`
+	Role           string `json:"role"`
+	Hp             int64  `json:"hp"`
+	Attack         int64  `json:"attack"`
+	Defense        int64  `json:"defense"`
+	X              int    `json:"x"`
+	Z              int    `json:"z"`
 }
 
 type raidSummary struct {
@@ -50,6 +76,7 @@ type raidStartResponse struct {
 	Raid      raidSummary           `json:"raid"`
 	Buildings []battleBuildingInput `json:"buildings"`
 	Team      []raidTeamMember      `json:"team"`
+	Defenders []raidDefender        `json:"defenders"`
 }
 
 type deployPlacement struct {
@@ -153,22 +180,12 @@ func (s *Server) rpcRaidStart(ctx context.Context, logger runtime.Logger, db *sq
 			return err
 		}
 
-		// Only one raid at a time. Starting a new one walks away from any unfinished one.
-		if _, err := tx.ExecContext(ctx, `UPDATE sd_raid SET status = 'abandoned' WHERE user_id = $1 AND status = 'prepare'`, userID); err != nil {
-			return err
-		}
-		snapshot, err := json.Marshal(raid.expanded)
+		defenders, err := s.scriptedDefenders(raid)
 		if err != nil {
 			return err
 		}
-		teamJSON, err := json.Marshal(team)
+		attackID, err := insertRaid(ctx, tx, userID, raid.ID, raid.Version, raid.GoldPerStar, nil, raid.expanded, team, defenders)
 		if err != nil {
-			return err
-		}
-		var attackID string
-		if err := tx.QueryRowContext(ctx, `INSERT INTO sd_raid (attack_id, user_id, raid_id, raid_version, gold_per_star, snapshot, team, status)
-			VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, 'prepare') RETURNING attack_id::text`,
-			userID, raid.ID, raid.Version, raid.GoldPerStar, string(snapshot), string(teamJSON)).Scan(&attackID); err != nil {
 			return err
 		}
 		output, err = marshal(raidStartResponse{
@@ -176,6 +193,7 @@ func (s *Server) rpcRaidStart(ctx context.Context, logger runtime.Logger, db *sq
 			Raid:      raidSummary{raid.ID, raid.DisplayName, raid.Description, raid.GoldPerStar, best},
 			Buildings: raid.expanded,
 			Team:      team,
+			Defenders: defenders,
 		})
 		if err != nil {
 			return err
@@ -186,6 +204,264 @@ func (s *Server) rpcRaidStart(ctx context.Context, logger runtime.Logger, db *sq
 		return "", err
 	}
 	return output, nil
+}
+
+// insertRaid stores the exact defender layout, team and guards, so nothing can change once a raid starts.
+func insertRaid(ctx context.Context, tx *sql.Tx, userID, raidID string, version int, goldPerStar int64, opponent *string, buildings []battleBuildingInput, team []raidTeamMember, defenders []raidDefender) (string, error) {
+	// Only one raid at a time. Starting a new one walks away from any unfinished one.
+	if _, err := tx.ExecContext(ctx, `UPDATE sd_raid SET status = 'abandoned' WHERE user_id = $1 AND status = 'prepare'`, userID); err != nil {
+		return "", err
+	}
+	snapshot, err := json.Marshal(buildings)
+	if err != nil {
+		return "", err
+	}
+	teamJSON, err := json.Marshal(team)
+	if err != nil {
+		return "", err
+	}
+	defendersJSON, err := json.Marshal(defenders)
+	if err != nil {
+		return "", err
+	}
+	var attackID string
+	err = tx.QueryRowContext(ctx, `INSERT INTO sd_raid (attack_id, user_id, raid_id, raid_version, gold_per_star, snapshot, team, status, opponent_id, defenders)
+		VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, 'prepare', $7, $8) RETURNING attack_id::text`,
+		userID, raidID, version, goldPerStar, string(snapshot), string(teamJSON), opponent, string(defendersJSON)).Scan(&attackID)
+	return attackID, err
+}
+
+// scriptedDefenders stands each listed hero in the middle of the Hero Base at its cell.
+func (s *Server) scriptedDefenders(raid *raidDefinition) ([]raidDefender, error) {
+	base, ok := s.buildings.byID["hero_base"]
+	if !ok {
+		return nil, errors.New("no hero base definition")
+	}
+	result := []raidDefender{}
+	for i, entry := range raid.Defenders {
+		defender, err := s.makeDefender(fmt.Sprintf("d%d", i+1), entry.HeroID, entry.Evolution, entry.Level, entry.X+base.Width/2, entry.Z+base.Depth/2)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, defender)
+	}
+	return result, nil
+}
+
+func (s *Server) makeDefender(id, archetypeID string, evolution, level, x, z int) (raidDefender, error) {
+	archetype, ok := s.catalog.byID[archetypeID]
+	if !ok {
+		return raidDefender{}, errHeroNotFound
+	}
+	hp, attack, defense := heroBattleStats(archetype, evolution, level)
+	return raidDefender{id, archetypeID, evolution, level, archetype.Role, hp, attack, defense, x, z}, nil
+}
+
+// rivalSnapshot copies a rival's village and guards as they stand now, in a fixed order.
+func (s *Server) rivalSnapshot(ctx context.Context, tx *sql.Tx, rivalID string) ([]battleBuildingInput, []raidDefender, int, error) {
+	v, err := s.loadVillage(ctx, tx, rivalID, 0)
+	if err != nil {
+		return nil, nil, 0, err
+	}
+	ids := make([]int, 0, len(v.byID))
+	for id := range v.byID {
+		ids = append(ids, id)
+	}
+	sort.Ints(ids)
+	buildings := make([]battleBuildingInput, 0, len(ids))
+	dojoLevel := 1
+	for _, id := range ids {
+		b := v.byID[id]
+		width, depth := b.size()
+		row := b.Def.at(b.Level)
+		buildings = append(buildings, battleBuildingInput{
+			ID: b.ID, DefinitionID: b.Def.ID, X: b.X, Z: b.Z, Width: width, Depth: depth,
+			Level: b.Level, Hp: row.Hp, Attack: row.Attack, Range: row.Range,
+			IsWall: b.Def.isWall(), IsDefense: b.Def.Function == "Defense",
+		})
+		if b.Def.ID == "dojo_hq" {
+			dojoLevel = b.Level
+		}
+	}
+
+	rows, err := tx.QueryContext(ctx, `SELECT archetype_id, evolution, level, base_slot FROM sd_hero WHERE user_id = $1 AND base_slot IS NOT NULL ORDER BY base_slot`, rivalID)
+	if err != nil {
+		return nil, nil, 0, err
+	}
+	defer rows.Close()
+	defenders := []raidDefender{}
+	for rows.Next() {
+		var archetypeID string
+		var evolution, level, slot int
+		if err := rows.Scan(&archetypeID, &evolution, &level, &slot); err != nil {
+			return nil, nil, 0, err
+		}
+		base, ok := v.byID[slot]
+		if !ok {
+			continue
+		}
+		width, depth := base.size()
+		// The rival's own hero ids stay private: these are only labels for this raid.
+		defender, err := s.makeDefender(fmt.Sprintf("d%d", len(defenders)+1), archetypeID, evolution, level, base.X+width/2, base.Z+depth/2)
+		if err != nil {
+			return nil, nil, 0, err
+		}
+		defenders = append(defenders, defender)
+	}
+	return buildings, defenders, dojoLevel, rows.Err()
+}
+
+func (s *Server) rpcRivalStart(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error) {
+	userID, err := userFrom(ctx)
+	if err != nil {
+		return "", err
+	}
+	var request struct {
+		Key     string `json:"key"`
+		RivalID string `json:"rivalId"`
+	}
+	if err := decodeStrict(payload, &request); err != nil {
+		return "", err
+	}
+	if !keyPattern.MatchString(request.Key) {
+		return "", errBadKey
+	}
+	// Players never choose their rival. Only development tests may, to be repeatable.
+	if request.RivalID != "" && (!s.dev || !uuidPattern.MatchString(request.RivalID) || request.RivalID == userID) {
+		return "", errRivalChoice
+	}
+	if !s.limiter.Allow(userID, time.Now()) {
+		return "", errRateLimited
+	}
+
+	var output string
+	err = withTx(ctx, db, func(tx *sql.Tx) error {
+		crystals, err := s.lockPlayer(ctx, tx, userID)
+		if err != nil {
+			return err
+		}
+		if stored, found, err := replayed(ctx, tx, userID, request.Key, "rival_start", rivalRaidID); err != nil {
+			return err
+		} else if found {
+			output = stored
+			return nil
+		}
+		team, err := s.loadRaidTeam(ctx, tx, userID)
+		if err != nil {
+			return err
+		}
+		if len(team) == 0 {
+			return errNoTeam
+		}
+		mine, err := s.loadVillage(ctx, tx, userID, crystals)
+		if err != nil {
+			return err
+		}
+		myDojo := 1
+		for _, b := range mine.byID {
+			if b.Def.ID == "dojo_hq" {
+				myDojo = b.Level
+			}
+		}
+
+		// The closest Dojo level, preferring villages with heroes on guard, then anyone at random.
+		var rivalID string
+		if request.RivalID != "" {
+			err = tx.QueryRowContext(ctx, `SELECT user_id::text FROM sd_player WHERE user_id = $1 AND village_ready`, request.RivalID).Scan(&rivalID)
+		} else {
+			err = tx.QueryRowContext(ctx, `SELECT p.user_id::text FROM sd_player p
+				JOIN sd_building b ON b.user_id = p.user_id AND b.definition_id = 'dojo_hq'
+				WHERE p.user_id <> $1 AND p.village_ready
+				ORDER BY ABS(b.level - $2),
+					EXISTS (SELECT 1 FROM sd_hero h WHERE h.user_id = p.user_id AND h.base_slot IS NOT NULL) DESC,
+					random()
+				LIMIT 1`, userID, myDojo).Scan(&rivalID)
+		}
+		if errors.Is(err, sql.ErrNoRows) {
+			return errNoRivals
+		}
+		if err != nil {
+			return err
+		}
+		buildings, defenders, dojoLevel, err := s.rivalSnapshot(ctx, tx, rivalID)
+		if err != nil {
+			return err
+		}
+		goldPerStar := int64(dojoLevel) * rivalGoldPerDojoLevel
+		attackID, err := insertRaid(ctx, tx, userID, rivalRaidID, 1, goldPerStar, &rivalID, buildings, team, defenders)
+		if err != nil {
+			return err
+		}
+		output, err = marshal(raidStartResponse{
+			AttackID:  attackID,
+			Raid:      raidSummary{rivalRaidID, "Rival village", fmt.Sprintf("A real player's village, with a level %d Dojo and %d heroes on guard.", dojoLevel, len(defenders)), goldPerStar, 0},
+			Buildings: buildings,
+			Team:      team,
+			Defenders: defenders,
+		})
+		if err != nil {
+			return err
+		}
+		return storeResponse(ctx, tx, userID, request.Key, "rival_start", rivalRaidID, output)
+	})
+	if err != nil {
+		return "", err
+	}
+	return output, nil
+}
+
+// rivalPays says whether a rival raid may pay gold: once a rival a day, and a daily limit overall.
+func rivalPays(ctx context.Context, tx *sql.Tx, userID, rivalID string) (bool, error) {
+	var sameRival, today int
+	err := tx.QueryRowContext(ctx, `SELECT
+		COUNT(*) FILTER (WHERE opponent_id = $2),
+		COUNT(*)
+		FROM sd_raid WHERE user_id = $1 AND status = 'resolved' AND opponent_id IS NOT NULL AND gold_earned > 0
+		AND resolved_at > now() - interval '`+rivalPayCooldown+`'`, userID, rivalID).Scan(&sameRival, &today)
+	if err != nil {
+		return false, err
+	}
+	return sameRival == 0 && today < rivalPaidRaidsPerDay, nil
+}
+
+type defenseRecord struct {
+	Stars          int   `json:"stars"`
+	DamagePercent  int   `json:"damagePercent"`
+	DefendersAlive int   `json:"defendersAlive"`
+	DefendersTotal int   `json:"defendersTotal"`
+	AtMs           int64 `json:"atMs"`
+}
+
+// rpcDefenseLog lists raids on this player's village. It never says who attacked.
+func (s *Server) rpcDefenseLog(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error) {
+	userID, err := userFrom(ctx)
+	if err != nil {
+		return "", err
+	}
+	rows, err := db.QueryContext(ctx, `SELECT stars, damage_percent, COALESCE(defenders_alive, 0), defenders, (EXTRACT(EPOCH FROM resolved_at) * 1000)::bigint
+		FROM sd_raid WHERE opponent_id = $1 AND status = 'resolved' ORDER BY resolved_at DESC LIMIT 20`, userID)
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+	records := []defenseRecord{}
+	for rows.Next() {
+		var record defenseRecord
+		var defendersText string
+		if err := rows.Scan(&record.Stars, &record.DamagePercent, &record.DefendersAlive, &defendersText, &record.AtMs); err != nil {
+			return "", err
+		}
+		var defenders []raidDefender
+		if err := json.Unmarshal([]byte(defendersText), &defenders); err != nil {
+			return "", err
+		}
+		record.DefendersTotal = len(defenders)
+		records = append(records, record)
+	}
+	if err := rows.Err(); err != nil {
+		return "", err
+	}
+	return marshal(map[string]interface{}{"defenses": records})
 }
 
 // loadRaidTeam reads who stands on the player's Hero Bases. Only the server decides their stats.
@@ -257,11 +533,12 @@ func (s *Server) rpcRaidDeploy(ctx context.Context, logger runtime.Logger, db *s
 			return nil
 		}
 
-		var raidID, status, snapshotText, teamText string
+		var raidID, status, snapshotText, teamText, defendersText string
+		var opponent sql.NullString
 		var goldPerStar int64
 		var created time.Time
-		err = tx.QueryRowContext(ctx, `SELECT raid_id, status, snapshot, team, gold_per_star, created_at FROM sd_raid WHERE attack_id = $1 AND user_id = $2 FOR UPDATE`,
-			request.AttackID, userID).Scan(&raidID, &status, &snapshotText, &teamText, &goldPerStar, &created)
+		err = tx.QueryRowContext(ctx, `SELECT raid_id, status, snapshot, team, defenders, opponent_id::text, gold_per_star, created_at FROM sd_raid WHERE attack_id = $1 AND user_id = $2 FOR UPDATE`,
+			request.AttackID, userID).Scan(&raidID, &status, &snapshotText, &teamText, &defendersText, &opponent, &goldPerStar, &created)
 		if errors.Is(err, sql.ErrNoRows) {
 			return errAttackNotFound
 		}
@@ -282,6 +559,14 @@ func (s *Server) rpcRaidDeploy(ctx context.Context, logger runtime.Logger, db *s
 		var team []raidTeamMember
 		if err := json.Unmarshal([]byte(teamText), &team); err != nil {
 			return err
+		}
+		var stored []raidDefender
+		if err := json.Unmarshal([]byte(defendersText), &stored); err != nil {
+			return err
+		}
+		defenders := make([]battleDefenderInput, 0, len(stored))
+		for _, d := range stored {
+			defenders = append(defenders, battleDefenderInput{d.ID, d.Role, d.Hp, d.Attack, d.Defense, d.X, d.Z})
 		}
 		heroes := make([]battleHeroInput, 0, len(request.Placements))
 		for _, placement := range request.Placements {
@@ -324,7 +609,7 @@ func (s *Server) rpcRaidDeploy(ctx context.Context, logger runtime.Logger, db *s
 			return gameError(refusal, codePrecondition)
 		}
 
-		result, err := runBattle(buildings, heroes)
+		result, err := runDefendedBattle(buildings, heroes, defenders)
 		if err != nil {
 			return err
 		}
@@ -334,18 +619,33 @@ func (s *Server) rpcRaidDeploy(ctx context.Context, logger runtime.Logger, db *s
 			}
 		}
 
-		// Gold is only paid for stars beyond the player's best, so a raid can't be farmed.
-		best, err := bestStarsFor(ctx, tx, userID, raidID)
-		if err != nil {
-			return err
-		}
 		v, err := s.loadVillage(ctx, tx, userID, crystals)
 		if err != nil {
 			return err
 		}
 		beforeGold := v.gold
 		var earned int64
-		if result.Stars > best {
+		best := result.Stars
+		if opponent.Valid {
+			// A raid on a rival never costs the rival anything. Limits stop one village being farmed.
+			pays, err := rivalPays(ctx, tx, userID, opponent.String)
+			if err != nil {
+				return err
+			}
+			if pays && result.Stars > 0 {
+				earned = int64(result.Stars) * goldPerStar
+				if room := v.goldCapacity() - v.gold; earned > room {
+					earned = room
+				}
+				if earned < 0 {
+					earned = 0
+				}
+				v.gold += earned
+			}
+		} else if best, err = bestStarsFor(ctx, tx, userID, raidID); err != nil {
+			return err
+		} else if result.Stars > best {
+			// Gold is only paid for stars beyond the player's best, so a raid can't be farmed.
 			earned = int64(result.Stars-best) * goldPerStar
 			if room := v.goldCapacity() - v.gold; earned > room {
 				earned = room
@@ -363,8 +663,8 @@ func (s *Server) rpcRaidDeploy(ctx context.Context, logger runtime.Logger, db *s
 		if err := persistVillage(ctx, tx, userID, v, beforeGold, crystals, "raid_reward", request.AttackID); err != nil {
 			return err
 		}
-		if _, err := tx.ExecContext(ctx, `UPDATE sd_raid SET status = 'resolved', stars = $1, damage_percent = $2, gold_earned = $3, checksum = $4, resolved_at = now() WHERE attack_id = $5`,
-			result.Stars, result.DamagePercent, earned, result.Checksum, request.AttackID); err != nil {
+		if _, err := tx.ExecContext(ctx, `UPDATE sd_raid SET status = 'resolved', stars = $1, damage_percent = $2, gold_earned = $3, checksum = $4, defenders_alive = $5, resolved_at = now() WHERE attack_id = $6`,
+			result.Stars, result.DamagePercent, earned, result.Checksum, result.DefendersAlive, request.AttackID); err != nil {
 			return err
 		}
 

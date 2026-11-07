@@ -38,6 +38,8 @@ namespace ShinobiDominion.Tests
             public Task<ServerState> CollectAsync(string key, int id) => Fail();
             public Task<System.Collections.Generic.List<RaidSummary>> RaidListAsync() => Task.FromException<System.Collections.Generic.List<RaidSummary>>(new GameServerException("UNREACHABLE"));
             public Task<RaidSession> RaidStartAsync(string key, string raidId) => Task.FromException<RaidSession>(new GameServerException("UNREACHABLE"));
+            public Task<RaidSession> RivalStartAsync(string key) => Task.FromException<RaidSession>(new GameServerException("UNREACHABLE"));
+            public Task<System.Collections.Generic.List<DefenseRecord>> DefenseLogAsync() => Task.FromException<System.Collections.Generic.List<DefenseRecord>>(new GameServerException("UNREACHABLE"));
             public Task<RaidOutcome> RaidDeployAsync(string key, string attackId, System.Collections.Generic.IList<RaidPlacement> placements, System.Collections.Generic.IList<RaidTroopStack> troops) => Task.FromException<RaidOutcome>(new GameServerException("UNREACHABLE"));
             public Task<ServerState> TrainTroopsAsync(string key, string troopId, int count) => Fail();
         }

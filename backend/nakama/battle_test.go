@@ -34,6 +34,8 @@ func TestBattle_MatchesTheClientsLogExactly(t *testing.T) {
 			EndTick       int               `json:"endTick"`
 			HeroesAlive   int               `json:"heroesAlive"`
 			Team          []battleHeroInput `json:"team"`
+			Defenders     []battleDefenderInput `json:"defenders"`
+			DefendersAlive int              `json:"defendersAlive"`
 		} `json:"scenarios"`
 	}
 	if err := json.Unmarshal(battleVectorsJSON, &vectors); err != nil {
@@ -43,12 +45,12 @@ func TestBattle_MatchesTheClientsLogExactly(t *testing.T) {
 		t.Fatal("no scenarios")
 	}
 	for _, scenario := range vectors.Scenarios {
-		result, err := runBattle(raids.byID["ridge_outpost"].expanded, scenario.Team)
+		result, err := runDefendedBattle(raids.byID["ridge_outpost"].expanded, scenario.Team, scenario.Defenders)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if result.Checksum != scenario.Checksum || result.Stars != scenario.Stars || result.DamagePercent != scenario.DamagePercent ||
-			result.EndTick != scenario.EndTick || result.HeroesAlive != scenario.HeroesAlive {
+			result.EndTick != scenario.EndTick || result.HeroesAlive != scenario.HeroesAlive || result.DefendersAlive != scenario.DefendersAlive {
 			t.Errorf("%s: got stars=%d damage=%d end=%d alive=%d checksum=%s", scenario.Name, result.Stars, result.DamagePercent, result.EndTick, result.HeroesAlive, result.Checksum)
 		}
 	}

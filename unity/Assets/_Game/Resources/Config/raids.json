@@ -25,6 +25,36 @@
         { "level": 2, "x1": 33, "z1": 33, "x2": 16, "z2": 33 },
         { "level": 2, "x1": 16, "z1": 33, "x2": 16, "z2": 16 }
       ]
+    },
+    {
+      "id": "cinder_garrison",
+      "displayName": "Cinder Garrison",
+      "description": "A fortified camp with three hired heroes on guard. Expect them to come out and fight.",
+      "version": 1,
+      "goldPerStar": 1200,
+      "buildings": [
+        { "def": "dojo_hq", "level": 3, "x": 22, "z": 22 },
+        { "def": "defense_tower", "level": 2, "x": 18, "z": 18 },
+        { "def": "defense_tower", "level": 2, "x": 30, "z": 30 },
+        { "def": "spirit_turret", "level": 1, "x": 30, "z": 18 },
+        { "def": "gold_vault", "level": 2, "x": 18, "z": 29 },
+        { "def": "gold_mine", "level": 2, "x": 28, "z": 23 },
+        { "def": "builder_hall", "level": 1, "x": 18, "z": 23 },
+        { "def": "hero_base", "level": 2, "x": 24, "z": 18 },
+        { "def": "hero_base", "level": 2, "x": 24, "z": 29 },
+        { "def": "hero_base", "level": 2, "x": 14, "z": 12 }
+      ],
+      "walls": [
+        { "level": 2, "x1": 16, "z1": 16, "x2": 33, "z2": 16 },
+        { "level": 2, "x1": 33, "z1": 16, "x2": 33, "z2": 33 },
+        { "level": 2, "x1": 33, "z1": 33, "x2": 16, "z2": 33 },
+        { "level": 2, "x1": 16, "z1": 33, "x2": 16, "z2": 16 }
+      ],
+      "defenders": [
+        { "heroId": "solar_beast_sage", "evolution": 0, "level": 40, "x": 14, "z": 12 },
+        { "heroId": "lantern_warden", "evolution": 0, "level": 60, "x": 24, "z": 18 },
+        { "heroId": "reed_archer", "evolution": 0, "level": 80, "x": 24, "z": 29 }
+      ]
     }
   ]
 }

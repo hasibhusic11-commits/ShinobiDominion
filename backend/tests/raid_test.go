@@ -24,6 +24,7 @@ type raidStart struct {
 		BestStars   int    `json:"bestStars"`
 	} `json:"raid"`
 	Buildings []raidBuilding `json:"buildings"`
+	Defenders []raidGuard    `json:"defenders"`
 	Team      []struct {
 		InstanceID string `json:"instanceId"`
 		Role       string `json:"role"`
@@ -32,12 +33,22 @@ type raidStart struct {
 	} `json:"team"`
 }
 
+type raidGuard struct {
+	ID          string `json:"id"`
+	ArchetypeID string `json:"archetypeId"`
+	Hp          int64  `json:"hp"`
+	Attack      int64  `json:"attack"`
+	X           int    `json:"x"`
+	Z           int    `json:"z"`
+}
+
 type raidDeploy struct {
 	AttackID string `json:"attackId"`
 	Result   struct {
 		Stars         int       `json:"stars"`
 		DamagePercent int       `json:"damagePercent"`
 		EndTick       int       `json:"endTick"`
+		DefendersAlive int      `json:"defendersAlive"`
 		Checksum      string    `json:"checksum"`
 		Events        [][]int64 `json:"events"`
 	} `json:"result"`

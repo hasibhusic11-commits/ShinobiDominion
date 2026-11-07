@@ -141,6 +141,7 @@ namespace ShinobiDominion.Core
                 case "BAD_TROOP_COUNT": return "That is not a valid number of troops";
                 case "TOO_MANY_TROOPS": return "Too many troops for one raid";
                 case "NO_TEAM": return "Put at least one hero on a Hero Base first";
+                case "NO_RIVALS": return "No rival villages are available right now.";
                 case "RAID_NOT_FOUND": return "That raid is no longer available";
                 case "ATTACK_NOT_FOUND": return "That raid no longer exists";
                 case "ATTACK_ALREADY_RESOLVED": return "This raid is already over";

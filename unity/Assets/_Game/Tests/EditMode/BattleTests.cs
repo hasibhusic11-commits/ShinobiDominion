@@ -241,6 +241,93 @@ namespace ShinobiDominion.Tests
             Assert.Greater(camp.At(15).troopCapacity, camp.At(1).troopCapacity);
         }
 
+        private static BattleDefenderInput Guard(string id, string role, long power, int x, int z) =>
+            new BattleDefenderInput { id = id, role = role, hp = 1000 * power, attack = 80 * power, defense = 30 * power, x = x, z = z };
+
+        /// <summary>Three guards just inside the walls, on the side the test teams land.</summary>
+        private static List<BattleDefenderInput> Guards(long power) => new List<BattleDefenderInput>
+        {
+            Guard("g1", "Tank", power, 14, 14),
+            Guard("g2", "Mage", power, 17, 17),
+            Guard("g3", "Support", power, 20, 17)
+        };
+
+        [Test]
+        public void Defenders_FightBack_AndCostTheAttackersHeroes()
+        {
+            var undefended = BattleSim.Run(Outpost(), MixedTeam(2));
+            var defended = BattleSim.Run(Outpost(), MixedTeam(2), Guards(4));
+            Assert.Greater(undefended.heroesAlive, defended.heroesAlive, "Guards should cost the attackers heroes");
+            Assert.IsTrue(defended.events.Any(e => e[1] == (long)BattleEventKind.DefenderHit), "Guards should strike");
+            Assert.IsTrue(defended.events.Any(e => e[1] == (long)BattleEventKind.DefenderDamaged), "Attackers should strike back");
+        }
+
+        [Test]
+        public void Defenders_CanStopARaidThatWouldOtherwiseWin()
+        {
+            var undefended = BattleSim.Run(Outpost(), MixedTeam(2));
+            var defended = BattleSim.Run(Outpost(), MixedTeam(2), Guards(20));
+            Assert.Greater(undefended.stars, defended.stars);
+            Assert.AreEqual(0, defended.heroesAlive);
+            Assert.AreEqual(3, defended.defendersAlive);
+        }
+
+        [Test]
+        public void StrongerAttackers_BeatTheDefenders()
+        {
+            var result = BattleSim.Run(Outpost(), MixedTeam(30), Guards(2));
+            Assert.AreEqual(0, result.defendersAlive);
+            Assert.AreEqual(3, result.stars);
+            Assert.IsTrue(result.events.Count(e => e[1] == (long)BattleEventKind.DefenderDown) == 3);
+        }
+
+        [Test]
+        public void DefendedBattle_IsRepeatable_AndNoEventRefersToAMissingUnit()
+        {
+            var first = BattleSim.Run(Outpost(), MixedTeam(4), Guards(4));
+            var second = BattleSim.Run(Outpost(), MixedTeam(4), Guards(4));
+            Assert.AreEqual(first.checksum, second.checksum);
+            foreach (var e in first.events)
+            {
+                var kind = (BattleEventKind)e[1];
+                if (kind == BattleEventKind.DefenderHit || kind == BattleEventKind.DefenderMove || kind == BattleEventKind.DefenderDown || kind == BattleEventKind.DefenderAbility || kind == BattleEventKind.DefenderHeal)
+                    Assert.Less(e[2], 3);
+                if (kind == BattleEventKind.DefenderDamaged)
+                    Assert.Less(e[3], 3);
+            }
+        }
+
+        [Test]
+        public void Guard_NeverWalksIntoAWallOrBuilding()
+        {
+            var buildings = Outpost();
+            var result = BattleSim.Run(buildings, MixedTeam(3), Guards(5));
+            foreach (var e in result.events.Where(entry => entry[1] == (long)BattleEventKind.DefenderMove))
+            {
+                var x = (int)e[3];
+                var z = (int)e[4];
+                // A wall can have fallen by then, so only standing buildings that never fell are checked.
+                var fallen = result.events.Where(entry => entry[0] <= e[0] && entry[1] == (long)BattleEventKind.BuildingDown).Select(entry => (int)entry[2]).ToList();
+                Assert.IsFalse(buildings.Any(b => !fallen.Contains(b.id) && x >= b.x && x < b.x + b.width && z >= b.z && z < b.z + b.depth), $"Guard walked into a building at {x},{z}");
+            }
+        }
+
+        [Test]
+        public void GarrisonRaid_HasThreeGuardsOnTheirBases()
+        {
+            var raids = RaidCatalog.FromJson(FindFile("raids.json", "Resources/Config"), TestCatalog.Load());
+            var raid = raids.Find("cinder_garrison");
+            Assert.IsNotNull(raid);
+            var buildings = raid.Expand(TestCatalog.Load());
+            var guards = raid.ExpandDefenders(TestCatalog.Load(), HeroCatalog.FromJson(FindFile("heroes.json", "Resources/Config")));
+            Assert.AreEqual(3, guards.Count);
+            foreach (var guard in guards)
+            {
+                Assert.Greater(guard.hp, 0);
+                Assert.IsTrue(buildings.Any(b => b.definitionId == "hero_base" && guard.x >= b.x && guard.x < b.x + b.width && guard.z >= b.z && guard.z < b.z + b.depth), guard.id);
+            }
+        }
+
         /// <summary>The server's Go copy of the battle must produce these exact logs too.</summary>
         [Test]
         public void SharedScenarios_MatchExpectedLogs()
@@ -251,10 +338,11 @@ namespace ShinobiDominion.Tests
             foreach (var scenario in vectors["scenarios"])
             {
                 var team = scenario["team"].Select(h => h.ToObject<BattleHeroInput>()).ToList();
-                var result = BattleSim.Run(buildings, team);
+                var defenders = scenario["defenders"]?.Select(d => d.ToObject<BattleDefenderInput>()).ToList();
+                var result = BattleSim.Run(buildings, team, defenders);
                 var name = scenario.Value<string>("name");
-                var actual = $"stars={result.stars} damage={result.damagePercent} endTick={result.endTick} alive={result.heroesAlive} checksum={result.checksum}";
-                var expected = $"stars={scenario.Value<int>("stars")} damage={scenario.Value<int>("damagePercent")} endTick={scenario.Value<int>("endTick")} alive={scenario.Value<int>("heroesAlive")} checksum={scenario.Value<string>("checksum")}";
+                var actual = $"stars={result.stars} damage={result.damagePercent} endTick={result.endTick} alive={result.heroesAlive} guards={result.defendersAlive} checksum={result.checksum}";
+                var expected = $"stars={scenario.Value<int>("stars")} damage={scenario.Value<int>("damagePercent")} endTick={scenario.Value<int>("endTick")} alive={scenario.Value<int>("heroesAlive")} guards={scenario.Value<int?>("defendersAlive") ?? 0} checksum={scenario.Value<string>("checksum")}";
                 if (actual != expected) problems.Add($"{name}: got {actual}, expected {expected}");
             }
             Assert.IsEmpty(problems, string.Join("\n", problems));

@@ -21,6 +21,9 @@ namespace ShinobiDominion.Game
             public GameObject Go;
             public Mesh Mesh;
             public HeroSpriteActor Actor;
+            public bool OnBase;
+            public float HomeX;
+            public float HomeZ;
             public Bar Bar;
             public string InstanceId;
             public float Px;
@@ -67,6 +70,7 @@ namespace ShinobiDominion.Game
         private readonly Dictionary<string, Mesh> _troopMeshes = new Dictionary<string, Mesh>();
         private TroopCatalog _troops;
         private readonly List<Figure> _units = new List<Figure>();
+        private readonly List<Figure> _defenders = new List<Figure>();
         private readonly Dictionary<int, BattleBuildingInput> _buildings = new Dictionary<int, BattleBuildingInput>();
         private readonly Dictionary<int, Bar> _buildingBars = new Dictionary<int, Bar>();
         private readonly List<Flash> _flashes = new List<Flash>();
@@ -88,7 +92,7 @@ namespace ShinobiDominion.Game
         public int SecondsLeft => Mathf.Max(0, Mathf.CeilToInt((BattleSim.TickLimit - _ticks) / BattleSim.TicksPerSecond));
         public event Action Finished;
 
-        public void Initialize(RaidSession session, BuildingCatalog catalog, TroopCatalog troops, Camera worldCamera, Func<string, HeroLook> lookFor)
+        public void Initialize(RaidSession session, BuildingCatalog catalog, TroopCatalog troops, Camera worldCamera, Func<string, HeroLook> lookFor, Func<RaidDefender, HeroLook> defenderLook)
         {
             _session = session;
             _troops = troops;
@@ -113,6 +117,21 @@ namespace ShinobiDominion.Game
             _orb = orb.Build("Orb");
             _orbMaterials = orb.LitMaterials();
             _ownedMeshes.Add(_orb);
+
+            foreach (var defender in session.defenders)
+            {
+                var figure = CreateFigureFrom(defenderLook(defender), defender.id, defender.x, defender.z);
+                figure.Go.name = "BattleDefender";
+                figure.Speed = BattleSim.SpeedOf(defender.role);
+                figure.MaxHp = defender.hp;
+                figure.OnBase = true;
+                figure.HomeX = figure.Px;
+                figure.HomeZ = figure.Pz;
+                PlaceFigure(figure);
+                figure.Bar = CreateBar(figure.Go.transform.position + Vector3.up * (figure.Actor != null ? 3.5f : 3.1f), 1.4f, new Color(0.9f, 0.25f, 0.2f));
+                figure.Bar.Root.transform.SetParent(figure.Go.transform, true);
+                _defenders.Add(figure);
+            }
         }
 
         // ---------- Placing heroes ----------
@@ -162,9 +181,11 @@ namespace ShinobiDominion.Game
             return go;
         }
 
-        private Figure CreateFigure(string instanceId, int x, int z)
+        private Figure CreateFigure(string instanceId, int x, int z) => CreateFigureFrom(_lookFor(instanceId), instanceId, x, z);
+
+        private Figure CreateFigureFrom(HeroLook heroLook, string instanceId, int x, int z)
         {
-            var look = _lookFor(instanceId) ?? new HeroLook { Color = new Color(0.6f, 0.6f, 0.6f) };
+            var look = heroLook ?? new HeroLook { Color = new Color(0.6f, 0.6f, 0.6f) };
             var go = new GameObject("BattleHero");
             go.transform.SetParent(transform, false);
             go.transform.localScale = Vector3.one * HeroScale;
@@ -196,7 +217,9 @@ namespace ShinobiDominion.Game
 
         private static void PlaceFigure(Figure figure)
         {
-            var at = new Vector3(figure.Px / BattleSim.CellUnits, 0f, figure.Pz / BattleSim.CellUnits);
+            // A defender stands up on its Hero Base until it steps off.
+            var raised = figure.OnBase && Mathf.Abs(figure.Px - figure.HomeX) < BattleSim.CellUnits && Mathf.Abs(figure.Pz - figure.HomeZ) < BattleSim.CellUnits;
+            var at = new Vector3(figure.Px / BattleSim.CellUnits, raised ? BuildingMeshes.PedestalTop : 0f, figure.Pz / BattleSim.CellUnits);
             figure.Go.transform.localPosition = at + figure.Offset + figure.KickDirection * figure.Kick;
         }
 
@@ -260,6 +283,10 @@ namespace ShinobiDominion.Game
             {
                 if (unit.Bar != null && _camera != null) unit.Bar.Root.transform.rotation = _camera.transform.rotation;
             }
+            foreach (var unit in _defenders)
+            {
+                if (unit.Bar != null && _camera != null) unit.Bar.Root.transform.rotation = _camera.transform.rotation;
+            }
             UpdateFlashes();
 
             if (_result == null || _finished) return;
@@ -268,6 +295,7 @@ namespace ShinobiDominion.Game
             while (_nextEvent < _result.events.Count && _result.events[_nextEvent][0] <= _ticks)
                 Apply(_result.events[_nextEvent++], true);
             foreach (var unit in _units) MoveUnit(unit, delta);
+            foreach (var unit in _defenders) MoveUnit(unit, delta);
             if (_nextEvent >= _result.events.Count && _ticks >= _result.endTick) Finish();
         }
 
@@ -387,12 +415,58 @@ namespace ShinobiDominion.Game
                     if (!show) break;
                     var unit = _units[(int)entry[2]];
                     var at = unit.Go.transform.position + Vector3.up * 0.9f;
-                    AddFlash(at, at, 0.45f, 0.2f, 1.3f, AbilityColor((int)entry[3]));
+                    AddFlash(at, at, 0.35f, 0.15f, 0.55f, AbilityColor((int)entry[3]));
                     break;
                 }
                 case BattleEventKind.Heal:
                 {
                     var unit = _units[(int)entry[2]];
+                    unit.Bar?.Set((float)entry[4] / unit.MaxHp);
+                    if (show)
+                    {
+                        var at = unit.Go.transform.position + Vector3.up;
+                        AddFlash(at, at + Vector3.up * 0.8f, 0.5f, 0.15f, 0.05f, new Color(0.5f, 1f, 0.55f));
+                    }
+                    break;
+                }
+                case BattleEventKind.DefenderMove:
+                {
+                    var unit = _defenders[(int)entry[2]];
+                    unit.Tx = entry[3] * BattleSim.CellUnits + BattleSim.CellUnits / 2f;
+                    unit.Tz = entry[4] * BattleSim.CellUnits + BattleSim.CellUnits / 2f;
+                    break;
+                }
+                case BattleEventKind.DefenderHit:
+                {
+                    var target = _units[(int)entry[3]];
+                    target.Bar?.Set((float)entry[5] / target.MaxHp);
+                    if (show) ShowBlow(_defenders[(int)entry[2]], target);
+                    break;
+                }
+                case BattleEventKind.DefenderDamaged:
+                {
+                    var target = _defenders[(int)entry[3]];
+                    target.Bar?.Set((float)entry[5] / target.MaxHp);
+                    if (show) ShowBlow(_units[(int)entry[2]], target);
+                    break;
+                }
+                case BattleEventKind.DefenderDown:
+                {
+                    var unit = _defenders[(int)entry[2]];
+                    if (show) AddFlash(unit.Go.transform.position + Vector3.up * 0.6f, unit.Go.transform.position + Vector3.up * 0.8f, 0.4f, 0.4f, 0.05f, new Color(0.9f, 0.3f, 0.25f));
+                    unit.Go.SetActive(false);
+                    break;
+                }
+                case BattleEventKind.DefenderAbility:
+                {
+                    if (!show) break;
+                    var at = _defenders[(int)entry[2]].Go.transform.position + Vector3.up * 0.9f;
+                    AddFlash(at, at, 0.35f, 0.15f, 0.55f, AbilityColor((int)entry[3]));
+                    break;
+                }
+                case BattleEventKind.DefenderHeal:
+                {
+                    var unit = _defenders[(int)entry[2]];
                     unit.Bar?.Set((float)entry[4] / unit.MaxHp);
                     if (show)
                     {
@@ -409,6 +483,27 @@ namespace ShinobiDominion.Game
                     break;
                 }
             }
+        }
+
+        /// <summary>One hero striking another: it faces the target, lunges, and a small burst lands.</summary>
+        private void ShowBlow(Figure from, Figure to)
+        {
+            var direction = to.Go.transform.position - from.Go.transform.position;
+            direction.y = 0f;
+            if (direction.sqrMagnitude > 0.001f)
+            {
+                from.Go.transform.rotation = Quaternion.LookRotation(-direction.normalized);
+                from.KickDirection = direction.normalized;
+                from.Kick = 0.22f;
+                if (from.Actor != null)
+                {
+                    from.Actor.Face(direction);
+                    from.Actor.Attack();
+                }
+            }
+            var impact = to.Go.transform.position + Vector3.up;
+            if (direction.magnitude > 2.5f) AddFlash(from.Go.transform.position + Vector3.up, impact, 0.2f, 0.1f, 0.1f, new Color(1f, 0.85f, 0.45f));
+            else AddFlash(impact, impact, 0.12f, 0.05f, 0.25f, new Color(1f, 0.9f, 0.6f));
         }
 
         private static Color AbilityColor(int role)

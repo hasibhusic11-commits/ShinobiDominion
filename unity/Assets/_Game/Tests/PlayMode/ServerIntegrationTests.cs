@@ -320,6 +320,66 @@ namespace ShinobiDominion.Tests
             Assert.AreEqual(VillageScreen.Home, Controller.UiState.Screen);
         }
 
+        private IEnumerator PutFirstHeroOnBase()
+        {
+            var heroBase = First("hero_base").Id;
+            var hero = Controller.Roster.Heroes.First();
+            Controller.AssignHero(heroBase, hero.InstanceId);
+            yield return WaitFor(() => Controller.Village.Find(heroBase).AssignedHeroInstanceId == hero.InstanceId);
+        }
+
+        /// <summary>Fights the raid in progress and checks the client's own rules reach the server's exact result.</summary>
+        private IEnumerator FightAndCompare()
+        {
+            yield return WaitFor(() => Controller.CurrentRaidPhase == RaidPhase.Prepare);
+            var session = Controller.CurrentRaidSession;
+            Controller.AutoPlaceHeroes();
+            var placements = Controller.RaidPlacements.ToList();
+            Controller.StartBattle();
+            yield return WaitFor(() => Controller.CurrentRaidPhase == RaidPhase.Battle);
+
+            var server = Controller.LastRaidOutcome.Result;
+            var local = BattleSim.Run(session.buildings, session.ToHeroes(placements), session.ToDefenderInputs());
+            Assert.AreEqual(local.checksum, server.checksum, "Server and client battles must be identical");
+            Assert.AreEqual(local.defendersAlive, server.defendersAlive);
+
+            Controller.SkipBattle();
+            Assert.AreEqual(RaidPhase.Resolved, Controller.CurrentRaidPhase);
+            var gold = Controller.Village.Gold;
+            yield return ServerState(state => Assert.AreEqual(gold, state.Village.gold, "Gold must match the server"));
+            Controller.FinishRaid();
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator DefendedRaid_ThroughTheServer_MatchesTheLocalRules()
+        {
+            yield return PutFirstHeroOnBase();
+            Controller.ScoutRaid("cinder_garrison");
+            yield return WaitFor(() => Controller.CurrentRaidPhase == RaidPhase.Prepare);
+            Assert.AreEqual(3, Controller.CurrentRaidSession.defenders.Count, "The guards come from the server");
+            yield return FightAndCompare();
+        }
+
+        [UnityTest]
+        public IEnumerator RivalRaid_FromTheAttackPanel_MatchesTheLocalRules()
+        {
+            // Someone else has to exist to be raided.
+            var other = new NakamaGameServer(new ServerConfig { serverKey = Environment.GetEnvironmentVariable("SD_SERVER_KEY") }, "sd-rival-" + Guid.NewGuid().ToString("N"));
+            var connect = other.ConnectAsync();
+            yield return WaitFor(() => connect.IsCompleted);
+            Assert.IsFalse(connect.IsFaulted, "The rival should connect");
+
+            yield return PutFirstHeroOnBase();
+            Controller.OpenAttack();
+            yield return ClickWhenReady("FindRivalButton");
+            yield return WaitFor(() => Controller.CurrentRaidPhase == RaidPhase.Prepare);
+            var session = Controller.CurrentRaidSession;
+            Assert.AreEqual("rival", session.raid.id);
+            Assert.Greater(session.buildings.Count, 0, "A rival's village should come back");
+            yield return FightAndCompare();
+        }
+
         [UnityTest]
         public IEnumerator ServerRefusal_IsShown_AndChangesNothing()
         {

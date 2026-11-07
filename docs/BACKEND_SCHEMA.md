@@ -36,6 +36,9 @@ The last one kills the server under load and briefly runs it in production mode.
 | `sd_village_collect` | `key`, `id`. The amount comes from the server's clock. |
 | `sd_dev_grant`, `sd_dev_audit` | Exist only when `SD_DEV_MODE` is exactly `true` |
 
+- `sd_rival_start` `{key}`: starts a raid on a rival chosen by the server. `rivalId` is accepted only in development mode, for tests.
+- `sd_defense_log`: the latest 20 raids on this player's village, with no attacker details.
+
 ## Tables
 | Table | Holds |
 |---|---|

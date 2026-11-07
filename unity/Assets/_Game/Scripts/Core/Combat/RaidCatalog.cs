@@ -22,6 +22,15 @@ namespace ShinobiDominion.Core
         public int z2;
     }
 
+    public sealed class RaidDefenderEntry
+    {
+        public string heroId;
+        public int evolution;
+        public int level = 1;
+        public int x;
+        public int z;
+    }
+
     public sealed class RaidDefinition
     {
         public string id;
@@ -31,6 +40,33 @@ namespace ShinobiDominion.Core
         public long goldPerStar;
         public List<RaidBuildingEntry> buildings = new List<RaidBuildingEntry>();
         public List<RaidWallRun> walls = new List<RaidWallRun>();
+        public List<RaidDefenderEntry> defenders = new List<RaidDefenderEntry>();
+
+        /// <summary>Stands each listed hero in the middle of the Hero Base at its cell, as the server does.</summary>
+        public List<RaidDefender> ExpandDefenders(BuildingCatalog buildings, HeroCatalog heroes)
+        {
+            var result = new List<RaidDefender>();
+            var heroBase = buildings.Get("hero_base");
+            foreach (var entry in defenders)
+            {
+                var hero = heroes.Get(entry.heroId);
+                var stats = HeroMath.Stats(hero, entry.evolution, entry.level);
+                result.Add(new RaidDefender
+                {
+                    id = "d" + (result.Count + 1),
+                    archetypeId = hero.id,
+                    evolutionIndex = entry.evolution,
+                    level = entry.level,
+                    role = hero.role.ToString(),
+                    hp = stats.Hp,
+                    attack = stats.Attack,
+                    defense = stats.Defense,
+                    x = entry.x + heroBase.width / 2,
+                    z = entry.z + heroBase.depth / 2
+                });
+            }
+            return result;
+        }
 
         /// <summary>Every building in battle order: buildings first, then walls, numbered from 1.</summary>
         public List<BattleBuildingInput> Expand(BuildingCatalog catalog)

@@ -158,6 +158,8 @@ func (s *Server) register(initializer runtime.Initializer, logger runtime.Logger
 		"sd_raid_list":    s.rpcRaidList,
 		"sd_raid_start":   s.rpcRaidStart,
 		"sd_raid_deploy":  s.rpcRaidDeploy,
+		"sd_rival_start":  s.rpcRivalStart,
+		"sd_defense_log":  s.rpcDefenseLog,
 	}
 	if s.dev {
 		logger.Warn("DEVELOPMENT MODE: dev grant and audit calls are enabled. Never use this in production.")

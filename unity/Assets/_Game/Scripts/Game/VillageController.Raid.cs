@@ -47,6 +47,7 @@ namespace ShinobiDominion.Game
         public Army Army { get; } = new Army();
         private RaidRun _raid;
         private List<RaidSummary> _raidList;
+        private List<DefenseRecord> _defenseLog;
         private CellHighlight _raidCells;
         private HeroPortraits _portraits;
 
@@ -123,6 +124,7 @@ namespace ShinobiDominion.Game
             Run(async () =>
             {
                 var list = await _server.RaidListAsync();
+                _defenseLog = await _server.DefenseLogAsync();
                 _raidList = list;
                 if (UiState.Screen == VillageScreen.AttackFlow && _raid == null) ShowRaidList();
             }, () =>
@@ -144,6 +146,18 @@ namespace ShinobiDominion.Game
                 {
                     panel.Line("Checking your raids...");
                     return;
+                }
+                if (IsOnline)
+                {
+                    panel.Line("Rival villages", 24);
+                    panel.Line("Raid another player's village as they left it. They lose nothing, and each rival pays once a day.", 19);
+                    panel.Action("FindRivalButton", "Find a rival", FindRival, team > 0, Ui.AccentColor);
+                    if (_defenseLog != null && _defenseLog.Count > 0)
+                    {
+                        panel.Line("Raids on your village", 22);
+                        foreach (var record in _defenseLog.Take(3))
+                            panel.Line($"{record.stars} of 3 stars, {record.damagePercent}% damage. {record.defendersAlive} of {record.defendersTotal} guards still standing.", 19);
+                    }
                 }
                 foreach (var raid in RaidData.All)
                 {
@@ -174,6 +188,20 @@ namespace ShinobiDominion.Game
             EnterPrepare(LocalSession(raidId));
         }
 
+        /// <summary>Finds a real player's village. The server chooses it and copies it for this raid.</summary>
+        public void FindRival()
+        {
+            if (_raid != null || !IsOnline) return;
+            var key = KeyFor($"rival-start|{System.DateTime.UtcNow.Ticks}");
+            Run(async () =>
+            {
+                var session = await _server.RivalStartAsync(key);
+                ClearKey();
+                LastMessage = null;
+                EnterPrepare(session);
+            }, ShowRaidList);
+        }
+
         /// <summary>A practice raid built from this device's own data, for offline development.</summary>
         private RaidSession LocalSession(string raidId)
         {
@@ -182,7 +210,8 @@ namespace ShinobiDominion.Game
             {
                 attackId = "practice",
                 raid = new RaidSummary { id = raid.id, displayName = raid.displayName, description = raid.description, goldPerStar = 0 },
-                buildings = raid.Expand(Village.Catalog)
+                buildings = raid.Expand(Village.Catalog),
+                defenders = raid.ExpandDefenders(Village.Catalog, Roster.Catalog)
             };
             foreach (var building in Village.Buildings.OrderBy(b => b.Id))
             {
@@ -214,7 +243,7 @@ namespace ShinobiDominion.Game
             var stageObject = new GameObject("BattleStage");
             stageObject.transform.SetParent(_worldRoot, false);
             var stage = stageObject.AddComponent<BattleStage>();
-            stage.Initialize(session, Village.Catalog, TroopData, _camera.Camera, HeroLookFor);
+            stage.Initialize(session, Village.Catalog, TroopData, _camera.Camera, HeroLookFor, DefenderLook);
             stage.Finished += ShowRaidResult;
             _raid = new RaidRun { Session = session, Stage = stage };
             _view.SetVisible(false);
@@ -234,6 +263,9 @@ namespace ShinobiDominion.Game
             ShowPreparePanel();
         }
 
+        private HeroLook DefenderLook(RaidDefender defender) =>
+            Roster.Catalog.TryGet(defender.archetypeId, out var archetype) ? LookOf(archetype, defender.evolutionIndex) : null;
+
         private void ShowPreparePanel()
         {
             if (_raid == null) return;
@@ -241,6 +273,7 @@ namespace ShinobiDominion.Game
             {
                 if (!string.IsNullOrEmpty(LastMessage)) panel.Line(LastMessage, 20, Ui.AccentColor);
                 panel.Line("Tap the map to land. Shaded cells are too close to the enemy. Troops that land are used up.", 19);
+                if (_raid.Session.defenders.Count > 0) panel.Line($"{_raid.Session.defenders.Count} enemy heroes on guard.", 19, Ui.AccentColor);
                 panel.Line($"Heroes placed: {_raid.Placements.Count} of {_raid.Session.team.Count}");
                 var left = TroopData.All.Where(t => TroopsLeft(t.id) > 0).ToList();
                 if (Army.Counts.Count > 0)
@@ -398,7 +431,7 @@ namespace ShinobiDominion.Game
                 return;
             }
             foreach (var stack in _raid.Stacks) Army.Remove(stack.troopId, stack.count);
-            BeginPlayback(new RaidOutcome { Result = BattleSim.Run(_raid.Session.buildings, heroes) });
+            BeginPlayback(new RaidOutcome { Result = BattleSim.Run(_raid.Session.buildings, heroes, _raid.Session.ToDefenderInputs()) });
         }
 
         private void BeginPlayback(RaidOutcome outcome)
@@ -459,9 +492,13 @@ namespace ShinobiDominion.Game
                 panel.Line(result.dojoDestroyed ? "The enemy Dojo fell." : "The enemy Dojo still stands.");
                 var landed = _raid.Placements.Count + _raid.Stacks.Sum(s => s.count);
                 panel.Line($"Still standing: {result.heroesAlive} of {landed}");
+                var guards = _raid.Session.defenders.Count;
+                if (guards > 0) panel.Line($"Enemy heroes beaten: {guards - result.defendersAlive} of {guards}");
                 panel.Line($"Time: {result.endTick / BattleSim.TicksPerSecond} seconds");
                 if (_raid.Session.attackId == "practice") panel.Line("Practice battle: no reward.", 20, Ui.AccentColor);
-                else panel.Line(outcome.GoldEarned > 0 ? $"Earned {outcome.GoldEarned:N0} gold" : "No gold: only new stars pay, or your vault is full.");
+                else if (outcome.GoldEarned > 0) panel.Line($"Earned {outcome.GoldEarned:N0} gold");
+                else if (_raid.Session.raid.id == "rival") panel.Line(result.stars == 0 ? "No gold: earn a star to get paid." : "No gold: this rival already paid today, you reached today's limit, or your vault is full.");
+                else panel.Line("No gold: only new stars pay, or your vault is full.");
                 panel.Action("ReturnHomeButton", "Return to village", FinishRaid, true, Ui.AccentColor);
             });
         }

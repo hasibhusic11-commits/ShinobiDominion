@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"strconv"
 )
 
@@ -34,6 +35,17 @@ const (
 	eventAbility      = 6
 	eventHeal         = 7
 	eventStun         = 8
+
+	eventDefenderMove    = 9
+	eventDefenderHit     = 10
+	eventDefenderDamaged = 11
+	eventDefenderDown    = 12
+	eventDefenderAbility = 13
+	eventDefenderHeal    = 14
+
+	// How far a defender notices attackers, and how far from its post it will chase them.
+	defenderAggro = 800
+	defenderLeash = 1400
 )
 
 var (
@@ -73,6 +85,17 @@ type battleHeroInput struct {
 	IsTroop bool   `json:"isTroop"`
 }
 
+// battleDefenderInput is a hero guarding the village, standing at a cell on or by its Hero Base.
+type battleDefenderInput struct {
+	ID      string `json:"id"`
+	Role    string `json:"role"`
+	Hp      int64  `json:"hp"`
+	Attack  int64  `json:"attack"`
+	Defense int64  `json:"defense"`
+	X       int    `json:"x"`
+	Z       int    `json:"z"`
+}
+
 type battleBuildingInput struct {
 	ID           int    `json:"id"`
 	DefinitionID string `json:"definitionId"`
@@ -94,6 +117,7 @@ type battleResult struct {
 	DojoDestroyed bool      `json:"dojoDestroyed"`
 	EndTick       int       `json:"endTick"`
 	HeroesAlive   int       `json:"heroesAlive"`
+	DefendersAlive int      `json:"defendersAlive"`
 	Checksum      string    `json:"checksum"`
 	Events        [][]int64 `json:"events"`
 }
@@ -119,6 +143,24 @@ type battleUnit struct {
 	isTroop     bool
 }
 
+type battleDefender struct {
+	index        int
+	role         int
+	hp           int64
+	maxHp        int64
+	attack       int64
+	defense      int64
+	px           int
+	pz           int
+	tx           int
+	tz           int
+	homeX        int
+	homeZ        int
+	attackTimer  int
+	abilityTimer int
+	guardTimer   int
+}
+
 type battleStructure struct {
 	input     battleBuildingInput
 	hp        int64
@@ -129,6 +171,7 @@ type battleStructure struct {
 
 type battleSim struct {
 	units      []*battleUnit
+	defenders  []*battleDefender
 	structures []*battleStructure
 	grid       []int
 	cost       []int
@@ -143,6 +186,10 @@ type battleSim struct {
 const costUnreached = int(^uint(0) >> 1)
 
 func runBattle(buildings []battleBuildingInput, heroes []battleHeroInput) (*battleResult, error) {
+	return runDefendedBattle(buildings, heroes, nil)
+}
+
+func runDefendedBattle(buildings []battleBuildingInput, heroes []battleHeroInput, defenders []battleDefenderInput) (*battleResult, error) {
 	cells := battleGridSize * battleGridSize
 	sim := &battleSim{
 		grid:   make([]int, cells),
@@ -170,6 +217,17 @@ func runBattle(buildings []battleBuildingInput, heroes []battleHeroInput) (*batt
 			index: i, role: role, hp: h.Hp, maxHp: h.Hp, attack: h.Attack, defense: h.Defense,
 			px: h.X*cellUnits + cellUnits/2, pz: h.Z*cellUnits + cellUnits/2,
 			target: -1, blocker: -1, needsPlan: true, abilityTimer: roleCooldowns[role] / 2, isTroop: h.IsTroop,
+		})
+	}
+	for i, d := range defenders {
+		role, err := roleNumber(d.Role)
+		if err != nil {
+			return nil, err
+		}
+		px, pz := d.X*cellUnits+cellUnits/2, d.Z*cellUnits+cellUnits/2
+		sim.defenders = append(sim.defenders, &battleDefender{
+			index: i, role: role, hp: d.Hp, maxHp: d.Hp, attack: d.Attack, defense: d.Defense,
+			px: px, pz: pz, tx: px, tz: pz, homeX: d.X, homeZ: d.Z, abilityTimer: roleCooldowns[role] / 2,
 		})
 	}
 	sim.play()
@@ -231,6 +289,11 @@ func (s *battleSim) play() {
 				s.stepUnit(unit)
 			}
 		}
+		for _, defender := range s.defenders {
+			if defender.hp > 0 {
+				s.stepDefender(defender)
+			}
+		}
 		for _, structure := range s.structures {
 			if structure.alive && structure.input.IsDefense {
 				s.stepTower(structure)
@@ -255,6 +318,11 @@ func (s *battleSim) play() {
 	for _, unit := range s.units {
 		if unit.hp > 0 {
 			r.HeroesAlive++
+		}
+	}
+	for _, defender := range s.defenders {
+		if defender.hp > 0 {
+			r.DefendersAlive++
 		}
 	}
 	for _, structure := range s.structures {
@@ -324,6 +392,15 @@ func (s *battleSim) stepUnit(unit *battleUnit) {
 	}
 	s.selfAbility(unit)
 
+	// A defender in reach comes first. The attacker stands and fights, then carries on.
+	if foe := s.closestDefender(unit); foe != nil {
+		if unit.attackTimer == 0 {
+			s.strikeDefender(unit, foe)
+			unit.attackTimer = roleIntervals[unit.role]
+		}
+		return
+	}
+
 	if unit.needsPlan || unit.target < 0 || !s.structures[unit.target].alive {
 		if unit.idle > 0 {
 			return
@@ -373,6 +450,218 @@ func (s *battleSim) stepUnit(unit *battleUnit) {
 		unit.pathAt++
 		if unit.pathAt < len(unit.path) {
 			s.logMove(unit)
+		}
+	}
+}
+
+// ---------- Defenders ----------
+
+func squaredPoints(ax, az, bx, bz int) int64 {
+	dx, dz := int64(ax-bx), int64(az-bz)
+	return dx*dx + dz*dz
+}
+
+func (s *battleSim) closestDefender(unit *battleUnit) *battleDefender {
+	var best *battleDefender
+	bestDistance := int64(math.MaxInt64)
+	reach := int64(roleRanges[unit.role]) * int64(roleRanges[unit.role])
+	for _, defender := range s.defenders {
+		if defender.hp <= 0 {
+			continue
+		}
+		distance := squaredPoints(unit.px, unit.pz, defender.px, defender.pz)
+		if distance <= reach && distance < bestDistance {
+			best = defender
+			bestDistance = distance
+		}
+	}
+	return best
+}
+
+func burstPercent(role int) int64 {
+	switch role {
+	case roleFighter:
+		return 150
+	case roleAssassin:
+		return 300
+	case roleMage:
+		return 200
+	}
+	return 100
+}
+
+func clampHit(amount, hp int64) int64 {
+	if amount < 1 {
+		amount = 1
+	}
+	if amount > hp {
+		amount = hp
+	}
+	return amount
+}
+
+func (s *battleSim) strikeDefender(unit *battleUnit, defender *battleDefender) {
+	percent := int64(100)
+	if unit.abilityTimer == 0 && !unit.isTroop {
+		percent = burstPercent(unit.role)
+		if percent != 100 {
+			unit.abilityTimer = roleCooldowns[unit.role]
+			s.log(eventAbility, int64(unit.index), int64(unit.role), 0, 0)
+		}
+	}
+	amount := unit.attack * percent / 100 * 100 / (100 + defender.defense)
+	if defender.guardTimer > 0 {
+		amount /= 2
+	}
+	amount = clampHit(amount, defender.hp)
+	defender.hp -= amount
+	s.log(eventDefenderDamaged, int64(unit.index), int64(defender.index), amount, defender.hp)
+	if defender.hp == 0 {
+		s.log(eventDefenderDown, int64(defender.index), 0, 0, 0)
+	}
+}
+
+func (s *battleSim) stepDefender(defender *battleDefender) {
+	if defender.attackTimer > 0 {
+		defender.attackTimer--
+	}
+	if defender.abilityTimer > 0 {
+		defender.abilityTimer--
+	}
+	if defender.guardTimer > 0 {
+		defender.guardTimer--
+	}
+
+	target := s.closestAttacker(defender)
+	if defender.abilityTimer == 0 {
+		if defender.role == roleTank && target != nil {
+			defender.guardTimer = 40
+			defender.abilityTimer = roleCooldowns[roleTank]
+			s.log(eventDefenderAbility, int64(defender.index), roleTank, 0, 0)
+		} else if defender.role == roleSupport {
+			s.mendDefenders(defender)
+		}
+	}
+
+	if target == nil {
+		s.walkDefender(defender, defender.homeX, defender.homeZ)
+		return
+	}
+	reach := int64(roleRanges[defender.role]) * int64(roleRanges[defender.role])
+	if squaredPoints(defender.px, defender.pz, target.px, target.pz) <= reach {
+		if defender.attackTimer == 0 {
+			s.defenderStrike(defender, target)
+			defender.attackTimer = roleIntervals[defender.role]
+		}
+		return
+	}
+	s.walkDefender(defender, target.px/cellUnits, target.pz/cellUnits)
+}
+
+func (s *battleSim) closestAttacker(defender *battleDefender) *battleUnit {
+	var best *battleUnit
+	bestDistance := int64(math.MaxInt64)
+	homeX := defender.homeX*cellUnits + cellUnits/2
+	homeZ := defender.homeZ*cellUnits + cellUnits/2
+	for _, unit := range s.units {
+		if unit.hp <= 0 {
+			continue
+		}
+		distance := squaredPoints(defender.px, defender.pz, unit.px, unit.pz)
+		if distance > int64(defenderAggro)*int64(defenderAggro) {
+			continue
+		}
+		if squaredPoints(homeX, homeZ, unit.px, unit.pz) > int64(defenderLeash)*int64(defenderLeash) {
+			continue
+		}
+		if distance < bestDistance {
+			best = unit
+			bestDistance = distance
+		}
+	}
+	return best
+}
+
+func (s *battleSim) mendDefenders(healer *battleDefender) {
+	healed := false
+	for _, other := range s.defenders {
+		if other.hp <= 0 || other.hp >= other.maxHp {
+			continue
+		}
+		if squaredPoints(other.px, other.pz, healer.px, healer.pz) > 600*600 {
+			continue
+		}
+		amount := healer.attack * 2
+		if room := other.maxHp - other.hp; amount > room {
+			amount = room
+		}
+		other.hp += amount
+		if !healed {
+			s.log(eventDefenderAbility, int64(healer.index), roleSupport, 0, 0)
+			healed = true
+		}
+		s.log(eventDefenderHeal, int64(other.index), amount, other.hp, 0)
+	}
+	if healed {
+		healer.abilityTimer = roleCooldowns[roleSupport]
+	}
+}
+
+func (s *battleSim) defenderStrike(defender *battleDefender, unit *battleUnit) {
+	percent := int64(100)
+	if defender.abilityTimer == 0 {
+		percent = burstPercent(defender.role)
+		if percent != 100 {
+			defender.abilityTimer = roleCooldowns[defender.role]
+			s.log(eventDefenderAbility, int64(defender.index), int64(defender.role), 0, 0)
+		}
+	}
+	amount := defender.attack * percent / 100 * 100 / (100 + unit.defense)
+	if unit.guardTimer > 0 {
+		amount /= 2
+	}
+	amount = clampHit(amount, unit.hp)
+	unit.hp -= amount
+	s.log(eventDefenderHit, int64(defender.index), int64(unit.index), amount, unit.hp)
+	if unit.hp == 0 {
+		s.log(eventHeroDown, int64(unit.index), 0, 0, 0)
+	}
+}
+
+func (s *battleSim) defenderCanEnter(x, z int) bool {
+	occupant := s.grid[z*battleGridSize+x]
+	return occupant == 0 || s.structures[occupant-1].input.DefinitionID == "hero_base"
+}
+
+// walkDefender goes one cell at a time towards a goal, along x and then z. Buildings and walls stop it.
+func (s *battleSim) walkDefender(defender *battleDefender, goalX, goalZ int) {
+	if defender.px == defender.tx && defender.pz == defender.tz {
+		x, z := defender.px/cellUnits, defender.pz/cellUnits
+		if goalX != x && s.defenderCanEnter(x+sign(goalX-x), z) {
+			x += sign(goalX - x)
+		} else if goalZ != z && s.defenderCanEnter(x, z+sign(goalZ-z)) {
+			z += sign(goalZ - z)
+		} else {
+			return
+		}
+		defender.tx = x*cellUnits + cellUnits/2
+		defender.tz = z*cellUnits + cellUnits/2
+		s.log(eventDefenderMove, int64(defender.index), int64(x), int64(z), 0)
+	}
+	speed := roleSpeeds[defender.role]
+	if defender.px != defender.tx {
+		step := minInt(absInt(defender.tx-defender.px), speed)
+		if defender.tx > defender.px {
+			defender.px += step
+		} else {
+			defender.px -= step
+		}
+	} else {
+		step := minInt(absInt(defender.tz-defender.pz), speed)
+		if defender.tz > defender.pz {
+			defender.pz += step
+		} else {
+			defender.pz -= step
 		}
 	}
 }
@@ -799,6 +1088,14 @@ type raidEntry struct {
 	Z     int    `json:"z"`
 }
 
+type raidDefenderEntry struct {
+	HeroID    string `json:"heroId"`
+	Evolution int    `json:"evolution"`
+	Level     int    `json:"level"`
+	X         int    `json:"x"`
+	Z         int    `json:"z"`
+}
+
 type raidWall struct {
 	Level int `json:"level"`
 	X1    int `json:"x1"`
@@ -815,6 +1112,7 @@ type raidDefinition struct {
 	GoldPerStar int64       `json:"goldPerStar"`
 	Buildings   []raidEntry `json:"buildings"`
 	Walls       []raidWall  `json:"walls"`
+	Defenders   []raidDefenderEntry `json:"defenders"`
 	expanded    []battleBuildingInput
 }
 

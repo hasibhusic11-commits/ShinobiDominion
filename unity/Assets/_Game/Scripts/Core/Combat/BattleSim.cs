@@ -16,6 +16,18 @@ namespace ShinobiDominion.Core
         public bool isTroop;
     }
 
+    /// <summary>A hero guarding the village, standing at a cell on or by its Hero Base.</summary>
+    public sealed class BattleDefenderInput
+    {
+        public string id;
+        public string role;
+        public long hp;
+        public long attack;
+        public long defense;
+        public int x;
+        public int z;
+    }
+
     public sealed class BattleBuildingInput
     {
         public int id;
@@ -50,7 +62,19 @@ namespace ShinobiDominion.Core
         /// <summary>a = hero healed, b = amount, c = hero HP now.</summary>
         Heal = 7,
         /// <summary>a = building id.</summary>
-        Stun = 8
+        Stun = 8,
+        /// <summary>a = defender, b = cell x, c = cell z. The defender starts walking towards that cell.</summary>
+        DefenderMove = 9,
+        /// <summary>a = defender, b = attacking unit hit, c = damage, d = unit HP left.</summary>
+        DefenderHit = 10,
+        /// <summary>a = attacking unit, b = defender hit, c = damage, d = defender HP left.</summary>
+        DefenderDamaged = 11,
+        /// <summary>a = defender.</summary>
+        DefenderDown = 12,
+        /// <summary>a = defender, b = role number.</summary>
+        DefenderAbility = 13,
+        /// <summary>a = defender healed, b = amount, c = defender HP now.</summary>
+        DefenderHeal = 14
     }
 
     public sealed class BattleResult
@@ -60,6 +84,7 @@ namespace ShinobiDominion.Core
         public bool dojoDestroyed;
         public int endTick;
         public int heroesAlive;
+        public int defendersAlive;
         public string checksum;
         public List<long[]> events = new List<long[]>();
     }
@@ -86,6 +111,11 @@ namespace ShinobiDominion.Core
         private const int WalkCost = 10;
         private const int WallCost = 150;
         private const int GridSize = VillageGrid.Size;
+        private const string HeroBaseId = "hero_base";
+
+        // How far a defender notices attackers, and how far from its post it will chase them.
+        private const int DefenderAggro = 800;
+        private const int DefenderLeash = 1400;
 
         // Per role: attack range, walking speed per tick, ticks between attacks, ability cooldown,
         // and percent of attack dealt to buildings.
@@ -133,6 +163,25 @@ namespace ShinobiDominion.Core
             public bool IsTroop;
         }
 
+        private sealed class Defender
+        {
+            public int Index;
+            public int Role;
+            public long Hp;
+            public long MaxHp;
+            public long Attack;
+            public long Defense;
+            public int Px;
+            public int Pz;
+            public int Tx;
+            public int Tz;
+            public int HomeX;
+            public int HomeZ;
+            public int AttackTimer;
+            public int AbilityTimer;
+            public int GuardTimer;
+        }
+
         private sealed class Structure
         {
             public BattleBuildingInput Input;
@@ -143,6 +192,7 @@ namespace ShinobiDominion.Core
         }
 
         private readonly Unit[] _units;
+        private readonly Defender[] _defenders;
         private readonly Structure[] _structures;
         private readonly int[] _grid = new int[GridSize * GridSize];
         private readonly int[] _cost = new int[GridSize * GridSize];
@@ -153,7 +203,7 @@ namespace ShinobiDominion.Core
         private long _dealtHp;
         private int _tick;
 
-        private BattleSim(IEnumerable<BattleBuildingInput> buildings, IEnumerable<BattleHeroInput> heroes)
+        private BattleSim(IEnumerable<BattleBuildingInput> buildings, IEnumerable<BattleHeroInput> heroes, IEnumerable<BattleDefenderInput> defenders)
         {
             _structures = buildings.Select(b => new Structure { Input = b, Hp = b.hp }).ToArray();
             for (var i = 0; i < _structures.Length; i++)
@@ -181,11 +231,33 @@ namespace ShinobiDominion.Core
                     IsTroop = h.isTroop
                 };
             }).ToArray();
+            _defenders = (defenders ?? Enumerable.Empty<BattleDefenderInput>()).Select((d, i) =>
+            {
+                var role = RoleNumber(d.role);
+                var px = d.x * CellUnits + CellUnits / 2;
+                var pz = d.z * CellUnits + CellUnits / 2;
+                return new Defender
+                {
+                    Index = i,
+                    Role = role,
+                    Hp = d.hp,
+                    MaxHp = d.hp,
+                    Attack = d.attack,
+                    Defense = d.defense,
+                    Px = px,
+                    Pz = pz,
+                    Tx = px,
+                    Tz = pz,
+                    HomeX = d.x,
+                    HomeZ = d.z,
+                    AbilityTimer = Cooldowns[role] / 2
+                };
+            }).ToArray();
         }
 
-        public static BattleResult Run(IEnumerable<BattleBuildingInput> buildings, IEnumerable<BattleHeroInput> heroes)
+        public static BattleResult Run(IEnumerable<BattleBuildingInput> buildings, IEnumerable<BattleHeroInput> heroes, IEnumerable<BattleDefenderInput> defenders = null)
         {
-            var sim = new BattleSim(buildings, heroes);
+            var sim = new BattleSim(buildings, heroes, defenders);
             sim.Play();
             return sim._result;
         }
@@ -225,6 +297,8 @@ namespace ShinobiDominion.Core
             {
                 foreach (var unit in _units)
                     if (unit.Hp > 0) StepUnit(unit);
+                foreach (var defender in _defenders)
+                    if (defender.Hp > 0) StepDefender(defender);
                 foreach (var structure in _structures)
                     if (structure.Alive && structure.Input.isDefense) StepTower(structure);
                 if (Finished()) break;
@@ -234,6 +308,7 @@ namespace ShinobiDominion.Core
             _result.endTick = endTick;
             _result.damagePercent = _totalHp == 0 ? 100 : (int)(_dealtHp * 100 / _totalHp);
             _result.heroesAlive = _units.Count(u => u.Hp > 0);
+            _result.defendersAlive = _defenders.Count(d => d.Hp > 0);
             foreach (var structure in _structures)
                 if (structure.Input.definitionId == "dojo_hq" && !structure.Alive) _result.dojoDestroyed = true;
             if (_result.damagePercent >= 50) _result.stars++;
@@ -278,6 +353,18 @@ namespace ShinobiDominion.Core
             if (unit.GuardTimer > 0) unit.GuardTimer--;
             if (unit.Idle > 0) unit.Idle--;
             SelfAbility(unit);
+
+            // A defender in reach comes first. The attacker stands and fights, then carries on.
+            var foe = ClosestDefender(unit);
+            if (foe != null)
+            {
+                if (unit.AttackTimer == 0)
+                {
+                    StrikeDefender(unit, foe);
+                    unit.AttackTimer = Intervals[unit.Role];
+                }
+                return;
+            }
 
             if (unit.NeedsPlan || unit.Target < 0 || !_structures[unit.Target].Alive)
             {
@@ -446,6 +533,196 @@ namespace ShinobiDominion.Core
             foreach (var other in _units)
                 if (other.Target == index || other.Blocker == index)
                     other.NeedsPlan = true;
+        }
+
+        // ---------- Defenders ----------
+
+        private static long SquaredPoints(int ax, int az, int bx, int bz)
+        {
+            var dx = (long)(ax - bx);
+            var dz = (long)(az - bz);
+            return dx * dx + dz * dz;
+        }
+
+        private Defender ClosestDefender(Unit unit)
+        {
+            Defender best = null;
+            var bestDistance = long.MaxValue;
+            var reach = (long)Ranges[unit.Role] * Ranges[unit.Role];
+            foreach (var defender in _defenders)
+            {
+                if (defender.Hp <= 0) continue;
+                var distance = SquaredPoints(unit.Px, unit.Pz, defender.Px, defender.Pz);
+                if (distance <= reach && distance < bestDistance)
+                {
+                    best = defender;
+                    bestDistance = distance;
+                }
+            }
+            return best;
+        }
+
+        private static long BurstPercent(int role)
+        {
+            switch (role)
+            {
+                case RoleFighter: return 150;
+                case RoleAssassin: return 300;
+                case RoleMage: return 200;
+                default: return 100;
+            }
+        }
+
+        private void StrikeDefender(Unit unit, Defender defender)
+        {
+            var percent = 100L;
+            if (unit.AbilityTimer == 0 && !unit.IsTroop)
+            {
+                percent = BurstPercent(unit.Role);
+                if (percent != 100)
+                {
+                    unit.AbilityTimer = Cooldowns[unit.Role];
+                    Log(BattleEventKind.Ability, unit.Index, unit.Role);
+                }
+            }
+            var amount = unit.Attack * percent / 100 * 100 / (100 + defender.Defense);
+            if (defender.GuardTimer > 0) amount /= 2;
+            amount = Math.Min(Math.Max(amount, 1), defender.Hp);
+            defender.Hp -= amount;
+            Log(BattleEventKind.DefenderDamaged, unit.Index, defender.Index, amount, defender.Hp);
+            if (defender.Hp == 0) Log(BattleEventKind.DefenderDown, defender.Index);
+        }
+
+        private void StepDefender(Defender defender)
+        {
+            if (defender.AttackTimer > 0) defender.AttackTimer--;
+            if (defender.AbilityTimer > 0) defender.AbilityTimer--;
+            if (defender.GuardTimer > 0) defender.GuardTimer--;
+
+            var target = ClosestAttacker(defender);
+            if (defender.AbilityTimer == 0)
+            {
+                if (defender.Role == RoleTank && target != null)
+                {
+                    defender.GuardTimer = 40;
+                    defender.AbilityTimer = Cooldowns[RoleTank];
+                    Log(BattleEventKind.DefenderAbility, defender.Index, RoleTank);
+                }
+                else if (defender.Role == RoleSupport)
+                {
+                    MendDefenders(defender);
+                }
+            }
+
+            if (target == null)
+            {
+                WalkDefender(defender, defender.HomeX, defender.HomeZ);
+                return;
+            }
+            var reach = (long)Ranges[defender.Role] * Ranges[defender.Role];
+            if (SquaredPoints(defender.Px, defender.Pz, target.Px, target.Pz) <= reach)
+            {
+                if (defender.AttackTimer == 0)
+                {
+                    DefenderStrike(defender, target);
+                    defender.AttackTimer = Intervals[defender.Role];
+                }
+                return;
+            }
+            WalkDefender(defender, target.Px / CellUnits, target.Pz / CellUnits);
+        }
+
+        private Unit ClosestAttacker(Defender defender)
+        {
+            Unit best = null;
+            var bestDistance = long.MaxValue;
+            var homeX = defender.HomeX * CellUnits + CellUnits / 2;
+            var homeZ = defender.HomeZ * CellUnits + CellUnits / 2;
+            foreach (var unit in _units)
+            {
+                if (unit.Hp <= 0) continue;
+                var distance = SquaredPoints(defender.Px, defender.Pz, unit.Px, unit.Pz);
+                if (distance > (long)DefenderAggro * DefenderAggro) continue;
+                if (SquaredPoints(homeX, homeZ, unit.Px, unit.Pz) > (long)DefenderLeash * DefenderLeash) continue;
+                if (distance < bestDistance)
+                {
+                    best = unit;
+                    bestDistance = distance;
+                }
+            }
+            return best;
+        }
+
+        private void MendDefenders(Defender healer)
+        {
+            var healed = false;
+            foreach (var other in _defenders)
+            {
+                if (other.Hp <= 0 || other.Hp >= other.MaxHp) continue;
+                if (SquaredPoints(other.Px, other.Pz, healer.Px, healer.Pz) > 600L * 600L) continue;
+                var amount = Math.Min(healer.Attack * 2, other.MaxHp - other.Hp);
+                other.Hp += amount;
+                if (!healed)
+                {
+                    Log(BattleEventKind.DefenderAbility, healer.Index, RoleSupport);
+                    healed = true;
+                }
+                Log(BattleEventKind.DefenderHeal, other.Index, amount, other.Hp);
+            }
+            if (healed) healer.AbilityTimer = Cooldowns[RoleSupport];
+        }
+
+        private void DefenderStrike(Defender defender, Unit unit)
+        {
+            var percent = 100L;
+            if (defender.AbilityTimer == 0)
+            {
+                percent = BurstPercent(defender.Role);
+                if (percent != 100)
+                {
+                    defender.AbilityTimer = Cooldowns[defender.Role];
+                    Log(BattleEventKind.DefenderAbility, defender.Index, defender.Role);
+                }
+            }
+            var amount = defender.Attack * percent / 100 * 100 / (100 + unit.Defense);
+            if (unit.GuardTimer > 0) amount /= 2;
+            amount = Math.Min(Math.Max(amount, 1), unit.Hp);
+            unit.Hp -= amount;
+            Log(BattleEventKind.DefenderHit, defender.Index, unit.Index, amount, unit.Hp);
+            if (unit.Hp == 0) Log(BattleEventKind.HeroDown, unit.Index);
+        }
+
+        private bool DefenderCanEnter(int x, int z)
+        {
+            var occupant = _grid[z * GridSize + x];
+            return occupant == 0 || _structures[occupant - 1].Input.definitionId == HeroBaseId;
+        }
+
+        /// <summary>One cell at a time towards a goal, along x and then z. Buildings and walls stop it.</summary>
+        private void WalkDefender(Defender defender, int goalX, int goalZ)
+        {
+            if (defender.Px == defender.Tx && defender.Pz == defender.Tz)
+            {
+                var x = defender.Px / CellUnits;
+                var z = defender.Pz / CellUnits;
+                if (goalX != x && DefenderCanEnter(x + Math.Sign(goalX - x), z)) x += Math.Sign(goalX - x);
+                else if (goalZ != z && DefenderCanEnter(x, z + Math.Sign(goalZ - z))) z += Math.Sign(goalZ - z);
+                else return;
+                defender.Tx = x * CellUnits + CellUnits / 2;
+                defender.Tz = z * CellUnits + CellUnits / 2;
+                Log(BattleEventKind.DefenderMove, defender.Index, x, z);
+            }
+            var speed = Speeds[defender.Role];
+            if (defender.Px != defender.Tx)
+            {
+                var step = Math.Min(Math.Abs(defender.Tx - defender.Px), speed);
+                defender.Px += defender.Tx > defender.Px ? step : -step;
+            }
+            else
+            {
+                var step = Math.Min(Math.Abs(defender.Tz - defender.Pz), speed);
+                defender.Pz += defender.Tz > defender.Pz ? step : -step;
+            }
         }
 
         // ---------- Choosing targets and paths ----------

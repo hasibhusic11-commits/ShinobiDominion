@@ -88,6 +88,15 @@ Follows the owner's ADR-021. Up to four Troop Camps, gated by Dojo level, and a 
 - A raid still needs at least one hero. At most 200 troops can land in one raid, to bound the server's work.
 - Troop names and all numbers are test values. Offline practice troops aren't saved.
 
+## ADR-028: Defender heroes and raids on rivals, added on 2026-11-07
+Claude made these choices while the owner slept, and the owner can overrule any of them. All numbers are test values.
+- **Guards:** heroes on a village's Hero Bases defend it. Each stands on its base, notices attackers within 8 cells, chases up to 14 cells from its post, then walks back. Roles keep their abilities. Attackers stop and fight any guard in reach. Stars still count only buildings, so a raid can win with a guard alive.
+- **Rivals:** a raid can target a real player's village. The server chooses the closest Dojo level, preferring villages with guards, then at random. Players can't choose a rival.
+- **Snapshots:** the rival's layout and guards are copied when the raid starts, so nothing they do later changes it.
+- **A raid costs the rival nothing.** No gold, buildings or heroes are lost. This is the largest choice here, because Castle Clash style raids usually take resources. It avoids griefing and needs no shields while the player count is small. Taking resources can be added later.
+- **Farming limits, with no energy:** a rival raid pays 150 gold per star per rival Dojo level, once per rival per 24 hours and on at most 10 raids in 24 hours. Raids are otherwise unlimited.
+- **Privacy:** the rival's hero ids aren't sent, and the defense log never says who attacked.
+
 ## ADR-026: How raids work, added on 2026-11-05
 The first raid slice follows the brief's phase 4. Choices Claude made that the owner can overrule:
 - **The server fights the battle.** It keeps the defender and team from when the raid started, takes only where heroes stand, runs the battle and pays any reward. The client plays the log back. The battle is whole numbers with no randomness, and the Go and C# copies must produce identical logs in shared tests.

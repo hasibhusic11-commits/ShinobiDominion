@@ -28,6 +28,37 @@ namespace ShinobiDominion.Core
         public int speed;
     }
 
+    /// <summary>A hero guarding the target, with the stats fixed when the raid started.</summary>
+    public sealed class RaidDefender
+    {
+        public string id;
+        public string archetypeId;
+        public int evolutionIndex;
+        public int level;
+        public string role;
+        public long hp;
+        public long attack;
+        public long defense;
+        public int x;
+        public int z;
+    }
+
+    /// <summary>One raid on this player's village. It never says who attacked.</summary>
+    public sealed class DefenseRecord
+    {
+        public int stars;
+        public int damagePercent;
+        public int defendersAlive;
+        public int defendersTotal;
+        public long atMs;
+
+        public static List<DefenseRecord> ParseList(string json)
+        {
+            var token = ServerState.ParseObject(json);
+            return token["defenses"] is JArray list ? list.ToObject<List<DefenseRecord>>() : new List<DefenseRecord>();
+        }
+    }
+
     public sealed class RaidPlacement
     {
         public string instanceId;
@@ -42,6 +73,10 @@ namespace ShinobiDominion.Core
         public RaidSummary raid;
         public List<BattleBuildingInput> buildings = new List<BattleBuildingInput>();
         public List<RaidTeamMember> team = new List<RaidTeamMember>();
+        public List<RaidDefender> defenders = new List<RaidDefender>();
+
+        public List<BattleDefenderInput> ToDefenderInputs() =>
+            defenders.Select(d => new BattleDefenderInput { id = d.id, role = d.role, hp = d.hp, attack = d.attack, defense = d.defense, x = d.x, z = d.z }).ToList();
 
         /// <summary>
         /// Everything that lands, in battle order: heroes, then each stack of troops. The server builds

@@ -41,7 +41,9 @@ First slice built, awaiting your playtest: ATTACK opens a scripted raid, heroes 
 
 Troops are built too: 4 camps, a Training Hall, camp space by strength, and landing them in raids (ADR-027).
 
-Still to do in this phase: defender heroes and battle sound.
+Defender heroes and raids on real players' villages are built, awaiting your playtest (ADR-028). Verified with shared battle logs in C# and Go, the live server and the real client, but only with test accounts, not two people.
+
+Still to do in this phase: battle sound.
 
 ## Hero designs and sharper UI: awaiting your review
 All 30 heroes have an original design and a generated model, and only Legendaries have four looks. See `HERO_DESIGNS.md` and `docs/hero_designs/`. The 24 heroes outside the current pool are not summonable until you approve them, because adding them changes the odds. The interface was redrawn with crisper frames, buttons and icons.
@@ -51,7 +53,18 @@ All 30 heroes have an original design and a generated model, and only Legendarie
 ## Visual overhaul — done as temporary art, awaiting your review
 Curved-roof ninja architecture for every building, modular walls with level tiers, Hero Bases with figures and emblems, textured ground, forest, mountains, waterfall, toon lighting, smoother camera and a quality setting. See `ART_STATUS.md` for what still needs an artist, and `VISUAL_BASELINE.md` for the before state and asset evaluation.
 
-## Latest test results (2026-11-05)
+## Latest test results (2026-11-07, branch `feature/raid-defenders`)
+| Suite | Result |
+|---|---|
+| .NET harness (`tools/core-tests`) | 135 of 135 passed |
+| Go server unit tests, including the shared battle logs | passed; part of the server build |
+| Backend attack and concurrency suite, with new rival tests | passed |
+| Production mode: no dev calls, rival can't be chosen | passed |
+| Unity PlayMode against the live server, 10 suites | 89 of 89 passed |
+
+Not rerun this time: crash recovery, Windows release player, `ScreenCaptureTests`.
+
+## Earlier test results (2026-11-05)
 | Suite | Result |
 |---|---|
 | .NET harness (`tools/core-tests`) | 104 of 104 passed |
