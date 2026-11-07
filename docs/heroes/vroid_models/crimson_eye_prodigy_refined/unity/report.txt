@@ -1,0 +1,5 @@
+clips 43 human 43
+shader ShinobiDominion/HeroCutoutEval supported True
+avatar valid True human True
+renderer Body tris 11125 submeshes 1 bones 171 blendshapes 0 slots N00_000_00_Body_00_SKIN (Instance)
+renderer Face tris 5994 submeshes 1 bones 171 blendshapes 57 slots N00_000_00_FaceMouth_00_FACE (Instance)
