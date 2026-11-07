@@ -116,11 +116,11 @@ namespace ShinobiDominion.Game
             var best = BestStarsOn(stage.id);
             panel.Line($"Stage {stage.stage}: {stage.displayName}", 25, new Color(1f, 0.9f, 0.66f));
             panel.Line(stage.description, 19);
-            panel.Line($"Best: {best} of 3 stars.   Enemy heroes: {stage.defenders.Count}.", 19);
+            panel.Line($"Best: {best} of 3 stars.   One enemy hero on guard.", 19);
             panel.Line(RewardText(stage, best), 19, Ui.AccentColor);
             var open = StageOpen(stage);
             if (!open) panel.Line("Clear the stage before this one first.", 19, Ui.MutedText);
-            else if (team == 0) panel.Line("Put at least one hero on a Hero Base first.", 19, Ui.MutedText);
+            else if (team == 0) panel.Line("Put a hero on your Hero Base first.", 19, Ui.MutedText);
             panel.Action("ScoutButton", "Scout", () => ScoutRaid(stage.id), open && team > 0 && (IsOnline || AllowOfflinePlay), Ui.AttackColor);
         }
 

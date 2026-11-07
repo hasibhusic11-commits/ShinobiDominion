@@ -155,7 +155,6 @@ var starterLayout = []struct {
 	{"summoning_gate", 23, 30},
 	{"gold_mine", 18, 16},
 	{"hero_base", 19, 29},
-	{"hero_base", 29, 29},
 }
 
 type building struct {

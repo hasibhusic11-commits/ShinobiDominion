@@ -70,10 +70,9 @@ namespace ShinobiDominion.Tests
             _controller.ScoutRaid(Garrison);
             yield return null;
             Assert.AreEqual(RaidPhase.Prepare, _controller.CurrentRaidPhase);
-            Assert.AreEqual(3, _controller.CurrentRaidSession.defenders.Count);
-            Assert.AreEqual(3, Guards().Length);
+            Assert.AreEqual(1, _controller.CurrentRaidSession.defenders.Count);
+            Assert.AreEqual(1, Guards().Length);
             Assert.IsTrue(Guards().Any(g => g.GetComponentInChildren<HeroSpriteActor>() != null), "The Sage guard should be a sprite");
-            Assert.IsTrue(Guards().Any(g => g.GetComponent<MeshRenderer>() != null), "Guards with no art yet should use the fallback");
             _controller.RetreatRaid();
             yield return null;
             Assert.AreEqual(0, Guards().Length, "Retreating should clear the guards");
@@ -82,7 +81,7 @@ namespace ShinobiDominion.Tests
         [UnityTest]
         public IEnumerator Garrison_StrongTeam_BeatsTheGuards_AndTheResultNamesThem()
         {
-            AssignTeam(6);
+            AssignTeam(1);
             yield return null;
             _controller.ScoutRaid(Garrison);
             _controller.AutoPlaceHeroes();
@@ -103,7 +102,7 @@ namespace ShinobiDominion.Tests
         [UnityTest]
         public IEnumerator Garrison_PlaysToTheEnd_WithoutErrors()
         {
-            AssignTeam(6);
+            AssignTeam(1);
             yield return null;
             _controller.ScoutRaid(Garrison);
             _controller.AutoPlaceHeroes();
@@ -166,7 +165,7 @@ namespace ShinobiDominion.Tests
         [UnityTest]
         public IEnumerator Battle_ShowsHud_GravesAndSound_WithoutErrors()
         {
-            AssignTeam(6);
+            AssignTeam(1);
             yield return null;
             _controller.ScoutRaid("stage_05");
             _controller.AutoPlaceHeroes();
@@ -232,7 +231,7 @@ namespace ShinobiDominion.Tests
             Directory.CreateDirectory(dir);
             LogAssert.ignoreFailingMessages = true;
 
-            AssignTeam(6);
+            AssignTeam(1);
             yield return null;
             var iso = _game.IsoCamera;
             var camera = iso.Camera;

@@ -61,7 +61,7 @@ type raidDeploy struct {
 func raidReady(t *testing.T, archetype string, copies, maxLevelFirst int) *player {
 	t.Helper()
 	p := blank(t, 0)
-	bases := sixBases(t, p)
+	bases := heroBases(t, p)
 	s := grant(t, p, map[string]interface{}{"archetypeId": archetype, "copies": copies})
 	for i := 0; i < copies && i < len(bases); i++ {
 		if _, err := p.rpc("sd_assign_hero", map[string]interface{}{"slot": bases[i], "instanceId": s.Heroes[i].InstanceID}); err != nil {
@@ -119,8 +119,8 @@ func TestRaid_UnknownRaid_IsRefused(t *testing.T) {
 func TestRaid_ServerDecidesTeamStats_FromBasesOnly(t *testing.T) {
 	p := raidReady(t, "river_scout", 2, 0)
 	start := startRaid(t, p)
-	if len(start.Team) != 2 {
-		t.Fatalf("team of %d, want the 2 heroes on bases", len(start.Team))
+	if len(start.Team) != 1 {
+		t.Fatalf("team of %d, want the one hero on its base", len(start.Team))
 	}
 	if start.Team[0].Hp != 420 || start.Team[0].Attack != 60 || start.Team[0].Role != "Assassin" {
 		t.Fatalf("stats %+v", start.Team[0])
@@ -198,7 +198,7 @@ func TestRaid_IllegalPlacements_AreRefused(t *testing.T) {
 	stranger := raidReady(t, "river_scout", 1, 0)
 	start := startRaid(t, p)
 	foreign := startRaid(t, stranger)
-	a, b := start.Team[0].InstanceID, start.Team[1].InstanceID
+	a := start.Team[0].InstanceID
 	place := func(id string, x, z int) map[string]interface{} {
 		return map[string]interface{}{"instanceId": id, "x": x, "z": z}
 	}
@@ -211,7 +211,6 @@ func TestRaid_IllegalPlacements_AreRefused(t *testing.T) {
 		{"BAD_DEPLOY_CELL", []map[string]interface{}{place(a, 9999, 2)}},
 		{"DEPLOY_TOO_CLOSE", []map[string]interface{}{place(a, 25, 25)}},
 		{"DUPLICATE_HERO", []map[string]interface{}{place(a, 2, 2), place(a, 3, 3)}},
-		{"DEPLOY_CELL_TAKEN", []map[string]interface{}{place(a, 2, 2), place(b, 2, 2)}},
 		{"HERO_NOT_IN_TEAM", []map[string]interface{}{place(foreign.Team[0].InstanceID, 2, 2)}},
 		{"HERO_NOT_IN_TEAM", []map[string]interface{}{place("00000000-0000-0000-0000-000000000000", 2, 2)}},
 	}

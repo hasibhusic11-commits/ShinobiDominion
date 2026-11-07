@@ -135,7 +135,7 @@ namespace ShinobiDominion.Core
                 case "DUPLICATE_ASSIGNED": return "That copy is on a Hero Base";
                 case "MISSING_CATALYST": return "Missing the required catalyst";
                 case "HERO_ALREADY_ASSIGNED": return "That hero is already on another base";
-                case "ALL_BASES_FULL": return "All six bases already have heroes";
+                case "ALL_BASES_FULL": return "Only one hero can be used at a time. Take your hero off its base first.";
                 case "BAD_SLOT": return "That is not one of your Hero Bases";
                 case "NOT_ENOUGH_TROOPS": return "You don't have that many troops";
                 case "BAD_TROOP_COUNT": return "That is not a valid number of troops";

@@ -374,7 +374,7 @@ namespace ShinobiDominion.Tests
             yield return PutFirstHeroOnBase();
             Controller.ScoutRaid("cinder_garrison");
             yield return WaitFor(() => Controller.CurrentRaidPhase == RaidPhase.Prepare);
-            Assert.AreEqual(3, Controller.CurrentRaidSession.defenders.Count, "The guards come from the server");
+            Assert.AreEqual(1, Controller.CurrentRaidSession.defenders.Count, "The guards come from the server");
             yield return FightAndCompare();
         }
 

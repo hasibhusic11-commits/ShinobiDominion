@@ -141,7 +141,7 @@ namespace ShinobiDominion.Game
             _panel.Show("Attack", CloseAll, panel =>
             {
                 if (!string.IsNullOrEmpty(LastMessage)) panel.Line(LastMessage, 20, Ui.AccentColor);
-                panel.Line(team == 0 ? "No heroes are on your Hero Bases. Assign at least one to raid." : $"Your team: {team} of 6 Hero Bases filled.");
+                panel.Line(team == 0 ? "No hero is on your Hero Base. Put one there to raid." : "Your hero leads the raid. Only one hero is used at a time.");
                 if (!IsOnline) panel.Line(AllowOfflinePlay ? "Practice battle: not connected, so it pays nothing." : "Raids need the server.", 20, Ui.AccentColor);
                 if (IsOnline && _raidList == null)
                 {
@@ -270,7 +270,7 @@ namespace ShinobiDominion.Game
             {
                 if (!string.IsNullOrEmpty(LastMessage)) panel.Line(LastMessage, 20, Ui.AccentColor);
                 panel.Line("Tap the map to land. Shaded cells are too close to the enemy. Troops that land are used up.", 19);
-                if (_raid.Session.defenders.Count > 0) panel.Line($"{_raid.Session.defenders.Count} enemy heroes on guard.", 19, Ui.AccentColor);
+                if (_raid.Session.defenders.Count > 0) panel.Line("An enemy hero is on guard.", 19, Ui.AccentColor);
                 panel.Line($"Heroes placed: {_raid.Placements.Count} of {_raid.Session.team.Count}");
                 var left = TroopData.All.Where(t => TroopsLeft(t.id) > 0).ToList();
                 if (Army.Counts.Count > 0)

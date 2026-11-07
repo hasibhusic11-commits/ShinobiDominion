@@ -70,11 +70,12 @@ namespace ShinobiDominion.Tests
         }
 
         [UnityTest]
-        public IEnumerator HeroBase_AssignThroughPicker_ThenReassignIsBlocked()
+        public IEnumerator HeroBase_AssignThroughPicker_ThenSwapForAnother()
         {
             var bases = Controller.Village.Buildings.Where(b => b.Definition.function == BuildingFunction.HeroBase).ToList();
-            Assert.GreaterOrEqual(bases.Count, 2);
+            Assert.AreEqual(1, bases.Count, "A village has one Hero Base");
             var hero = Controller.Roster.Heroes.First();
+            var other = Controller.Roster.Heroes.First(h => h.InstanceId != hero.InstanceId);
 
             Controller.Select(bases[0].Id);
             yield return null;
@@ -85,11 +86,14 @@ namespace ShinobiDominion.Tests
             Assert.AreEqual(hero.InstanceId, bases[0].AssignedHeroInstanceId);
 
             Controller.CloseAll();
-            Controller.Select(bases[1].Id);
+            Controller.Select(bases[0].Id);
             yield return null;
             Click(Find("ChangeHeroButton"));
             yield return null;
-            Assert.IsFalse(Find("Pick_" + hero.InstanceId).interactable, "A hero on another base cannot be picked");
+            Assert.IsFalse(Find("Pick_" + hero.InstanceId).interactable, "The hero already there cannot be picked again");
+            Click(Find("Pick_" + other.InstanceId));
+            yield return null;
+            Assert.AreEqual(other.InstanceId, bases[0].AssignedHeroInstanceId, "Picking another hero swaps them");
         }
 
         [Test]
@@ -101,17 +105,13 @@ namespace ShinobiDominion.Tests
         }
 
         [UnityTest]
-        public IEnumerator SixLegendaries_OnSixBases_AreLegal()
+        public IEnumerator OnlyOneHeroBase_CanBeBuilt_AndAnyLegendaryCanStandOnIt()
         {
-            var nearby = new[] { new GridCoord(10, 10), new GridCoord(13, 10), new GridCoord(16, 10), new GridCoord(19, 10) };
-            foreach (var cell in nearby) Controller.Village.TryPlace("hero_base", cell, Rotation.R0, 0, out _);
-            var bases = Controller.Village.Buildings.Where(b => b.Definition.function == BuildingFunction.HeroBase).ToList();
-            var legends = Controller.Roster.Heroes.Where(h => Controller.Roster.ArchetypeOf(h).rarity == HeroRarity.Legendary).Take(6).ToList();
-
-            Assert.AreEqual(6, bases.Count);
-            Assert.AreEqual(6, legends.Count);
-            for (var i = 0; i < 6; i++)
-                Assert.AreEqual(VillageError.None, Controller.AssignHero(bases[i].Id, legends[i].InstanceId));
+            Assert.AreEqual(VillageError.LimitReached, Controller.Village.TryPlace("hero_base", new GridCoord(10, 10), Rotation.R0, 0, out _));
+            var heroBase = First("hero_base");
+            foreach (var legend in Controller.Roster.Heroes.Where(h => Controller.Roster.ArchetypeOf(h).rarity == HeroRarity.Legendary).Take(6))
+                Assert.AreEqual(VillageError.None, Controller.AssignHero(heroBase.Id, legend.InstanceId));
+            Assert.AreEqual(1, Controller.Village.Buildings.Count(b => b.AssignedHeroInstanceId != null));
             yield return null;
         }
 

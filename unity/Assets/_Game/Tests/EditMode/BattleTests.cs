@@ -92,8 +92,10 @@ namespace ShinobiDominion.Tests
                 commons[i].attack = 55;
                 commons[i].defense = 20;
             }
-            var weak = BattleSim.Run(Outpost(), commons);
-            var strong = BattleSim.Run(Outpost(), MixedTeam(4));
+            // A mid-campaign fortress, so the gap shows; the first outpost is meant to be easy.
+            var fortress = RaidCatalog.FromJson(FindFile("raids.json", "Resources/Config"), TestCatalog.Load()).Find("stage_05").Expand(TestCatalog.Load());
+            var weak = BattleSim.Run(fortress, commons);
+            var strong = BattleSim.Run(fortress, MixedTeam(4));
             Assert.Greater(strong.stars, weak.stars);
             Assert.Greater(strong.damagePercent, weak.damagePercent);
         }
@@ -101,8 +103,9 @@ namespace ShinobiDominion.Tests
         [Test]
         public void Walls_MakeTheRaidSlower()
         {
-            var open = Outpost().Where(b => !b.isWall).ToList();
-            var walled = Outpost();
+            // The first outpost has only thin walls, so test with a fortress.
+            var walled = RaidCatalog.FromJson(FindFile("raids.json", "Resources/Config"), TestCatalog.Load()).Find("stage_05").Expand(TestCatalog.Load());
+            var open = walled.Where(b => !b.isWall).ToList();
             Assert.Greater(BattleSim.Run(walled, MixedTeam(4)).endTick, BattleSim.Run(open, MixedTeam(4)).endTick);
         }
 
@@ -313,14 +316,14 @@ namespace ShinobiDominion.Tests
         }
 
         [Test]
-        public void GarrisonRaid_HasThreeGuardsOnTheirBases()
+        public void GarrisonRaid_HasOneGuardOnItsBase()
         {
             var raids = RaidCatalog.FromJson(FindFile("raids.json", "Resources/Config"), TestCatalog.Load());
             var raid = raids.Find("cinder_garrison");
             Assert.IsNotNull(raid);
             var buildings = raid.Expand(TestCatalog.Load());
             var guards = raid.ExpandDefenders(TestCatalog.Load(), HeroCatalog.FromJson(FindFile("heroes.json", "Resources/Config")));
-            Assert.AreEqual(3, guards.Count);
+            Assert.AreEqual(1, guards.Count, "A village has one guard");
             foreach (var guard in guards)
             {
                 Assert.Greater(guard.hp, 0);

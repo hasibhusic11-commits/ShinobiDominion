@@ -40,8 +40,8 @@ The brief lists "Chakra Turret" as an example but also requires original termino
 
 ## ADR-011: Rule details the brief left open
 - Dojo HQ, Builder Hall, Hero Altar and Summoning Gate can be moved but not removed, since removing them would lock out their menus.
-- Hero bases are capped at six at every Dojo level, per non-negotiable rule 4.
-- New players start with two placed Hero Bases and build the other four.
+- Hero bases are capped at six at every Dojo level, per non-negotiable rule 4. *Replaced by ADR-030: one base, one hero.*
+- New players start with two placed Hero Bases and build the other four. *Replaced by ADR-030: they start with their one base.*
 - Removing a building gives no refund.
 - All numbers in `Resources/Config/buildings.json` are test values and the file is marked not approved.
 
@@ -89,6 +89,16 @@ Follows the owner's ADR-021. Up to four Troop Camps, gated by Dojo level, and a 
 - Troop names and all numbers are test values. Offline practice troops aren't saved.
 
 
+## ADR-030: One hero at a time, decided by the owner on 2026-11-07
+The owner decided that only one hero is used at a time. **This replaces non-negotiable rule 4 ("Six on the field")** in the master prompt, and the owner made that call.
+- A village has **one Hero Base** at every Dojo level, and new players start with it placed.
+- That one hero leads every raid and guards the village. Troops still fill out the army.
+- Putting another hero on the base swaps them.
+- Every dungeon stage and rival village has **one enemy guard**.
+- Existing players keep the hero on their earliest base, and the others go back to the roster (`007_one_hero.sql`). Extra bases built before this stay, empty, and the hero cannot be put on a second one. Offline saves are fixed the same way when they load.
+- The first two stages were made easier so one level 1 hero with a small army can win them. A test checks every chapter for one hero at the expected level with the army a player would have by then.
+- Still open: whether rarer heroes should matter more now, since only one is ever used.
+
 ## ADR-029: A dungeon campaign and battle feel, added on 2026-11-07
 The owner asked for the game to feel like Castle Clash, so this borrows the genre's usual shape and none of its art, names or layouts. The home screen is unchanged: ATTACK stays the only thing docked at the bottom, with no icon rail, and there is no energy counter.
 - **15 stages in 3 chapters**, opened in order. The server refuses a locked stage with `RAID_LOCKED`, and the client only draws the map.
@@ -96,7 +106,7 @@ The owner asked for the game to feel like Castle Clash, so this borrows the genr
 - **Hero XP from dungeons is capped at 30 wins in 24 hours**, so it cannot be farmed without limit.
 - **Raids on rivals give no dungeon rewards.**
 - **Battle feel:** a battle panel with loot, stars and damage, damage numbers, a gravestone for each fighter who falls, a results screen with rewards, and sounds made in code. A sound switch is in the Menu. Walkers in the village are for show only, and nothing in the rules knows about them.
-- All values are test values, made by `tools/balance/generate_campaign.py`. How generous crystals and catalysts should be is still the owner's call.
+- All values are test values, made by `tools/balance/generate_campaign.py`. Under ADR-030 each stage has one guard. How generous crystals and catalysts should be is still the owner's call.
 ## ADR-028: Defender heroes and raids on rivals, added on 2026-11-07
 Claude made these choices while the owner slept, and the owner can overrule any of them. All numbers are test values.
 - **Guards:** heroes on a village's Hero Bases defend it. Each stands on its base, notices attackers within 8 cells, chases up to 14 cells from its post, then walks back. Roles keep their abilities. Attackers stop and fight any guard in reach. Stars still count only buildings, so a raid can win with a guard alive.

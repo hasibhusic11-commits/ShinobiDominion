@@ -17,31 +17,25 @@
         },
         {
           "def": "defense_tower",
-          "level": 2,
+          "level": 1,
           "x": 18,
           "z": 18
         },
         {
           "def": "defense_tower",
-          "level": 2,
+          "level": 1,
           "x": 30,
           "z": 30
         },
         {
-          "def": "spirit_turret",
-          "level": 1,
-          "x": 30,
-          "z": 18
-        },
-        {
           "def": "gold_vault",
-          "level": 2,
+          "level": 1,
           "x": 18,
           "z": 29
         },
         {
           "def": "gold_mine",
-          "level": 2,
+          "level": 1,
           "x": 28,
           "z": 23
         },
@@ -66,28 +60,28 @@
       ],
       "walls": [
         {
-          "level": 2,
+          "level": 1,
           "x1": 16,
           "z1": 16,
           "x2": 33,
           "z2": 16
         },
         {
-          "level": 2,
+          "level": 1,
           "x1": 33,
           "z1": 16,
           "x2": 33,
           "z2": 33
         },
         {
-          "level": 2,
+          "level": 1,
           "x1": 33,
           "z1": 33,
           "x2": 16,
           "z2": 33
         },
         {
-          "level": 2,
+          "level": 1,
           "x1": 16,
           "z1": 33,
           "x2": 16,
@@ -117,31 +111,25 @@
         },
         {
           "def": "defense_tower",
-          "level": 2,
+          "level": 1,
           "x": 18,
           "z": 18
         },
         {
           "def": "defense_tower",
-          "level": 2,
+          "level": 1,
           "x": 30,
           "z": 30
         },
         {
-          "def": "spirit_turret",
-          "level": 1,
-          "x": 30,
-          "z": 18
-        },
-        {
           "def": "gold_vault",
-          "level": 2,
+          "level": 1,
           "x": 18,
           "z": 29
         },
         {
           "def": "gold_mine",
-          "level": 2,
+          "level": 1,
           "x": 28,
           "z": 23
         },
@@ -153,47 +141,35 @@
         },
         {
           "def": "hero_base",
-          "level": 2,
-          "x": 24,
-          "z": 18
-        },
-        {
-          "def": "hero_base",
-          "level": 2,
-          "x": 24,
-          "z": 29
-        },
-        {
-          "def": "hero_base",
-          "level": 2,
+          "level": 1,
           "x": 14,
           "z": 12
         }
       ],
       "walls": [
         {
-          "level": 2,
+          "level": 1,
           "x1": 16,
           "z1": 16,
           "x2": 33,
           "z2": 16
         },
         {
-          "level": 2,
+          "level": 1,
           "x1": 33,
           "z1": 16,
           "x2": 33,
           "z2": 33
         },
         {
-          "level": 2,
+          "level": 1,
           "x1": 33,
           "z1": 33,
           "x2": 16,
           "z2": 33
         },
         {
-          "level": 2,
+          "level": 1,
           "x1": 16,
           "z1": 33,
           "x2": 16,
@@ -204,23 +180,9 @@
         {
           "heroId": "solar_beast_sage",
           "evolution": 0,
-          "level": 40,
+          "level": 10,
           "x": 14,
           "z": 12
-        },
-        {
-          "heroId": "lantern_warden",
-          "evolution": 0,
-          "level": 60,
-          "x": 24,
-          "z": 18
-        },
-        {
-          "heroId": "reed_archer",
-          "evolution": 0,
-          "level": 80,
-          "x": 24,
-          "z": 29
         }
       ],
       "chapter": 1,
@@ -286,18 +248,6 @@
           "level": 2,
           "x": 24,
           "z": 28
-        },
-        {
-          "def": "hero_base",
-          "level": 2,
-          "x": 24,
-          "z": 21
-        },
-        {
-          "def": "hero_base",
-          "level": 2,
-          "x": 28,
-          "z": 26
         }
       ],
       "walls": [
@@ -337,20 +287,6 @@
           "level": 35,
           "x": 24,
           "z": 28
-        },
-        {
-          "heroId": "reed_archer",
-          "evolution": 0,
-          "level": 35,
-          "x": 24,
-          "z": 21
-        },
-        {
-          "heroId": "solar_beast_sage",
-          "evolution": 0,
-          "level": 35,
-          "x": 28,
-          "z": 26
         }
       ]
     },
@@ -427,18 +363,6 @@
           "level": 2,
           "x": 24,
           "z": 28
-        },
-        {
-          "def": "hero_base",
-          "level": 2,
-          "x": 24,
-          "z": 21
-        },
-        {
-          "def": "hero_base",
-          "level": 2,
-          "x": 28,
-          "z": 26
         }
       ],
       "walls": [
@@ -478,20 +402,6 @@
           "level": 44,
           "x": 24,
           "z": 28
-        },
-        {
-          "heroId": "reed_archer",
-          "evolution": 0,
-          "level": 44,
-          "x": 24,
-          "z": 21
-        },
-        {
-          "heroId": "solar_beast_sage",
-          "evolution": 0,
-          "level": 44,
-          "x": 28,
-          "z": 26
         }
       ]
     },
@@ -568,18 +478,6 @@
           "level": 2,
           "x": 24,
           "z": 28
-        },
-        {
-          "def": "hero_base",
-          "level": 2,
-          "x": 24,
-          "z": 21
-        },
-        {
-          "def": "hero_base",
-          "level": 2,
-          "x": 28,
-          "z": 26
         }
       ],
       "walls": [
@@ -619,20 +517,6 @@
           "level": 53,
           "x": 24,
           "z": 28
-        },
-        {
-          "heroId": "reed_archer",
-          "evolution": 0,
-          "level": 53,
-          "x": 24,
-          "z": 21
-        },
-        {
-          "heroId": "solar_beast_sage",
-          "evolution": 0,
-          "level": 53,
-          "x": 28,
-          "z": 26
         }
       ]
     },
@@ -715,24 +599,6 @@
           "level": 3,
           "x": 24,
           "z": 28
-        },
-        {
-          "def": "hero_base",
-          "level": 3,
-          "x": 24,
-          "z": 21
-        },
-        {
-          "def": "hero_base",
-          "level": 3,
-          "x": 28,
-          "z": 26
-        },
-        {
-          "def": "hero_base",
-          "level": 3,
-          "x": 21,
-          "z": 26
         }
       ],
       "walls": [
@@ -772,27 +638,6 @@
           "level": 62,
           "x": 24,
           "z": 28
-        },
-        {
-          "heroId": "reed_archer",
-          "evolution": 0,
-          "level": 62,
-          "x": 24,
-          "z": 21
-        },
-        {
-          "heroId": "solar_beast_sage",
-          "evolution": 0,
-          "level": 62,
-          "x": 28,
-          "z": 26
-        },
-        {
-          "heroId": "talisman_novice",
-          "evolution": 0,
-          "level": 62,
-          "x": 21,
-          "z": 26
         }
       ]
     },
@@ -875,24 +720,6 @@
           "level": 3,
           "x": 24,
           "z": 28
-        },
-        {
-          "def": "hero_base",
-          "level": 3,
-          "x": 24,
-          "z": 21
-        },
-        {
-          "def": "hero_base",
-          "level": 3,
-          "x": 28,
-          "z": 26
-        },
-        {
-          "def": "hero_base",
-          "level": 3,
-          "x": 21,
-          "z": 26
         }
       ],
       "walls": [
@@ -932,27 +759,6 @@
           "level": 71,
           "x": 24,
           "z": 28
-        },
-        {
-          "heroId": "reed_archer",
-          "evolution": 0,
-          "level": 71,
-          "x": 24,
-          "z": 21
-        },
-        {
-          "heroId": "solar_beast_sage",
-          "evolution": 0,
-          "level": 71,
-          "x": 28,
-          "z": 26
-        },
-        {
-          "heroId": "talisman_novice",
-          "evolution": 0,
-          "level": 71,
-          "x": 21,
-          "z": 26
         }
       ]
     },
@@ -1047,24 +853,6 @@
           "level": 3,
           "x": 24,
           "z": 28
-        },
-        {
-          "def": "hero_base",
-          "level": 3,
-          "x": 24,
-          "z": 21
-        },
-        {
-          "def": "hero_base",
-          "level": 3,
-          "x": 28,
-          "z": 26
-        },
-        {
-          "def": "hero_base",
-          "level": 3,
-          "x": 21,
-          "z": 26
         }
       ],
       "walls": [
@@ -1104,27 +892,6 @@
           "level": 80,
           "x": 24,
           "z": 28
-        },
-        {
-          "heroId": "reed_archer",
-          "evolution": 0,
-          "level": 80,
-          "x": 24,
-          "z": 21
-        },
-        {
-          "heroId": "solar_beast_sage",
-          "evolution": 0,
-          "level": 80,
-          "x": 28,
-          "z": 26
-        },
-        {
-          "heroId": "talisman_novice",
-          "evolution": 0,
-          "level": 80,
-          "x": 21,
-          "z": 26
         }
       ]
     },
@@ -1219,30 +986,6 @@
           "level": 4,
           "x": 24,
           "z": 28
-        },
-        {
-          "def": "hero_base",
-          "level": 4,
-          "x": 24,
-          "z": 21
-        },
-        {
-          "def": "hero_base",
-          "level": 4,
-          "x": 28,
-          "z": 26
-        },
-        {
-          "def": "hero_base",
-          "level": 4,
-          "x": 21,
-          "z": 26
-        },
-        {
-          "def": "hero_base",
-          "level": 4,
-          "x": 28,
-          "z": 22
         }
       ],
       "walls": [
@@ -1282,34 +1025,6 @@
           "level": 89,
           "x": 24,
           "z": 28
-        },
-        {
-          "heroId": "reed_archer",
-          "evolution": 0,
-          "level": 89,
-          "x": 24,
-          "z": 21
-        },
-        {
-          "heroId": "solar_beast_sage",
-          "evolution": 0,
-          "level": 89,
-          "x": 28,
-          "z": 26
-        },
-        {
-          "heroId": "talisman_novice",
-          "evolution": 0,
-          "level": 89,
-          "x": 21,
-          "z": 26
-        },
-        {
-          "heroId": "thunder_empress",
-          "evolution": 0,
-          "level": 89,
-          "x": 28,
-          "z": 22
         }
       ]
     },
@@ -1410,30 +1125,6 @@
           "level": 4,
           "x": 24,
           "z": 28
-        },
-        {
-          "def": "hero_base",
-          "level": 4,
-          "x": 24,
-          "z": 21
-        },
-        {
-          "def": "hero_base",
-          "level": 4,
-          "x": 28,
-          "z": 26
-        },
-        {
-          "def": "hero_base",
-          "level": 4,
-          "x": 21,
-          "z": 26
-        },
-        {
-          "def": "hero_base",
-          "level": 4,
-          "x": 28,
-          "z": 22
         }
       ],
       "walls": [
@@ -1473,34 +1164,6 @@
           "level": 98,
           "x": 24,
           "z": 28
-        },
-        {
-          "heroId": "reed_archer",
-          "evolution": 0,
-          "level": 98,
-          "x": 24,
-          "z": 21
-        },
-        {
-          "heroId": "solar_beast_sage",
-          "evolution": 0,
-          "level": 98,
-          "x": 28,
-          "z": 26
-        },
-        {
-          "heroId": "talisman_novice",
-          "evolution": 0,
-          "level": 98,
-          "x": 21,
-          "z": 26
-        },
-        {
-          "heroId": "thunder_empress",
-          "evolution": 0,
-          "level": 98,
-          "x": 28,
-          "z": 22
         }
       ]
     },
@@ -1601,30 +1264,6 @@
           "level": 4,
           "x": 24,
           "z": 28
-        },
-        {
-          "def": "hero_base",
-          "level": 4,
-          "x": 24,
-          "z": 21
-        },
-        {
-          "def": "hero_base",
-          "level": 4,
-          "x": 28,
-          "z": 26
-        },
-        {
-          "def": "hero_base",
-          "level": 4,
-          "x": 21,
-          "z": 26
-        },
-        {
-          "def": "hero_base",
-          "level": 4,
-          "x": 28,
-          "z": 22
         }
       ],
       "walls": [
@@ -1664,34 +1303,6 @@
           "level": 107,
           "x": 24,
           "z": 28
-        },
-        {
-          "heroId": "reed_archer",
-          "evolution": 0,
-          "level": 107,
-          "x": 24,
-          "z": 21
-        },
-        {
-          "heroId": "solar_beast_sage",
-          "evolution": 0,
-          "level": 107,
-          "x": 28,
-          "z": 26
-        },
-        {
-          "heroId": "talisman_novice",
-          "evolution": 0,
-          "level": 107,
-          "x": 21,
-          "z": 26
-        },
-        {
-          "heroId": "thunder_empress",
-          "evolution": 0,
-          "level": 107,
-          "x": 28,
-          "z": 22
         }
       ]
     },
@@ -1798,36 +1409,6 @@
           "level": 5,
           "x": 24,
           "z": 28
-        },
-        {
-          "def": "hero_base",
-          "level": 5,
-          "x": 24,
-          "z": 21
-        },
-        {
-          "def": "hero_base",
-          "level": 5,
-          "x": 28,
-          "z": 26
-        },
-        {
-          "def": "hero_base",
-          "level": 5,
-          "x": 21,
-          "z": 26
-        },
-        {
-          "def": "hero_base",
-          "level": 5,
-          "x": 28,
-          "z": 22
-        },
-        {
-          "def": "hero_base",
-          "level": 5,
-          "x": 21,
-          "z": 22
         }
       ],
       "walls": [
@@ -1867,41 +1448,6 @@
           "level": 116,
           "x": 24,
           "z": 28
-        },
-        {
-          "heroId": "reed_archer",
-          "evolution": 0,
-          "level": 116,
-          "x": 24,
-          "z": 21
-        },
-        {
-          "heroId": "solar_beast_sage",
-          "evolution": 0,
-          "level": 116,
-          "x": 28,
-          "z": 26
-        },
-        {
-          "heroId": "talisman_novice",
-          "evolution": 0,
-          "level": 116,
-          "x": 21,
-          "z": 26
-        },
-        {
-          "heroId": "thunder_empress",
-          "evolution": 0,
-          "level": 116,
-          "x": 28,
-          "z": 22
-        },
-        {
-          "heroId": "stone_titan",
-          "evolution": 0,
-          "level": 116,
-          "x": 21,
-          "z": 22
         }
       ]
     },
@@ -2014,36 +1560,6 @@
           "level": 5,
           "x": 24,
           "z": 28
-        },
-        {
-          "def": "hero_base",
-          "level": 5,
-          "x": 24,
-          "z": 21
-        },
-        {
-          "def": "hero_base",
-          "level": 5,
-          "x": 28,
-          "z": 26
-        },
-        {
-          "def": "hero_base",
-          "level": 5,
-          "x": 21,
-          "z": 26
-        },
-        {
-          "def": "hero_base",
-          "level": 5,
-          "x": 28,
-          "z": 22
-        },
-        {
-          "def": "hero_base",
-          "level": 5,
-          "x": 21,
-          "z": 22
         }
       ],
       "walls": [
@@ -2083,41 +1599,6 @@
           "level": 125,
           "x": 24,
           "z": 28
-        },
-        {
-          "heroId": "reed_archer",
-          "evolution": 0,
-          "level": 125,
-          "x": 24,
-          "z": 21
-        },
-        {
-          "heroId": "solar_beast_sage",
-          "evolution": 0,
-          "level": 125,
-          "x": 28,
-          "z": 26
-        },
-        {
-          "heroId": "talisman_novice",
-          "evolution": 0,
-          "level": 125,
-          "x": 21,
-          "z": 26
-        },
-        {
-          "heroId": "thunder_empress",
-          "evolution": 0,
-          "level": 125,
-          "x": 28,
-          "z": 22
-        },
-        {
-          "heroId": "stone_titan",
-          "evolution": 0,
-          "level": 125,
-          "x": 21,
-          "z": 22
         }
       ]
     },
@@ -2230,36 +1711,6 @@
           "level": 5,
           "x": 24,
           "z": 28
-        },
-        {
-          "def": "hero_base",
-          "level": 5,
-          "x": 24,
-          "z": 21
-        },
-        {
-          "def": "hero_base",
-          "level": 5,
-          "x": 28,
-          "z": 26
-        },
-        {
-          "def": "hero_base",
-          "level": 5,
-          "x": 21,
-          "z": 26
-        },
-        {
-          "def": "hero_base",
-          "level": 5,
-          "x": 28,
-          "z": 22
-        },
-        {
-          "def": "hero_base",
-          "level": 5,
-          "x": 21,
-          "z": 22
         }
       ],
       "walls": [
@@ -2299,41 +1750,6 @@
           "level": 134,
           "x": 24,
           "z": 28
-        },
-        {
-          "heroId": "reed_archer",
-          "evolution": 0,
-          "level": 134,
-          "x": 24,
-          "z": 21
-        },
-        {
-          "heroId": "solar_beast_sage",
-          "evolution": 0,
-          "level": 134,
-          "x": 28,
-          "z": 26
-        },
-        {
-          "heroId": "talisman_novice",
-          "evolution": 0,
-          "level": 134,
-          "x": 21,
-          "z": 26
-        },
-        {
-          "heroId": "thunder_empress",
-          "evolution": 0,
-          "level": 134,
-          "x": 28,
-          "z": 22
-        },
-        {
-          "heroId": "stone_titan",
-          "evolution": 0,
-          "level": 134,
-          "x": 21,
-          "z": 22
         }
       ]
     },
@@ -2446,36 +1862,6 @@
           "level": 6,
           "x": 24,
           "z": 28
-        },
-        {
-          "def": "hero_base",
-          "level": 6,
-          "x": 24,
-          "z": 21
-        },
-        {
-          "def": "hero_base",
-          "level": 6,
-          "x": 28,
-          "z": 26
-        },
-        {
-          "def": "hero_base",
-          "level": 6,
-          "x": 21,
-          "z": 26
-        },
-        {
-          "def": "hero_base",
-          "level": 6,
-          "x": 28,
-          "z": 22
-        },
-        {
-          "def": "hero_base",
-          "level": 6,
-          "x": 21,
-          "z": 22
         }
       ],
       "walls": [
@@ -2515,41 +1901,6 @@
           "level": 143,
           "x": 24,
           "z": 28
-        },
-        {
-          "heroId": "reed_archer",
-          "evolution": 0,
-          "level": 143,
-          "x": 24,
-          "z": 21
-        },
-        {
-          "heroId": "solar_beast_sage",
-          "evolution": 0,
-          "level": 143,
-          "x": 28,
-          "z": 26
-        },
-        {
-          "heroId": "talisman_novice",
-          "evolution": 0,
-          "level": 143,
-          "x": 21,
-          "z": 26
-        },
-        {
-          "heroId": "thunder_empress",
-          "evolution": 0,
-          "level": 143,
-          "x": 28,
-          "z": 22
-        },
-        {
-          "heroId": "stone_titan",
-          "evolution": 0,
-          "level": 143,
-          "x": 21,
-          "z": 22
         }
       ]
     }

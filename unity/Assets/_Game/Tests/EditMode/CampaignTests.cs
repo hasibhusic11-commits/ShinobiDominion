@@ -22,23 +22,27 @@ namespace ShinobiDominion.Tests
         private static RaidCatalog Raids() => RaidCatalog.FromJson(FindFile("raids.json", "Resources/Config"), TestCatalog.Load());
         private static HeroCatalog Heroes() => HeroCatalog.FromJson(FindFile("heroes.json", "Resources/Config"));
 
-        /// <summary>Six level-appropriate legends landing together, as a player would have them.</summary>
-        private static List<BattleHeroInput> Team(HeroCatalog heroes, int level, int evolution = 0)
+        /// <summary>The army a player would have by this stage: camps grow with the Dojo.</summary>
+        public static int ArmyFor(int stage) => Math.Min(160, 10 + 10 * stage);
+
+        /// <summary>One hero at a level fitting the stage, landing with a militia army, as a player would.</summary>
+        private static List<BattleHeroInput> Team(HeroCatalog heroes, int level, int army, int evolution = 0, string heroId = "solar_beast_sage")
         {
-            var ids = new[] { "stone_titan", "solar_beast_sage", "solar_beast_sage", "thunder_empress", "moonfang_oracle", "lantern_warden" };
-            return ids.Select((id, i) =>
-            {
-                var hero = heroes.Get(id);
-                var stats = HeroMath.Stats(hero, evolution, level);
-                return new BattleHeroInput { id = "h" + i, role = hero.role.ToString(), hp = stats.Hp, attack = stats.Attack, defense = stats.Defense, x = 3 + i, z = 3 };
-            }).ToList();
+            var hero = heroes.Get(heroId);
+            var stats = HeroMath.Stats(hero, evolution, level);
+            var team = new List<BattleHeroInput> { new BattleHeroInput { id = "h0", role = hero.role.ToString(), hp = stats.Hp, attack = stats.Attack, defense = stats.Defense, x = 3, z = 3 } };
+            for (var i = 0; i < army; i++)
+                team.Add(new BattleHeroInput { id = "t" + i, role = "Fighter", hp = 110, attack = 14, defense = 5, isTroop = true, x = 2 + i % 10, z = 2 + i / 10 % 3 });
+            return team;
         }
 
-        private static BattleResult Fight(RaidDefinition raid, HeroCatalog heroes, int level, int evolution = 0)
+        private static BattleResult Fight(RaidDefinition raid, HeroCatalog heroes, int level, int evolution = 0) => Fight(raid, heroes, level, ArmyFor(raid.stage), evolution);
+
+        private static BattleResult Fight(RaidDefinition raid, HeroCatalog heroes, int level, int army, int evolution, string heroId = "solar_beast_sage")
         {
             var catalog = TestCatalog.Load();
             var guards = raid.ExpandDefenders(catalog, heroes).Select(d => new BattleDefenderInput { id = d.id, role = d.role, hp = d.hp, attack = d.attack, defense = d.defense, x = d.x, z = d.z });
-            return BattleSim.Run(raid.Expand(catalog), Team(heroes, level, evolution), guards);
+            return BattleSim.Run(raid.Expand(catalog), Team(heroes, level, army, evolution, heroId), guards);
         }
 
         [Test]
@@ -63,7 +67,7 @@ namespace ShinobiDominion.Tests
             {
                 var buildings = raid.Expand(catalog);
                 var guards = raid.ExpandDefenders(catalog, heroes);
-                Assert.Greater(guards.Count, 0, raid.id);
+                Assert.AreEqual(1, guards.Count, raid.id + " should have exactly one guard, like any village");
                 Assert.Greater(raid.xpPerWin, 0, raid.id);
                 Assert.Greater(raid.goldPerStar, 0, raid.id);
                 foreach (var guard in guards)
@@ -94,6 +98,8 @@ namespace ShinobiDominion.Tests
             Assert.Greater(Power(raids[14]), Power(raids[9]));
         }
 
+        [TestCase("ridge_outpost", 1)]
+        [TestCase("cinder_garrison", 10)]
         [TestCase("stage_03", 25)]
         [TestCase("stage_05", 50)]
         [TestCase("stage_10", 110)]
@@ -112,17 +118,13 @@ namespace ShinobiDominion.Tests
             Assert.Less(Fight(Raids().Find(id), Heroes(), 1).stars, 3, id);
         }
 
-        [Test]
-        public void SixSameRoleLegends_DoNotTriviallyBeatTheFinalStage()
+        [TestCase("stage_05")]
+        [TestCase("stage_10")]
+        [TestCase("stage_15")]
+        public void ArmyAlone_WithAWeakHero_DoesNotThreeStarTheStage(string id)
         {
-            var catalog = TestCatalog.Load();
-            var heroes = Heroes();
-            var raid = Raids().Find("stage_15");
-            var guards = raid.ExpandDefenders(catalog, heroes).Select(d => new BattleDefenderInput { id = d.id, role = d.role, hp = d.hp, attack = d.attack, defense = d.defense, x = d.x, z = d.z }).ToList();
-            var assassin = heroes.Get("river_scout");
-            var stats = HeroMath.Stats(assassin, 0, 100);
-            var team = Enumerable.Range(0, 6).Select(i => new BattleHeroInput { id = "a" + i, role = "Assassin", hp = stats.Hp, attack = stats.Attack, defense = stats.Defense, x = 3 + i, z = 3 }).ToList();
-            Assert.Less(BattleSim.Run(raid.Expand(catalog), team, guards).stars, 3);
+            var raid = Raids().Find(id);
+            Assert.Less(Fight(raid, Heroes(), 1, ArmyFor(raid.stage), 0, "river_scout").stars, 3, id);
         }
     }
 }

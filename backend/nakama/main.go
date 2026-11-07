@@ -31,7 +31,7 @@ var migrationFiles embed.FS
 
 const (
 	startingCrystals = 3000
-	maxBaseSlots     = 6
+	maxBaseSlots     = 1 // one hero at a time leads raids and guards (ADR-030)
 	maxPayloadBytes  = 2048
 	migrationLockID  = 7265001
 )

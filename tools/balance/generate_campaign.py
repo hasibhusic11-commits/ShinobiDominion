@@ -79,7 +79,7 @@ def build_stage(stage):
     for defn, (x, z) in zip(economy[:3 + stage // 4], filler):
         buildings.append(place(defn, building_level, x, z))
 
-    guards = min(6, 2 + stage // 3)
+    guards = 1  # One hero guards a village, as in every village (ADR-030).
     guard_spots = [(cx - 1, cz + 3), (cx - 1, cz - 4), (cx + 3, cz + 1), (cx - 4, cz + 1), (cx + 3, cz - 3), (cx - 4, cz - 3)]
     level = min(200, 8 + stage * 9)
     evolution = 0

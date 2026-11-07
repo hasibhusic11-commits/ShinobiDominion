@@ -28,7 +28,8 @@ namespace ShinobiDominion.Core
         BadTroop,
         NoTrainingHall,
         TroopLocked,
-        CampsFull
+        CampsFull,
+        OneHeroOnly
     }
 
     public static class VillageErrorText
@@ -50,6 +51,7 @@ namespace ShinobiDominion.Core
                 case VillageError.NotRemovable: return "This building cannot be removed";
                 case VillageError.NotAHeroBase: return "Only a Hero Base can hold a hero";
                 case VillageError.HeroAlreadyAssigned: return "That hero is already on another base";
+                case VillageError.OneHeroOnly: return "Only one hero can be used at a time. Take your hero off its base first.";
                 case VillageError.InvalidHeroId: return "Invalid hero";
                 case VillageError.NotACollector: return "This building produces nothing";
                 case VillageError.NothingToCollect: return "Nothing to collect yet";
@@ -354,6 +356,9 @@ namespace ShinobiDominion.Core
 
         // ---------- Hero bases ----------
 
+        /// <summary>Only one hero is used at a time: it leads raids and guards the village (ADR-030).</summary>
+        public const int MaxAssignedHeroes = 1;
+
         public VillageError TryAssignHero(int baseId, string heroInstanceId)
         {
             var building = Find(baseId);
@@ -363,6 +368,8 @@ namespace ShinobiDominion.Core
             foreach (var other in _buildings.Values)
                 if (other.Id != baseId && other.AssignedHeroInstanceId == heroInstanceId)
                     return VillageError.HeroAlreadyAssigned;
+            if (_buildings.Values.Count(b => b.Id != baseId && b.AssignedHeroInstanceId != null) >= MaxAssignedHeroes)
+                return VillageError.OneHeroOnly;
 
             building.AssignedHeroInstanceId = heroInstanceId;
             Changed?.Invoke();
@@ -533,8 +540,14 @@ namespace ShinobiDominion.Core
             }
 
             foreach (var definition in Catalog.All)
+            {
+                // Villages from before the one-hero rule may keep their extra bases, empty.
+                if (definition.function == BuildingFunction.HeroBase) continue;
                 if (CountOf(definition.id) > LimitOf(definition))
                     throw new VillageSaveException($"Too many '{definition.id}' for the Dojo level.");
+            }
+            foreach (var extra in _buildings.Values.Where(b => b.AssignedHeroInstanceId != null).OrderBy(b => b.Id).Skip(MaxAssignedHeroes).ToList())
+                extra.AssignedHeroInstanceId = null;
 
             if (save.nextInstanceId <= maxId)
                 throw new VillageSaveException("Save's next id collides with an existing building.");

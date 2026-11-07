@@ -139,7 +139,7 @@ func TestRaid_TroopsFight_AndAreUsedUp(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := grant(t, p, map[string]interface{}{"archetypeId": "river_scout", "copies": 1})
-	bases := sixBases(t, p)
+	bases := heroBases(t, p)
 	if _, err := p.rpc("sd_assign_hero", map[string]interface{}{"slot": bases[0], "instanceId": s.Heroes[0].InstanceID}); err != nil {
 		t.Fatal(err)
 	}
@@ -167,7 +167,7 @@ func TestRaid_CannotLandTroopsYouDontHave(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := grant(t, p, map[string]interface{}{"archetypeId": "river_scout", "copies": 1})
-	bases := sixBases(t, p)
+	bases := heroBases(t, p)
 	p.rpc("sd_assign_hero", map[string]interface{}{"slot": bases[0], "instanceId": s.Heroes[0].InstanceID})
 	start := startRaid(t, p)
 	land := func(troop string, x, z, count int) error {

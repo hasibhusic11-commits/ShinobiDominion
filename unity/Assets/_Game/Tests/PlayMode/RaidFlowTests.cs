@@ -45,11 +45,11 @@ namespace ShinobiDominion.Tests
                 Assert.AreEqual(VillageError.None, village.TryPlace("hero_base", new GridCoord(x, 40), Rotation.R0, 0, out _));
                 bases = village.Buildings.Where(b => b.Definition.function == BuildingFunction.HeroBase).ToList();
             }
-            var legends = Controller.Roster.Heroes.Where(h => h.ArchetypeId == "solar_beast_sage").ToList();
+            var legends = Controller.Roster.Heroes.Where(h => h.ArchetypeId == "solar_beast_sage" && h.Level == HeroMath.MaxLevel).ToList();
             while (legends.Count < count)
             {
                 Controller.Roster.AddHero("solar_beast_sage", 0, HeroMath.MaxLevel);
-                legends = Controller.Roster.Heroes.Where(h => h.ArchetypeId == "solar_beast_sage").ToList();
+                legends = Controller.Roster.Heroes.Where(h => h.ArchetypeId == "solar_beast_sage" && h.Level == HeroMath.MaxLevel).ToList();
             }
             for (var i = 0; i < count; i++) Controller.AssignHero(bases[i].Id, legends[i].InstanceId);
         }
@@ -57,7 +57,7 @@ namespace ShinobiDominion.Tests
         [UnityTest]
         public IEnumerator FullRaid_RunsToResult_AndComesBackHome()
         {
-            AssignTeam(6);
+            AssignTeam(1);
             var buildings = Controller.Village.BuildingCount;
             var gold = Controller.Village.Gold;
 
@@ -68,7 +68,7 @@ namespace ShinobiDominion.Tests
             Assert.IsFalse(Controller.Hud.AttackButton.gameObject.activeSelf, "ATTACK stays hidden during a raid");
 
             Controller.AutoPlaceHeroes();
-            Assert.AreEqual(6, Controller.RaidPlacements.Count);
+            Assert.AreEqual(1, Controller.RaidPlacements.Count);
             Controller.StartBattle();
             Assert.AreEqual(RaidPhase.Battle, Controller.CurrentRaidPhase);
 
@@ -77,7 +77,7 @@ namespace ShinobiDominion.Tests
 
             Controller.SkipBattle();
             Assert.AreEqual(RaidPhase.Resolved, Controller.CurrentRaidPhase);
-            Assert.AreEqual(3, Controller.LastRaidOutcome.Result.stars, "Six level 200 legends should clear this base");
+            Assert.AreEqual(3, Controller.LastRaidOutcome.Result.stars, "One level 200 legend should clear this base");
             Assert.AreEqual(gold, Controller.Village.Gold, "A practice battle pays nothing");
 
             Controller.FinishRaid();
@@ -92,14 +92,14 @@ namespace ShinobiDominion.Tests
         [UnityTest]
         public IEnumerator Playback_ReachesTheResult_WithoutSkipping()
         {
-            AssignTeam(6);
+            AssignTeam(1);
             Controller.OpenAttack();
             Controller.ScoutRaid("ridge_outpost");
             Controller.AutoPlaceHeroes();
             Controller.StartBattle();
-            var limit = Time.time + 90f;
+            var limit = Time.realtimeSinceStartup + 60f;
             Time.timeScale = 20f;
-            while (Controller.CurrentRaidPhase == RaidPhase.Battle && Time.time < limit) yield return null;
+            while (Controller.CurrentRaidPhase == RaidPhase.Battle && Time.realtimeSinceStartup < limit) yield return null;
             Time.timeScale = 1f;
             Assert.AreEqual(RaidPhase.Resolved, Controller.CurrentRaidPhase);
             Controller.FinishRaid();
@@ -172,7 +172,7 @@ namespace ShinobiDominion.Tests
         [UnityTest]
         public IEnumerator Placement_RefusesCellsNearTheEnemy_AndPicksHeroesBackUp()
         {
-            AssignTeam(2);
+            AssignTeam(1);
             Controller.OpenAttack();
             Controller.ScoutRaid("ridge_outpost");
             Controller.TapDeployCell(new GridCoord(25, 25));
@@ -192,7 +192,7 @@ namespace ShinobiDominion.Tests
         [UnityTest]
         public IEnumerator Outcome_FromTheLog_MatchesWhatThePlaybackShows()
         {
-            AssignTeam(6);
+            AssignTeam(1);
             Controller.OpenAttack();
             Controller.ScoutRaid("ridge_outpost");
             Controller.AutoPlaceHeroes();

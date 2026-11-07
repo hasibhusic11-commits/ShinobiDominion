@@ -75,24 +75,19 @@ namespace ShinobiDominion.Tests
             controller.CloseAll();
 
             var village = controller.Village;
-            village.TryPlace("hero_base", new GridCoord(17, 33), Rotation.R0, 0, out _);
-            village.TryPlace("hero_base", new GridCoord(23, 36), Rotation.R0, 0, out _);
-            village.TryPlace("hero_base", new GridCoord(29, 34), Rotation.R0, 0, out _);
-            var last = village.TryPlace("hero_base", new GridCoord(33, 31), Rotation.R0, 0, out _);
-            Assert.AreEqual(VillageError.None, last);
+            Assert.AreEqual(VillageError.LimitReached, village.TryPlace("hero_base", new GridCoord(17, 33), Rotation.R0, 0, out _), "One Hero Base only");
             village.TryPlace("defense_tower", new GridCoord(35, 16), Rotation.R0, 0, out _);
 
-            // One Legendary in each of the four forms, on a base, to show the visual progression.
+            // The one hero, in its final form, on the village's only base.
             var roster = controller.Roster;
             var bases = village.Buildings.Where(b => b.Definition.function == BuildingFunction.HeroBase).ToList();
-            for (var e = 0; e <= 3; e++)
-                controller.AssignHero(bases[e].Id, roster.AddHero("thunder_empress", e, 50).InstanceId);
+            Assert.AreEqual(VillageError.None, controller.AssignHero(bases[0].Id, roster.AddHero("thunder_empress", 3, 50).InstanceId));
             First("gold_mine").LastCollectedUtcTicks = DateTime.UtcNow.Ticks - TimeSpan.TicksPerHour;
             controller.RefreshCollectMarkers();
-            yield return shot("07_home_six_bases_and_walls");
+            yield return shot("07_home_one_base_and_walls");
 
             game.IsoCamera.ZoomAt(0.4f, new Vector2(texture.width * 0.5f, texture.height * 0.62f));
-            yield return shot("09_four_forms_close_up");
+            yield return shot("09_hero_on_base_close_up");
             game.IsoCamera.ZoomAt(2.5f, new Vector2(texture.width * 0.5f, texture.height * 0.62f));
 
             controller.Select(First("hero_altar").Id);

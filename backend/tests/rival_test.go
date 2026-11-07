@@ -72,8 +72,8 @@ func TestRival_CopiesVillageAndGuards_WithoutExposingHeroIds(t *testing.T) {
 	if start.Raid.ID != "rival" {
 		t.Fatalf("raid id %q", start.Raid.ID)
 	}
-	if len(start.Defenders) != 2 {
-		t.Fatalf("want 2 guards, got %d", len(start.Defenders))
+	if len(start.Defenders) != 1 {
+		t.Fatalf("want the 1 guard, got %d", len(start.Defenders))
 	}
 	if len(start.Buildings) == 0 {
 		t.Fatal("no buildings")
@@ -107,7 +107,7 @@ func TestRival_GuardsFight_AndTheSnapshotOutlivesLaterChanges(t *testing.T) {
 	attacker := raidReady(t, "solar_beast_sage", 6, 6)
 	start := raidRival(t, attacker, userIDOf(t, rival))
 
-	// The rival pulls both heroes off guard after the raid has started.
+	// The rival pulls its hero off guard after the raid has started.
 	for _, slot := range baseIDs(mustState(t, rival)) {
 		if _, err := rival.rpc("sd_assign_hero", map[string]interface{}{"slot": slot, "instanceId": nil}); err != nil {
 			t.Fatal(err)
@@ -124,8 +124,8 @@ func TestRival_GuardsFight_AndTheSnapshotOutlivesLaterChanges(t *testing.T) {
 		}
 	}
 	// Guards removed after the start still count: the raid fights the copy taken at the start.
-	if downs < 1 || downs+result.Result.DefendersAlive != 2 {
-		t.Fatalf("downs %d alive %d, want a total of 2 with at least one down", downs, result.Result.DefendersAlive)
+	if downs != 1 || result.Result.DefendersAlive != 0 {
+		t.Fatalf("downs %d alive %d, want the one guard down", downs, result.Result.DefendersAlive)
 	}
 }
 
@@ -240,8 +240,8 @@ func TestGarrison_HasGuards_AndTheyFight(t *testing.T) {
 	if err := json.Unmarshal([]byte(body), &start); err != nil {
 		t.Fatal(err)
 	}
-	if len(start.Defenders) != 3 {
-		t.Fatalf("want 3 guards, got %d", len(start.Defenders))
+	if len(start.Defenders) != 1 {
+		t.Fatalf("want 1 guard, got %d", len(start.Defenders))
 	}
 	result, err := deploy(p, "k-"+randomHex(8), start.AttackID, legalPlacements(start))
 	if err != nil {

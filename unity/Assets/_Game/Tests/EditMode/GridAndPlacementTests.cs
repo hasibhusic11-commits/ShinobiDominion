@@ -49,7 +49,7 @@ namespace ShinobiDominion.Tests
         public void Footprint_CannotOverrunMapEdge()
         {
             var village = TestCatalog.EmptyVillage();
-            Assert.AreEqual(VillageError.None, village.TryPlace("hero_base", new GridCoord(48, 48), Rotation.R0, Now, out _));
+            Assert.AreEqual(VillageError.None, village.TryPlace("defense_tower", new GridCoord(48, 48), Rotation.R0, Now, out _));
             Assert.AreEqual(VillageError.OutOfBounds, village.TryPlace("hero_base", new GridCoord(49, 49), Rotation.R0, Now, out _));
             Assert.AreEqual(VillageError.OutOfBounds, village.TryPlace("hero_base", new GridCoord(50, 0), Rotation.R0, Now, out _));
             Assert.AreEqual(VillageError.OutOfBounds, village.TryPlace("hero_base", new GridCoord(-1, 0), Rotation.R0, Now, out _));
@@ -98,13 +98,12 @@ namespace ShinobiDominion.Tests
         }
 
         [Test]
-        public void HeroBases_ExactlySixAllowed_EachIndependentlyPlaced()
+        public void HeroBases_ExactlyOneAllowed()
         {
             var village = TestCatalog.EmptyVillage();
-            for (var i = 0; i < 6; i++)
-                Assert.AreEqual(VillageError.None, village.TryPlace("hero_base", new GridCoord(i * 3, 0), Rotation.R0, Now, out _));
+            Assert.AreEqual(VillageError.None, village.TryPlace("hero_base", new GridCoord(0, 0), Rotation.R0, Now, out _));
             Assert.AreEqual(VillageError.LimitReached, village.TryPlace("hero_base", new GridCoord(30, 30), Rotation.R0, Now, out _));
-            Assert.AreEqual(6, village.CountOf("hero_base"));
+            Assert.AreEqual(1, village.CountOf("hero_base"));
         }
 
         [Test]
@@ -162,18 +161,14 @@ namespace ShinobiDominion.Tests
         }
 
         [Test]
-        public void HeroBase_OneHeroCannotOccupyTwoBases_SixLegendaryIdsAllowed()
+        public void HeroBase_HoldsOneHero_AndSwapsCleanly()
         {
             var village = TestCatalog.EmptyVillage();
-            var ids = new int[6];
-            for (var i = 0; i < 6; i++)
-            {
-                village.TryPlace("hero_base", new GridCoord(i * 3, 0), Rotation.R0, Now, out ids[i]);
-                Assert.AreEqual(VillageError.None, village.TryAssignHero(ids[i], "legendary-" + i));
-            }
-            Assert.AreEqual(VillageError.HeroAlreadyAssigned, village.TryAssignHero(ids[1], "legendary-0"));
-            Assert.AreEqual(VillageError.None, village.TryUnassignHero(ids[0]));
-            Assert.AreEqual(VillageError.None, village.TryAssignHero(ids[1], "legendary-0"));
+            village.TryPlace("hero_base", new GridCoord(0, 0), Rotation.R0, Now, out var id);
+            Assert.AreEqual(VillageError.None, village.TryAssignHero(id, "legendary-0"));
+            Assert.AreEqual(VillageError.None, village.TryAssignHero(id, "legendary-1"), "Putting another hero on the base swaps them");
+            Assert.AreEqual("legendary-1", village.Find(id).AssignedHeroInstanceId);
+            Assert.IsFalse(village.IsHeroAssigned("legendary-0"));
         }
 
         [Test]

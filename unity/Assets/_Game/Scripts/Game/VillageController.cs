@@ -629,7 +629,7 @@ namespace ShinobiDominion.Game
                 AddTab(tabs, BuildingCategory.Structures, "Structures");
                 AddTab(tabs, BuildingCategory.Defense, "Defense");
                 AddTab(tabs, BuildingCategory.Resources, "Resources");
-                AddTab(tabs, BuildingCategory.HeroBases, "Hero Bases");
+                AddTab(tabs, BuildingCategory.HeroBases, "Hero Base");
                 AddTab(tabs, BuildingCategory.Walls, "Walls");
 
                 // Unique essentials such as the Dojo always exist, so they would only be noise here.

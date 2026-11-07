@@ -152,11 +152,11 @@ func baseIDs(s state) []int {
 	return ids
 }
 
-// sixBases builds up to six real Hero Bases and returns their ids.
-func sixBases(t testing.TB, p *player) []int {
+// heroBases builds up to six real Hero Bases and returns their ids.
+func heroBases(t testing.TB, p *player) []int {
 	t.Helper()
 	grant(t, p, map[string]interface{}{"setGold": 10000})
-	for i, x := 0, 2; len(baseIDs(mustState(t, p))) < 6; i, x = i+1, x+3 {
+	for i, x := 0, 2; len(baseIDs(mustState(t, p))) < 1; i, x = i+1, x+3 {
 		if _, err := p.rpc("sd_village_place", map[string]interface{}{"key": "k-" + randomHex(8), "definitionId": "hero_base", "x": x, "z": 2}); err != nil {
 			t.Fatal(err)
 		}
@@ -857,28 +857,32 @@ func TestEvolve_ConcurrentAssignVersusSacrifice_NeverBoth(t *testing.T) {
 
 // ---------- Base assignment ----------
 
-func TestAssign_RulesAndSixLegendaries(t *testing.T) {
+func TestAssign_OneHeroAtATime(t *testing.T) {
 	p := blank(t, 0)
-	bases := sixBases(t, p)
-	grant(t, p, map[string]interface{}{"archetypeId": legend, "copies": 3})
-	s := grant(t, p, map[string]interface{}{"archetypeId": "thunder_empress", "copies": 4})
-	if len(s.Heroes) != 7 || len(bases) != 6 {
-		t.Fatal(len(s.Heroes), len(bases))
+	bases := heroBases(t, p)
+	s := grant(t, p, map[string]interface{}{"archetypeId": legend, "copies": 2})
+	if len(bases) != 1 {
+		t.Fatalf("%d bases", len(bases))
 	}
-	for i, slot := range bases {
-		if _, err := p.rpc("sd_assign_hero", map[string]interface{}{"slot": slot, "instanceId": s.Heroes[i].InstanceID}); err != nil {
-			t.Fatalf("six Legendaries must be allowed, base %d: %v", slot, err)
+	for _, hero := range s.Heroes {
+		if _, err := p.rpc("sd_assign_hero", map[string]interface{}{"slot": bases[0], "instanceId": hero.InstanceID}); err != nil {
+			t.Fatal(err)
 		}
 	}
-	_, err := p.rpc("sd_assign_hero", map[string]interface{}{"slot": bases[1], "instanceId": s.Heroes[0].InstanceID})
-	expectError(t, err, "HERO_ALREADY_ASSIGNED")
-
-	if _, err := p.rpc("sd_assign_hero", map[string]interface{}{"slot": bases[0], "instanceId": nil}); err != nil {
-		t.Fatal(err)
+	assigned := 0
+	for _, h := range mustState(t, p).Heroes {
+		if h.BaseSlot != nil {
+			assigned++
+			if h.InstanceID != s.Heroes[1].InstanceID {
+				t.Fatal("the second hero should have replaced the first")
+			}
+		}
 	}
-	if _, err := p.rpc("sd_assign_hero", map[string]interface{}{"slot": bases[0], "instanceId": s.Heroes[6].InstanceID}); err != nil {
-		t.Fatal(err)
+	if assigned != 1 {
+		t.Fatalf("%d heroes on bases", assigned)
 	}
+	_, err := place(p, "k-"+randomHex(8), "hero_base", 40, 40, 0)
+	expectError(t, err, "LimitReached")
 	for _, slot := range []int{0, -1} {
 		_, err = p.rpc("sd_assign_hero", map[string]interface{}{"slot": slot, "instanceId": s.Heroes[0].InstanceID})
 		expectError(t, err, "BAD_SLOT")
@@ -905,7 +909,7 @@ func TestAssign_OnlyRealHeroBasesCount(t *testing.T) {
 
 func TestAssign_ConcurrentNeverDoubleUsesAHero(t *testing.T) {
 	p := blank(t, 0)
-	bases := sixBases(t, p)
+	bases := heroBases(t, p)
 	s := grant(t, p, map[string]interface{}{"archetypeId": legend, "copies": 12})
 	var wg sync.WaitGroup
 	for i := 0; i < 12; i++ {
@@ -928,7 +932,7 @@ func TestAssign_ConcurrentNeverDoubleUsesAHero(t *testing.T) {
 			slots[*h.BaseSlot] = true
 		}
 	}
-	if used != 6 {
+	if used != 1 {
 		t.Fatalf("assigned %d heroes", used)
 	}
 }
@@ -983,10 +987,10 @@ func countBuildings(s state, def string) int {
 
 func TestVillage_NewPlayerStartsWithTheStarterLayout(t *testing.T) {
 	s := mustState(t, newPlayer(t))
-	if len(s.Village.Buildings) != 7 || s.Village.Gold != 5000 {
+	if len(s.Village.Buildings) != 6 || s.Village.Gold != 5000 {
 		t.Fatalf("buildings=%d gold=%d", len(s.Village.Buildings), s.Village.Gold)
 	}
-	if findBuilding(s, "builder_hall") == nil || findBuilding(s, "hero_altar") == nil || countBuildings(s, "hero_base") != 2 {
+	if findBuilding(s, "builder_hall") == nil || findBuilding(s, "hero_altar") == nil || countBuildings(s, "hero_base") != 1 {
 		t.Fatalf("%+v", s.Village.Buildings)
 	}
 }
@@ -1117,8 +1121,8 @@ func TestVillage_ConcurrentBuilds_CannotOverspend(t *testing.T) {
 	}
 }
 
-func TestVillage_ConcurrentSeventhBase_LimitHolds(t *testing.T) {
-	p := newPlayer(t)
+func TestVillage_ConcurrentSecondBase_LimitHolds(t *testing.T) {
+	p := blank(t, 0)
 	grant(t, p, map[string]interface{}{"setGold": 20000})
 	var wg sync.WaitGroup
 	for i := 0; i < 16; i++ {
@@ -1130,10 +1134,10 @@ func TestVillage_ConcurrentSeventhBase_LimitHolds(t *testing.T) {
 	}
 	wg.Wait()
 	final := mustState(t, p)
-	if countBuildings(final, "hero_base") != 6 {
+	if countBuildings(final, "hero_base") != 1 {
 		t.Fatalf("bases=%d", countBuildings(final, "hero_base"))
 	}
-	if final.Village.Gold != 20000-4*400 {
+	if final.Village.Gold != 20000 {
 		t.Fatalf("gold=%d", final.Village.Gold)
 	}
 }

@@ -57,12 +57,49 @@ func TestCampaign_LockedStage_IsRefused_UntilThePreviousOneIsCleared(t *testing.
 	}
 }
 
-func TestCampaign_Win_GivesEveryLandedHeroXP_FromTheServer(t *testing.T) {
-	p := raidReady(t, "solar_beast_sage", 6, 5)
+// armyHero is a player with one level 1 hero on its base and camps for an army.
+func armyHero(t *testing.T) *player {
+	t.Helper()
+	p := armyReady(t, 2)
+	s := grant(t, p, map[string]interface{}{"archetypeId": "solar_beast_sage", "copies": 1})
+	bases := heroBases(t, p)
+	if _, err := p.rpc("sd_assign_hero", map[string]interface{}{"slot": bases[0], "instanceId": s.Heroes[0].InstanceID}); err != nil {
+		t.Fatal(err)
+	}
+	return p
+}
+
+// winWithArmy trains 30 militia and lands them with the hero, as a player clearing an early stage would.
+func winWithArmy(t *testing.T, p *player, id string) campaignDeploy {
+	t.Helper()
+	grant(t, p, map[string]interface{}{"setGold": 20000})
+	if _, err := trainTroops(p, "k-"+randomHex(8), "militia", 30); err != nil {
+		t.Fatal(err)
+	}
+	start, err := startStage(t, p, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, err := p.rpc("sd_raid_deploy", map[string]interface{}{
+		"key": "k-" + randomHex(8), "attackId": start.AttackID, "placements": legalPlacements(start),
+		"troops": []map[string]interface{}{{"troopId": "militia", "x": 5, "z": 5, "count": 30}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var result campaignDeploy
+	if err := json.Unmarshal([]byte(body), &result); err != nil {
+		t.Fatal(err)
+	}
+	return result
+}
+
+func TestCampaign_Win_GivesTheLandedHeroXP_FromTheServer(t *testing.T) {
+	p := armyHero(t)
 	before := mustState(t, p)
-	won := fightStage(t, p, "ridge_outpost")
+	won := winWithArmy(t, p, "ridge_outpost")
 	if won.Result.Stars == 0 {
-		t.Fatal("five level 200 heroes should clear the first stage")
+		t.Fatal("a level 1 hero with 30 militia should clear the first stage")
 	}
 	if won.XpEarned <= 0 {
 		t.Fatalf("xp %d", won.XpEarned)
@@ -84,13 +121,13 @@ func TestCampaign_Win_GivesEveryLandedHeroXP_FromTheServer(t *testing.T) {
 }
 
 func TestCampaign_HeroXP_StopsAfterThe24HourCap(t *testing.T) {
-	p := raidReady(t, "solar_beast_sage", 6, 5)
+	p := armyHero(t)
 	for i := 0; i < 30; i++ {
-		if won := fightStage(t, p, "ridge_outpost"); won.XpEarned <= 0 {
-			t.Fatalf("win %d paid no XP", i+1)
+		if won := winWithArmy(t, p, "ridge_outpost"); won.XpEarned <= 0 {
+			t.Fatalf("win %d paid no XP (stars %d)", i+1, won.Result.Stars)
 		}
 	}
-	over := fightStage(t, p, "ridge_outpost")
+	over := winWithArmy(t, p, "ridge_outpost")
 	if over.Result.Stars == 0 {
 		t.Fatal("this team should still win")
 	}

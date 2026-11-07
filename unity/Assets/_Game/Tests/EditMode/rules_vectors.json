@@ -6,21 +6,20 @@
     { "def": "hero_altar", "x": 29, "z": 22 },
     { "def": "summoning_gate", "x": 23, "z": 30 },
     { "def": "gold_mine", "x": 18, "z": 16 },
-    { "def": "hero_base", "x": 19, "z": 29 },
-    { "def": "hero_base", "x": 29, "z": 29 }
+    { "def": "hero_base", "x": 19, "z": 29 }
   ],
   "scenarios": [
     {
       "name": "map edges",
       "startGold": 5000,
       "ops": [
-        { "op": "place", "def": "hero_base", "x": 48, "z": 48, "expect": "None", "gold": 4600 },
+        { "op": "place", "def": "defense_tower", "x": 48, "z": 48, "expect": "None", "gold": 4400 },
         { "op": "place", "def": "hero_base", "x": 49, "z": 49, "expect": "OutOfBounds" },
         { "op": "place", "def": "hero_base", "x": 50, "z": 0, "expect": "OutOfBounds" },
         { "op": "place", "def": "hero_base", "x": -1, "z": 0, "expect": "OutOfBounds" },
-        { "op": "place", "def": "hero_base", "x": 0, "z": -1, "expect": "OutOfBounds", "gold": 4600 },
+        { "op": "place", "def": "hero_base", "x": 0, "z": -1, "expect": "OutOfBounds", "gold": 4400 },
         { "op": "walls", "x": 49, "z": 49, "x2": 49, "z2": 49, "expect": "Overlap" },
-        { "op": "walls", "x": 50, "z": 0, "x2": 50, "z2": 0, "expect": "OutOfBounds", "gold": 4600 }
+        { "op": "walls", "x": 50, "z": 0, "x2": 50, "z2": 0, "expect": "OutOfBounds", "gold": 4400 }
       ]
     },
     {
@@ -50,16 +49,11 @@
       ]
     },
     {
-      "name": "exactly six hero bases",
+      "name": "exactly one hero base",
       "startGold": 5000,
       "ops": [
-        { "op": "place", "def": "hero_base", "x": 0, "z": 0, "expect": "None" },
-        { "op": "place", "def": "hero_base", "x": 3, "z": 0, "expect": "None" },
-        { "op": "place", "def": "hero_base", "x": 6, "z": 0, "expect": "None" },
-        { "op": "place", "def": "hero_base", "x": 9, "z": 0, "expect": "None" },
-        { "op": "place", "def": "hero_base", "x": 12, "z": 0, "expect": "None" },
-        { "op": "place", "def": "hero_base", "x": 15, "z": 0, "expect": "None", "gold": 2600 },
-        { "op": "place", "def": "hero_base", "x": 30, "z": 30, "expect": "LimitReached", "gold": 2600, "countDef": "hero_base", "count": 6 }
+        { "op": "place", "def": "hero_base", "x": 0, "z": 0, "expect": "None", "gold": 4600 },
+        { "op": "place", "def": "hero_base", "x": 30, "z": 30, "expect": "LimitReached", "gold": 4600, "countDef": "hero_base", "count": 1 }
       ]
     },
     {

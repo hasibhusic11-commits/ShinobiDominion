@@ -340,16 +340,13 @@ namespace ShinobiDominion.Tests
         }
 
         [Test]
-        public void SixLegendaries_CanAllBeAssignedToSixBases()
+        public void AnyLegendary_CanTakeTheOneBase()
         {
             var roster = DevInventory.Create(Catalog());
             var village = TestCatalog.EmptyVillage();
-            var legends = roster.Heroes.Where(h => roster.ArchetypeOf(h).rarity == HeroRarity.Legendary).Take(6).ToList();
-            for (var i = 0; i < 6; i++)
-            {
-                village.TryPlace("hero_base", new GridCoord(i * 3, 0), Rotation.R0, 0, out var id);
-                Assert.AreEqual(VillageError.None, village.TryAssignHero(id, legends[i].InstanceId));
-            }
+            village.TryPlace("hero_base", new GridCoord(0, 0), Rotation.R0, 0, out var id);
+            foreach (var legend in roster.Heroes.Where(h => roster.ArchetypeOf(h).rarity == HeroRarity.Legendary).Take(6))
+                Assert.AreEqual(VillageError.None, village.TryAssignHero(id, legend.InstanceId));
         }
     }
 }

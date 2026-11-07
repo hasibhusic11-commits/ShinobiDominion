@@ -83,13 +83,16 @@ namespace ShinobiDominion.Tests
         }
 
         [Test]
-        public void Load_RejectsSevenHeroBases()
+        public void Load_KeepsOldExtraHeroBases_ButOnlyTheFirstHero()
         {
             var save = ValidSave();
             for (var i = 0; i < 6; i++)
-                save.buildings.Add(new BuildingSave { id = 1000 + i, definitionId = "hero_base", x = i * 3, z = 40, level = 1 });
+                save.buildings.Add(new BuildingSave { id = 1000 + i, definitionId = "hero_base", x = i * 3, z = 40, level = 1, assignedHeroInstanceId = "hero-" + i });
             save.nextInstanceId = 2000;
-            Assert.Throws<VillageSaveException>(() => Village.FromSave(TestCatalog.Load(), save));
+            var village = Village.FromSave(TestCatalog.Load(), save);
+            var assigned = village.Buildings.Where(b => b.AssignedHeroInstanceId != null).ToList();
+            Assert.AreEqual(1, assigned.Count, "Only one hero stays on a base");
+            Assert.AreEqual(VillageError.LimitReached, village.TryPlace("hero_base", new GridCoord(30, 30), Rotation.R0, 0, out _), "No new bases past the limit");
         }
 
         [Test]
@@ -216,11 +219,11 @@ namespace ShinobiDominion.Tests
         }
 
         [Test]
-        public void HeroBaseLimit_IsSixAtEveryHqLevel()
+        public void HeroBaseLimit_IsOneAtEveryHqLevel()
         {
             var heroBase = TestCatalog.Load().Get("hero_base");
-            for (var level = 1; level <= 5; level++)
-                Assert.AreEqual(6, heroBase.MaxCountAt(level));
+            for (var level = 1; level <= 15; level++)
+                Assert.AreEqual(1, heroBase.MaxCountAt(level));
         }
 
         [Test]

@@ -81,7 +81,6 @@ namespace ShinobiDominion.Core
             Grant(village, "summoning_gate", 23, 30, nowUtcTicks);
             Grant(village, "gold_mine", 18, 16, nowUtcTicks);
             Grant(village, "hero_base", 19, 29, nowUtcTicks);
-            Grant(village, "hero_base", 29, 29, nowUtcTicks);
             return village;
         }
 
