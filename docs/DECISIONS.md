@@ -89,10 +89,10 @@ Follows the owner's ADR-021. Up to four Troop Camps, gated by Dojo level, and a 
 - Troop names and all numbers are test values. Offline practice troops aren't saved.
 
 
-## ADR-031: Heroes hop walls, everything else goes around or breaks through, decided by the owner on 2026-11-07
-- **Every hero** (attacking or guarding) hops over walls and never needs to break one. Hopping a wall cell takes twice as long as a step. Ranged heroes already shoot over walls from where they stand.
-- **Troops** (and monster waves, when they exist) take whichever is faster in real time: walking around, or breaking the wall in the way. The cost of breaking is the hits that wall's health needs at the troop's damage and attack speed.
-- Guards can now leave their compound over the walls to reach attackers. Buildings still block everyone.
+## ADR-031: Only guards hop walls; attackers go around or break through, decided by the owner on 2026-11-07
+- **Guard heroes** (a village's heroes defending it) hop over walls to reach attackers; hopping a wall cell takes twice as long as a step. Buildings still stop them.
+- **Attackers** (heroes and troops alike, and monster waves when they exist) cannot hop. They take whichever is faster in real time: walking around, or breaking the wall in the way. Breaking costs the hits that wall's health needs at the attacker's damage and attack speed.
+- Ranged attackers still shoot over a wall at a target in range, from where they stand.
 - The same rule is in the game's and the server's battle code, checked by the shared battle logs.
 
 ## ADR-030: One hero at a time, decided by the owner on 2026-11-07

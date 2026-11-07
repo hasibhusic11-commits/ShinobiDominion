@@ -62,7 +62,7 @@ namespace ShinobiDominion.Tests
             Assert.Less(result.endTick, BattleSim.TickLimit);
         }
 
-        // ---------- Walls: heroes hop and shoot over them; troops go around or break them, whichever is quicker ----------
+        // ---------- Walls: guards hop them; attackers go around or break them, whichever is quicker ----------
 
         private const int Treasury = 1;
 
@@ -89,13 +89,22 @@ namespace ShinobiDominion.Tests
         private static bool OnRing(long x, long z) => (x == 18 || x == 24 || z == 18 || z == 24) && x >= 18 && x <= 24 && z >= 18 && z <= 24;
 
         [Test]
-        public void Hero_HopsAnUnbreakableWall_InsteadOfBreakingIt()
+        public void AttackingHero_CannotHop_SoAStrongWallWithAGapIsWalkedAround()
         {
             var hero = Hero("a", "Assassin", 100000, 60, 50, 10, 21);
-            var result = BattleSim.Run(WalledBuilding(10_000_000, false), new List<BattleHeroInput> { hero });
-            Assert.IsTrue(Destroyed(result, Treasury), "The hero should reach the building over the wall");
-            Assert.IsFalse(HitAWall(result), "A hero never needs to break a wall");
-            Assert.IsTrue(result.events.Any(e => e[1] == (long)BattleEventKind.Move && OnRing(e[3], e[4])), "The hero's route should cross the wall");
+            var result = BattleSim.Run(WalledBuilding(10_000_000, true), new List<BattleHeroInput> { hero });
+            Assert.IsTrue(Destroyed(result, Treasury), "The hero should get in through the gap");
+            Assert.IsFalse(HitAWall(result));
+            Assert.IsFalse(result.events.Any(e => e[1] == (long)BattleEventKind.Move && OnRing(e[3], e[4]) && !(e[3] == 24 && e[4] == 21)), "An attacking hero never steps onto a standing wall");
+        }
+
+        [Test]
+        public void AttackingHero_BreaksAWeakWall_WhenThatIsQuicker()
+        {
+            var hero = Hero("a", "Assassin", 100000, 60, 50, 10, 21);
+            var result = BattleSim.Run(WalledBuilding(10, true), new List<BattleHeroInput> { hero });
+            Assert.IsTrue(Destroyed(result, Treasury));
+            Assert.IsTrue(HitAWall(result), "Breaking a thin wall beats walking round to the gap");
         }
 
         [Test]

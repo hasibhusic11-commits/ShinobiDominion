@@ -17,8 +17,9 @@ const (
 	cellUnits       = 100
 	deployClearance = 2
 	battleGridSize  = 50
-	// Routes are priced in ticks. Heroes hop a wall in twice the time of a step; troops break it,
-	// which costs the hits it takes, or walk around it if that is quicker.
+	// Routes are priced in ticks. Attackers, heroes and troops alike, break a wall in the way (the
+	// hits it takes) or walk around it, whichever is quicker. Only guards hop walls, in twice the
+	// time of a step.
 	hopSteps    = 2
 	maxPathCost = 1_000_000
 
@@ -179,7 +180,6 @@ type battleSim struct {
 	cost       []int
 	from       []int
 	heap       []int64
-	pathHops     bool
 	pathStep     int
 	pathPerHit   int64
 	pathInterval int
@@ -437,9 +437,6 @@ func (s *battleSim) stepUnit(unit *battleUnit) {
 	tx := (next%battleGridSize)*cellUnits + cellUnits/2
 	tz := (next/battleGridSize)*cellUnits + cellUnits/2
 	speed := roleSpeeds[unit.role]
-	if s.isWallCell(next) {
-		speed = maxInt(1, speed/hopSteps)
-	}
 	if unit.px != tx {
 		step := minInt(absInt(tx-unit.px), speed)
 		if tx > unit.px {
@@ -835,12 +832,9 @@ func (s *battleSim) plan(unit *battleUnit) {
 		return
 	}
 
-	// Heroes hop the walls on their route. Troops walk up to the first wall in the way, and break it.
+	// Walk up to the first wall in the way, and break it.
 	length := len(path)
 	for i, cell := range path {
-		if !unit.isTroop {
-			break
-		}
 		occupant := s.grid[cell]
 		if occupant != 0 && s.structures[occupant-1].input.IsWall {
 			unit.blocker = occupant - 1
@@ -886,7 +880,6 @@ func (s *battleSim) findPath(unit *battleUnit) ([]int, bool) {
 	reach := roleRanges[unit.role]
 	start := minInt(unit.pz/cellUnits, battleGridSize-1)*battleGridSize + minInt(unit.px/cellUnits, battleGridSize-1)
 	speed := roleSpeeds[unit.role]
-	s.pathHops = !unit.isTroop
 	s.pathStep = (cellUnits + speed - 1) / speed
 	s.pathPerHit = unit.attack * roleDamagePercents[unit.role] / 100
 	if s.pathPerHit < 1 {
@@ -936,7 +929,7 @@ func (s *battleSim) findPath(unit *battleUnit) ([]int, bool) {
 	return nil, false
 }
 
-// wallBreakTicks is the ticks a troop spends breaking a wall with this much health, then stepping through.
+// wallBreakTicks is the ticks an attacker spends breaking a wall with this much health, then stepping through.
 func (s *battleSim) wallBreakTicks(hp int64) int {
 	hits := (hp + s.pathPerHit - 1) / s.pathPerHit
 	ticks := hits*int64(s.pathInterval) + int64(s.pathStep)
@@ -954,11 +947,7 @@ func (s *battleSim) relax(from, to, cost int) {
 		if !structure.input.IsWall {
 			return
 		}
-		if s.pathHops {
-			step = s.pathStep * hopSteps
-		} else {
-			step = s.wallBreakTicks(structure.hp)
-		}
+		step = s.wallBreakTicks(structure.hp)
 	}
 	if cost+step >= s.cost[to] {
 		return

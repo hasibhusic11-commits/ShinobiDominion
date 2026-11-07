@@ -2,7 +2,7 @@
   "scenarios": [
     {
       "name": "mixed team, strong",
-      "checksum": "0439df267241b7c1", "stars": 3, "damagePercent": 100, "endTick": 449, "heroesAlive": 6,
+      "checksum": "129657e63259c746", "stars": 3, "damagePercent": 100, "endTick": 443, "heroesAlive": 6,
       "team": [
         { "id": "a", "role": "Tank", "hp": 6000, "attack": 240, "defense": 240, "x": 10, "z": 10 },
         { "id": "b", "role": "Fighter", "hp": 4800, "attack": 360, "defense": 160, "x": 11, "z": 10 },
@@ -14,7 +14,7 @@
     },
     {
       "name": "mixed team, weak",
-      "checksum": "448e96a427872214", "stars": 3, "damagePercent": 100, "endTick": 1032, "heroesAlive": 6,
+      "checksum": "084d266c4fc302fb", "stars": 3, "damagePercent": 100, "endTick": 1040, "heroesAlive": 6,
       "team": [
         { "id": "a", "role": "Tank", "hp": 1500, "attack": 60, "defense": 60, "x": 40, "z": 40 },
         { "id": "b", "role": "Fighter", "hp": 1200, "attack": 90, "defense": 40, "x": 41, "z": 41 },
@@ -26,7 +26,7 @@
     },
     {
       "name": "heroes and troops together",
-      "checksum": "85fb1bbd1c1a19c8", "stars": 3, "damagePercent": 100, "endTick": 1765, "heroesAlive": 1,
+      "checksum": "f8e5fd10d4084284", "stars": 3, "damagePercent": 100, "endTick": 1800, "heroesAlive": 1,
       "team": [
         { "id": "a", "role": "Control", "hp": 2000, "attack": 200, "defense": 60, "x": 25, "z": 5 },
         { "id": "militia", "role": "Fighter", "hp": 110, "attack": 14, "defense": 5, "x": 10, "z": 10, "isTroop": true },
@@ -40,14 +40,14 @@
     },
     {
       "name": "one legendary alone",
-      "checksum": "f33079f6c4add80f", "stars": 3, "damagePercent": 100, "endTick": 1258, "heroesAlive": 1,
+      "checksum": "bcb6cac228ca9021", "stars": 3, "damagePercent": 100, "endTick": 1240, "heroesAlive": 1,
       "team": [
         { "id": "a", "role": "Fighter", "hp": 28000, "attack": 1140, "defense": 455, "x": 25, "z": 45 }
       ]
     },
     {
       "name": "defended, attackers win",
-      "checksum": "baa2229509d04276", "stars": 3, "damagePercent": 100, "endTick": 511, "heroesAlive": 6, "defendersAlive": 0,
+      "checksum": "4ca012d2bb398f8c", "stars": 3, "damagePercent": 100, "endTick": 474, "heroesAlive": 6, "defendersAlive": 0,
       "team": [
         { "id": "a", "role": "Tank", "hp": 6000, "attack": 240, "defense": 240, "x": 10, "z": 10 },
         { "id": "b", "role": "Fighter", "hp": 4800, "attack": 360, "defense": 160, "x": 11, "z": 10 },
