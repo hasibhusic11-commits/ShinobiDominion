@@ -101,8 +101,17 @@ namespace ShinobiDominion.Game
             new HeroLook { DesignId = archetype.id, Color = HeroColor(archetype, evolution), Evolution = evolution, Role = archetype.role, Affinity = archetype.affinity };
 
         /// <summary>Shows the hero's actual model, standing with its feet at the given height.</summary>
+        /// <summary>Above this size a picture is the large hero view and shows the whole painting.</summary>
+        private const float FullPictureSize = 300f;
+
         private void HeroPicture(RectTransform parent, HeroArchetype archetype, int evolution, float size, float feet)
         {
+            // The concept paintings show each hero's base form only, so evolved forms keep their own pictures.
+            if (evolution == 0 && HeroConcepts.Has(archetype.id))
+            {
+                ConceptPicture(parent, archetype.id, size, feet);
+                return;
+            }
             _portraits = _portraits ?? new HeroPortraits(_worldRoot);
             var picture = Ui.Rect("HeroPicture", parent);
             picture.anchorMin = picture.anchorMax = new Vector2(0.5f, 0f);
@@ -111,6 +120,23 @@ namespace ShinobiDominion.Game
             picture.anchoredPosition = new Vector2(0f, feet);
             var image = picture.gameObject.AddComponent<UnityEngine.UI.RawImage>();
             image.texture = _portraits.For(LookOf(archetype, evolution));
+            image.raycastTarget = false;
+        }
+
+        private static void ConceptPicture(RectTransform parent, string heroId, float size, float feet)
+        {
+            var full = size >= FullPictureSize;
+            var sprite = full ? HeroConcepts.Full(heroId) : HeroConcepts.Card(heroId);
+            var picture = Ui.Rect("HeroConcept", parent);
+            picture.anchorMin = picture.anchorMax = new Vector2(0.5f, 0f);
+            picture.pivot = new Vector2(0.5f, 0f);
+            // The whole painting fits inside the hero view; a card's crop sits just above the hero's name.
+            var height = full ? size * 0.78f : size - 10f;
+            picture.sizeDelta = new Vector2(height * sprite.rect.width / sprite.rect.height, height);
+            picture.anchoredPosition = new Vector2(0f, full ? feet : feet + 14f);
+            var image = picture.gameObject.AddComponent<Image>();
+            image.sprite = sprite;
+            image.preserveAspect = true;
             image.raycastTarget = false;
         }
 

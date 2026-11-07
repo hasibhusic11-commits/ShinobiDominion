@@ -96,6 +96,35 @@ namespace ShinobiDominion.Tests
             Assert.AreEqual(other.InstanceId, bases[0].AssignedHeroInstanceId, "Picking another hero swaps them");
         }
 
+        [UnityTest]
+        public IEnumerator Altar_ShowsConceptPaintings_ForBaseFormHeroesThatHaveThem()
+        {
+            Controller.Select(First("hero_altar").Id);
+            yield return null;
+            var painted = Controller.Roster.Heroes.First(h => h.EvolutionIndex == 0 && HeroConcepts.Has(h.ArchetypeId));
+            var card = Find("Hero_" + painted.InstanceId);
+            Assert.IsNotNull(card, "The Altar should list the hero");
+            var concept = card.transform.Find("HeroConcept");
+            Assert.IsNotNull(concept, "A base-form hero with a concept painting should show it");
+            Assert.IsNotNull(concept.GetComponent<Image>().sprite);
+
+            var unpainted = Controller.Roster.Heroes.FirstOrDefault(h => !HeroConcepts.Has(h.ArchetypeId));
+            if (unpainted != null) Assert.IsNull(Find("Hero_" + unpainted.InstanceId).transform.Find("HeroConcept"), "Heroes without a painting keep their old picture");
+
+            Controller.ShowHeroDetail(painted.InstanceId);
+            yield return null;
+            var detail = Object.FindObjectsByType<Image>(FindObjectsSortMode.None).FirstOrDefault(i => i.name == "HeroConcept");
+            Assert.IsNotNull(detail, "The hero's own page should show the whole painting");
+            Assert.Greater(detail.rectTransform.sizeDelta.y, 250f);
+        }
+
+        [Test]
+        public void EveryLegendary_HasAConceptPainting()
+        {
+            foreach (var hero in Controller.Roster.Catalog.All.Where(a => a.rarity == HeroRarity.Legendary))
+                Assert.IsTrue(HeroConcepts.Has(hero.id), hero.id);
+        }
+
         [Test]
         public void HeroBase_RejectsHeroThePlayerDoesNotOwn()
         {
