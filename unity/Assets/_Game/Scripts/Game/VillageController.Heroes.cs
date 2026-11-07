@@ -159,6 +159,9 @@ namespace ShinobiDominion.Game
             colors.disabledColor = new Color(0.5f, 0.5f, 0.5f, 0.8f);
             button.colors = colors;
             if (onClick != null) button.onClick.AddListener(() => onClick());
+            UiMotion.Pressable(button);
+            // Legendary heroes catch the light, so they stand out in a list.
+            if (archetype.rarity == HeroRarity.Legendary) UiMotion.Shine(frame, new Color(1f, 0.95f, 0.75f, 0.9f), 3.2f);
 
             HeroPicture(rect, archetype, hero.EvolutionIndex, 150f, 52f);
 

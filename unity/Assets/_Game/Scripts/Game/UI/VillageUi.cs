@@ -320,6 +320,7 @@ namespace ShinobiDominion.Game
 
             var label = Strong(Label(rect, caption, fontSize, TextAnchor.MiddleCenter));
             Stretch(label.rectTransform, 8f, 3f, 8f, 3f);
+            UiMotion.Pressable(button);
             return button;
         }
 
@@ -409,6 +410,8 @@ namespace ShinobiDominion.Game
             var attackImage = AttackButton.GetComponent<Image>();
             attackImage.sprite = UiSkin.Disc(new Color(0.88f, 0.28f, 0.18f), new Color(0.50f, 0.09f, 0.08f), UiSkin.Brass, 0.09f);
             attackImage.type = Image.Type.Simple;
+            UnityEngine.Object.Destroy(AttackButton.GetComponent<UiPress>());
+            UiMotion.Pulse(attackRect, 0.045f, 1.6f);
         }
 
         private static Text Pill(RectTransform root, string name, Vector2 offset, Sprite icon)
@@ -422,10 +425,18 @@ namespace ShinobiDominion.Game
             return text;
         }
 
+        private long _shownGold = -1;
+        private long _shownCrystals = -1;
+
         public void SetWallet(long gold, long crystals)
         {
             _gold.text = gold.ToString("N0");
             _crystals.text = crystals.ToString("N0");
+            // A bounce when a currency goes up, so a gain is noticed.
+            if (_shownGold >= 0 && gold > _shownGold) UiMotion.Punch(_gold.transform.parent, 0.12f);
+            if (_shownCrystals >= 0 && crystals > _shownCrystals) UiMotion.Punch(_crystals.transform.parent, 0.12f);
+            _shownGold = gold;
+            _shownCrystals = crystals;
         }
 
         public void SetIdentity(string displayName, int level) => _identity.text = $"{displayName}  ·  Lv {level}";
@@ -454,6 +465,7 @@ namespace ShinobiDominion.Game
 
         public void Show(string title, Action onClose, Action<PanelView> fill)
         {
+            var opening = !IsOpen;
             Hide();
             IsFullScreen = false;
             _card = Ui.Rect("Panel", _parent);
@@ -484,10 +496,16 @@ namespace ShinobiDominion.Game
 
             BuildScrollArea(14f, 16f, 14f, 78f);
             fill(this);
+            if (opening)
+            {
+                UiMotion.SlideIn(_card, new Vector2(-70f, 0f));
+                UiMotion.FadeIn(_card.gameObject);
+            }
         }
 
         public void ShowScreen(string title, string headerInfo, Action onBack, Action<PanelView> fill)
         {
+            var opening = !IsOpen;
             Hide();
             IsFullScreen = true;
             _card = Ui.Rect("Screen", _parent);
@@ -516,6 +534,11 @@ namespace ShinobiDominion.Game
 
             BuildScrollArea(18f, 14f, 18f, 80f);
             fill(this);
+            if (opening)
+            {
+                UiMotion.FadeIn(_card.gameObject, 0.2f);
+                UiMotion.PopIn(_card, 0f, 0.96f, 0.24f);
+            }
         }
 
         private void BuildScrollArea(float left, float bottom, float right, float top)
@@ -523,7 +546,7 @@ namespace ShinobiDominion.Game
             var viewport = Ui.Rect("Viewport", _card);
             Ui.Stretch(viewport, left, bottom, right, top);
             Ui.Background(viewport, new Color(0f, 0f, 0f, 0f));
-            viewport.gameObject.AddComponent<RectMask2D>();
+            viewport.gameObject.AddComponent<RectMask2D>().softness = new Vector2Int(0, 22);
 
             _content = Ui.Rect("Content", viewport);
             _content.anchorMin = new Vector2(0f, 1f);

@@ -239,7 +239,8 @@ namespace ShinobiDominion.Tests
 
         internal static IEnumerator Capture(Camera camera, RenderTexture texture, string path)
         {
-            yield return null;
+            // Let opening motions finish, so pictures show screens at rest.
+            yield return new WaitForSecondsRealtime(0.5f);
             Canvas.ForceUpdateCanvases();
             camera.Render();
 

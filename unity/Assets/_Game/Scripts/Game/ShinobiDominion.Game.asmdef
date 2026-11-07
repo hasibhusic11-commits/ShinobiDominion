@@ -5,7 +5,10 @@
         "ShinobiDominion.Core",
         "Unity.InputSystem",
         "UnityEngine.UI",
-        "NakamaRuntime"
+        "NakamaRuntime",
+        "LitMotion",
+        "LitMotion.Extensions",
+        "Coffee.UIEffect"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

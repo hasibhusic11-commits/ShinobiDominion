@@ -6,7 +6,8 @@
         "ShinobiDominion.Game",
         "UnityEngine.UI",
         "Unity.InputSystem",
-        "UnityEngine.TestRunner"
+        "UnityEngine.TestRunner",
+        "Coffee.UIEffect"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

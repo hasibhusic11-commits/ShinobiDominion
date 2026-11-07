@@ -247,12 +247,15 @@ namespace ShinobiDominion.Game
             _panel.ShowScreen("Summon Results", $"Crystals {ServerCrystals ?? 0:N0}", ShowSummoningGate, panel =>
             {
                 var grid = panel.Grid(HeroCardSize);
+                var shown = 0;
                 foreach (var roll in result.Rolls)
                 {
                     var hero = Roster.Find(roll.instanceId);
                     if (hero == null) continue;
                     var tag = roll.copiesOwned <= 1 ? "New hero" : $"You own {roll.copiesOwned}";
-                    HeroCard(grid, "Result_" + roll.rollIndex, hero, tag, null, true);
+                    var card = HeroCard(grid, "Result_" + roll.rollIndex, hero, tag, null, true);
+                    // Cards turn up one after another, like a reveal.
+                    UiMotion.PopIn(card.transform, 0.12f * shown++, 0.2f, 0.36f);
                 }
                 panel.Action("SummonDoneButton", "Done", ShowSummoningGate, true, Ui.AccentColor);
             });

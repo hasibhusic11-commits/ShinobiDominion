@@ -22,7 +22,8 @@ MonoBehaviour:
     - key: Hidden/UI/Default (SoftMaskable)
       value: Hidden/UI/Default (UIEffect)
     m_Asset: {fileID: 6813098016668750370}
-    m_RegisteredShaders: []
+    m_RegisteredShaders:
+    - {fileID: 4800000, guid: 96246b1ead49a4c5a996fd477bc5a117, type: 3}
     m_ErrorOnUnregisteredVariant: 0
     m_UnregisteredVariants: []
 --- !u!200 &6813098016668750370
@@ -32,4 +33,9 @@ ShaderVariantCollection:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: ShaderVariants
-  m_Shaders: {}
+  m_Shaders:
+  - first: {fileID: 4800000, guid: 96246b1ead49a4c5a996fd477bc5a117, type: 3}
+    second:
+      variants:
+      - keywords: TRANSITION_SHINY
+        passType: 0

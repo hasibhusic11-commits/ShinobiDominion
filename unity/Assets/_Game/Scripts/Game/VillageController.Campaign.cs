@@ -85,6 +85,11 @@ namespace ShinobiDominion.Game
                 rect.pivot = new Vector2(0.5f, 0.5f);
                 rect.sizeDelta = new Vector2(size, size);
                 rect.anchoredPosition = Vector2.zero;
+                if (stage.id == selected.id)
+                {
+                    Object.Destroy(node.GetComponent<UiPress>());
+                    UiMotion.Pulse(rect, 0.07f, 1.2f);
+                }
 
                 var label = Ui.Strong(Ui.Label(map, open ? $"{best}/3" : "Locked", 17, TextAnchor.MiddleCenter));
                 var labelRect = label.rectTransform;
@@ -155,6 +160,7 @@ namespace ShinobiDominion.Game
             rect.SetParent(_raid.StatusBar.transform.parent, false);
             Ui.Anchor(rect, new Vector2(1f, 1f), new Vector2(300f, 150f), new Vector2(-16f, -104f));
             Ui.Framed(rect, Ui.PillSprite);
+            UiMotion.SlideIn(rect, new Vector2(340f, 0f), 0.3f);
             _raid.Hud = panel;
 
             var session = _raid.Session;
@@ -170,6 +176,7 @@ namespace ShinobiDominion.Game
 
             var banner = Ui.Strong(Ui.Label(_raid.StatusBar.transform.parent, "BATTLE!", 72, TextAnchor.MiddleCenter, new Color(1f, 0.82f, 0.35f)));
             Ui.Anchor(banner.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(620f, 120f), new Vector2(0f, 110f));
+            UiMotion.PopIn(banner.transform, 0f, 2.2f, 0.4f);
             Destroy(banner.gameObject, 1.1f);
         }
 
@@ -181,7 +188,11 @@ namespace ShinobiDominion.Game
             var lit = (stage.DamagePercent >= 50 ? 1 : 0) + (stage.DojoDown ? 1 : 0) + (stage.DamagePercent >= 100 ? 1 : 0);
             if (lit <= _battleHud.Lit) return;
             for (var i = _battleHud.Lit; i < lit && i < 3; i++)
+            {
                 _battleHud.Stars[i].sprite = UiSkin.Diamond(new Color(1f, 0.87f, 0.4f), new Color(0.9f, 0.55f, 0.12f));
+                UiMotion.Punch(_battleHud.Stars[i].transform, 0.5f, 0.45f);
+                UiMotion.Shine(_battleHud.Stars[i], new Color(1f, 0.95f, 0.75f, 0.9f), 2.5f, 0.35f);
+            }
             _battleHud.Lit = lit;
             GameSounds.Play(GameSound.Star);
         }
@@ -193,15 +204,30 @@ namespace ShinobiDominion.Game
             for (var i = 0; i < 3; i++)
             {
                 var sprite = i < stars ? UiSkin.Diamond(new Color(1f, 0.87f, 0.4f), new Color(0.9f, 0.55f, 0.12f)) : UiSkin.Diamond(new Color(0.3f, 0.3f, 0.33f), new Color(0.17f, 0.17f, 0.2f));
-                Ui.Icon(row, sprite, new Vector2(0.5f, 0.5f), new Vector2(70f, 70f), new Vector2((i - 1) * 90f, 0f));
+                var icon = Ui.Icon(row, sprite, new Vector2(0.5f, 0.5f), new Vector2(70f, 70f), new Vector2((i - 1) * 90f, 0f));
+                if (i >= stars) continue;
+                // Earned stars land one at a time, then keep a slow shine.
+                UiMotion.PopIn(icon.transform, 0.2f + i * 0.28f, 0.1f, 0.42f);
+                UiMotion.Shine(icon, new Color(1f, 0.95f, 0.75f, 0.9f), 2.6f, 0.35f);
             }
         }
 
         private static void DrawRewardLines(PanelView panel, RaidOutcome outcome)
         {
-            if (outcome.XpEarned > 0) panel.Line($"Each hero gained {outcome.XpEarned:N0} XP" + (outcome.LevelsGained > 0 ? $", {outcome.LevelsGained} levels in all" : ""), 21, Ui.AccentColor);
-            if (outcome.CrystalsEarned > 0) panel.Line($"Earned {outcome.CrystalsEarned:N0} crystals", 21, Ui.AccentColor);
-            if (!string.IsNullOrEmpty(outcome.ItemEarned)) panel.Line($"Found: {ItemName(outcome.ItemEarned)}", 24, new Color(1f, 0.87f, 0.4f));
+            var delay = 1.0f;
+            void Reveal(Text line)
+            {
+                UiMotion.FadeIn(line.gameObject, 0.3f, delay);
+                delay += 0.25f;
+            }
+            if (outcome.XpEarned > 0) Reveal(panel.Line($"Your hero gained {outcome.XpEarned:N0} XP" + (outcome.LevelsGained > 0 ? $" and {outcome.LevelsGained} levels" : ""), 21, Ui.AccentColor));
+            if (outcome.CrystalsEarned > 0) Reveal(panel.Line($"Earned {outcome.CrystalsEarned:N0} crystals", 21, Ui.AccentColor));
+            if (!string.IsNullOrEmpty(outcome.ItemEarned))
+            {
+                var found = panel.Line($"Found: {ItemName(outcome.ItemEarned)}", 24, new Color(1f, 0.87f, 0.4f));
+                Reveal(found);
+                UiMotion.Shine(found, Color.white, 2f, 0.3f);
+            }
         }
     }
 
