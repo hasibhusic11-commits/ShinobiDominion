@@ -304,7 +304,224 @@ def build_icons(folder):
                       (lambda x, y: poly_mask(x, y, [(26, 46), (102, 46), (98, 50), (30, 50)]), hexc('2C7FA8'))], folder, outline=4)
 
 
+def button_plate(face_top, face_bottom, folder, name, w=160, h=64, radius=14):
+    """A raised plate: brass rim, a face lit from the top, a gloss band, and a darker lip along the bottom."""
+    x, y = grid(w, h)
+    img = np.zeros(x.shape + (4,), np.float32)
+    sd = rounded_rect_sd(x, y, 0, 0, w, h, radius)
+    depth = -sd
+    v = y / h
+    paint(img, lerp(BRASS_LIGHT, BRASS_DARK, v * 1.1), smooth(sd))
+    over(img, hexc('3A2810'), smooth(sd) * np.clip(1.4 - depth, 0, 1))
+    face_sd = rounded_rect_sd(x, y, 3, 3, w - 3, h - 7, radius - 3)
+    paint(img, lerp(face_top, face_bottom, (y - 3) / (h - 10)), smooth(face_sd))
+    over(img, hexc('3A2810'), smooth(face_sd) * np.clip(1.4 + face_sd, 0, 1) * (face_sd > -1.5))
+    gloss = smooth(rounded_rect_sd(x, y, 7, 6, w - 7, h * 0.42, radius - 6))
+    over(img, hexc('FFFFFF', 0.22), gloss)
+    save(name, img, folder)
+
+
+def frame(size, thick, corner, folder, name):
+    """A heavy brass window frame with riveted corner caps and a lacquer inside."""
+    x, y = grid(size, size)
+    img = np.zeros(x.shape + (4,), np.float32)
+    sd = rounded_rect_sd(x, y, 0, 0, size, size, 10)
+    depth = -sd
+    v = y / size
+    across = np.clip(depth / thick, 0, 1)
+    metal = lerp(lerp(BRASS_LIGHT, BRASS, across * 1.6), BRASS_DARK, np.clip((across - 0.6) * 2.5, 0, 1))
+    metal = lerp(metal, BRASS_DARK, v * 0.35)
+    paint(img, metal, smooth(sd))
+    over(img, hexc('3A2810'), smooth(sd) * np.clip(1.6 - depth, 0, 1))
+    inner = smooth(sd + thick)
+    lac = lerp(LACQUER_LIGHT, LACQUER_DEEP, np.clip(v * 1.2, 0, 1))
+    paint(img, lac, inner)
+    over(img, hexc('3A2810'), inner * np.clip(2.0 - (depth - thick), 0, 1))
+    over(img, hexc('000000', 0.5), inner * np.clip(1 - (depth - thick) / 10, 0, 1))
+    for cx, cy in ((corner / 2, corner / 2), (size - corner / 2, corner / 2), (corner / 2, size - corner / 2), (size - corner / 2, size - corner / 2)):
+        cap = rounded_rect_sd(x, y, cx - corner / 2, cy - corner / 2, cx + corner / 2, cy + corner / 2, 6)
+        paint(img, lerp(BRASS_LIGHT, BRASS_DARK, np.clip((y - (cy - corner / 2)) / corner, 0, 1)), smooth(cap))
+        over(img, hexc('3A2810'), smooth(cap) * np.clip(1.6 + cap, 0, 1))
+        d = np.sqrt((x - cx) ** 2 + (y - cy) ** 2)
+        over(img, hexc('3A2810'), smooth(d - 5.5))
+        paint(img, lerp(BRASS_LIGHT, BRASS_DARK, np.clip(((x - cx) * 0.6 + (y - cy) * 0.8) / 5 * 0.5 + 0.5, 0, 1)), smooth(d - 4.5))
+    save(name, img, folder)
+
+
+def ribbon(folder, name, w=360, h=62):
+    """A crimson title ribbon with brass edges and swallow-tail ends."""
+    x, y = grid(w, h)
+    img = np.zeros(x.shape + (4,), np.float32)
+    tail = 34
+    body = (x > tail * 0.55) & (x < w - tail * 0.55) & (y > 6) & (y < h - 6)
+    notch = np.abs(y - h / 2) / (h / 2 - 6) * tail * 0.55
+    left_tail = (x <= tail * 0.55 + 1) & (x > notch * 0.0 + (tail * 0.55 - (tail * 0.55 - notch))) & (y > 12) & (y < h - 12)
+    right_tail = (x >= w - tail * 0.55 - 1) & (x < w - (tail * 0.55 - (tail * 0.55 - notch))) & (y > 12) & (y < h - 12)
+    shape = (body | left_tail | right_tail).astype(np.float32)
+    v = (y - 6) / (h - 12)
+    col = lerp(CRIMSON_LIGHT, CRIMSON_DARK, np.clip(v, 0, 1))
+    over(img, INK, dilate(shape, 3 * SS))
+    paint(img, col, shape)
+    rim = shape * ((np.abs(y - 9) < 2.2) | (np.abs(y - (h - 9)) < 2.2)) * body
+    over(img, BRASS_LIGHT, rim.astype(np.float32))
+    save(name, img, folder)
+
+
+# ---------- Heavier parts (docs/ui/UI_TOKENS.md, v2) ----------
+
+INK_DARK = hexc('0C0806')
+BRASS_HI, BRASS_LO = hexc('F2D28A'), hexc('5E4318')
+
+
+def brass_band(across, v):
+    """Brass seen across a bevelled band (0 outer edge .. 1 inner edge), lit from above (v 0 top .. 1 bottom)."""
+    col = np.where((across < 0.3)[..., None], lerp(BRASS_HI, BRASS, across / 0.3),
+                   lerp(BRASS, BRASS_LO, (across - 0.3) / 0.7))
+    shade = (1.12 - 0.32 * v)[..., None]
+    out = col.copy()
+    out[..., :3] = np.clip(col[..., :3] * shade, 0, 1)
+    return out
+
+
+def framed(w, h, radius, outline, rim, inner_line, interior, folder, name, gloss=0.0, lip=0, well=False):
+    """The shared heavy frame: ink outline, bevelled brass rim, ink line, then the interior (a function of x, y)."""
+    x, y = grid(w, h)
+    img = np.zeros(x.shape + (4,), np.float32)
+    sd = rounded_rect_sd(x, y, 0, 0, w, h, radius)
+    depth = -sd
+    v = y / h
+    paint(img, np.broadcast_to(INK_DARK, x.shape + (4,)).copy(), smooth(sd))
+    across = np.clip((depth - outline) / rim, 0, 1)
+    paint(img, brass_band(across, v), smooth(sd + outline))
+    inset = outline + rim
+    paint(img, np.broadcast_to(INK_DARK, x.shape + (4,)).copy(), smooth(sd + inset))
+    body_sd = rounded_rect_sd(x, y, inset + inner_line, inset + inner_line, w - inset - inner_line, h - inset - inner_line - lip, max(radius - inset, 3))
+    paint(img, interior(x, y), smooth(body_sd))
+    if lip:
+        lip_sd = rounded_rect_sd(x, y, inset + inner_line, h - inset - inner_line - lip - 2, w - inset - inner_line, h - inset - inner_line, max(radius - inset, 3))
+        over(img, hexc('000000', 0.38), smooth(lip_sd) * (1 - smooth(body_sd)))
+    inner_depth = -body_sd
+    shadow_strength = 0.75 if well else 0.42
+    over(img, hexc('000000', shadow_strength), smooth(body_sd) * np.clip(1 - inner_depth / (9 if well else 6), 0, 1) * (y < h * 0.6))
+    if gloss:
+        g = smooth(rounded_rect_sd(x, y, inset + 5, inset + 4, w - inset - 5, inset + (h - 2 * inset) * 0.45, max(radius - inset - 2, 2)))
+        over(img, hexc('FFFFFF', gloss), g * smooth(body_sd))
+    save(name, img, folder)
+
+
+def vertical(top, bottom, y0, y1):
+    return lambda x, y: lerp(top, bottom, (y - y0) / max(y1 - y0, 1))
+
+
+def heavy_ring(size, folder, name, rivets=0, band=0.2):
+    """A thick medallion ring: ink outline, bevelled brass, ink inner line; optional rivets."""
+    x, y = grid(size, size)
+    c = size / 2
+    dx, dy = x - c, y - c
+    r = np.sqrt(dx * dx + dy * dy)
+    img = np.zeros(x.shape + (4,), np.float32)
+    outer = c - 1
+    ink = max(3.0, size * 0.016)
+    width = size * band
+    inner = outer - ink - width
+    paint(img, np.broadcast_to(INK_DARK, x.shape + (4,)).copy(), smooth(r - outer) * (1 - smooth(r - inner + ink)))
+    across = np.clip((outer - ink - r) / width, 0, 1)
+    v = (y - (c - outer)) / (2 * outer)
+    # Top-left light across the whole ring, on top of the bevel.
+    lit = np.clip(0.5 - (dx * 0.6 + dy * 0.8) / outer * 0.5, 0, 1)
+    metal = brass_band(across, 1 - lit)
+    paint(img, metal, smooth(r - (outer - ink)) * (1 - smooth(r - inner)))
+    for i in range(rivets):
+        angle = i * 2 * math.pi / rivets + math.pi / rivets
+        mid = inner + width / 2
+        rx, ry = c + mid * math.cos(angle), c + mid * math.sin(angle)
+        d = np.sqrt((x - rx) ** 2 + (y - ry) ** 2)
+        rr = width * 0.17
+        over(img, INK_DARK, smooth(d - rr - 1.2))
+        paint(img, lerp(BRASS_HI, BRASS_LO, np.clip(((x - rx) * 0.6 + (y - ry) * 0.8) / rr * 0.5 + 0.5, 0, 1)), smooth(d - rr))
+    save(name, img, folder)
+
+
+def halo(size, folder, name):
+    """A bright gold ring with a soft outer glow, for a selected round button."""
+    x, y = grid(size, size)
+    c = size / 2
+    r = np.sqrt((x - c) ** 2 + (y - c) ** 2)
+    img = np.zeros(x.shape + (4,), np.float32)
+    over(img, hexc('FFD978', 0.65), np.clip(1 - np.abs(r - (c - 10)) / 10, 0, 1) ** 1.5)
+    over(img, hexc('FFF1C2'), np.clip(1 - np.abs(r - (c - 10)) / 2.5, 0, 1))
+    save(name, img, folder)
+
+
+def soft_shadow(folder, name, size=96, radius=20, blur=14):
+    x, y = grid(size, size)
+    img = np.zeros(x.shape + (4,), np.float32)
+    sd = rounded_rect_sd(x, y, blur, blur, size - blur, size - blur, radius)
+    over(img, hexc('000000'), np.clip(0.5 - sd / blur, 0, 1) ** 1.6)
+    save(name, img, folder)
+
+
+def gem_frame(size, thick, cap, folder, name):
+    """The window frame: heavy brass with crimson gems set in square caps at the corners."""
+    x, y = grid(size, size)
+    img = np.zeros(x.shape + (4,), np.float32)
+    sd = rounded_rect_sd(x, y, 0, 0, size, size, 12)
+    depth = -sd
+    v = y / size
+    paint(img, np.broadcast_to(INK_DARK, x.shape + (4,)).copy(), smooth(sd))
+    across = np.clip((depth - 4) / thick, 0, 1)
+    paint(img, brass_band(across, v), smooth(sd + 4))
+    paint(img, np.broadcast_to(INK_DARK, x.shape + (4,)).copy(), smooth(sd + 4 + thick))
+    body = smooth(sd + 7 + thick)
+    paint(img, lerp(LACQUER_LIGHT, LACQUER_DEEP, np.clip(v * 1.3, 0, 1)), body)
+    over(img, hexc('000000', 0.55), body * np.clip(1 - (depth - 7 - thick) / 12, 0, 1))
+    for cx, cy in ((cap / 2, cap / 2), (size - cap / 2, cap / 2), (cap / 2, size - cap / 2), (size - cap / 2, size - cap / 2)):
+        box = rounded_rect_sd(x, y, cx - cap / 2, cy - cap / 2, cx + cap / 2, cy + cap / 2, 7)
+        paint(img, np.broadcast_to(INK_DARK, x.shape + (4,)).copy(), smooth(box))
+        inner_box = rounded_rect_sd(x, y, cx - cap / 2 + 3, cy - cap / 2 + 3, cx + cap / 2 - 3, cy + cap / 2 - 3, 5)
+        paint(img, brass_band(np.clip(-inner_box / 8, 0, 1), np.clip((y - (cy - cap / 2)) / cap, 0, 1)), smooth(inner_box))
+        gem = [(cx, cy - cap * 0.26), (cx + cap * 0.26, cy), (cx, cy + cap * 0.26), (cx - cap * 0.26, cy)]
+        gm = poly_mask(x, y, gem)
+        over(img, INK_DARK, dilate(gm, 2 * SS))
+        paint(img, lerp(CRIMSON_LIGHT * 1.15, CRIMSON_DARK, np.clip((y - (cy - cap * 0.26)) / (cap * 0.52), 0, 1)), gm)
+        over(img, hexc('FFFFFF', 0.55), poly_mask(x, y, [(cx, cy - cap * 0.2), (cx + cap * 0.1, cy - cap * 0.05), (cx - cap * 0.1, cy - cap * 0.05)]))
+    save(name, img, folder)
+
+
+def heavy_kit(folder):
+    navy = vertical(LACQUER_LIGHT, LACQUER_DEEP, 10, 74)
+    framed(128, 84, 16, 3, 9, 2, navy, folder, 'plate_s30', gloss=0.10)
+    framed(128, 84, 16, 3, 9, 2, vertical(hexc('2A52A0'), hexc('0D1D42'), 10, 74), folder, 'counter_s30', gloss=0.16)
+    framed(160, 200, 14, 3, 10, 2, vertical(hexc('22305A'), hexc('0E1530'), 14, 186), folder, 'card_s34', gloss=0.06)
+    framed(96, 96, 10, 2, 3, 1, vertical(hexc('0B1020'), hexc('1A2546'), 6, 90), folder, 'well_s18', well=True)
+    framed(160, 70, 14, 3, 5, 2, vertical(LACQUER_LIGHT * 1.45, LACQUER_DEEP, 10, 62), folder, 'btn_lacquer_s24', gloss=0.20, lip=7)
+    framed(160, 70, 14, 3, 5, 2, vertical(GOLD_TOP, hexc('8A5E22'), 10, 62), folder, 'btn_gold_s24', gloss=0.28, lip=7)
+    framed(160, 70, 14, 3, 5, 2, vertical(hexc('D2503F'), hexc('4A110E'), 10, 62), folder, 'btn_crimson_s24', gloss=0.22, lip=7)
+    framed(160, 70, 14, 3, 5, 2, vertical(hexc('5A5A62'), hexc('1C1C21'), 10, 62), folder, 'btn_charcoal_s24', gloss=0.10, lip=7)
+    gem_frame(208, 20, 40, folder, 'frame_s80')
+    soft_shadow(folder, 'shadow_s32')
+    heavy_ring(320, folder, 'medal_ring_attack', rivets=10, band=0.13)
+    heavy_ring(256, folder, 'medal_ring', band=0.13)
+    heavy_ring(256, folder, 'medal_ring_thin', band=0.09)
+    halo(288, folder, 'medal_halo')
+
+
 def main(folder):
+    main_v1(folder)
+    heavy_kit(folder)
+    print('HEAVY_KIT_DONE')
+
+
+def main_v1(folder):
+    ribbon(folder, 'ribbon')
+    icon('lock', [(lambda x, y: np.clip(circle_mask(x, y, 64, 52, 26) - circle_mask(x, y, 64, 52, 14), 0, 1) * (y < 60), hexc('C9BFA8')),
+                  (lambda x, y: (rounded_rect_sd(x, y, 30, 54, 98, 112, 8) <= 0).astype(np.float32), BRASS_LIGHT),
+                  (lambda x, y: circle_mask(x, y, 64, 78, 8), hexc('3A2810'))], folder)
+    icon('back', [(lambda x, y: poly_mask(x, y, [(16, 64), (60, 20), (60, 46), (110, 46), (110, 82), (60, 82), (60, 108)]), IVORY)], folder)
+    main_kit(folder)
+
+
+def main_kit(folder):
     os.makedirs(folder, exist_ok=True)
     ring(320, 160, 136, 8, folder, 'medal_ring_attack')
     ring(256, 128, 108, 0, folder, 'medal_ring')
@@ -316,7 +533,6 @@ def main(folder):
     face(256, 110, CRIMSON_LIGHT, CRIMSON, CRIMSON_DARK, folder, 'medal_face_crimson_small')
     glow(128, folder, 'glow')
     shadow(128, folder, 'shadow')
-    plate(128, 72, 14, 4, folder, 'plate_s26')
     pill(48, 16, hexc('05080F'), BRASS_DARK, folder, 'track_s8')
     pill(48, 16, hexc('FFFFFF'), hexc('FFFFFF'), folder, 'fill_s8')
     build_icons(folder)

@@ -117,10 +117,11 @@ namespace ShinobiDominion.Game
 
             // Name plate: the building on the left, its level on the right.
             var plate = Ui.Rect("NamePlate", bar);
-            Ui.Anchor(plate, new Vector2(0.5f, 0f), new Vector2(420f, 46f), new Vector2(0f, 150f));
+            Ui.Anchor(plate, new Vector2(0.5f, 0f), new Vector2(440f, 54f), new Vector2(0f, 150f));
             HudArt.Plate(plate);
+            HudArt.DropShadow(plate);
             var fret = Ui.Rect("Fret", plate);
-            Ui.Stretch(fret, 5f, 5f, 5f, 5f);
+            Ui.Stretch(fret, 14f, 13f, 14f, 13f);
             var fretImage = fret.gameObject.AddComponent<Image>();
             fretImage.sprite = HudArt.Sprite("kenney_fret_s16");
             fretImage.type = Image.Type.Sliced;
@@ -150,7 +151,7 @@ namespace ShinobiDominion.Game
             foreach (var action in actions)
             {
                 var size = action.Kind == MedalKind.IconOnly ? InfoSize : ActionSize;
-                var medal = Medal.Create(bar, action.Name, action.Kind, action.Icon, action.Caption, action.OnClick, action.Enabled, size);
+                var medal = Medal.Create(bar, action.Name, action.Kind, action.Icon, action.Caption, action.OnClick, action.Enabled, size, action.Kind == MedalKind.Primary);
                 var rect = (RectTransform)medal.transform;
                 Ui.Anchor(rect, new Vector2(0.5f, 0f), new Vector2(size, size), new Vector2(x + size / 2f, 40f + (ActionSize - size) / 2f));
                 if (!string.IsNullOrEmpty(action.Cost)) CostTag(rect, action.Cost, action.CostShort);
@@ -166,7 +167,7 @@ namespace ShinobiDominion.Game
         {
             var tag = Ui.Rect("CostTag", medal);
             Ui.Anchor(tag, new Vector2(0.5f, 0f), new Vector2(84f, 24f), new Vector2(0f, 4f));
-            HudArt.Plate(tag).pixelsPerUnitMultiplier = 3.2f;
+            HudArt.Plate(tag).pixelsPerUnitMultiplier = 2.6f;
             HudArt.Picture(tag, "Coin", "icon_gold", new Vector2(0f, 0.5f), new Vector2(20f, 20f), new Vector2(5f, 0f));
             var text = HudArt.Label(tag, cost, HudArt.Numbers, 15, TextAnchor.MiddleRight, short_ ? HudArt.CrimsonLight : HudArt.Ivory, HudArt.LacquerDeep);
             Ui.Stretch(text.rectTransform, 24f, 0f, 8f, 0f);

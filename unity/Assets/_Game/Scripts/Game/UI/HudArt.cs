@@ -48,7 +48,7 @@ namespace ShinobiDominion.Game
             text.fontStyle = FontStyle.Bold;
             var edge = text.gameObject.AddComponent<Outline>();
             edge.effectColor = outline;
-            edge.effectDistance = new Vector2(1.6f, -1.6f);
+            edge.effectDistance = new Vector2(2.2f, -2.2f);
             var drop = text.gameObject.AddComponent<Shadow>();
             drop.effectColor = new Color(0f, 0f, 0f, 0.55f);
             drop.effectDistance = new Vector2(0f, -2.5f);
@@ -63,13 +63,34 @@ namespace ShinobiDominion.Game
             return image;
         }
 
-        /// <summary>A brass-rimmed lacquer plate, nine-sliced.</summary>
-        public static Image Plate(RectTransform rect)
+        /// <summary>A heavy brass-framed lacquer plate, nine-sliced. Pass "counter_s30" for the deep-blue resource well.</summary>
+        public static Image Plate(RectTransform rect, string sprite = "plate_s30")
         {
             var image = rect.gameObject.AddComponent<Image>();
-            image.sprite = Sprite("plate_s26");
+            image.sprite = Sprite(sprite);
             image.type = Image.Type.Sliced;
-            image.pixelsPerUnitMultiplier = 1.6f;
+            image.pixelsPerUnitMultiplier = 1.25f;
+            image.raycastTarget = false;
+            return image;
+        }
+
+        /// <summary>
+        /// A soft shadow under a framed part, placed just behind it with the same anchors, a little larger and lower.
+        /// Call after the part is positioned. Not for children of layout groups, which would move without it.
+        /// </summary>
+        public static Image DropShadow(RectTransform target, float down = 7f, float spread = 12f, float alpha = 0.5f)
+        {
+            var shadow = Ui.Rect("Shadow", target.parent);
+            shadow.anchorMin = target.anchorMin;
+            shadow.anchorMax = target.anchorMax;
+            shadow.pivot = target.pivot;
+            shadow.sizeDelta = target.sizeDelta + new Vector2(spread * 2f, spread * 2f);
+            shadow.anchoredPosition = target.anchoredPosition + new Vector2((target.pivot.x - 0.5f) * 2f * spread, (target.pivot.y - 0.5f) * 2f * spread - down);
+            shadow.SetSiblingIndex(target.GetSiblingIndex());
+            var image = shadow.gameObject.AddComponent<Image>();
+            image.sprite = Sprite("shadow_s32");
+            image.type = Image.Type.Sliced;
+            image.color = new Color(1f, 1f, 1f, alpha);
             image.raycastTarget = false;
             return image;
         }
@@ -102,10 +123,15 @@ namespace ShinobiDominion.Game
         /// A round medallion button: shadow, face (the part that darkens when pressed), brass ring, icon, and a
         /// caption under it. Disabled medallions get a charcoal face and a faded icon, and shake when tapped.
         /// </summary>
-        public static Button Create(Transform parent, string name, MedalKind kind, string icon, string caption, Action onClick, bool interactable, float size)
+        public static Button Create(Transform parent, string name, MedalKind kind, string icon, string caption, Action onClick, bool interactable, float size, bool selected = false)
         {
             var rect = Ui.Rect(name, parent);
             rect.sizeDelta = new Vector2(size, size);
+            if (selected && interactable)
+            {
+                var halo = HudArt.Picture(rect, "Glow", "medal_halo", new Vector2(0.5f, 0.5f), new Vector2(size * 1.22f, size * 1.22f), Vector2.zero);
+                UiMotion.Breathe(halo, 0.95f, 1.8f);
+            }
 
             var shadow = HudArt.Picture(rect, "Shadow", "shadow", new Vector2(0.5f, 0f), new Vector2(size * 1.05f, size * 0.34f), new Vector2(0f, -size * 0.1f));
             shadow.color = new Color(1f, 1f, 1f, 0.9f);
@@ -119,14 +145,14 @@ namespace ShinobiDominion.Game
                 new Vector2(0.5f, 0.5f), new Vector2(size, size), Vector2.zero);
             if (!interactable) ring.color = new Color(0.75f, 0.75f, 0.75f, 1f);
 
-            var iconSize = kind == MedalKind.Attack ? size * 0.4f : size * 0.54f;
+            var iconSize = kind == MedalKind.Attack ? size * 0.34f : size * 0.5f;
             var picture = HudArt.Picture(rect, "Icon", "icon_" + icon, new Vector2(0.5f, 0.5f), new Vector2(iconSize, iconSize), new Vector2(0f, kind == MedalKind.Attack ? size * 0.13f : 0f));
             if (!interactable) picture.color = new Color(1f, 1f, 1f, 0.45f);
 
             if (kind == MedalKind.Attack)
             {
-                var word = HudArt.Label(rect, caption, HudArt.Display, Mathf.RoundToInt(size * 0.14f), TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.CrimsonDark);
-                Ui.Anchor(word.rectTransform, new Vector2(0.5f, 0f), new Vector2(size * 0.7f, size * 0.2f), new Vector2(0f, size * 0.24f));
+                var word = HudArt.Label(rect, caption, HudArt.Display, Mathf.RoundToInt(size * 0.122f), TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.CrimsonDark);
+                Ui.Anchor(word.rectTransform, new Vector2(0.5f, 0f), new Vector2(size * 0.62f, size * 0.17f), new Vector2(0f, size * 0.27f));
             }
             else if (!string.IsNullOrEmpty(caption))
             {

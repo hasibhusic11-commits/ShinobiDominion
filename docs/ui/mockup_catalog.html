@@ -1,0 +1,79 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Catalog mockup</title>
+<style>
+  :root { --ivory: #EFE6D0; --brass-light: #E8C77E; --deep: #0C1222; --crimson-light: #C2483C; }
+  body { margin: 0; background: #111; }
+  @media (max-height: 700px) { .screen { zoom: 0.86; } }
+  .screen { position: relative; width: 1280px; height: 720px; overflow: hidden; font-family: Georgia, serif;
+    background: url(after_home.png) center / cover; }
+  .scrim { position: absolute; inset: 0; background: rgba(0,0,0,.45); }
+  .k { --kit: url(../../unity/Assets/_Game/Resources/UI/); }
+  .window { position: absolute; left: 50px; top: 120px; width: 1180px; height: 560px; box-sizing: border-box;
+    border: 56px solid transparent; border-image: url(../../unity/Assets/_Game/Resources/UI/frame_s56.png) 56 fill / 56px; }
+  .fret { position: absolute; inset: -38px; border: 16px solid transparent; border-image: url(../../unity/Assets/_Game/Resources/UI/kenney_fret_s16.png) 16 / 16px;
+    filter: sepia(1) saturate(2) brightness(.75); opacity: .55; }
+  .ribbon { position: absolute; left: 50%; top: -86px; transform: translateX(-50%); width: 360px; height: 62px;
+    background: url(../../unity/Assets/_Game/Resources/UI/ribbon.png); display: flex; align-items: center; justify-content: center;
+    color: var(--ivory); font: bold 28px Georgia, serif; letter-spacing: 2px; text-shadow: 0 2px 0 #4E1310, 0 0 3px #4E1310; }
+  .close { position: absolute; right: -88px; top: -88px; width: 64px; height: 64px; }
+  .close img { position: absolute; inset: 0; width: 64px; height: 64px; }
+  .tabs { position: absolute; left: -26px; right: -26px; top: -24px; display: flex; gap: 10px; }
+  .tab { flex: 1; height: 58px; box-sizing: border-box; border: 22px solid transparent; border-width: 22px 22px;
+    border-image: url(../../unity/Assets/_Game/Resources/UI/btn_lacquer_s22.png) 22 fill / 22px; display: flex; align-items: center; justify-content: center; gap: 8px;
+    color: var(--ivory); font: bold 18px Arial, sans-serif; text-shadow: 0 0 2px var(--deep), 0 2px 2px #000; }
+  .tab span { margin-top: -18px; margin-bottom: -18px; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+  .tab img { width: 28px; height: 28px; }
+  .tab.on { border-image: url(../../unity/Assets/_Game/Resources/UI/btn_gold_s22.png) 22 fill / 22px; color: #2A1A08; text-shadow: none; }
+  .cards { position: absolute; left: -26px; top: 52px; display: flex; gap: 14px; }
+  .card { position: relative; width: 208px; height: 318px; box-sizing: border-box; border: 26px solid transparent;
+    border-image: url(../../unity/Assets/_Game/Resources/UI/plate_s26.png) 26 fill / 26px; }
+  .card .name { position: absolute; left: -16px; right: -16px; top: -12px; text-align: center; color: var(--ivory); font: bold 19px Georgia, serif;
+    text-shadow: 0 0 2px var(--deep), 0 2px 2px #000; letter-spacing: 1px; }
+  .card .glow { position: absolute; left: -10px; right: -10px; top: 18px; height: 160px; background: url(../../unity/Assets/_Game/Resources/UI/glow.png) center / contain no-repeat; opacity: .35; filter: sepia(1) saturate(3); }
+  .card .thumb { position: absolute; left: -12px; top: 22px; width: 180px; height: 150px; background-image: url(before_catalog.png); background-size: 1280px 720px; }
+  .chips { position: absolute; left: -14px; right: -14px; top: 186px; display: flex; justify-content: center; gap: 8px; }
+  .chip { padding: 2px 10px; border-radius: 10px; background: #05080F; border: 1px solid #6B4F22; color: var(--ivory); font: bold 14px Arial; }
+  .price { position: absolute; left: -18px; right: -18px; bottom: -18px; height: 50px; box-sizing: border-box; border: 22px solid transparent;
+    border-image: url(../../unity/Assets/_Game/Resources/UI/btn_gold_s22.png) 22 fill / 22px; }
+  .price span { position: absolute; inset: -22px; display: flex; align-items: center; justify-content: center; gap: 6px; color: #2A1A08; font: bold 20px Arial; }
+  .price img { width: 26px; height: 26px; }
+  .price.short { border-image-source: url(../../unity/Assets/_Game/Resources/UI/btn_lacquer_s22.png); }
+  .price.short span { color: var(--crimson-light); }
+  .lockcard::after { content: ""; position: absolute; inset: -20px; background: rgba(20,20,26,.62); border-radius: 12px; }
+  .lockbadge { position: absolute; left: 50%; top: 70px; transform: translateX(-50%); z-index: 2; text-align: center; color: var(--ivory); font: bold 18px Arial; }
+  .lockbadge img { width: 56px; height: 56px; display: block; margin: 0 auto 4px; }
+</style>
+</head>
+<body>
+<div class="screen">
+  <div class="scrim"></div>
+  <div class="window">
+    <div class="fret"></div>
+    <div class="ribbon">BUILD</div>
+    <div class="close"><img src="../../unity/Assets/_Game/Resources/UI/medal_face_crimson_small.png"><img src="../../unity/Assets/_Game/Resources/UI/medal_ring_thin.png"><img src="../../unity/Assets/_Game/Resources/UI/icon_close.png" style="inset:16px;width:32px;height:32px"></div>
+    <div class="tabs">
+      <div class="tab on"><span><img src="../../unity/Assets/_Game/Resources/UI/icon_build.png">Structures</span></div>
+      <div class="tab"><span><img src="../../unity/Assets/_Game/Resources/UI/icon_train.png">Defense</span></div>
+      <div class="tab"><span><img src="../../unity/Assets/_Game/Resources/UI/icon_gold.png">Resources</span></div>
+      <div class="tab"><span><img src="../../unity/Assets/_Game/Resources/UI/icon_hero.png">Hero Base</span></div>
+      <div class="tab"><span><img src="../../unity/Assets/_Game/Resources/UI/icon_walls.png">Walls</span></div>
+    </div>
+    <div class="cards">
+      <div class="card"><div class="glow"></div><div class="thumb" style="background-position:-60px -260px"></div><div class="name">TRAINING HALL</div>
+        <div class="chips"><span class="chip">4 x 3</span><span class="chip">0 / 1</span></div>
+        <div class="price"><span><img src="../../unity/Assets/_Game/Resources/UI/icon_gold.png">1,500</span></div></div>
+      <div class="card"><div class="glow"></div><div class="thumb" style="background-position:-370px -260px"></div><div class="name">TROOP CAMP</div>
+        <div class="chips"><span class="chip">3 x 3</span><span class="chip">0 / 1</span></div>
+        <div class="price"><span><img src="../../unity/Assets/_Game/Resources/UI/icon_gold.png">400</span></div></div>
+      <div class="card lockcard"><div class="glow"></div><div class="thumb" style="background-position:-668px -260px"></div><div class="name">RESEARCH HUT</div>
+        <div class="lockbadge"><img src="../../unity/Assets/_Game/Resources/UI/icon_lock.png">Dojo 3</div>
+        <div class="chips"><span class="chip">3 x 3</span><span class="chip">0 / 0</span></div>
+        <div class="price short"><span><img src="../../unity/Assets/_Game/Resources/UI/icon_gold.png">2,000</span></div></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

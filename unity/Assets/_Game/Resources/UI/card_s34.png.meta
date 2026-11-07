@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 6164b7340a7b3ed4081e4ac43d8024d0
+guid: 29da92d3cf5026046b544779b559a186
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 8765543321200878099
-    second: plate_s26_0
+      213: -424367255304176187
+    second: card_s34_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -52,7 +52,7 @@ TextureImporter:
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
   spritePixelsToUnits: 100
-  spriteBorder: {x: 26, y: 26, z: 26, w: 26}
+  spriteBorder: {x: 34, y: 34, z: 34, w: 34}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
   alphaIsTransparency: 1
@@ -100,13 +100,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: plate_s26_0
+      name: card_s34_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 128
-        height: 72
+        width: 160
+        height: 200
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -115,8 +115,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 312e973753775a970800000000000000
-      internalID: 8765543321200878099
+      spriteID: 5cd794dca385c1af0800000000000000
+      internalID: -424367255304176187
       vertices: []
       indices: 
       edges: []

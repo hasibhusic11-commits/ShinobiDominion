@@ -636,82 +636,163 @@ namespace ShinobiDominion.Game
             return true;
         }
 
+        private static readonly Vector2 CatalogWindow = new Vector2(1180f, 510f);
+        private static readonly Vector2 CatalogCardSize = new Vector2(208f, 318f);
+
+        /// <summary>The build catalog as a framed window over the village (docs/ui/CATALOG_SPEC.md).</summary>
         private void ShowCatalog()
         {
-            _panel.ShowScreen("Build", WalletInfo, CloseAll, panel =>
+            _panel.ShowWindow("Build", CatalogWindow, CloseAll, content =>
             {
-                var tabs = panel.Row();
-                AddTab(tabs, BuildingCategory.Structures, "Structures");
-                AddTab(tabs, BuildingCategory.Defense, "Defense");
-                AddTab(tabs, BuildingCategory.Resources, "Resources");
-                AddTab(tabs, BuildingCategory.HeroBases, "Hero Base");
-                AddTab(tabs, BuildingCategory.Walls, "Walls");
+                var tabs = Ui.Rect("Tabs", content);
+                tabs.anchorMin = new Vector2(0f, 1f);
+                tabs.anchorMax = new Vector2(1f, 1f);
+                tabs.pivot = new Vector2(0.5f, 1f);
+                tabs.sizeDelta = new Vector2(0f, 58f);
+                tabs.anchoredPosition = Vector2.zero;
+                var row = tabs.gameObject.AddComponent<HorizontalLayoutGroup>();
+                row.spacing = 10f;
+                row.childControlWidth = true;
+                row.childControlHeight = true;
+                row.childForceExpandWidth = true;
+                row.childForceExpandHeight = true;
+                AddTab(tabs, BuildingCategory.Structures, "Structures", "build");
+                AddTab(tabs, BuildingCategory.Defense, "Defense", "train");
+                AddTab(tabs, BuildingCategory.Resources, "Resources", "gold");
+                AddTab(tabs, BuildingCategory.HeroBases, "Hero Base", "hero");
+                AddTab(tabs, BuildingCategory.Walls, "Walls", "walls");
 
                 // Unique essentials such as the Dojo always exist, so they would only be noise here.
-                var grid = panel.Grid(new Vector2(226f, 330f));
+                var cards = Ui.Rect("Cards", content);
+                cards.anchorMin = new Vector2(0f, 0f);
+                cards.anchorMax = new Vector2(1f, 1f);
+                cards.offsetMin = new Vector2(0f, 0f);
+                cards.offsetMax = new Vector2(0f, -74f);
+                var grid = cards.gameObject.AddComponent<GridLayoutGroup>();
+                grid.cellSize = CatalogCardSize;
+                grid.spacing = new Vector2(14f, 14f);
+                grid.childAlignment = TextAnchor.UpperLeft;
+                var index = 0;
                 foreach (var definition in Village.Catalog.InCategory(_catalogCategory))
                     if (definition.removable)
-                        CatalogCard(grid, definition);
+                        UiMotion.PopIn(CatalogCard(cards, definition).transform, 0.035f * index++, 0.85f, 0.2f);
 
                 // Undo is offline-only for now: online it would be a free refund the server must not give.
                 if (!IsOnline && _history.Count > 0)
-                    panel.Action("CatalogUndoButton", "Undo last build", UndoFromCatalog);
+                {
+                    var undo = Medal.Create(content, "CatalogUndoButton", MedalKind.IconOnly, "back", "Undo", UndoFromCatalog, true, 56f);
+                    Ui.Anchor((RectTransform)undo.transform, new Vector2(1f, 0f), new Vector2(56f, 56f), new Vector2(-6f, 30f));
+                }
             });
         }
 
-        private void AddTab(RectTransform row, BuildingCategory category, string caption)
+        private void AddTab(RectTransform row, BuildingCategory category, string caption, string icon)
         {
-            var color = category == _catalogCategory ? Ui.AccentColor : Ui.ButtonColor;
+            var selected = category == _catalogCategory;
             var tab = Ui.Button(row, "Tab" + category, caption, () =>
             {
                 _catalogCategory = category;
                 ShowCatalog();
-            }, true, color, 17);
-            tab.GetComponentInChildren<Text>().horizontalOverflow = HorizontalWrapMode.Overflow;
+            }, true, selected ? Ui.AccentColor : Ui.ButtonColor, 18);
+            var label = tab.GetComponentInChildren<Text>();
+            label.horizontalOverflow = HorizontalWrapMode.Overflow;
+            Ui.Stretch(label.rectTransform, 46f, 7f, 10f, 3f);
+            label.alignment = TextAnchor.MiddleLeft;
+            HudArt.Picture(tab.transform, "Icon", "icon_" + icon, new Vector2(0f, 0.5f), new Vector2(30f, 30f), new Vector2(12f, 2f));
         }
 
-        /// <summary>A shop-style card: name, real building preview, footprint, count and cost.</summary>
-        private void CatalogCard(RectTransform grid, BuildingDefinition definition)
+        /// <summary>A catalog card: name, the real building on a soft glow, footprint and count chips, and the price.</summary>
+        private Button CatalogCard(RectTransform grid, BuildingDefinition definition)
         {
             var count = Village.CountOf(definition.id);
             var limit = Village.LimitOf(definition);
-            var cost = definition.costCrystals > 0
-                ? $"{definition.costGold:N0} gold, {definition.costCrystals:N0} crystals"
-                : $"{definition.costGold:N0} gold";
-
-            string blocked = null;
-            if (limit == 0) blocked = "Needs a higher Dojo level";
-            else if (count >= limit) blocked = "Maximum built";
-            else if (!Village.CanAfford(definition.costGold, definition.costCrystals)) blocked = "Not enough resources";
+            var locked = limit == 0;
+            var full = !locked && count >= limit;
+            var affordable = Village.CanAfford(definition.costGold, definition.costCrystals);
+            var available = !locked && !full && affordable;
 
             var rect = Ui.Rect("Place_" + definition.id, grid);
-            var frame = Ui.Framed(rect, UiSkin.Frame(new Color(0.32f, 0.30f, 0.36f), new Color(0.14f, 0.14f, 0.20f), UiSkin.Brass, 4));
+            var plate = Ui.Framed(rect, HudArt.Sprite("card_s34"));
+            plate.pixelsPerUnitMultiplier = 1.15f;
             var button = rect.gameObject.AddComponent<Button>();
-            button.targetGraphic = frame;
-            button.interactable = blocked == null;
+            button.targetGraphic = plate;
+            button.interactable = available;
             var colors = button.colors;
-            colors.disabledColor = new Color(0.55f, 0.55f, 0.55f, 0.85f);
+            colors.pressedColor = new Color(0.8f, 0.8f, 0.8f, 1f);
+            colors.disabledColor = Color.white;
             button.colors = colors;
+            button.onClick.AddListener(() => GameSounds.Play(GameSound.Click));
             button.onClick.AddListener(() => BeginPlacement(definition.id));
+            UiMotion.Pressable(button);
+            rect.gameObject.AddComponent<DeniedShake>();
 
-            var title = Ui.Strong(Ui.Label(rect, definition.displayName, 21, TextAnchor.MiddleCenter));
-            Ui.Anchor(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(214f, 40f), new Vector2(0f, -6f));
-
-            var preview = Ui.Rect("Preview", rect);
-            Ui.Anchor(preview, new Vector2(0.5f, 1f), new Vector2(190f, 190f), new Vector2(0f, -44f));
+            // A recessed picture well, so the building sits in a framed window like a collectible card.
+            var well = Ui.Rect("Well", rect);
+            Ui.Anchor(well, new Vector2(0.5f, 1f), new Vector2(178f, 168f), new Vector2(0f, -44f));
+            Ui.Framed(well, HudArt.Sprite("well_s18"), false).pixelsPerUnitMultiplier = 1.1f;
+            var glow = HudArt.Picture(well, "Glow", "glow", new Vector2(0.5f, 0.5f), new Vector2(190f, 150f), Vector2.zero);
+            glow.color = new Color(1f, 0.8f, 0.45f, 0.4f);
+            var preview = Ui.Rect("Preview", well);
+            Ui.Anchor(preview, new Vector2(0.5f, 0.5f), new Vector2(170f, 170f), new Vector2(0f, -4f));
             var image = preview.gameObject.AddComponent<RawImage>();
             image.texture = _thumbnails.For(definition);
             image.raycastTarget = false;
 
-            var info = Ui.Strong(Ui.Label(rect, $"{definition.width}x{definition.depth}     Built {count}/{limit}", 16, TextAnchor.MiddleCenter));
-            Ui.Anchor(info.rectTransform, new Vector2(0.5f, 0f), new Vector2(214f, 26f), new Vector2(0f, 58f));
+            var title = HudArt.Label(rect, definition.displayName, HudArt.Display, 18, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.LacquerDeep);
+            Ui.Anchor(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(180f, 32f), new Vector2(0f, -12f));
+            title.resizeTextForBestFit = true;
+            title.resizeTextMinSize = 13;
+            title.resizeTextMaxSize = 18;
 
-            var strip = Ui.Rect("Cost", rect);
-            Ui.Anchor(strip, new Vector2(0.5f, 0f), new Vector2(206f, 48f), new Vector2(0f, 8f));
-            Ui.Framed(strip, UiSkin.ButtonFace, false, blocked == null ? Ui.AccentColor : Ui.ButtonColor);
-            var caption = blocked ?? (definition.IsWall ? $"{cost} each" : cost);
-            var costLabel = Ui.Strong(Ui.Label(strip, caption, 16, TextAnchor.MiddleCenter));
-            Ui.Stretch(costLabel.rectTransform, 4f, 2f, 4f, 2f);
+            Chip(rect, $"{definition.width} x {definition.depth}", new Vector2(-44f, 74f));
+            Chip(rect, $"{count} / {limit}", new Vector2(44f, 74f));
+
+            // The price bar: gold when it can be bought, red numbers when it cannot be paid, a plain note otherwise.
+            var price = Ui.Rect("Cost", rect);
+            Ui.Anchor(price, new Vector2(0.5f, 0f), new Vector2(182f, 54f), new Vector2(0f, 14f));
+            var priceImage = Ui.Framed(price, HudArt.Sprite(available ? "btn_gold_s24" : full || locked ? "btn_charcoal_s24" : "btn_lacquer_s24"), false);
+            priceImage.pixelsPerUnitMultiplier = 1.4f;
+            string caption;
+            Color tint;
+            if (full)
+            {
+                caption = "Maximum built";
+                tint = HudArt.IvoryMuted;
+            }
+            else
+            {
+                caption = definition.costCrystals > 0 ? $"{definition.costGold:N0} + {definition.costCrystals:N0}" : definition.costGold.ToString("N0");
+                if (definition.IsWall) caption += " each";
+                tint = available ? new Color32(0x2A, 0x1A, 0x08, 0xFF) : affordable ? HudArt.IvoryMuted : HudArt.CrimsonLight;
+            }
+            if (!full) HudArt.Picture(price, "Coin", "icon_gold", new Vector2(0f, 0.5f), new Vector2(30f, 30f), new Vector2(14f, 3f));
+            var cost = HudArt.Label(price, caption, HudArt.Numbers, 19, full ? TextAnchor.MiddleCenter : TextAnchor.MiddleLeft, tint, available ? new Color(1f, 0.92f, 0.7f, 0.5f) : HudArt.LacquerDeep);
+            Ui.Stretch(cost.rectTransform, full ? 10f : 52f, 9f, 10f, 3f);
+
+            if (locked)
+            {
+                var shade = Ui.Rect("Locked", rect);
+                Ui.Stretch(shade, 14f, 14f, 14f, 14f);
+                Ui.Background(shade, new Color(0.08f, 0.08f, 0.1f, 0.6f), false);
+                HudArt.Picture(shade, "Lock", "icon_lock", new Vector2(0.5f, 0.5f), new Vector2(60f, 60f), new Vector2(0f, 40f));
+                var needs = Village.HqLevel + 1;
+                while (needs < 15 && definition.MaxCountAt(needs) == 0) needs++;
+                var note = HudArt.Label(shade, $"Dojo {needs}", HudArt.Numbers, 18, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.LacquerDeep);
+                Ui.Anchor(note.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(180f, 26f), new Vector2(0f, -6f));
+            }
+            return button;
+        }
+
+        private static void Chip(RectTransform card, string text, Vector2 offset)
+        {
+            var chip = Ui.Rect("Chip", card);
+            Ui.Anchor(chip, new Vector2(0.5f, 0f), new Vector2(78f, 24f), offset);
+            var image = chip.gameObject.AddComponent<Image>();
+            image.sprite = HudArt.Sprite("track_s8");
+            image.type = Image.Type.Sliced;
+            image.raycastTarget = false;
+            var label = HudArt.Label(chip, text, HudArt.Numbers, 14, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.LacquerDeep);
+            Ui.Stretch(label.rectTransform);
         }
 
         private void UndoFromCatalog()

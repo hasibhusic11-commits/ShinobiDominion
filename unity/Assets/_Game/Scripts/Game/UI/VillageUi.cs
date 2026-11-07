@@ -301,15 +301,26 @@ namespace ShinobiDominion.Game
             return text;
         }
 
+        /// <summary>The plate for a button's role colour: gold for the main choice, crimson for attack or danger, lacquer otherwise.</summary>
+        private static string PlateFor(Color color)
+        {
+            if (color.r > 0.75f && color.g > 0.4f && color.b < 0.4f) return "btn_gold_s24";
+            if (color.r > 0.55f && color.g < 0.32f && color.b < 0.3f) return "btn_crimson_s24";
+            return "btn_lacquer_s24";
+        }
+
         public static Button Button(Transform parent, string name, string caption, Action onClick, bool interactable = true, Color? color = null, int fontSize = 22)
         {
             var rect = Rect(name, parent);
-            var image = Framed(rect, UiSkin.ButtonFace, true, color ?? ButtonColor);
+            var plate = interactable ? PlateFor(color ?? ButtonColor) : "btn_charcoal_s24";
+            var image = Framed(rect, HudArt.Sprite(plate), true);
+            image.pixelsPerUnitMultiplier = 1.4f;
             var button = rect.gameObject.AddComponent<Button>();
             button.targetGraphic = image;
             button.interactable = interactable;
             var colors = button.colors;
-            colors.disabledColor = new Color(0.55f, 0.55f, 0.55f, 0.75f);
+            colors.pressedColor = new Color(0.8f, 0.8f, 0.8f, 1f);
+            colors.disabledColor = Color.white;
             button.colors = colors;
             button.onClick.AddListener(() => GameSounds.Play(GameSound.Click));
             if (onClick != null) button.onClick.AddListener(() => onClick());
@@ -318,9 +329,13 @@ namespace ShinobiDominion.Game
             layout.minHeight = MinTouchHeight;
             layout.preferredHeight = MinTouchHeight;
 
-            var label = Strong(Label(rect, caption, fontSize, TextAnchor.MiddleCenter));
-            Stretch(label.rectTransform, 8f, 3f, 8f, 3f);
+            var dark = plate == "btn_gold_s24";
+            var label = HudArt.Label(rect, caption, HudArt.Numbers, fontSize, TextAnchor.MiddleCenter,
+                dark ? new Color32(0x2A, 0x1A, 0x08, 0xFF) : (interactable ? HudArt.Ivory : HudArt.IvoryMuted),
+                dark ? new Color(1f, 0.92f, 0.7f, 0.5f) : HudArt.LacquerDeep);
+            Stretch(label.rectTransform, 12f, 9f, 12f, 4f);
             UiMotion.Pressable(button);
+            rect.gameObject.AddComponent<DeniedShake>();
             return button;
         }
 
@@ -387,10 +402,10 @@ namespace ShinobiDominion.Game
 
         // Sizes from docs/ui/HUD_SPEC.md, in reference units (1280 x 720).
         private const float CounterWidth = 188f;
-        private const float CounterHeight = 46f;
+        private const float CounterHeight = 52f;
         private const float CounterGap = 30f;
         private const float Margin = 14f;
-        private const float AttackSize = 168f;
+        private const float AttackSize = 172f;
 
         public HudView(RectTransform parent, Action onAttack, Action onSettings)
         {
@@ -400,22 +415,24 @@ namespace ShinobiDominion.Game
             // Profile: a plate with the avatar medallion over its left end, the level on a crimson diamond,
             // and the menu as a small icon-only medallion beside it.
             var left = Ui.Rect("TopLeft", Root);
-            Ui.Anchor(left, new Vector2(0f, 1f), new Vector2(230f, CounterHeight), new Vector2(50f, -Margin));
+            Ui.Anchor(left, new Vector2(0f, 1f), new Vector2(236f, CounterHeight), new Vector2(50f, -Margin));
             HudArt.Plate(left);
+            HudArt.DropShadow(left);
             _identity = HudArt.Label(left, string.Empty, HudArt.Display, 21, TextAnchor.MiddleLeft, HudArt.Ivory, HudArt.LacquerDeep);
-            Ui.Stretch(_identity.rectTransform, 44f, 0f, 12f, 0f);
+            Ui.Stretch(_identity.rectTransform, 46f, 2f, 14f, 0f);
             var avatar = Ui.Rect("Avatar", Root);
-            Ui.Anchor(avatar, new Vector2(0f, 1f), new Vector2(72f, 72f), new Vector2(10f, -4f));
-            HudArt.Picture(avatar, "Face", "medal_face_lacquer", new Vector2(0.5f, 0.5f), new Vector2(72f, 72f), Vector2.zero);
-            HudArt.Picture(avatar, "Ring", "medal_ring_thin", new Vector2(0.5f, 0.5f), new Vector2(72f, 72f), Vector2.zero);
+            Ui.Anchor(avatar, new Vector2(0f, 1f), new Vector2(78f, 78f), new Vector2(8f, -4f));
+            HudArt.Picture(avatar, "Shadow", "shadow", new Vector2(0.5f, 0f), new Vector2(82f, 28f), new Vector2(0f, -10f));
+            HudArt.Picture(avatar, "Face", "medal_face_lacquer", new Vector2(0.5f, 0.5f), new Vector2(78f, 78f), Vector2.zero);
+            HudArt.Picture(avatar, "Ring", "medal_ring", new Vector2(0.5f, 0.5f), new Vector2(78f, 78f), Vector2.zero);
             var monogram = HudArt.Label(avatar, "P", HudArt.Display, 30, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.LacquerDeep);
             Ui.Stretch(monogram.rectTransform);
             var badge = Ui.Icon(avatar, UiSkin.Diamond(HudArt.CrimsonLight, HudArt.CrimsonDark), new Vector2(0.5f, 0f), new Vector2(34f, 34f), new Vector2(16f, -12f));
             badge.raycastTarget = false;
             _level = HudArt.Label(badge.transform, "1", HudArt.Numbers, 15, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.CrimsonDark);
             Ui.Stretch(_level.rectTransform);
-            SettingsButton = Medal.Create(Root, "SettingsButton", MedalKind.IconOnly, "menu", null, onSettings, true, 52f);
-            Ui.Anchor((RectTransform)SettingsButton.transform, new Vector2(0f, 1f), new Vector2(52f, 52f), new Vector2(292f, -Margin + 3f));
+            SettingsButton = Medal.Create(Root, "SettingsButton", MedalKind.IconOnly, "menu", null, onSettings, true, 56f);
+            Ui.Anchor((RectTransform)SettingsButton.transform, new Vector2(0f, 1f), new Vector2(56f, 56f), new Vector2(296f, -Margin + 2f));
 
             _gold = Counter(Root, "Gold", "gold", -(CounterWidth + CounterGap + Margin), out _goldFill, out _goldFillImage);
             _crystals = Counter(Root, "Crystals", "crystals", -Margin, out _, out _);
@@ -437,14 +454,15 @@ namespace ShinobiDominion.Game
         {
             var plate = Ui.Rect(name + "Pill", root);
             Ui.Anchor(plate, new Vector2(1f, 1f), new Vector2(CounterWidth, CounterHeight), new Vector2(right, -Margin));
-            HudArt.Plate(plate);
+            HudArt.Plate(plate, "counter_s30");
+            HudArt.DropShadow(plate);
             var medal = Ui.Rect("Medal", plate);
-            Ui.Anchor(medal, new Vector2(0f, 0.5f), new Vector2(56f, 56f), new Vector2(-20f, 0f));
-            HudArt.Picture(medal, "Face", "medal_face_lacquer", new Vector2(0.5f, 0.5f), new Vector2(56f, 56f), Vector2.zero);
-            HudArt.Picture(medal, "Ring", "medal_ring_thin", new Vector2(0.5f, 0.5f), new Vector2(56f, 56f), Vector2.zero);
+            Ui.Anchor(medal, new Vector2(0f, 0.5f), new Vector2(62f, 62f), new Vector2(-22f, 0f));
+            HudArt.Picture(medal, "Face", "medal_face_lacquer", new Vector2(0.5f, 0.5f), new Vector2(62f, 62f), Vector2.zero);
+            HudArt.Picture(medal, "Ring", "medal_ring", new Vector2(0.5f, 0.5f), new Vector2(62f, 62f), Vector2.zero);
             HudArt.Picture(medal, "Icon", "icon_" + icon, new Vector2(0.5f, 0.5f), new Vector2(36f, 36f), Vector2.zero);
-            var text = HudArt.Label(plate, string.Empty, HudArt.Numbers, 22, TextAnchor.MiddleRight, HudArt.Ivory, HudArt.LacquerDeep);
-            Ui.Stretch(text.rectTransform, 44f, 4f, 14f, 2f);
+            var text = HudArt.Label(plate, string.Empty, HudArt.Numbers, 23, TextAnchor.MiddleRight, HudArt.Ivory, HudArt.LacquerDeep);
+            Ui.Stretch(text.rectTransform, 46f, 6f, 18f, 2f);
             fill = null;
             fillImage = null;
             if (name != "Gold") return text;
@@ -453,8 +471,8 @@ namespace ShinobiDominion.Game
             track.anchorMin = new Vector2(0f, 0f);
             track.anchorMax = new Vector2(1f, 0f);
             track.pivot = new Vector2(0.5f, 0f);
-            track.offsetMin = new Vector2(42f, 6f);
-            track.offsetMax = new Vector2(-12f, 12f);
+            track.offsetMin = new Vector2(46f, 8f);
+            track.offsetMax = new Vector2(-16f, 14f);
             var trackImage = track.gameObject.AddComponent<Image>();
             trackImage.sprite = HudArt.Sprite("track_s8");
             trackImage.type = Image.Type.Sliced;
@@ -566,9 +584,9 @@ namespace ShinobiDominion.Game
             _card.pivot = new Vector2(0f, 0.5f);
             _card.sizeDelta = new Vector2(450f, -104f);
             _card.anchoredPosition = new Vector2(16f, -44f);
-            Ui.Framed(_card, Ui.PanelSprite);
+            Ui.Framed(_card, HudArt.Sprite("frame_s80")).pixelsPerUnitMultiplier = 1.3f;
 
-            var header = Ui.Strong(Ui.Label(_card, title, 27, TextAnchor.MiddleLeft, new Color(1f, 0.9f, 0.66f)));
+            var header = HudArt.Label(_card, title, HudArt.Display, 25, TextAnchor.MiddleLeft, HudArt.BrassLight, HudArt.LacquerDeep);
             header.rectTransform.anchorMin = new Vector2(0f, 1f);
             header.rectTransform.anchorMax = new Vector2(1f, 1f);
             header.rectTransform.pivot = new Vector2(0f, 1f);
@@ -583,8 +601,8 @@ namespace ShinobiDominion.Game
             divider.anchoredPosition = new Vector2(0f, -68f);
             Ui.Background(divider, Color.white, false).sprite = UiSkin.Divider;
 
-            var close = Ui.Button(_card, "CloseButton", "X", onClose, true, UiSkin.Vermilion, 24);
-            Ui.Anchor((RectTransform)close.transform, new Vector2(1f, 1f), new Vector2(56f, 56f), new Vector2(-12f, -10f));
+            var close = Medal.Create(_card, "CloseButton", MedalKind.Destructive, "close", null, onClose, true, 54f);
+            Ui.Anchor((RectTransform)close.transform, new Vector2(1f, 1f), new Vector2(54f, 54f), new Vector2(-12f, -10f));
 
             BuildScrollArea(14f, 16f, 14f, 78f);
             fill(this);
@@ -602,12 +620,12 @@ namespace ShinobiDominion.Game
             IsFullScreen = true;
             _card = Ui.Rect("Screen", _parent);
             Ui.Stretch(_card);
-            Ui.Framed(_card, UiSkin.Frame(new Color(0.15f, 0.15f, 0.25f), new Color(0.06f, 0.06f, 0.10f), UiSkin.Brass));
+            Ui.Framed(_card, HudArt.Sprite("frame_s80")).pixelsPerUnitMultiplier = 1.1f;
 
-            var back = Ui.Button(_card, "CloseButton", "Back", onBack, true, UiSkin.Vermilion, 20);
-            Ui.Anchor((RectTransform)back.transform, new Vector2(0f, 1f), new Vector2(104f, 56f), new Vector2(14f, -12f));
+            var back = Medal.Create(_card, "CloseButton", MedalKind.IconOnly, "back", null, onBack, true, 60f);
+            Ui.Anchor((RectTransform)back.transform, new Vector2(0f, 1f), new Vector2(60f, 60f), new Vector2(20f, -10f));
 
-            var header = Ui.Strong(Ui.Label(_card, title, 32));
+            var header = HudArt.Label(_card, title, HudArt.Display, 30, TextAnchor.MiddleLeft, HudArt.BrassLight, HudArt.LacquerDeep);
             header.rectTransform.anchorMin = new Vector2(0f, 1f);
             header.rectTransform.anchorMax = new Vector2(1f, 1f);
             header.rectTransform.pivot = new Vector2(0f, 1f);
@@ -616,7 +634,7 @@ namespace ShinobiDominion.Game
 
             if (!string.IsNullOrEmpty(headerInfo))
             {
-                var info = Ui.Strong(Ui.Label(_card, headerInfo, 19, TextAnchor.MiddleRight));
+                var info = HudArt.Label(_card, headerInfo, HudArt.Numbers, 19, TextAnchor.MiddleRight, HudArt.Ivory, HudArt.LacquerDeep);
                 info.rectTransform.anchorMin = new Vector2(0.5f, 1f);
                 info.rectTransform.anchorMax = new Vector2(1f, 1f);
                 info.rectTransform.pivot = new Vector2(1f, 1f);
@@ -624,7 +642,7 @@ namespace ShinobiDominion.Game
                 info.rectTransform.anchoredPosition = new Vector2(-20f, -4f);
             }
 
-            BuildScrollArea(18f, 14f, 18f, 80f);
+            BuildScrollArea(24f, 20f, 24f, 82f);
             fill(this);
             if (opening)
             {
@@ -650,16 +668,59 @@ namespace ShinobiDominion.Game
             Ui.Stretch(scene);
             fill(scene);
 
-            var back = Ui.Button(_card, "CloseButton", "Back", onBack, true, UiSkin.Vermilion, 20);
-            Ui.Anchor((RectTransform)back.transform, new Vector2(0f, 1f), new Vector2(104f, 56f), new Vector2(14f, -12f));
-            var header = Ui.Strong(Ui.Label(_card, title, 32));
-            Ui.Anchor(header.rectTransform, new Vector2(0f, 1f), new Vector2(560f, 72f), new Vector2(132f, -4f));
+            var back = Medal.Create(_card, "CloseButton", MedalKind.IconOnly, "back", null, onBack, true, 60f);
+            Ui.Anchor((RectTransform)back.transform, new Vector2(0f, 1f), new Vector2(60f, 60f), new Vector2(20f, -10f));
+            var header = HudArt.Label(_card, title, HudArt.Display, 30, TextAnchor.MiddleLeft, HudArt.BrassLight, HudArt.LacquerDeep);
+            Ui.Anchor(header.rectTransform, new Vector2(0f, 1f), new Vector2(560f, 72f), new Vector2(96f, -4f));
             if (!string.IsNullOrEmpty(headerInfo))
             {
-                var info = Ui.Strong(Ui.Label(_card, headerInfo, 19, TextAnchor.MiddleRight));
+                var info = HudArt.Label(_card, headerInfo, HudArt.Numbers, 19, TextAnchor.MiddleRight, HudArt.Ivory, HudArt.LacquerDeep);
                 Ui.Anchor(info.rectTransform, new Vector2(1f, 1f), new Vector2(560f, 72f), new Vector2(-20f, -4f));
             }
             if (opening) UiMotion.FadeIn(_card.gameObject, 0.2f);
+        }
+
+        /// <summary>
+        /// A modal window framed in brass over the dimmed village, with a crimson title ribbon and a Close medallion.
+        /// The caller lays out its contents inside the returned area. Counts as full screen: the world is blocked.
+        /// </summary>
+        public void ShowWindow(string title, Vector2 size, Action onClose, Action<RectTransform> fill)
+        {
+            var opening = !IsOpen;
+            Hide();
+            IsFullScreen = true;
+            _card = Ui.Rect("Window", _parent);
+            Ui.Stretch(_card);
+            Ui.Background(_card, new Color(0f, 0f, 0f, 0.45f));
+
+            var frame = Ui.Rect("Frame", _card);
+            Ui.Anchor(frame, new Vector2(0.5f, 0.5f), size, new Vector2(0f, -24f));
+            Ui.Framed(frame, HudArt.Sprite("frame_s80"));
+            HudArt.DropShadow(frame, 12f, 22f, 0.65f);
+            var fret = Ui.Rect("Fret", frame);
+            Ui.Stretch(fret, 34f, 34f, 34f, 34f);
+            var fretImage = fret.gameObject.AddComponent<Image>();
+            fretImage.sprite = HudArt.Sprite("kenney_fret_s16");
+            fretImage.type = Image.Type.Sliced;
+            fretImage.pixelsPerUnitMultiplier = 1.4f;
+            fretImage.color = new Color(HudArt.Brass.r, HudArt.Brass.g, HudArt.Brass.b, 0.45f);
+            fretImage.raycastTarget = false;
+
+            var content = Ui.Rect("Content", frame);
+            Ui.Stretch(content, 44f, 40f, 44f, 56f);
+            fill(content);
+
+            var ribbon = HudArt.Picture(frame, "Ribbon", "ribbon", new Vector2(0.5f, 1f), new Vector2(400f, 70f), new Vector2(0f, 34f));
+            var heading = HudArt.Label(ribbon.transform, title.ToUpperInvariant(), HudArt.Display, 28, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.CrimsonDark);
+            Ui.Stretch(heading.rectTransform, 30f, 4f, 30f, 2f);
+            var close = Medal.Create(frame, "CloseButton", MedalKind.Destructive, "close", null, onClose, true, 70f);
+            Ui.Anchor((RectTransform)close.transform, new Vector2(1f, 1f), new Vector2(70f, 70f), new Vector2(24f, 24f));
+
+            if (opening)
+            {
+                UiMotion.FadeIn(_card.gameObject, 0.18f);
+                UiMotion.PopIn(frame, 0f, 0.92f, 0.24f);
+            }
         }
 
         private void BuildScrollArea(float left, float bottom, float right, float top)
