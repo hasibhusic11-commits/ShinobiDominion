@@ -51,6 +51,7 @@ namespace ShinobiDominion.Tests
         public IEnumerator Altar_ListsEveryOwnedHero_ThroughTheBuilding()
         {
             Controller.Select(First("hero_altar").Id);
+            Controller.ShowAltarRoster();
             yield return null;
             var rows = Buttons().Count(b => b.name.StartsWith("Hero_"));
             Assert.Greater(Controller.Roster.HeroCount, 0);
@@ -61,6 +62,7 @@ namespace ShinobiDominion.Tests
         public IEnumerator Altar_RarityFilter_ShowsOnlyThatRarity()
         {
             Controller.Select(First("hero_altar").Id);
+            Controller.ShowAltarRoster();
             yield return null;
             Click(Find("FilterLegendary"));
             yield return null;
@@ -100,6 +102,7 @@ namespace ShinobiDominion.Tests
         public IEnumerator Altar_ShowsConceptPaintings_ForBaseFormHeroesThatHaveThem()
         {
             Controller.Select(First("hero_altar").Id);
+            Controller.ShowAltarRoster();
             yield return null;
             var painted = Controller.Roster.Heroes.First(h => h.EvolutionIndex == 0 && HeroConcepts.Has(h.ArchetypeId));
             var card = Find("Hero_" + painted.InstanceId);
@@ -154,6 +157,8 @@ namespace ShinobiDominion.Tests
             var duplicateId = duplicate.InstanceId;
 
             Controller.Select(First("hero_altar").Id);
+
+            Controller.ShowAltarRoster();
             yield return null;
             Click(Find("Hero_" + mainId));
             yield return null;
@@ -182,6 +187,8 @@ namespace ShinobiDominion.Tests
             Controller.AssignHero(First("hero_base").Id, duplicate.InstanceId);
 
             Controller.Select(First("hero_altar").Id);
+
+            Controller.ShowAltarRoster();
             yield return null;
             Controller.ShowEvolution(main.InstanceId);
             yield return null;
@@ -214,6 +221,7 @@ namespace ShinobiDominion.Tests
         {
             var heroes = Controller.Roster.HeroCount;
             Controller.Select(First("summoning_gate").Id);
+            Controller.ShowSummoningGate();
             yield return null;
             Assert.AreEqual(heroes, Controller.Roster.HeroCount);
             Assert.IsFalse(Buttons().Any(b => b.name.ToLowerInvariant().Contains("summon")));

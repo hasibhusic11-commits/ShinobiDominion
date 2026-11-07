@@ -393,76 +393,116 @@ namespace ShinobiDominion.Game
         public readonly RectTransform Root;
         public readonly Button AttackButton;
         public readonly Button SettingsButton;
+        private readonly Image _portrait;
+        private readonly Text _monogram;
         private readonly Text _identity;
         private readonly Text _level;
+        private readonly Text _power;
         private readonly Text _gold;
+        private readonly Text _chakra;
         private readonly Text _crystals;
         private readonly RectTransform _goldFill;
         private readonly Image _goldFillImage;
 
-        // Sizes from docs/ui/HUD_SPEC.md, in reference units (1280 x 720).
-        private const float CounterWidth = 188f;
-        private const float CounterHeight = 52f;
-        private const float CounterGap = 30f;
-        private const float Margin = 14f;
-        private const float AttackSize = 172f;
+        // Layout from the owner's mockup (docs/ui/target_home_mockup.png), in reference units (1280 x 720).
+        private const float Margin = 12f;
+        private const float BarWidth = 214f;
+        private const float BarHeight = 48f;
+        private const float BarGap = 34f;
+        private const float AttackSize = 178f;
+        private const float RoundIcon = 64f;
 
-        public HudView(RectTransform parent, Action onAttack, Action onSettings)
+        public HudView(RectTransform parent, Action onAttack, Action onSettings, Action<string> onShortcut, Action<string> onShop)
         {
             Root = Ui.Rect("Hud", parent);
             Ui.Stretch(Root);
 
-            // Profile: a plate with the avatar medallion over its left end, the level on a crimson diamond,
-            // and the menu as a small icon-only medallion beside it.
-            var left = Ui.Rect("TopLeft", Root);
-            Ui.Anchor(left, new Vector2(0f, 1f), new Vector2(236f, CounterHeight), new Vector2(50f, -Margin));
-            HudArt.Plate(left);
-            HudArt.DropShadow(left);
-            _identity = HudArt.Label(left, string.Empty, HudArt.Display, 21, TextAnchor.MiddleLeft, HudArt.Ivory, HudArt.LacquerDeep);
-            Ui.Stretch(_identity.rectTransform, 46f, 2f, 14f, 0f);
+            // Player: an arrow-shaped plate with name and level, a smaller plate with power, and the portrait ring over both.
+            var plate = Ui.Rect("TopLeft", Root);
+            Ui.Anchor(plate, new Vector2(0f, 1f), new Vector2(236f, 66f), new Vector2(84f, -Margin));
+            var plateImage = plate.gameObject.AddComponent<Image>();
+            plateImage.sprite = HudArt.Sprite("plate_player");
+            plateImage.raycastTarget = false;
+            HudArt.DropShadow(plate);
+            _identity = HudArt.Label(plate, string.Empty, HudArt.Display, 23, TextAnchor.MiddleLeft, HudArt.Ivory, HudArt.LacquerDeep);
+            Ui.Anchor(_identity.rectTransform, new Vector2(0f, 1f), new Vector2(170f, 30f), new Vector2(46f, -6f));
+            _level = HudArt.Label(plate, string.Empty, HudArt.Display, 18, TextAnchor.MiddleLeft, HudArt.BrassLight, HudArt.LacquerDeep);
+            Ui.Anchor(_level.rectTransform, new Vector2(0f, 0f), new Vector2(170f, 26f), new Vector2(46f, 6f));
+
+            var power = Ui.Rect("PowerPlate", Root);
+            Ui.Anchor(power, new Vector2(0f, 1f), new Vector2(190f, 42f), new Vector2(102f, -82f));
+            var powerImage = power.gameObject.AddComponent<Image>();
+            powerImage.sprite = HudArt.Sprite("plaque_arrow_s40");
+            powerImage.type = Image.Type.Sliced;
+            powerImage.pixelsPerUnitMultiplier = 1.4f;
+            powerImage.raycastTarget = false;
+            HudArt.Picture(power, "Icon", "icon_power", new Vector2(0f, 0.5f), new Vector2(34f, 34f), new Vector2(22f, 0f));
+            _power = HudArt.Label(power, "0", HudArt.Numbers, 21, TextAnchor.MiddleLeft, HudArt.Ivory, HudArt.LacquerDeep);
+            Ui.Stretch(_power.rectTransform, 62f, 2f, 26f, 2f);
+
             var avatar = Ui.Rect("Avatar", Root);
-            Ui.Anchor(avatar, new Vector2(0f, 1f), new Vector2(78f, 78f), new Vector2(8f, -4f));
-            HudArt.Picture(avatar, "Shadow", "shadow", new Vector2(0.5f, 0f), new Vector2(82f, 28f), new Vector2(0f, -10f));
-            HudArt.Picture(avatar, "Face", "medal_face_lacquer", new Vector2(0.5f, 0.5f), new Vector2(78f, 78f), Vector2.zero);
-            HudArt.Picture(avatar, "Ring", "medal_ring", new Vector2(0.5f, 0.5f), new Vector2(78f, 78f), Vector2.zero);
-            var monogram = HudArt.Label(avatar, "P", HudArt.Display, 30, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.LacquerDeep);
-            Ui.Stretch(monogram.rectTransform);
-            var badge = Ui.Icon(avatar, UiSkin.Diamond(HudArt.CrimsonLight, HudArt.CrimsonDark), new Vector2(0.5f, 0f), new Vector2(34f, 34f), new Vector2(16f, -12f));
-            badge.raycastTarget = false;
-            _level = HudArt.Label(badge.transform, "1", HudArt.Numbers, 15, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.CrimsonDark);
-            Ui.Stretch(_level.rectTransform);
-            SettingsButton = Medal.Create(Root, "SettingsButton", MedalKind.IconOnly, "menu", null, onSettings, true, 56f);
-            Ui.Anchor((RectTransform)SettingsButton.transform, new Vector2(0f, 1f), new Vector2(56f, 56f), new Vector2(296f, -Margin + 2f));
+            Ui.Anchor(avatar, new Vector2(0f, 1f), new Vector2(118f, 118f), new Vector2(6f, -4f));
+            HudArt.Picture(avatar, "Shadow", "shadow", new Vector2(0.5f, 0f), new Vector2(118f, 36f), new Vector2(0f, -12f));
+            HudArt.Picture(avatar, "Face", "medal_face_lacquer", new Vector2(0.5f, 0.5f), new Vector2(104f, 104f), Vector2.zero);
+            var portraitMask = Ui.Rect("PortraitMask", avatar);
+            Ui.Anchor(portraitMask, new Vector2(0.5f, 0.5f), new Vector2(92f, 92f), Vector2.zero);
+            portraitMask.gameObject.AddComponent<Image>().sprite = UiSkin.Disc(Color.white, Color.white, Color.white, 0f);
+            portraitMask.gameObject.AddComponent<Mask>().showMaskGraphic = false;
+            _portrait = HudArt.Picture(portraitMask, "Portrait", "medal_face_lacquer", new Vector2(0.5f, 1f), new Vector2(92f, 120f), new Vector2(0f, 6f));
+            _portrait.enabled = false;
+            _monogram = HudArt.Label(avatar, "P", HudArt.Display, 40, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.LacquerDeep);
+            Ui.Stretch(_monogram.rectTransform);
+            HudArt.Picture(avatar, "Ring", "medal_ring", new Vector2(0.5f, 0.5f), new Vector2(118f, 118f), Vector2.zero);
 
-            _gold = Counter(Root, "Gold", "gold", -(CounterWidth + CounterGap + Margin), out _goldFill, out _goldFillImage);
-            _crystals = Counter(Root, "Crystals", "crystals", -Margin, out _, out _);
+            // Currencies: gold, chakra and crystals, each a bar with its picture on the left and a "+" on the right.
+            _crystals = Counter(Root, "Crystals", "crystals", -Margin, onShop, out _, out _);
+            _chakra = Counter(Root, "Chakra", "chakra", -(Margin + BarWidth + BarGap), onShop, out _, out _);
+            _gold = Counter(Root, "Gold", "gold", -(Margin + 2f * (BarWidth + BarGap)), onShop, out _goldFill, out _goldFillImage);
 
-            // ATTACK: the hero medallion, the one prominent control on the idle screen. It glows, rather
-            // than pulsing in size, so it never looks as if it moved.
-            AttackButton = Medal.Create(Root, "AttackButton", MedalKind.Attack, "attack", "ATTACK", onAttack, true, AttackSize);
+            // The shortcut row at the bottom left, decided by the owner on 2026-11-07 (ADR-032).
+            var names = new[] { ("MailButton", "mail"), ("TrophyButton", "trophy"), ("FriendsButton", "friends"), ("QuestsButton", "quests"), ("SettingsButton", "settings") };
+            Button settings = null;
+            for (var i = 0; i < names.Length; i++)
+            {
+                var (name, icon) = names[i];
+                var action = name == "SettingsButton" ? onSettings : (Action)(() => onShortcut(icon));
+                var button = Medal.Create(Root, name, MedalKind.IconOnly, icon, null, action, true, RoundIcon);
+                Ui.Anchor((RectTransform)button.transform, new Vector2(0f, 0f), new Vector2(RoundIcon, RoundIcon), new Vector2(16f + i * 76f, 14f));
+                if (name == "SettingsButton") settings = button;
+            }
+            SettingsButton = settings;
+
+            // ATTACK: the crimson medallion in its spiked gold ring, the most important button on the screen.
+            AttackButton = Medal.Create(Root, "AttackButton", MedalKind.Attack, "attack", "Attack", onAttack, true, AttackSize);
             var attackRect = (RectTransform)AttackButton.transform;
-            Ui.Anchor(attackRect, new Vector2(1f, 0f), new Vector2(AttackSize, AttackSize), new Vector2(-18f, Margin));
-            var glow = HudArt.Picture(attackRect, "Glow", "glow", new Vector2(0.5f, 0.5f), new Vector2(AttackSize * 1.45f, AttackSize * 1.45f), Vector2.zero);
+            Ui.Anchor(attackRect, new Vector2(1f, 0f), new Vector2(AttackSize, AttackSize), new Vector2(-10f, 6f));
+            var glow = HudArt.Picture(attackRect, "Glow", "glow", new Vector2(0.5f, 0.5f), new Vector2(AttackSize * 1.2f, AttackSize * 1.2f), Vector2.zero);
             glow.color = new Color(1f, 0.8f, 0.45f, 0f);
             glow.transform.SetAsFirstSibling();
-            UiMotion.Breathe(glow, 0.55f, 2.4f);
+            UiMotion.Breathe(glow, 0.5f, 2.4f);
         }
 
-        /// <summary>A currency counter: a lacquer plate, a medallion with the currency's picture over its left end, the
-        /// value on the right, and for gold a thin track showing how full the vaults are.</summary>
-        private static Text Counter(RectTransform root, string name, string icon, float right, out RectTransform fill, out Image fillImage)
+        private static Text Counter(RectTransform root, string name, string icon, float right, Action<string> onShop, out RectTransform fill, out Image fillImage)
         {
             var plate = Ui.Rect(name + "Pill", root);
-            Ui.Anchor(plate, new Vector2(1f, 1f), new Vector2(CounterWidth, CounterHeight), new Vector2(right, -Margin));
+            Ui.Anchor(plate, new Vector2(1f, 1f), new Vector2(BarWidth, BarHeight), new Vector2(right - 20f, -Margin - 6f));
             HudArt.Plate(plate, "counter_s30");
             HudArt.DropShadow(plate);
-            var medal = Ui.Rect("Medal", plate);
-            Ui.Anchor(medal, new Vector2(0f, 0.5f), new Vector2(62f, 62f), new Vector2(-22f, 0f));
-            HudArt.Picture(medal, "Face", "medal_face_lacquer", new Vector2(0.5f, 0.5f), new Vector2(62f, 62f), Vector2.zero);
-            HudArt.Picture(medal, "Ring", "medal_ring", new Vector2(0.5f, 0.5f), new Vector2(62f, 62f), Vector2.zero);
-            HudArt.Picture(medal, "Icon", "icon_" + icon, new Vector2(0.5f, 0.5f), new Vector2(36f, 36f), Vector2.zero);
-            var text = HudArt.Label(plate, string.Empty, HudArt.Numbers, 23, TextAnchor.MiddleRight, HudArt.Ivory, HudArt.LacquerDeep);
-            Ui.Stretch(text.rectTransform, 46f, 6f, 18f, 2f);
+            HudArt.Picture(plate, "Icon", "icon_" + icon, new Vector2(0f, 0.5f), new Vector2(62f, 62f), new Vector2(-26f, 2f));
+            var text = HudArt.Label(plate, string.Empty, HudArt.Numbers, 24, TextAnchor.MiddleRight, HudArt.Ivory, HudArt.LacquerDeep);
+            Ui.Stretch(text.rectTransform, 40f, 6f, 34f, 2f);
+            var plus = Ui.Rect("Plus", plate);
+            Ui.Anchor(plus, new Vector2(1f, 0.5f), new Vector2(44f, 44f), new Vector2(22f, 0f));
+            var plusImage = plus.gameObject.AddComponent<Image>();
+            plusImage.sprite = HudArt.Sprite("btn_plus");
+            var plusButton = plus.gameObject.AddComponent<Button>();
+            plusButton.name = name + "ShopButton";
+            plusButton.targetGraphic = plusImage;
+            plusButton.onClick.AddListener(() => GameSounds.Play(GameSound.Click));
+            plusButton.onClick.AddListener(() => onShop(icon));
+            UiMotion.Pressable(plusButton);
+            var sign = HudArt.Label(plus, "+", HudArt.Numbers, 30, TextAnchor.MiddleCenter, HudArt.Ivory, new Color32(0x4A, 0x2C, 0x08, 0xFF));
+            Ui.Stretch(sign.rectTransform, 0f, 2f, 0f, 0f);
             fill = null;
             fillImage = null;
             if (name != "Gold") return text;
@@ -471,12 +511,11 @@ namespace ShinobiDominion.Game
             track.anchorMin = new Vector2(0f, 0f);
             track.anchorMax = new Vector2(1f, 0f);
             track.pivot = new Vector2(0.5f, 0f);
-            track.offsetMin = new Vector2(46f, 8f);
-            track.offsetMax = new Vector2(-16f, 14f);
+            track.offsetMin = new Vector2(40f, 7f);
+            track.offsetMax = new Vector2(-34f, 13f);
             var trackImage = track.gameObject.AddComponent<Image>();
             trackImage.sprite = HudArt.Sprite("track_s8");
             trackImage.type = Image.Type.Sliced;
-            trackImage.pixelsPerUnitMultiplier = 1.4f;
             trackImage.raycastTarget = false;
             fill = Ui.Rect("CapacityFill", track);
             fill.anchorMin = Vector2.zero;
@@ -486,32 +525,39 @@ namespace ShinobiDominion.Game
             fillImage = fill.gameObject.AddComponent<Image>();
             fillImage.sprite = HudArt.Sprite("fill_s8");
             fillImage.type = Image.Type.Sliced;
-            fillImage.pixelsPerUnitMultiplier = 1.6f;
             fillImage.raycastTarget = false;
             fillImage.color = HudArt.BrassLight;
             return text;
         }
 
         private long _shownGold = -1;
+        private long _shownChakra = -1;
         private long _shownCrystals = -1;
         private long _shownCapacity = -1;
+        private long _shownPower = -1;
 
-        /// <summary>Numbers roll to their new value; a gain bounces the counter, a loss flashes it red once.</summary>
-        public void SetWallet(long gold, long crystals, long goldCapacity = 0)
+        /// <summary>Numbers roll to their new value; a gain bounces the bar, a loss flashes it red once.</summary>
+        public void SetWallet(long gold, long crystals, long goldCapacity = 0, long chakra = 0)
         {
             if (gold != _shownGold)
             {
                 Roll(_gold, _shownGold, gold);
                 _shownGold = gold;
             }
+            if (chakra != _shownChakra)
+            {
+                Roll(_chakra, _shownChakra, chakra);
+                _shownChakra = chakra;
+            }
             if (crystals != _shownCrystals)
             {
                 Roll(_crystals, _shownCrystals, crystals);
                 _shownCrystals = crystals;
             }
-            if (_goldFill != null && (goldCapacity != _shownCapacity || gold != _shownGold))
-            {
+            if (_goldFill != null && goldCapacity != _shownCapacity)
                 _shownCapacity = goldCapacity;
+            if (_goldFill != null)
+            {
                 var share = goldCapacity > 0 ? Mathf.Clamp01((float)gold / goldCapacity) : 0f;
                 _goldFill.anchorMax = new Vector2(share, 1f);
                 _goldFillImage.color = share >= 0.95f ? HudArt.CrimsonLight : HudArt.BrassLight;
@@ -533,18 +579,32 @@ namespace ShinobiDominion.Game
         private string _shownName;
         private int _shownLevel = -1;
 
-        public void SetIdentity(string displayName, int level)
+        public void SetIdentity(string displayName, int level, long power = 0)
         {
             if (displayName != _shownName)
             {
                 _identity.text = displayName;
+                _monogram.text = string.IsNullOrEmpty(displayName) ? "?" : displayName.Substring(0, 1);
                 _shownName = displayName;
             }
             if (level != _shownLevel)
             {
-                _level.text = level.ToString();
+                _level.text = "Lv " + level;
                 _shownLevel = level;
             }
+            if (power != _shownPower)
+            {
+                _power.text = power.ToString("N0");
+                _shownPower = power;
+            }
+        }
+
+        /// <summary>The player's portrait: the guarding hero's painting when there is one, otherwise the initial.</summary>
+        public void SetPortrait(Sprite sprite)
+        {
+            _portrait.enabled = sprite != null;
+            if (sprite != null) _portrait.sprite = sprite;
+            _monogram.enabled = sprite == null;
         }
 
         public void SetAttackVisible(bool visible)

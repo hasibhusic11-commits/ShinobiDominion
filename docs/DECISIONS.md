@@ -89,6 +89,19 @@ Follows the owner's ADR-021. Up to four Troop Camps, gated by Dojo level, and a 
 - Troop names and all numbers are test values. Offline practice troops aren't saved.
 
 
+## ADR-032: The owner's home screen mockup, decided on 2026-11-07
+The owner sent a painted home screen and asked for it exactly. This replaces ADR-017's ATTACK-only bottom.
+- Bottom left: a row of round shortcuts (mail, rankings, friends, quests, settings). Settings moved here from the
+  player bar. Mail, rankings, friends and quests open a "coming in a later update" window until each is built.
+- Top left: a round portrait (the guarding hero's painting, or the initial), name and level on an arrow-shaped
+  plate, and a power number under it. Power is display only: building might plus the guarding hero's stats.
+- Top right: three currencies, gold, Chakra (new) and crystals, each with a "+" button. Chakra has no source yet and
+  reads 0; the "+" buttons open a "coming in a later update" shop window. No real-money purchases.
+- Building actions are square framed tiles with labels, under an arrow-ended plaque; ATTACK sits in a spiked ring.
+- The art is a stand-in drawn in code until the owner's ChatGPT sheets (prompts in Downloads) arrive.
+- The mockup's banners use Naruto's Hidden Leaf symbol, and the owner asked for it exactly. It is not used: an
+  original crest replaces it, because the symbol is protected.
+
 ## ADR-031: Only guards hop walls; attackers go around or break through, decided by the owner on 2026-11-07
 - **Guard heroes** (a village's heroes defending it) hop over walls to reach attackers; hopping a wall cell takes twice as long as a step. Buildings still stop them.
 - **Attackers** (heroes and troops alike, and monster waves when they exist) cannot hop. They take whichever is faster in real time: walking around, or breaking the wall in the way. Breaking costs the hits that wall's health needs at the attacker's damage and attack speed.

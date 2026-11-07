@@ -522,7 +522,129 @@ def parchment(folder, name, w=200, h=200):
     framed(w, h, 14, 3, 11, 2, paper, folder, name)
 
 
+# ---------- Home screen pieces (docs/ui/target_home_mockup.png). Stand-ins until the painted sheet P1 arrives;
+# the painted versions are saved under the same names so the game picks them up without code changes. ----------
+
+def action_tile(folder, name, pressed=False):
+    """A square action button: heavy gold frame, navy inside, and a gold strip along the bottom for the label."""
+    w = h = 128
+    x, y = grid(w, h)
+    img = np.zeros(x.shape + (4,), np.float32)
+    sd = rounded_rect_sd(x, y, 0, 0, w, h, 16)
+    depth = -sd
+    v = y / h
+    paint(img, np.broadcast_to(INK_DARK, x.shape + (4,)).copy(), smooth(sd))
+    paint(img, brass_band(np.clip((depth - 3) / 9, 0, 1), v), smooth(sd + 3))
+    paint(img, np.broadcast_to(INK_DARK, x.shape + (4,)).copy(), smooth(sd + 12))
+    inner = rounded_rect_sd(x, y, 14, 14, w - 14, h - 14, 6)
+    top, bottom = (hexc('22305A'), hexc('0B1226')) if not pressed else (hexc('162140'), hexc('070C1A'))
+    paint(img, lerp(top, bottom, np.clip((y - 14) / 100, 0, 1)), smooth(inner))
+    over(img, hexc('000000', 0.5), smooth(inner) * np.clip(1 + inner / 8, 0, 1))
+    strip = rounded_rect_sd(x, y, 10, h - 34, w - 10, h - 6, 6)
+    paint(img, np.broadcast_to(INK_DARK, x.shape + (4,)).copy(), smooth(strip))
+    paint(img, brass_band(np.clip((y - (h - 32)) / 24, 0, 1), np.clip((y - (h - 32)) / 24, 0, 1)), smooth(strip + 2))
+    for cx, cy in ((10, 10), (w - 10, 10)):
+        d = np.sqrt((x - cx) ** 2 + (y - cy) ** 2)
+        over(img, INK_DARK, smooth(d - 7))
+        paint(img, lerp(BRASS_HI, BRASS_LO, np.clip(((x - cx) * 0.6 + (y - cy) * 0.8) / 6 * 0.5 + 0.5, 0, 1)), smooth(d - 5.5))
+    if not pressed:
+        over(img, hexc('FFFFFF', 0.12), smooth(rounded_rect_sd(x, y, 16, 16, w - 16, 50, 5)))
+    save(name, img, folder)
+
+
+def arrow_plaque(folder, name, w=420, h=60, tip=34):
+    """A long name plaque with pointed gold tips at both ends."""
+    x, y = grid(w, h)
+    img = np.zeros(x.shape + (4,), np.float32)
+    cy = h / 2
+    def shape(pad):
+        body = (x > tip - pad) & (x < w - tip + pad) & (y > 6 - pad) & (y < h - 6 + pad)
+        left = (x <= tip) & (x > np.abs(y - cy) * tip / (cy - 2) - pad) & (np.abs(y - cy) < cy - 2 + pad)
+        right = (x >= w - tip) & (x < w - np.abs(y - cy) * tip / (cy - 2) + pad) & (np.abs(y - cy) < cy - 2 + pad)
+        return (body | left | right).astype(np.float32)
+    outer = shape(0)
+    over(img, INK_DARK, dilate(outer, 3 * SS))
+    paint(img, brass_band(np.clip(np.abs(y - cy) / cy, 0, 1) * 0 + 0.2, y / h), outer)
+    inner = (x > tip + 6) & (x < w - tip - 6) & (y > 14) & (y < h - 14)
+    over(img, INK_DARK, dilate(inner.astype(np.float32), 2 * SS))
+    paint(img, lerp(hexc('22305A'), hexc('0B1226'), np.clip((y - 14) / (h - 28), 0, 1)), inner.astype(np.float32))
+    save(name, img, folder)
+
+
+def player_plate(folder, name, w=300, h=84, tip=30):
+    """The player's name plate: flat on the left, arrow-shaped on the right, gold-framed navy."""
+    x, y = grid(w, h)
+    img = np.zeros(x.shape + (4,), np.float32)
+    cy = h / 2
+    shape = ((x < w - tip) | (x < w - np.abs(y - cy) * tip / cy)) & (y > 2) & (y < h - 2) & (x > 0)
+    over(img, INK_DARK, dilate(shape.astype(np.float32), 3 * SS))
+    paint(img, brass_band(np.full(x.shape, 0.25, np.float32), y / h), shape.astype(np.float32))
+    inner = ((x < w - tip - 6) | (x < w - 6 - np.abs(y - cy) * (tip - 6) / (cy - 8))) & (y > 10) & (y < h - 10) & (x > 8)
+    over(img, INK_DARK, dilate(inner.astype(np.float32), 2 * SS))
+    paint(img, lerp(hexc('22305A'), hexc('0B1226'), np.clip((y - 10) / (h - 20), 0, 1)), inner.astype(np.float32))
+    save(name, img, folder)
+
+
+def spiked_ring(folder, name, size=320):
+    """The ATTACK ring: a heavy gold ring with four gold spikes pointing up, down, left and right."""
+    x, y = grid(size, size)
+    c = size / 2
+    img = np.zeros(x.shape + (4,), np.float32)
+    spikes = np.zeros(x.shape, np.float32)
+    for angle in (0, math.pi / 2, math.pi, -math.pi / 2):
+        pts = [(c + 0.5 * size * 0.0, 0)]
+        tipd = c - 2
+        base = c * 0.72
+        half = size * 0.09
+        ca, sa = math.cos(angle), math.sin(angle)
+        tri = [(c + tipd * ca, c + tipd * sa), (c + base * ca - half * sa, c + base * sa + half * ca), (c + base * ca + half * sa, c + base * sa - half * ca)]
+        spikes = np.maximum(spikes, poly_mask(x, y, tri))
+    over(img, INK_DARK, dilate(spikes, 3 * SS))
+    lit = np.clip(0.5 - ((x - c) * 0.6 + (y - c) * 0.8) / c * 0.5, 0, 1)
+    paint(img, brass_band(np.full(x.shape, 0.2, np.float32), 1 - lit), spikes)
+    r = np.sqrt((x - c) ** 2 + (y - c) ** 2)
+    outer = c * 0.8
+    width = c * 0.17
+    paint(img, np.broadcast_to(INK_DARK, x.shape + (4,)).copy(), smooth(r - outer) * (1 - smooth(r - (outer - width - 6))))
+    paint(img, brass_band(np.clip((outer - 3 - r) / width, 0, 1), 1 - lit), smooth(r - (outer - 3)) * (1 - smooth(r - (outer - width - 3))))
+    save(name, img, folder)
+
+
+def home_kit(folder):
+    action_tile(folder, 'tile_action')
+    action_tile(folder, 'tile_action_pressed', pressed=True)
+    arrow_plaque(folder, 'plaque_arrow_s40')
+    player_plate(folder, 'plate_player')
+    spiked_ring(folder, 'medal_attack_spikes')
+    framed(64, 64, 10, 3, 6, 2, vertical(GOLD_TOP, hexc('8A5E22'), 6, 58), folder, 'btn_plus', gloss=0.25)
+    face(64, 30, CRIMSON_LIGHT, CRIMSON, CRIMSON_DARK, folder, 'badge')
+    icon('chakra', [(lambda x, y: poly_mask(x, y, [(64, 10), (90, 56), (96, 76), (88, 98), (64, 114), (40, 98), (32, 76), (38, 56)]), hexc('3FA2F0')),
+                    (lambda x, y: ellipse_mask(x, y, 52, 70, 8, 14), hexc('CFEBFF'))], folder)
+    icon('mail', [(lambda x, y: (rounded_rect_sd(x, y, 14, 30, 114, 100, 6) <= 0).astype(np.float32), hexc('EFE6D0')),
+                  (lambda x, y: poly_mask(x, y, [(14, 32), (114, 32), (64, 72)]), hexc('C9BFA8')),
+                  (lambda x, y: circle_mask(x, y, 64, 72, 11), hexc('B8312A'))], folder)
+    icon('trophy', [(lambda x, y: poly_mask(x, y, [(34, 18), (94, 18), (88, 62), (64, 76), (40, 62)]), hexc('E8B84A')),
+                    (lambda x, y: (rounded_rect_sd(x, y, 56, 74, 72, 96, 2) <= 0).astype(np.float32), hexc('C99A45')),
+                    (lambda x, y: (rounded_rect_sd(x, y, 38, 96, 90, 110, 3) <= 0).astype(np.float32), hexc('8B5A2B'))], folder)
+    icon('friends', [(lambda x, y: circle_mask(x, y, 46, 42, 16), IVORY), (lambda x, y: ellipse_mask(x, y, 46, 100, 30, 34) * (y < 104), IVORY),
+                     (lambda x, y: circle_mask(x, y, 84, 46, 14), hexc('C9BFA8')), (lambda x, y: ellipse_mask(x, y, 86, 102, 26, 30) * (y < 104), hexc('C9BFA8'))], folder)
+    icon('quests', [(lambda x, y: (rounded_rect_sd(x, y, 26, 24, 102, 104, 6) <= 0).astype(np.float32), hexc('E9DDB8')),
+                    (lambda x, y: (rounded_rect_sd(x, y, 58, 14, 70, 116, 2) <= 0).astype(np.float32), hexc('B8312A'))]
+         + [(lambda x, y, t=t: (rounded_rect_sd(x, y, 34, t, 52, t + 5, 2) <= 0).astype(np.float32), hexc('6B4F22')) for t in (40, 56, 72)], folder)
+    gear = []
+    for i in range(8):
+        a = i * math.pi / 4
+        gear.append(rot([(56, 6), (72, 6), (74, 30), (54, 30)], a))
+    icon('settings', [(lambda x, y: np.clip(circle_mask(x, y, 64, 64, 40) - circle_mask(x, y, 64, 64, 16), 0, 1), BRASS_LIGHT)]
+         + [(lambda x, y, g=g: poly_mask(x, y, g), BRASS_LIGHT) for g in gear], folder)
+    icon('power', [(lambda x, y: poly_mask(x, y, rot([(58, 8), (70, 8), (70, 92), (58, 92)], math.radians(40))), hexc('D9DDE3')),
+                   (lambda x, y: poly_mask(x, y, rot([(58, 8), (70, 8), (70, 92), (58, 92)], math.radians(-40))), hexc('D9DDE3')),
+                   (lambda x, y: poly_mask(x, y, rot([(40, 88), (88, 88), (88, 98), (40, 98)], math.radians(40))), BRASS_LIGHT),
+                   (lambda x, y: poly_mask(x, y, rot([(40, 88), (88, 88), (88, 98), (40, 98)], math.radians(-40))), BRASS_LIGHT)], folder)
+
+
 def heavy_kit(folder):
+    home_kit(folder)
     hollow_frame(160, 220, 14, 3, 9, BRASS_HI, BRASS, BRASS_LO, folder, 'heroframe_gold_s30')
     hollow_frame(160, 220, 14, 3, 9, hexc('F2EEFF'), hexc('A49BC4'), hexc('4A4266'), folder, 'heroframe_silver_s30')
     hollow_frame(160, 220, 14, 3, 9, hexc('E9C3A0'), hexc('9A6A45'), hexc('4A2E1A'), folder, 'heroframe_bronze_s30')

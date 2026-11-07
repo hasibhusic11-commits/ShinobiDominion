@@ -87,6 +87,7 @@ namespace ShinobiDominion.Tests
         public IEnumerator SummoningGate_ShowsTheServersExactOdds()
         {
             Controller.Select(First("summoning_gate").Id);
+            Controller.ShowSummoningGate();
             yield return WaitFor(() => Find("SummonOneButton") != null);
 
             var oddsTask = _direct.GetOddsAsync();
@@ -111,6 +112,8 @@ namespace ShinobiDominion.Tests
             var heroes = Controller.Roster.HeroCount;
 
             Controller.Select(First("summoning_gate").Id);
+
+            Controller.ShowSummoningGate();
             yield return ClickWhenReady("SummonTenButton");
             yield return WaitFor(() => Find("SummonDoneButton") != null);
 
@@ -128,6 +131,7 @@ namespace ShinobiDominion.Tests
         {
             var before = Controller.ServerCrystals.Value;
             Controller.Select(First("summoning_gate").Id);
+            Controller.ShowSummoningGate();
             yield return WaitFor(() => Find("SummonOneButton") != null);
             var button = Find("SummonOneButton");
             button.onClick.Invoke();
@@ -150,6 +154,8 @@ namespace ShinobiDominion.Tests
             var duplicateId = duplicate.InstanceId;
 
             Controller.Select(First("hero_altar").Id);
+
+            Controller.ShowAltarRoster();
             yield return null;
             Controller.ShowEvolution(mainId);
             yield return ClickWhenReady("Sacrifice_" + duplicateId);
@@ -197,6 +203,8 @@ namespace ShinobiDominion.Tests
             canvas.planeDistance = 5f;
 
             Controller.Select(First("summoning_gate").Id);
+
+            Controller.ShowSummoningGate();
             yield return WaitFor(() => Find("SummonOneButton") != null);
             yield return ScreenCaptureTests.Capture(camera, texture, Path.Combine(dir, "13_summoning_gate.png"));
 

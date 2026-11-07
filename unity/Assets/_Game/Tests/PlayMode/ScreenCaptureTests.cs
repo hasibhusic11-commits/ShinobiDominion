@@ -91,6 +91,8 @@ namespace ShinobiDominion.Tests
             game.IsoCamera.ZoomAt(2.5f, new Vector2(texture.width * 0.5f, texture.height * 0.62f));
 
             controller.Select(First("hero_altar").Id);
+
+            controller.ShowAltarRoster();
             yield return shot("10_hero_altar");
 
             var evolving = roster.Heroes.First(h => h.ArchetypeId == "solar_beast_sage" && h.Level == HeroMath.MaxLevel);

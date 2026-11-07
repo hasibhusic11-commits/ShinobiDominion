@@ -59,12 +59,15 @@ namespace ShinobiDominion.Tests
         }
 
         [Test]
-        public void IdleHome_HasOnlyAttackInTheBottomThird()
+        public void IdleHome_BottomHasOnlyAttackAndTheShortcutRow()
         {
-            var bottom = Buttons().Where(b => ScreenRect((RectTransform)b.transform).yMin < Screen.height / 3f).ToArray();
-            Assert.AreEqual(1, bottom.Length, "Only one button may sit in the bottom of the idle screen");
-            Assert.AreEqual("AttackButton", bottom[0].name);
-            StringAssert.AreEqualIgnoringCase("ATTACK", bottom[0].GetComponentInChildren<Text>().text);
+            // ADR-032: the owner added the shortcut row at the bottom left; nothing else may sit down there.
+            var allowed = new[] { "AttackButton", "MailButton", "TrophyButton", "FriendsButton", "QuestsButton", "SettingsButton" };
+            var bottom = Buttons().Where(b => ScreenRect((RectTransform)b.transform).yMin < Screen.height / 3f).Select(b => b.name).ToArray();
+            CollectionAssert.AreEquivalent(allowed, bottom);
+            var attack = Buttons().First(b => b.name == "AttackButton");
+            StringAssert.AreEqualIgnoringCase("ATTACK", attack.GetComponentInChildren<Text>().text);
+            Assert.IsFalse(Buttons().Any(b => b.name != "AttackButton" && ScreenRect((RectTransform)b.transform).xMin > Screen.width * 0.5f && ScreenRect((RectTransform)b.transform).yMin < Screen.height / 3f), "The bottom right belongs to ATTACK alone");
         }
 
         [Test]
@@ -120,6 +123,7 @@ namespace ShinobiDominion.Tests
         {
             Assert.IsFalse(Controller.OpenCatalog(), "Catalog must not open from home");
             Controller.Select(First("hero_altar").Id);
+            Controller.ShowAltarRoster();
             Assert.IsFalse(Controller.OpenCatalog(), "Catalog must not open from the altar");
             Assert.IsFalse(ButtonExists("BuildButton"));
             Controller.CloseAll();

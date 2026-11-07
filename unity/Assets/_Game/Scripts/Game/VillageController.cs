@@ -132,7 +132,7 @@ namespace ShinobiDominion.Game
             _grid = new GridOverlay(worldRoot);
             _placementCells = new CellHighlight(worldRoot, "PlacementCells", GoodCell, BadCell, 0.03f);
             _selectionCells = new CellHighlight(worldRoot, "SelectionCells", SelectCell, SelectCell, 0.025f);
-            _hud = new HudView(ui.Safe, OpenAttack, OpenSettings);
+            _hud = new HudView(ui.Safe, OpenAttack, OpenSettings, OpenShortcut, OpenShop);
             _panel = new PanelView(ui.Safe);
 
             Village.Changed += OnVillageChanged;
@@ -233,8 +233,9 @@ namespace ShinobiDominion.Game
 
         private void RefreshHud()
         {
-            _hud.SetWallet(Village.Gold, ServerCrystals ?? Village.Crystals, Village.GoldCapacity);
-            _hud.SetIdentity("Player", Village.HqLevel);
+            _hud.SetWallet(Village.Gold, ServerCrystals ?? Village.Crystals, Village.GoldCapacity, Chakra);
+            _hud.SetIdentity("Player", Village.HqLevel, Power);
+            _hud.SetPortrait(GuardPortrait());
         }
 
         private void ApplyUiState()
@@ -405,16 +406,7 @@ namespace ShinobiDominion.Game
             }
 
             var definition = building.Definition;
-            if (definition.function == BuildingFunction.HeroAltar && !_showAltarBuildingOptions)
-            {
-                ShowAltarRoster();
-                return;
-            }
-            if (definition.function == BuildingFunction.SummoningGate && IsOnline && !_showAltarBuildingOptions)
-            {
-                ShowSummoningGate();
-                return;
-            }
+            // Every building, the Altar and the Gate included, shows its action row first, so each one can be moved.
             _showAltarBuildingOptions = false;
             _panel.Hide();
             ShowActionBar(building);

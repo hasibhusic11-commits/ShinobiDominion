@@ -119,7 +119,9 @@ namespace ShinobiDominion.Tests
             yield return Click(ScreenOf(altar));
             Assert.AreEqual(VillageScreen.BuildingPanel, Controller.UiState.Screen);
             Assert.AreEqual(altar.Id, Controller.UiState.SelectedBuildingId);
-            Assert.IsTrue(Controller.Panel.IsOpen);
+            Assert.IsTrue(Controller.ActionBarOpen, "The Altar shows its action row, with Move, like every building");
+            Assert.IsNotNull(Find("RosterButton"));
+            Assert.IsNotNull(Find("MoveButton"));
         }
 
         [UnityTest]
@@ -277,6 +279,8 @@ namespace ShinobiDominion.Tests
             Assert.IsTrue(Controller.Hud.AttackButton.gameObject.activeSelf);
 
             Controller.Select(First("hero_altar").Id);
+
+            Controller.ShowAltarRoster();
             yield return null;
             Assert.IsTrue(Controller.Panel.IsFullScreen);
         }

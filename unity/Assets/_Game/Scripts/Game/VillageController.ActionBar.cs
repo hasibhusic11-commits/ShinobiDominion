@@ -12,9 +12,9 @@ namespace ShinobiDominion.Game
     /// </summary>
     public sealed partial class VillageController
     {
-        private const float ActionSize = 96f;
-        private const float InfoSize = 72f;
-        private const float ActionGap = 18f;
+        private const float ActionSize = 104f;
+        private const float InfoSize = 104f;
+        private const float ActionGap = 14f;
 
         private GameObject _actionBar;
         private int _actionBarBuilding = -1;
@@ -117,29 +117,22 @@ namespace ShinobiDominion.Game
 
             // Name plate: the building on the left, its level on the right.
             var plate = Ui.Rect("NamePlate", bar);
-            Ui.Anchor(plate, new Vector2(0.5f, 0f), new Vector2(440f, 54f), new Vector2(0f, 150f));
-            HudArt.Plate(plate);
+            Ui.Anchor(plate, new Vector2(0.5f, 0f), new Vector2(430f, 52f), new Vector2(0f, 140f));
+            var plateImage = plate.gameObject.AddComponent<Image>();
+            plateImage.sprite = HudArt.Sprite("plaque_arrow_s40");
+            plateImage.type = Image.Type.Sliced;
+            plateImage.raycastTarget = false;
             HudArt.DropShadow(plate);
-            var fret = Ui.Rect("Fret", plate);
-            Ui.Stretch(fret, 14f, 13f, 14f, 13f);
-            var fretImage = fret.gameObject.AddComponent<Image>();
-            fretImage.sprite = HudArt.Sprite("kenney_fret_s16");
-            fretImage.type = Image.Type.Sliced;
-            fretImage.pixelsPerUnitMultiplier = 2.2f;
-            fretImage.color = new Color(HudArt.Brass.r, HudArt.Brass.g, HudArt.Brass.b, 0.55f);
-            fretImage.raycastTarget = false;
-            var title = HudArt.Label(plate, building.Definition.displayName, HudArt.Display, 22, TextAnchor.MiddleLeft, HudArt.Ivory, HudArt.LacquerDeep);
-            Ui.Stretch(title.rectTransform, 22f, 0f, 120f, 0f);
+            var title = HudArt.Label(plate, $"{building.Definition.displayName}  (Lv {building.Level})", HudArt.Display, 22, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.LacquerDeep);
+            Ui.Stretch(title.rectTransform, 46f, 2f, 46f, 0f);
             title.resizeTextForBestFit = true;
             title.resizeTextMinSize = 14;
             title.resizeTextMaxSize = 22;
-            var level = HudArt.Label(plate, $"Lv {building.Level} / {building.Definition.maxLevel}", HudArt.Numbers, 18, TextAnchor.MiddleRight, HudArt.BrassLight, HudArt.LacquerDeep);
-            Ui.Stretch(level.rectTransform, 220f, 0f, 22f, 0f);
 
             if (!string.IsNullOrEmpty(LastMessage) && LastMessage != VillageErrorText.Describe(VillageError.None))
             {
                 var note = HudArt.Label(bar, LastMessage, HudArt.Numbers, 17, TextAnchor.MiddleCenter, HudArt.BrassLight, HudArt.LacquerDeep);
-                Ui.Anchor(note.rectTransform, new Vector2(0.5f, 0f), new Vector2(640f, 26f), new Vector2(0f, 200f));
+                Ui.Anchor(note.rectTransform, new Vector2(0.5f, 0f), new Vector2(640f, 26f), new Vector2(0f, 196f));
             }
 
             // The row is sized from its contents, so two actions or five always sit centred.
@@ -151,9 +144,9 @@ namespace ShinobiDominion.Game
             foreach (var action in actions)
             {
                 var size = action.Kind == MedalKind.IconOnly ? InfoSize : ActionSize;
-                var medal = Medal.Create(bar, action.Name, action.Kind, action.Icon, action.Caption, action.OnClick, action.Enabled, size, action.Kind == MedalKind.Primary);
-                var rect = (RectTransform)medal.transform;
-                Ui.Anchor(rect, new Vector2(0.5f, 0f), new Vector2(size, size), new Vector2(x + size / 2f, 40f + (ActionSize - size) / 2f));
+                var tile = Tile.Create(bar, action.Name, action.Icon, action.Caption, action.OnClick, action.Enabled, size);
+                var rect = (RectTransform)tile.transform;
+                Ui.Anchor(rect, new Vector2(0.5f, 0f), new Vector2(size, size), new Vector2(x + size / 2f, 18f));
                 if (!string.IsNullOrEmpty(action.Cost)) CostTag(rect, action.Cost, action.CostShort);
                 UiMotion.PopIn(rect, 0.04f * index++, 0.6f, 0.22f);
                 x += size + ActionGap;
@@ -166,7 +159,7 @@ namespace ShinobiDominion.Game
         private static void CostTag(RectTransform medal, string cost, bool short_)
         {
             var tag = Ui.Rect("CostTag", medal);
-            Ui.Anchor(tag, new Vector2(0.5f, 0f), new Vector2(84f, 24f), new Vector2(0f, 4f));
+            Ui.Anchor(tag, new Vector2(0.5f, 1f), new Vector2(84f, 24f), new Vector2(0f, 14f));
             HudArt.Plate(tag).pixelsPerUnitMultiplier = 2.6f;
             HudArt.Picture(tag, "Coin", "icon_gold", new Vector2(0f, 0.5f), new Vector2(20f, 20f), new Vector2(5f, 0f));
             var text = HudArt.Label(tag, cost, HudArt.Numbers, 15, TextAnchor.MiddleRight, short_ ? HudArt.CrimsonLight : HudArt.Ivory, HudArt.LacquerDeep);

@@ -187,6 +187,12 @@ namespace ShinobiDominion.Game
         public void ShowSummoningGate()
         {
             _selectionCells.Clear();
+            // Summoning happens only on the server; without one, say so instead of trying.
+            if (!IsOnline)
+            {
+                DrawOfflineGate();
+                return;
+            }
             Run(async () =>
             {
                 _odds = await _server.GetOddsAsync();
