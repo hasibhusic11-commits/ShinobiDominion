@@ -53,15 +53,88 @@ namespace ShinobiDominion.Tests
         }
 
         [Test]
-        public void StrongTeam_BreaksTheWalls_AndClearsTheBase()
+        public void StrongTeam_ClearsTheWalledBase()
         {
             var result = BattleSim.Run(Outpost(), MixedTeam(4));
             Assert.AreEqual(3, result.stars);
             Assert.AreEqual(100, result.damagePercent);
             Assert.IsTrue(result.dojoDestroyed);
             Assert.Less(result.endTick, BattleSim.TickLimit);
-            var walls = new HashSet<long>(Outpost().Where(b => b.isWall).Select(b => (long)b.id));
-            Assert.IsTrue(result.events.Any(e => e[1] == (long)BattleEventKind.BuildingDown && walls.Contains(e[2])), "The base is fully walled in, so a wall must fall");
+        }
+
+        // ---------- Walls: heroes hop and shoot over them; troops go around or break them, whichever is quicker ----------
+
+        private const int Treasury = 1;
+
+        /// <summary>A 3x3 building at 20,20 inside a ring of walls from 18 to 24, with an optional gap on the far side.</summary>
+        private static List<BattleBuildingInput> WalledBuilding(long wallHp, bool gapOnFarSide)
+        {
+            var list = new List<BattleBuildingInput>
+            {
+                new BattleBuildingInput { id = Treasury, definitionId = "gold_vault", x = 20, z = 20, width = 3, depth = 3, level = 1, hp = 400 }
+            };
+            var id = 100;
+            for (var x = 18; x <= 24; x++)
+            for (var z = 18; z <= 24; z++)
+            {
+                if (x != 18 && x != 24 && z != 18 && z != 24) continue;
+                if (gapOnFarSide && x == 24 && z == 21) continue;
+                list.Add(new BattleBuildingInput { id = id++, definitionId = "wall", x = x, z = z, width = 1, depth = 1, level = 1, hp = wallHp, isWall = true });
+            }
+            return list;
+        }
+
+        private static bool HitAWall(BattleResult result) => result.events.Any(e => e[1] == (long)BattleEventKind.HeroHit && e[3] >= 100);
+        private static bool Destroyed(BattleResult result, int id) => result.events.Any(e => e[1] == (long)BattleEventKind.BuildingDown && e[2] == id);
+        private static bool OnRing(long x, long z) => (x == 18 || x == 24 || z == 18 || z == 24) && x >= 18 && x <= 24 && z >= 18 && z <= 24;
+
+        [Test]
+        public void Hero_HopsAnUnbreakableWall_InsteadOfBreakingIt()
+        {
+            var hero = Hero("a", "Assassin", 100000, 60, 50, 10, 21);
+            var result = BattleSim.Run(WalledBuilding(10_000_000, false), new List<BattleHeroInput> { hero });
+            Assert.IsTrue(Destroyed(result, Treasury), "The hero should reach the building over the wall");
+            Assert.IsFalse(HitAWall(result), "A hero never needs to break a wall");
+            Assert.IsTrue(result.events.Any(e => e[1] == (long)BattleEventKind.Move && OnRing(e[3], e[4])), "The hero's route should cross the wall");
+        }
+
+        [Test]
+        public void RangedHero_ShootsOverTheWall_FromOutside()
+        {
+            var mage = Hero("m", "Mage", 100000, 60, 50, 10, 21);
+            var result = BattleSim.Run(WalledBuilding(10_000_000, false), new List<BattleHeroInput> { mage });
+            Assert.IsTrue(Destroyed(result, Treasury));
+            Assert.IsFalse(result.events.Any(e => e[1] == (long)BattleEventKind.Move && e[3] >= 18 && e[3] <= 24 && e[4] >= 18 && e[4] <= 24), "A mage in range stays outside the walls");
+        }
+
+        [Test]
+        public void Troop_WalksAroundToTheGap_WhenBreakingWouldTakeLonger()
+        {
+            var troop = Hero("t", "Fighter", 100000, 14, 5, 10, 21);
+            troop.isTroop = true;
+            var result = BattleSim.Run(WalledBuilding(5000, true), new List<BattleHeroInput> { troop });
+            Assert.IsTrue(Destroyed(result, Treasury));
+            Assert.IsFalse(HitAWall(result), "A strong wall with a gap: go around");
+        }
+
+        [Test]
+        public void Troop_BreaksAWeakWall_WhenThatIsQuickerThanGoingAround()
+        {
+            var troop = Hero("t", "Fighter", 100000, 14, 5, 10, 21);
+            troop.isTroop = true;
+            var result = BattleSim.Run(WalledBuilding(10, true), new List<BattleHeroInput> { troop });
+            Assert.IsTrue(Destroyed(result, Treasury));
+            Assert.IsTrue(HitAWall(result), "A weak wall in the way: break it rather than walk around");
+        }
+
+        [Test]
+        public void Guard_HopsTheWall_ToReachAnAttackerOutside()
+        {
+            var mage = Hero("m", "Mage", 100000, 1, 50, 10, 21);
+            var guard = new BattleDefenderInput { id = "g", role = "Fighter", hp = 100000, attack = 50, defense = 10, x = 19, z = 21 };
+            var result = BattleSim.Run(WalledBuilding(10_000_000, false), new List<BattleHeroInput> { mage }, new List<BattleDefenderInput> { guard });
+            Assert.IsTrue(result.events.Any(e => e[1] == (long)BattleEventKind.DefenderMove && OnRing(e[3], e[4])), "The guard should hop the wall");
+            Assert.IsTrue(result.events.Any(e => e[1] == (long)BattleEventKind.DefenderHit), "and then reach the mage");
         }
 
         [Test]
@@ -301,7 +374,7 @@ namespace ShinobiDominion.Tests
         }
 
         [Test]
-        public void Guard_NeverWalksIntoAWallOrBuilding()
+        public void Guard_HopsWalls_ButNeverWalksIntoABuilding()
         {
             var buildings = Outpost();
             var result = BattleSim.Run(buildings, MixedTeam(3), Guards(5));
@@ -311,7 +384,7 @@ namespace ShinobiDominion.Tests
                 var z = (int)e[4];
                 // A wall can have fallen by then, so only standing buildings that never fell are checked.
                 var fallen = result.events.Where(entry => entry[0] <= e[0] && entry[1] == (long)BattleEventKind.BuildingDown).Select(entry => (int)entry[2]).ToList();
-                Assert.IsFalse(buildings.Any(b => !fallen.Contains(b.id) && x >= b.x && x < b.x + b.width && z >= b.z && z < b.z + b.depth), $"Guard walked into a building at {x},{z}");
+                Assert.IsFalse(buildings.Any(b => !b.isWall && !fallen.Contains(b.id) && x >= b.x && x < b.x + b.width && z >= b.z && z < b.z + b.depth), $"Guard walked into a building at {x},{z}");
             }
         }
 

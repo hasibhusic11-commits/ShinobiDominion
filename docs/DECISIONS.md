@@ -89,6 +89,12 @@ Follows the owner's ADR-021. Up to four Troop Camps, gated by Dojo level, and a 
 - Troop names and all numbers are test values. Offline practice troops aren't saved.
 
 
+## ADR-031: Heroes hop walls, everything else goes around or breaks through, decided by the owner on 2026-11-07
+- **Every hero** (attacking or guarding) hops over walls and never needs to break one. Hopping a wall cell takes twice as long as a step. Ranged heroes already shoot over walls from where they stand.
+- **Troops** (and monster waves, when they exist) take whichever is faster in real time: walking around, or breaking the wall in the way. The cost of breaking is the hits that wall's health needs at the troop's damage and attack speed.
+- Guards can now leave their compound over the walls to reach attackers. Buildings still block everyone.
+- The same rule is in the game's and the server's battle code, checked by the shared battle logs.
+
 ## ADR-030: One hero at a time, decided by the owner on 2026-11-07
 The owner decided that only one hero is used at a time. **This replaces non-negotiable rule 4 ("Six on the field")** in the master prompt, and the owner made that call.
 - A village has **one Hero Base** at every Dojo level, and new players start with it placed.

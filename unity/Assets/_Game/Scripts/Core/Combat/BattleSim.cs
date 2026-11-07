@@ -108,8 +108,10 @@ namespace ShinobiDominion.Core
         private const int RoleControl = 4;
         private const int RoleSupport = 5;
 
-        private const int WalkCost = 10;
-        private const int WallCost = 150;
+        // Routes are priced in ticks. Heroes hop a wall in twice the time of a step; troops break it,
+        // which costs the hits it takes, or walk around it if that is quicker.
+        private const int HopSteps = 2;
+        private const int MaxPathCost = 1_000_000;
         private const int GridSize = VillageGrid.Size;
         private const string HeroBaseId = "hero_base";
 
@@ -198,6 +200,10 @@ namespace ShinobiDominion.Core
         private readonly int[] _cost = new int[GridSize * GridSize];
         private readonly int[] _from = new int[GridSize * GridSize];
         private readonly List<long> _heap = new List<long>();
+        private bool _pathHops;
+        private int _pathStep;
+        private long _pathPerHit;
+        private int _pathInterval;
         private readonly BattleResult _result = new BattleResult();
         private long _totalHp;
         private long _dealtHp;
@@ -393,6 +399,7 @@ namespace ShinobiDominion.Core
             var tx = (next % GridSize) * CellUnits + CellUnits / 2;
             var tz = (next / GridSize) * CellUnits + CellUnits / 2;
             var speed = Speeds[unit.Role];
+            if (IsWallCell(next)) speed = Math.Max(1, speed / HopSteps);
             if (unit.Px != tx)
             {
                 var step = Math.Min(Math.Abs(tx - unit.Px), speed);
@@ -692,13 +699,20 @@ namespace ShinobiDominion.Core
             if (unit.Hp == 0) Log(BattleEventKind.HeroDown, unit.Index);
         }
 
+        /// <summary>Guards are heroes, so they hop walls; only buildings stop them.</summary>
         private bool DefenderCanEnter(int x, int z)
         {
             var occupant = _grid[z * GridSize + x];
-            return occupant == 0 || _structures[occupant - 1].Input.definitionId == HeroBaseId;
+            return occupant == 0 || _structures[occupant - 1].Input.definitionId == HeroBaseId || _structures[occupant - 1].Input.isWall;
         }
 
-        /// <summary>One cell at a time towards a goal, along x and then z. Buildings and walls stop it.</summary>
+        private bool IsWallCell(int cell)
+        {
+            var occupant = _grid[cell];
+            return occupant != 0 && _structures[occupant - 1].Input.isWall;
+        }
+
+        /// <summary>One cell at a time towards a goal, along x and then z. Buildings stop it; walls slow it while it hops.</summary>
         private void WalkDefender(Defender defender, int goalX, int goalZ)
         {
             if (defender.Px == defender.Tx && defender.Pz == defender.Tz)
@@ -713,6 +727,7 @@ namespace ShinobiDominion.Core
                 Log(BattleEventKind.DefenderMove, defender.Index, x, z);
             }
             var speed = Speeds[defender.Role];
+            if (IsWallCell(defender.Tz / CellUnits * GridSize + defender.Tx / CellUnits)) speed = Math.Max(1, speed / HopSteps);
             if (defender.Px != defender.Tx)
             {
                 var step = Math.Min(Math.Abs(defender.Tx - defender.Px), speed);
@@ -745,9 +760,9 @@ namespace ShinobiDominion.Core
                 return;
             }
 
-            // Walk up to the first wall in the way, and break it.
+            // Heroes hop the walls on their route. Troops walk up to the first wall in the way, and break it.
             var length = path.Count;
-            for (var i = 0; i < path.Count; i++)
+            for (var i = 0; i < path.Count && unit.IsTroop; i++)
             {
                 var occupant = _grid[path[i]];
                 if (occupant != 0 && _structures[occupant - 1].Input.isWall)
@@ -786,6 +801,11 @@ namespace ShinobiDominion.Core
             var target = _structures[unit.Target].Input;
             var range = Ranges[unit.Role];
             var start = Math.Min(unit.Pz / CellUnits, GridSize - 1) * GridSize + Math.Min(unit.Px / CellUnits, GridSize - 1);
+            var speed = Speeds[unit.Role];
+            _pathHops = !unit.IsTroop;
+            _pathStep = (CellUnits + speed - 1) / speed;
+            _pathPerHit = Math.Max(1, unit.Attack * DamagePercents[unit.Role] / 100);
+            _pathInterval = Intervals[unit.Role];
             for (var i = 0; i < _cost.Length; i++) _cost[i] = int.MaxValue;
             _heap.Clear();
             _cost[start] = 0;
@@ -818,16 +838,25 @@ namespace ShinobiDominion.Core
         private void Relax(int from, int to, int cost)
         {
             var occupant = _grid[to];
-            var step = WalkCost;
+            var step = _pathStep;
             if (occupant != 0)
             {
-                if (!_structures[occupant - 1].Input.isWall) return;
-                step = WallCost;
+                var structure = _structures[occupant - 1];
+                if (!structure.Input.isWall) return;
+                step = _pathHops ? _pathStep * HopSteps : WallBreakTicks(structure.Hp);
             }
             if (cost + step >= _cost[to]) return;
             _cost[to] = cost + step;
             _from[to] = from;
             HeapPush(to);
+        }
+
+        /// <summary>The ticks a troop spends breaking a wall with this much health, then stepping through.</summary>
+        private int WallBreakTicks(long hp)
+        {
+            var hits = (hp + _pathPerHit - 1) / _pathPerHit;
+            var ticks = hits * _pathInterval + _pathStep;
+            return ticks > MaxPathCost ? MaxPathCost : (int)ticks;
         }
 
         private void HeapPush(int cell)

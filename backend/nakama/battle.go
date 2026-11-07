@@ -17,8 +17,10 @@ const (
 	cellUnits       = 100
 	deployClearance = 2
 	battleGridSize  = 50
-	walkCost        = 10
-	wallCost        = 150
+	// Routes are priced in ticks. Heroes hop a wall in twice the time of a step; troops break it,
+	// which costs the hits it takes, or walk around it if that is quicker.
+	hopSteps    = 2
+	maxPathCost = 1_000_000
 
 	roleTank     = 0
 	roleFighter  = 1
@@ -177,6 +179,10 @@ type battleSim struct {
 	cost       []int
 	from       []int
 	heap       []int64
+	pathHops     bool
+	pathStep     int
+	pathPerHit   int64
+	pathInterval int
 	result     *battleResult
 	totalHp    int64
 	dealtHp    int64
@@ -431,6 +437,9 @@ func (s *battleSim) stepUnit(unit *battleUnit) {
 	tx := (next%battleGridSize)*cellUnits + cellUnits/2
 	tz := (next/battleGridSize)*cellUnits + cellUnits/2
 	speed := roleSpeeds[unit.role]
+	if s.isWallCell(next) {
+		speed = maxInt(1, speed/hopSteps)
+	}
 	if unit.px != tx {
 		step := minInt(absInt(tx-unit.px), speed)
 		if tx > unit.px {
@@ -628,12 +637,18 @@ func (s *battleSim) defenderStrike(defender *battleDefender, unit *battleUnit) {
 	}
 }
 
+// defenderCanEnter: guards are heroes, so they hop walls; only buildings stop them.
 func (s *battleSim) defenderCanEnter(x, z int) bool {
 	occupant := s.grid[z*battleGridSize+x]
-	return occupant == 0 || s.structures[occupant-1].input.DefinitionID == "hero_base"
+	return occupant == 0 || s.structures[occupant-1].input.DefinitionID == "hero_base" || s.structures[occupant-1].input.IsWall
 }
 
-// walkDefender goes one cell at a time towards a goal, along x and then z. Buildings and walls stop it.
+func (s *battleSim) isWallCell(cell int) bool {
+	occupant := s.grid[cell]
+	return occupant != 0 && s.structures[occupant-1].input.IsWall
+}
+
+// walkDefender goes one cell at a time towards a goal, along x and then z. Buildings stop it; walls slow it while it hops.
 func (s *battleSim) walkDefender(defender *battleDefender, goalX, goalZ int) {
 	if defender.px == defender.tx && defender.pz == defender.tz {
 		x, z := defender.px/cellUnits, defender.pz/cellUnits
@@ -649,6 +664,9 @@ func (s *battleSim) walkDefender(defender *battleDefender, goalX, goalZ int) {
 		s.log(eventDefenderMove, int64(defender.index), int64(x), int64(z), 0)
 	}
 	speed := roleSpeeds[defender.role]
+	if s.isWallCell(defender.tz/cellUnits*battleGridSize + defender.tx/cellUnits) {
+		speed = maxInt(1, speed/hopSteps)
+	}
 	if defender.px != defender.tx {
 		step := minInt(absInt(defender.tx-defender.px), speed)
 		if defender.tx > defender.px {
@@ -817,8 +835,12 @@ func (s *battleSim) plan(unit *battleUnit) {
 		return
 	}
 
+	// Heroes hop the walls on their route. Troops walk up to the first wall in the way, and break it.
 	length := len(path)
 	for i, cell := range path {
+		if !unit.isTroop {
+			break
+		}
 		occupant := s.grid[cell]
 		if occupant != 0 && s.structures[occupant-1].input.IsWall {
 			unit.blocker = occupant - 1
@@ -863,6 +885,14 @@ func (s *battleSim) findPath(unit *battleUnit) ([]int, bool) {
 	target := s.structures[unit.target].input
 	reach := roleRanges[unit.role]
 	start := minInt(unit.pz/cellUnits, battleGridSize-1)*battleGridSize + minInt(unit.px/cellUnits, battleGridSize-1)
+	speed := roleSpeeds[unit.role]
+	s.pathHops = !unit.isTroop
+	s.pathStep = (cellUnits + speed - 1) / speed
+	s.pathPerHit = unit.attack * roleDamagePercents[unit.role] / 100
+	if s.pathPerHit < 1 {
+		s.pathPerHit = 1
+	}
+	s.pathInterval = roleIntervals[unit.role]
 	for i := range s.cost {
 		s.cost[i] = costUnreached
 	}
@@ -906,14 +936,29 @@ func (s *battleSim) findPath(unit *battleUnit) ([]int, bool) {
 	return nil, false
 }
 
+// wallBreakTicks is the ticks a troop spends breaking a wall with this much health, then stepping through.
+func (s *battleSim) wallBreakTicks(hp int64) int {
+	hits := (hp + s.pathPerHit - 1) / s.pathPerHit
+	ticks := hits*int64(s.pathInterval) + int64(s.pathStep)
+	if ticks > maxPathCost {
+		return maxPathCost
+	}
+	return int(ticks)
+}
+
 func (s *battleSim) relax(from, to, cost int) {
 	occupant := s.grid[to]
-	step := walkCost
+	step := s.pathStep
 	if occupant != 0 {
-		if !s.structures[occupant-1].input.IsWall {
+		structure := s.structures[occupant-1]
+		if !structure.input.IsWall {
 			return
 		}
-		step = wallCost
+		if s.pathHops {
+			step = s.pathStep * hopSteps
+		} else {
+			step = s.wallBreakTicks(structure.hp)
+		}
 	}
 	if cost+step >= s.cost[to] {
 		return
@@ -1245,4 +1290,11 @@ func placementHash(attackID string, parts []deployPlacement, stacks []troopStack
 		joined += part.InstanceID + ":" + strconv.Itoa(part.X) + ":" + strconv.Itoa(part.Z) + "|"
 	}
 	return joined
+}
+
+func maxInt(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }
