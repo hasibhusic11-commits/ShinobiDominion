@@ -89,6 +89,12 @@ namespace ShinobiDominion.Tests
 
             var oddsTask = _direct.GetOddsAsync();
             yield return WaitFor(() => oddsTask.IsCompleted);
+            // The gate itself shows the chance by rarity; every hero's own chance is one tap away.
+            var gateText = string.Join("\n", _root.GetComponentsInChildren<Text>().Select(t => t.text));
+            foreach (var rarity in oddsTask.Result.rarityChance)
+                StringAssert.Contains($"{rarity.Key}:  {rarity.Value}", gateText);
+            StringAssert.Contains("NOT APPROVED", gateText);
+            yield return ClickWhenReady("RatesButton");
             var text = string.Join("\n", _root.GetComponentsInChildren<Text>().Select(t => t.text));
             foreach (var item in oddsTask.Result.items)
                 StringAssert.Contains($"{item.displayName}  ({item.rarity}):  {item.chance}", text);

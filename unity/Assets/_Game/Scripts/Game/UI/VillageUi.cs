@@ -541,6 +541,35 @@ namespace ShinobiDominion.Game
             }
         }
 
+        /// <summary>
+        /// A full-screen scene with no scrolling list: the caller draws freely into the whole screen,
+        /// and the title and Back button sit on top. Line, Action and the other list calls do not apply.
+        /// </summary>
+        public void ShowScene(string title, string headerInfo, Action onBack, Action<RectTransform> fill)
+        {
+            var opening = !IsOpen;
+            Hide();
+            IsFullScreen = true;
+            _card = Ui.Rect("Screen", _parent);
+            Ui.Stretch(_card);
+            Ui.Background(_card, UiSkin.Ink);
+
+            var scene = Ui.Rect("Scene", _card);
+            Ui.Stretch(scene);
+            fill(scene);
+
+            var back = Ui.Button(_card, "CloseButton", "Back", onBack, true, UiSkin.Vermilion, 20);
+            Ui.Anchor((RectTransform)back.transform, new Vector2(0f, 1f), new Vector2(104f, 56f), new Vector2(14f, -12f));
+            var header = Ui.Strong(Ui.Label(_card, title, 32));
+            Ui.Anchor(header.rectTransform, new Vector2(0f, 1f), new Vector2(560f, 72f), new Vector2(132f, -4f));
+            if (!string.IsNullOrEmpty(headerInfo))
+            {
+                var info = Ui.Strong(Ui.Label(_card, headerInfo, 19, TextAnchor.MiddleRight));
+                Ui.Anchor(info.rectTransform, new Vector2(1f, 1f), new Vector2(560f, 72f), new Vector2(-20f, -4f));
+            }
+            if (opening) UiMotion.FadeIn(_card.gameObject, 0.2f);
+        }
+
         private void BuildScrollArea(float left, float bottom, float right, float top)
         {
             var viewport = Ui.Rect("Viewport", _card);

@@ -104,12 +104,12 @@ namespace ShinobiDominion.Tests
             var painted = Controller.Roster.Heroes.First(h => h.EvolutionIndex == 0 && HeroConcepts.Has(h.ArchetypeId));
             var card = Find("Hero_" + painted.InstanceId);
             Assert.IsNotNull(card, "The Altar should list the hero");
-            var concept = card.transform.Find("HeroConcept");
+            var concept = card.GetComponentsInChildren<Image>().FirstOrDefault(i => i.name == "HeroConcept")?.transform;
             Assert.IsNotNull(concept, "A base-form hero with a concept painting should show it");
             Assert.IsNotNull(concept.GetComponent<Image>().sprite);
 
             var unpainted = Controller.Roster.Heroes.FirstOrDefault(h => !HeroConcepts.Has(h.ArchetypeId));
-            if (unpainted != null) Assert.IsNull(Find("Hero_" + unpainted.InstanceId).transform.Find("HeroConcept"), "Heroes without a painting keep their old picture");
+            if (unpainted != null) Assert.IsNull(Find("Hero_" + unpainted.InstanceId).GetComponentsInChildren<Image>().FirstOrDefault(i => i.name == "HeroConcept"), "Heroes without a painting keep their old picture");
 
             Controller.ShowHeroDetail(painted.InstanceId);
             yield return null;

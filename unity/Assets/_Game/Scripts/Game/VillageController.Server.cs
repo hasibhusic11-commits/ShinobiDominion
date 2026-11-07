@@ -203,32 +203,6 @@ namespace ShinobiDominion.Game
             });
         }
 
-        private void DrawSummoningGate(string message)
-        {
-            var odds = _odds;
-            var one = odds.priceCrystalsPerRoll;
-            var crystals = ServerCrystals ?? 0;
-            _panel.ShowScreen(odds.bannerName, $"Crystals {crystals:N0}", CloseAll, panel =>
-            {
-                panel.Line(odds.status, 19, Ui.AccentColor);
-                panel.Line("Every roll is independent. Nothing is guaranteed, and past results do not change these rates.", 19, Ui.MutedText);
-                if (!string.IsNullOrEmpty(message)) panel.Line(message, 21, Ui.AccentColor);
-
-                var buttons = panel.Row();
-                Ui.Button(buttons, "SummonOneButton", $"Summon x1   ({one:N0} crystals)", () => Summon(1), crystals >= one, Ui.AccentColor, 20);
-                Ui.Button(buttons, "SummonTenButton", $"Summon x10   ({one * 10:N0} crystals)", () => Summon(10), crystals >= one * 10, Ui.AttackColor, 20);
-
-                panel.Line("Rates by rarity", 23, Ui.TextColor);
-                foreach (var rarity in new[] { "Legendary", "Elite", "Common" })
-                    if (odds.rarityChance.TryGetValue(rarity, out var chance))
-                        panel.Line($"{rarity}:  {chance}", 20, Ui.TextColor);
-
-                panel.Line("Rates by hero", 23, Ui.TextColor);
-                foreach (var item in odds.items.OrderBy(i => i.weight))
-                    panel.Line($"{item.displayName}  ({item.rarity}):  {item.chance}", 19);
-            });
-        }
-
         private void Summon(int count)
         {
             var request = $"summon|{_odds.poolVersion}|{count}";

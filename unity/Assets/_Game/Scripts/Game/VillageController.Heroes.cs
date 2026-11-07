@@ -172,36 +172,74 @@ namespace ShinobiDominion.Game
 
         // ---------- Hero cards ----------
 
-        /// <summary>A roster card: figure, level and rarity. Rarity is written out too, never colour alone.</summary>
+        /// <summary>
+        /// A roster card: the hero painted edge to edge over a rarity sunburst, inside a metal frame.
+        /// Level at the top, name and rarity (written out, never colour alone) at the bottom.
+        /// </summary>
         private Button HeroCard(Transform parent, string name, HeroInstance hero, string tag, Action onClick, bool interactable)
         {
             var archetype = Roster.ArchetypeOf(hero);
             var rect = Ui.Rect(name, parent);
-            var frame = Ui.Framed(rect, UiSkin.Frame(new Color(0.30f, 0.27f, 0.33f), new Color(0.13f, 0.12f, 0.18f), RarityColor(archetype.rarity), 5));
+            var back = Ui.Framed(rect, HeroArt.CardBackdrop(archetype.rarity));
+            back.type = Image.Type.Simple;
             var button = rect.gameObject.AddComponent<Button>();
-            button.targetGraphic = frame;
+            button.targetGraphic = back;
             button.interactable = interactable;
             var colors = button.colors;
             colors.disabledColor = new Color(0.5f, 0.5f, 0.5f, 0.8f);
             button.colors = colors;
             if (onClick != null) button.onClick.AddListener(() => onClick());
             UiMotion.Pressable(button);
-            // Legendary heroes catch the light, so they stand out in a list.
-            if (archetype.rarity == HeroRarity.Legendary) UiMotion.Shine(frame, new Color(1f, 0.95f, 0.75f, 0.9f), 3.2f);
 
-            HeroPicture(rect, archetype, hero.EvolutionIndex, 150f, 52f);
+            // The painting fills the card and is clipped by it, like a trading card.
+            var art = Ui.Rect("Art", rect);
+            Ui.Stretch(art, 6f, 6f, 6f, 6f);
+            art.gameObject.AddComponent<RectMask2D>();
+            if (hero.EvolutionIndex == 0 && HeroConcepts.Has(archetype.id))
+            {
+                var painting = Ui.Rect("HeroConcept", art);
+                Ui.Stretch(painting);
+                var image = Ui.Framed(painting, HeroConcepts.Card(archetype.id), false);
+                image.type = Image.Type.Simple;
+            }
+            else HeroPicture(art, archetype, hero.EvolutionIndex, 170f, 46f);
 
-            var level = Ui.Strong(Ui.Label(rect, $"Lv {hero.Level}", 19, TextAnchor.UpperRight));
-            Ui.Anchor(level.rectTransform, new Vector2(1f, 1f), new Vector2(110f, 28f), new Vector2(-10f, -8f));
+            var shade = Ui.Rect("Shade", rect);
+            shade.anchorMin = new Vector2(0f, 0f);
+            shade.anchorMax = new Vector2(1f, 0f);
+            shade.pivot = new Vector2(0.5f, 0f);
+            shade.sizeDelta = new Vector2(-12f, 92f);
+            shade.anchoredPosition = new Vector2(0f, 6f);
+            Ui.Framed(shade, HeroArt.Shade, false).type = Image.Type.Simple;
 
-            var evolution = Ui.Strong(Ui.Label(rect, EvolutionLabel(hero.EvolutionIndex), 15, TextAnchor.UpperLeft));
-            Ui.Anchor(evolution.rectTransform, new Vector2(0f, 1f), new Vector2(70f, 24f), new Vector2(10f, -10f));
+            var frameRect = Ui.Rect("Frame", rect);
+            Ui.Stretch(frameRect);
+            var frame = Ui.Framed(frameRect, HeroArt.CardFrame(archetype.rarity), false);
+            // Legendary heroes catch the light, and wear a gem on the frame.
+            if (archetype.rarity == HeroRarity.Legendary)
+            {
+                UiMotion.Shine(frame, new Color(1f, 0.95f, 0.75f, 0.9f), 3.2f);
+                Ui.Icon(rect, UiSkin.Diamond(new Color(1f, 0.55f, 0.35f), new Color(0.7f, 0.12f, 0.08f)), new Vector2(0.5f, 1f), new Vector2(26f, 26f), new Vector2(0f, 10f));
+            }
+
+            var level = Ui.Strong(Ui.Label(rect, $"Lv {hero.Level}", 21, TextAnchor.UpperRight));
+            Ui.Anchor(level.rectTransform, new Vector2(1f, 1f), new Vector2(110f, 28f), new Vector2(-14f, -12f));
+            var role = Ui.Icon(rect, UiSkin.Disc(Color.Lerp(HeroColor(archetype, 0), Color.white, 0.25f), HeroColor(archetype, 0) * 0.6f, UiSkin.Brass), new Vector2(0f, 1f), new Vector2(34f, 34f), new Vector2(10f, -10f));
+            var roleLetter = Ui.Strong(Ui.Label(role.transform, archetype.role.ToString().Substring(0, 1), 16, TextAnchor.MiddleCenter));
+            Ui.Stretch(roleLetter.rectTransform);
 
             var title = Ui.Strong(Ui.Label(rect, archetype.displayName, 16, TextAnchor.MiddleCenter));
-            Ui.Anchor(title.rectTransform, new Vector2(0.5f, 0f), new Vector2(166f, 40f), new Vector2(0f, 32f));
-
+            Ui.Anchor(title.rectTransform, new Vector2(0.5f, 0f), new Vector2(166f, 26f), new Vector2(0f, 36f));
             var rarity = Ui.Strong(Ui.Label(rect, string.IsNullOrEmpty(tag) ? archetype.rarity.ToString() : tag, 14, TextAnchor.MiddleCenter, RarityColor(archetype.rarity)));
-            Ui.Anchor(rarity.rectTransform, new Vector2(0.5f, 0f), new Vector2(166f, 22f), new Vector2(0f, 9f));
+            Ui.Anchor(rarity.rectTransform, new Vector2(0.5f, 0f), new Vector2(166f, 22f), new Vector2(0f, 14f));
+
+            // Evolved heroes wear their stage on a badge at the bottom edge.
+            if (hero.EvolutionIndex > 0)
+            {
+                var badge = Ui.Icon(rect, UiSkin.Diamond(new Color(1f, 0.87f, 0.4f), new Color(0.9f, 0.55f, 0.12f)), new Vector2(0.5f, 0f), new Vector2(36f, 36f), new Vector2(0f, -14f));
+                var stage = Ui.Strong(Ui.Label(badge.transform, new string('I', hero.EvolutionIndex), 14, TextAnchor.MiddleCenter));
+                Ui.Stretch(stage.rectTransform);
+            }
             return button;
         }
 
@@ -335,77 +373,6 @@ namespace ShinobiDominion.Game
                 ShowAltarRoster();
             }, true, Ui.ButtonColor, 15);
             tab.GetComponentInChildren<Text>().horizontalOverflow = HorizontalWrapMode.Overflow;
-        }
-
-        /// <summary>The large showcase on the left of hero screens. The art is a placeholder figure.</summary>
-        private void HeroShowcase(RectTransform column, HeroArchetype archetype, int evolution, string caption)
-        {
-            var stage = Ui.Rect("Stage", column);
-            Ui.Stretch(stage);
-            Ui.Framed(stage, UiSkin.Frame(new Color(0.24f, 0.20f, 0.36f), new Color(0.09f, 0.08f, 0.15f), RarityColor(archetype.rarity), 5), false);
-            HeroPicture(stage, archetype, evolution, 430f, 70f);
-            var title = Ui.Strong(Ui.Label(stage, caption, 24, TextAnchor.MiddleCenter));
-            title.rectTransform.anchorMin = new Vector2(0f, 0f);
-            title.rectTransform.anchorMax = new Vector2(1f, 0f);
-            title.rectTransform.pivot = new Vector2(0.5f, 0f);
-            title.rectTransform.sizeDelta = new Vector2(-16f, 70f);
-            title.rectTransform.anchoredPosition = new Vector2(0f, 14f);
-        }
-
-        public void ShowHeroDetail(string instanceId)
-        {
-            var hero = Roster.Find(instanceId);
-            if (hero == null)
-            {
-                ShowAltarRoster();
-                return;
-            }
-
-            var archetype = Roster.ArchetypeOf(hero);
-            _panel.ShowScreen(archetype.displayName, $"{archetype.rarity}  ·  {archetype.role}  ·  {archetype.affinity}", ShowAltarRoster, panel =>
-            {
-                panel.Columns(430f, column => HeroShowcase(column, archetype, hero.EvolutionIndex, $"{FormName(hero)}\n{EvolutionLabel(hero.EvolutionIndex)}  Lv {hero.Level}/{HeroMath.MaxLevel}"), () =>
-                {
-                    var stats = Roster.StatsOf(hero);
-                    panel.Line($"HP {stats.Hp:N0}     Attack {stats.Attack:N0}     Defense {stats.Defense:N0}", 24, Ui.TextColor);
-                    if (Village.IsHeroAssigned(hero.InstanceId)) panel.Line("Assigned to a Hero Base.");
-                    panel.Line("Equipment arrives in a later phase.", 17);
-
-                    panel.Line("Skills", 24, Ui.TextColor);
-                    foreach (var skill in archetype.skills)
-                    {
-                        var unlocked = skill.unlockEvolution <= hero.EvolutionIndex;
-                        panel.Line(unlocked
-                            ? $"{skill.displayName}: {skill.description}"
-                            : $"Locked until {EvolutionLabel(skill.unlockEvolution)}: {skill.displayName}", 20);
-                    }
-
-                    if (archetype.CanEvolve)
-                        panel.Action("EvolveButton", "Evolution", () => ShowEvolution(instanceId), true, Ui.AccentColor);
-                    panel.Action("LockButton", hero.Locked ? "Unlock" : "Lock (protect from sacrifice)", () =>
-                    {
-                        if (IsOnline)
-                        {
-                            SetLockOnline(instanceId, !hero.Locked);
-                            return;
-                        }
-                        Roster.SetLocked(instanceId, !hero.Locked);
-                        ShowHeroDetail(instanceId);
-                    });
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                    panel.Action("DevLevelButton", "Dev only: set to level 200", () =>
-                    {
-                        if (IsOnline)
-                        {
-                            DevMaxLevelOnline(instanceId);
-                            return;
-                        }
-                        Roster.GrantXp(instanceId, 100_000_000);
-                        ShowHeroDetail(instanceId);
-                    }, hero.Level < HeroMath.MaxLevel);
-#endif
-                });
-            });
         }
 
         // ---------- Evolution ----------
