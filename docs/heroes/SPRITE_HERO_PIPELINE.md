@@ -62,12 +62,12 @@ Run in a separate copy of the project on this branch, using the editor's graphic
 
 | Package | Licence | Verdict | Status |
 |---|---|---|---|
-| LitMotion 2.0.2 | MIT | Useful for UI motion. Adds Burst, Collections and Mathematics. README doesn't state Unity 6 or uGUI support | Not installed |
-| UIEffect 5.11.8 | MIT | Useful for uGUI panels and buttons. README states URP support | Not installed |
-| SoftMaskForUGUI 3.6.6 | MIT | Useful for soft edges on the game's scrolling lists. README warns about URP render scale and dynamic resolution | Not installed |
+| LitMotion 2.0.2 | MIT | Useful for UI motion. Adds Burst, Collections and Mathematics. README doesn't state Unity 6 or uGUI support | Installed, not used yet |
+| UIEffect 5.11.8 | MIT | Useful for uGUI panels and buttons. README states URP support | Installed, not used yet |
+| SoftMaskForUGUI 3.6.6 | MIT | Useful for soft edges on the game's scrolling lists. README warns about URP render scale and dynamic resolution | Installed, not used yet |
 | Unity-MCP | Apache-2.0 | Not safe to connect as it stands | Not installed |
 
-The three UI packages were blocked by a permission check on adding third-party code, so they're waiting on the owner's decision. Nothing about the sprite hero needs them.
+The owner approved the three UI packages on 2026-11-07. Each was added on its own with its official git URL and a pinned version, and each compiled with no errors. The same 61 PlayMode tests still pass with all three installed. Nothing in the game uses them yet, so their look and phone cost are untested. UIEffect and SoftMaskForUGUI added their default settings in `Assets/ProjectSettings/` and set them to preload in builds. Nothing about the sprite hero needs these packages.
 
 **Unity-MCP:** its README requires a project path without spaces, and this project is under `Game Design`. It also exposes a tool that compiles and runs any C# code, defaults to no authorization, and can use a cloud endpoint. To use it, the project would have to move first, and the tools and cloud endpoint would need restricting.
 
