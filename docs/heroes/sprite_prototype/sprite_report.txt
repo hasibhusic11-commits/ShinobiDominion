@@ -1,0 +1,5 @@
+5.8s idle
+6.3s run
+16.3s attack
+crowd 30 heroes: 510 sprites, 1 texture(s), 9.2 ms a frame in the editor
+sprite packed: True

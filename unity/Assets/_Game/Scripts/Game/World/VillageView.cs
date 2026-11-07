@@ -428,6 +428,11 @@ namespace ShinobiDominion.Game
             go.AddComponent<MeshFilter>().sharedMesh = mesh;
             go.AddComponent<MeshRenderer>().sharedMaterials = materials;
             AddEffects(go.transform, building.Definition);
+            if (building.Definition.function == BuildingFunction.HeroBase)
+            {
+                var actor = HeroSprites.Spawn(look, go.transform);
+                if (actor != null) actor.transform.localPosition = Vector3.up * BuildingMeshes.PedestalTop;
+            }
             return new Entry { Go = go, Signature = signature };
         }
 

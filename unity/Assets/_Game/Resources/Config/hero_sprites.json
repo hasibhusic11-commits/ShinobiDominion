@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "status": "Heroes listed here appear as animated sprites. Everything else uses the procedural fallback.",
+  "sprites": [
+    {
+      "heroId": "solar_beast_sage",
+      "form": 0,
+      "path": "HeroSprites/solar_beast_sage/form0",
+      "enabled": true,
+      "note": "Prototype. Layers rebuilt from the concept by script, not hand painted, and not yet approved."
+    }
+  ]
+}

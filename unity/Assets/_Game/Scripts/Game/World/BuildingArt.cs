@@ -10,6 +10,9 @@ namespace ShinobiDominion.Game
     /// </summary>
     public static partial class BuildingMeshes
     {
+        /// <summary>Where a hero stands on a Hero Base.</summary>
+        public const float PedestalTop = 0.39f;
+
         private static BuildingSkin S = new BuildingSkin();
 
         /// <summary>A hero on its own, for walking around in battle.</summary>
@@ -415,7 +418,8 @@ namespace ShinobiDominion.Game
             }
 
             AffinityEmblem(mesh, top + new Vector3(0f, 0f, -w * 0.3f), hero);
-            HeroFigure(mesh, top, hero);
+            // A sprite hero is its own object, placed by VillageView. This figure is the fallback.
+            if (!HeroSprites.Has(hero)) HeroFigure(mesh, top, hero);
         }
 
         private static Color AffinityColor(HeroAffinity affinity)

@@ -20,6 +20,7 @@ namespace ShinobiDominion.Game
         {
             public GameObject Go;
             public Mesh Mesh;
+            public HeroSpriteActor Actor;
             public Bar Bar;
             public string InstanceId;
             public float Px;
@@ -164,18 +165,24 @@ namespace ShinobiDominion.Game
         private Figure CreateFigure(string instanceId, int x, int z)
         {
             var look = _lookFor(instanceId) ?? new HeroLook { Color = new Color(0.6f, 0.6f, 0.6f) };
-            var builder = BuildingMeshes.Figure(look);
-            var mesh = builder.Build("Hero");
-            _ownedMeshes.Add(mesh);
             var go = new GameObject("BattleHero");
             go.transform.SetParent(transform, false);
             go.transform.localScale = Vector3.one * HeroScale;
-            go.AddComponent<MeshFilter>().sharedMesh = mesh;
-            var renderer = go.AddComponent<MeshRenderer>();
-            renderer.sharedMaterials = builder.LitMaterials();
+            var actor = HeroSprites.Spawn(look, go.transform);
+            Mesh mesh = null;
+            if (actor == null)
+            {
+                // Development fallback for heroes with no sprite art yet.
+                var builder = BuildingMeshes.Figure(look);
+                mesh = builder.Build("Hero");
+                _ownedMeshes.Add(mesh);
+                go.AddComponent<MeshFilter>().sharedMesh = mesh;
+                go.AddComponent<MeshRenderer>().sharedMaterials = builder.LitMaterials();
+            }
             var figure = new Figure
             {
                 Go = go,
+                Actor = actor,
                 Mesh = mesh,
                 InstanceId = instanceId,
                 Px = x * BattleSim.CellUnits + BattleSim.CellUnits / 2f,
@@ -204,7 +211,7 @@ namespace ShinobiDominion.Game
                 var member = _session.team.Find(m => m.instanceId == placement.instanceId);
                 figure.Speed = member.speed;
                 figure.MaxHp = member.hp;
-                figure.Bar = CreateBar(figure.Go.transform.position + Vector3.up * 3.1f, 1.4f, new Color(0.35f, 0.85f, 0.35f));
+                figure.Bar = CreateBar(figure.Go.transform.position + Vector3.up * (figure.Actor != null ? 3.5f : 3.1f), 1.4f, new Color(0.35f, 0.85f, 0.35f));
                 figure.Bar.Root.transform.SetParent(figure.Go.transform, true);
                 _units.Add(figure);
             }
@@ -275,6 +282,12 @@ namespace ShinobiDominion.Game
         {
             if (!unit.Go.activeSelf) return;
             var budget = unit.Speed * ticks;
+            var moving = !Mathf.Approximately(unit.Px, unit.Tx) || !Mathf.Approximately(unit.Pz, unit.Tz);
+            if (unit.Actor != null)
+            {
+                unit.Actor.SetMoving(moving);
+                if (moving) unit.Actor.Face(new Vector3(unit.Tx - unit.Px, 0f, Mathf.Approximately(unit.Px, unit.Tx) ? unit.Tz - unit.Pz : 0f));
+            }
             // The same walk as the battle itself: along x first, then along z.
             if (!Mathf.Approximately(unit.Px, unit.Tx))
             {
@@ -321,6 +334,11 @@ namespace ShinobiDominion.Game
                             unit.Go.transform.rotation = Quaternion.LookRotation(-direction.normalized);
                             unit.KickDirection = direction.normalized;
                             unit.Kick = 0.22f;
+                            if (unit.Actor != null)
+                            {
+                                unit.Actor.Face(direction);
+                                unit.Actor.Attack();
+                            }
                         }
                         var ranged = direction.magnitude > 2.5f;
                         if (ranged) AddFlash(from, center + Vector3.up * 0.8f, 0.2f, 0.1f, 0.1f, new Color(1f, 0.85f, 0.45f));

@@ -135,7 +135,7 @@ namespace ShinobiDominion.Tests
             Assert.AreEqual(RaidPhase.Battle, Controller.CurrentRaidPhase);
             Assert.AreEqual(0, Controller.Army.CountOf("militia"), "Troops that land are used up");
             yield return new WaitForSeconds(0.3f);
-            Assert.AreEqual(9, Object.FindObjectsByType<MeshRenderer>(FindObjectsSortMode.None).Count(r => r.name == "BattleTroop" || r.name == "BattleHero"));
+            Assert.AreEqual(9, Object.FindObjectsByType<Transform>(FindObjectsSortMode.None).Count(r => r.name == "BattleTroop" || r.name == "BattleHero"));
             Controller.SkipBattle();
             Assert.AreEqual(RaidPhase.Resolved, Controller.CurrentRaidPhase);
             Controller.FinishRaid();
