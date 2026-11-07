@@ -42,3 +42,10 @@ Every building has 15 levels. Edit `tools/balance/generate_building_levels.ps1` 
 | Hero base bonus | 2% | 30% | +2% per level |
 
 Dojo level needed: 3 for level 5, 6 for level 8, 9 for level 11, 12 for level 14.
+
+## Dungeon rewards (test values, ADR-029)
+Made by `tools/balance/generate_campaign.py`. Only the server pays these.
+- Gold: each stage pays per new star, as raids always have.
+- Hero XP: 30 + 25 for each stage number, per hero landed, on each win. At most 30 paying wins in 24 hours.
+- Crystals: paid once, on a stage's first clear.
+- Catalysts: one each, once only: stage 5 Awakening Scroll, stage 10 Ascension Stone, stage 15 Sovereign Scroll.

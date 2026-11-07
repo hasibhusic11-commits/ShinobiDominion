@@ -431,7 +431,12 @@ namespace ShinobiDominion.Game
             if (building.Definition.function == BuildingFunction.HeroBase)
             {
                 var actor = HeroSprites.Spawn(look, go.transform);
-                if (actor != null) actor.transform.localPosition = Vector3.up * BuildingMeshes.PedestalTop;
+                if (actor != null)
+                {
+                    actor.transform.localPosition = Vector3.up * BuildingMeshes.PedestalTop;
+                    // Heroes stand large on their bases, so they read clearly from the village camera.
+                    actor.transform.localScale = Vector3.one * 1.35f;
+                }
             }
             return new Entry { Go = go, Signature = signature };
         }

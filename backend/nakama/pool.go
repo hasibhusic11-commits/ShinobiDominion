@@ -52,6 +52,8 @@ type Archetype struct {
 type HeroCatalog struct {
 	SchemaVersion int         `json:"schemaVersion"`
 	Catalysts     []string    `json:"catalystByTransition"`
+	XpBase        int64       `json:"xpPerLevelBase"`
+	XpStep        int64       `json:"xpPerLevelStep"`
 	Heroes        []Archetype `json:"heroes"`
 	byID          map[string]Archetype
 }

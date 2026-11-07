@@ -21,6 +21,8 @@ const (
 	rivalGoldPerDojoLevel = 150
 	rivalPaidRaidsPerDay  = 10
 	rivalPayCooldown      = "24 hours"
+	// Test value. Replays are free, so XP stops after this many paying wins in 24 hours.
+	dungeonXpWinsPerDay = 30
 )
 
 var (
@@ -35,6 +37,7 @@ var (
 	errTooManyTroops  = gameError("TOO_MANY_TROOPS", codeInvalid)
 	errNoRivals       = gameError("NO_RIVALS", codePrecondition)
 	errRivalChoice    = gameError("RIVAL_NOT_ALLOWED", codeInvalid)
+	errRaidLocked     = gameError("RAID_LOCKED", codePrecondition)
 )
 
 type raidTeamMember struct {
@@ -98,6 +101,10 @@ type raidDeployResponse struct {
 	GoldEarned int64         `json:"goldEarned"`
 	BestStars  int           `json:"bestStars"`
 	State      *playerState  `json:"state"`
+	XpEarned       int64     `json:"xpEarned"`
+	LevelsGained   int       `json:"levelsGained"`
+	CrystalsEarned int64     `json:"crystalsEarned"`
+	ItemEarned     string    `json:"itemEarned"`
 }
 
 func bestStarsFor(ctx context.Context, tx *sql.Tx, userID, raidID string) (int, error) {
@@ -178,6 +185,16 @@ func (s *Server) rpcRaidStart(ctx context.Context, logger runtime.Logger, db *sq
 		best, err := bestStarsFor(ctx, tx, userID, raid.ID)
 		if err != nil {
 			return err
+		}
+		// Stages open in order. Only the server decides this.
+		if raid.Requires != "" {
+			previous, err := bestStarsFor(ctx, tx, userID, raid.Requires)
+			if err != nil {
+				return err
+			}
+			if previous < 1 {
+				return errRaidLocked
+			}
 		}
 
 		defenders, err := s.scriptedDefenders(raid)
@@ -410,6 +427,59 @@ func (s *Server) rpcRivalStart(ctx context.Context, logger runtime.Logger, db *s
 	return output, nil
 }
 
+// grantHeroXP adds XP to one hero, using the same curve as HeroRoster.GrantXp on the client.
+// A hero that has left the roster since the raid started simply gets nothing.
+func (s *Server) grantHeroXP(ctx context.Context, tx *sql.Tx, userID, instanceID string, amount int64) (int, error) {
+	var level int
+	var experience int64
+	err := tx.QueryRowContext(ctx, `SELECT level, experience FROM sd_hero WHERE instance_id = $1 AND user_id = $2 FOR UPDATE`, instanceID, userID).Scan(&level, &experience)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, err
+	}
+	gained := 0
+	level, experience, gained = s.catalog.applyXP(level, experience, amount)
+	_, err = tx.ExecContext(ctx, `UPDATE sd_hero SET level = $1, experience = $2 WHERE instance_id = $3 AND user_id = $4`, level, experience, instanceID, userID)
+	return gained, err
+}
+
+// applyXP is pure so the shared scenarios can test it. Level 200 holds no XP, matching the client.
+func (c *HeroCatalog) applyXP(level int, experience, amount int64) (int, int64, int) {
+	const maxLevel = 200
+	experience += amount
+	gained := 0
+	for level < maxLevel {
+		need := c.XpBase + c.XpStep*int64(level-1)
+		if experience < need {
+			break
+		}
+		experience -= need
+		level++
+		gained++
+	}
+	if level >= maxLevel {
+		experience = 0
+	}
+	return level, experience, gained
+}
+
+// xpWinsToday counts the wins in the last 24 hours that paid XP.
+func xpWinsToday(ctx context.Context, tx *sql.Tx, userID string) (int, error) {
+	var wins int
+	err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM sd_raid WHERE user_id = $1 AND status = 'resolved' AND xp_earned > 0 AND resolved_at > now() - interval '24 hours'`, userID).Scan(&wins)
+	return wins, err
+}
+
+func grantItem(ctx context.Context, tx *sql.Tx, userID, itemID, ref string) error {
+	if _, err := tx.ExecContext(ctx, `INSERT INTO sd_item (user_id, item_id, count) VALUES ($1, $2, 1)
+		ON CONFLICT (user_id, item_id) DO UPDATE SET count = sd_item.count + 1`, userID, itemID); err != nil {
+		return err
+	}
+	return addItemLedger(ctx, tx, userID, itemID, 1, "dungeon_first_clear", ref)
+}
+
 // rivalPays says whether a rival raid may pay gold: once a rival a day, and a daily limit overall.
 func rivalPays(ctx context.Context, tx *sql.Tx, userID, rivalID string) (bool, error) {
 	var sameRival, today int
@@ -624,7 +694,9 @@ func (s *Server) rpcRaidDeploy(ctx context.Context, logger runtime.Logger, db *s
 			return err
 		}
 		beforeGold := v.gold
-		var earned int64
+		var earned, xpEarned, crystalsEarned int64
+		var levelsGained int
+		var itemEarned string
 		best := result.Stars
 		if opponent.Valid {
 			// A raid on a rival never costs the rival anything. Limits stop one village being farmed.
@@ -644,7 +716,38 @@ func (s *Server) rpcRaidDeploy(ctx context.Context, logger runtime.Logger, db *s
 			}
 		} else if best, err = bestStarsFor(ctx, tx, userID, raidID); err != nil {
 			return err
-		} else if result.Stars > best {
+		} else {
+			// One-time rewards pay on the first win, and read today's raid data rather than the player's claims.
+			if definition, ok := s.raids.byID[raidID]; ok && result.Stars > 0 {
+				if best == 0 {
+					if definition.FirstClearCrystals > 0 {
+						crystalsEarned = definition.FirstClearCrystals
+						v.crystals += crystalsEarned
+					}
+					if definition.FirstClearItem != "" {
+						if err := grantItem(ctx, tx, userID, definition.FirstClearItem, request.AttackID); err != nil {
+							return err
+						}
+						itemEarned = definition.FirstClearItem
+					}
+				}
+				wins, err := xpWinsToday(ctx, tx, userID)
+				if err != nil {
+					return err
+				}
+				if definition.XpPerWin > 0 && wins < dungeonXpWinsPerDay {
+					xpEarned = definition.XpPerWin
+					for _, placement := range request.Placements {
+						gained, err := s.grantHeroXP(ctx, tx, userID, placement.InstanceID, xpEarned)
+						if err != nil {
+							return err
+						}
+						levelsGained += gained
+					}
+				}
+			}
+		}
+		if !opponent.Valid && result.Stars > best {
 			// Gold is only paid for stars beyond the player's best, so a raid can't be farmed.
 			earned = int64(result.Stars-best) * goldPerStar
 			if room := v.goldCapacity() - v.gold; earned > room {
@@ -663,16 +766,16 @@ func (s *Server) rpcRaidDeploy(ctx context.Context, logger runtime.Logger, db *s
 		if err := persistVillage(ctx, tx, userID, v, beforeGold, crystals, "raid_reward", request.AttackID); err != nil {
 			return err
 		}
-		if _, err := tx.ExecContext(ctx, `UPDATE sd_raid SET status = 'resolved', stars = $1, damage_percent = $2, gold_earned = $3, checksum = $4, defenders_alive = $5, resolved_at = now() WHERE attack_id = $6`,
-			result.Stars, result.DamagePercent, earned, result.Checksum, result.DefendersAlive, request.AttackID); err != nil {
+		if _, err := tx.ExecContext(ctx, `UPDATE sd_raid SET status = 'resolved', stars = $1, damage_percent = $2, gold_earned = $3, checksum = $4, defenders_alive = $5, xp_earned = $6, crystals_earned = $7, item_earned = NULLIF($8, ''), resolved_at = now() WHERE attack_id = $9`,
+			result.Stars, result.DamagePercent, earned, result.Checksum, result.DefendersAlive, xpEarned, crystalsEarned, itemEarned, request.AttackID); err != nil {
 			return err
 		}
 
-		state, err := loadState(ctx, tx, userID, crystals)
+		state, err := loadState(ctx, tx, userID, v.crystals)
 		if err != nil {
 			return err
 		}
-		output, err = marshal(raidDeployResponse{request.AttackID, result, earned, best, state})
+		output, err = marshal(raidDeployResponse{request.AttackID, result, earned, best, state, xpEarned, levelsGained, crystalsEarned, itemEarned})
 		if err != nil {
 			return err
 		}

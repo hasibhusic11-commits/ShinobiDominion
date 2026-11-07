@@ -88,6 +88,15 @@ Follows the owner's ADR-021. Up to four Troop Camps, gated by Dojo level, and a 
 - A raid still needs at least one hero. At most 200 troops can land in one raid, to bound the server's work.
 - Troop names and all numbers are test values. Offline practice troops aren't saved.
 
+
+## ADR-029: A dungeon campaign and battle feel, added on 2026-11-07
+The owner asked for the game to feel like Castle Clash, so this borrows the genre's usual shape and none of its art, names or layouts. The home screen is unchanged: ATTACK stays the only thing docked at the bottom, with no icon rail, and there is no energy counter.
+- **15 stages in 3 chapters**, opened in order. The server refuses a locked stage with `RAID_LOCKED`, and the client only draws the map.
+- **Rewards are all decided by the server.** A win gives each hero who was landed some XP, a first clear gives crystals, and each chapter's boss gives one catalyst, once. A loss pays nothing.
+- **Hero XP from dungeons is capped at 30 wins in 24 hours**, so it cannot be farmed without limit.
+- **Raids on rivals give no dungeon rewards.**
+- **Battle feel:** a battle panel with loot, stars and damage, damage numbers, a gravestone for each fighter who falls, a results screen with rewards, and sounds made in code. A sound switch is in the Menu. Walkers in the village are for show only, and nothing in the rules knows about them.
+- All values are test values, made by `tools/balance/generate_campaign.py`. How generous crystals and catalysts should be is still the owner's call.
 ## ADR-028: Defender heroes and raids on rivals, added on 2026-11-07
 Claude made these choices while the owner slept, and the owner can overrule any of them. All numbers are test values.
 - **Guards:** heroes on a village's Hero Bases defend it. Each stands on its base, notices attackers within 8 cells, chases up to 14 cells from its post, then walks back. Roles keep their abilities. Attackers stop and fight any guard in reach. Stars still count only buildings, so a raid can win with a guard alive.

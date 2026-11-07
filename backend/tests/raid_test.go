@@ -158,7 +158,8 @@ func TestRaid_FullBattle_PaysOnlyForNewStars(t *testing.T) {
 }
 
 func TestRaid_SameInput_GivesTheSameBattle(t *testing.T) {
-	p := raidReady(t, "solar_beast_sage", 3, 0)
+	// Level 200 heroes earn no XP, so the second battle starts from the same stats.
+	p := raidReady(t, "solar_beast_sage", 3, 3)
 	one := startRaid(t, p)
 	first, err := deploy(p, "k-"+randomHex(8), one.AttackID, placementsFor(one))
 	if err != nil {

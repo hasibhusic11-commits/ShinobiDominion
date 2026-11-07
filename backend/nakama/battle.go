@@ -1113,6 +1113,10 @@ type raidDefinition struct {
 	Buildings   []raidEntry `json:"buildings"`
 	Walls       []raidWall  `json:"walls"`
 	Defenders   []raidDefenderEntry `json:"defenders"`
+	Requires    string `json:"requires"`
+	XpPerWin    int64  `json:"xpPerWin"`
+	FirstClearCrystals int64 `json:"firstClearCrystals"`
+	FirstClearItem string `json:"firstClearItem"`
 	expanded    []battleBuildingInput
 }
 
@@ -1133,7 +1137,12 @@ func loadRaidCatalog(data []byte, buildings *BuildingCatalog) (*raidCatalog, err
 		return nil, errors.New("unsupported raid file")
 	}
 	catalog := &raidCatalog{byID: map[string]*raidDefinition{}, all: document.Raids}
+	known := map[string]bool{}
 	for _, raid := range document.Raids {
+		if raid.Requires != "" && !known[raid.Requires] {
+			return nil, errors.New("raid " + raid.ID + " requires a raid listed later or not at all: " + raid.Requires)
+		}
+		known[raid.ID] = true
 		expanded, err := expandRaid(raid, buildings)
 		if err != nil {
 			return nil, err

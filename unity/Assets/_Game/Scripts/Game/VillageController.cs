@@ -123,6 +123,10 @@ namespace ShinobiDominion.Game
             _worldRoot = worldRoot;
 
             _view = new VillageView(village, worldRoot, HeroLookFor);
+            var lifeObject = new GameObject("VillageLife");
+            lifeObject.transform.SetParent(worldRoot, false);
+            _life = lifeObject.AddComponent<VillageLife>();
+            _life.Initialize(village, TroopData.All[0].id, VillageLifeWalkers);
             _thumbnails = new BuildingThumbnails(worldRoot);
             RefreshCollectMarkers();
             _grid = new GridOverlay(worldRoot);
@@ -146,9 +150,28 @@ namespace ShinobiDominion.Game
             _thumbnails?.Dispose();
         }
 
+        private const int VillageLifeWalkers = 10;
+        private VillageLife _life;
+        private long _lastGold = -1;
+        private Vector3? _lastCollectAt;
+
+        /// <summary>Gold rising after a tap shows on the building it came from, online or off.</summary>
+        private void UpdateGoldPopups()
+        {
+            var gold = Village.Gold;
+            if (_lastGold >= 0 && gold > _lastGold && _lastCollectAt.HasValue && _raid == null)
+            {
+                GameSounds.Play(GameSound.Coin);
+                FloatingText.Create(_worldRoot, _camera.Camera, _lastCollectAt.Value, "+" + (gold - _lastGold).ToString("N0"), new Color(1f, 0.85f, 0.3f), 0.14f);
+                _lastCollectAt = null;
+            }
+            _lastGold = gold;
+        }
+
         private void Update()
         {
             UpdateRaid();
+            UpdateGoldPopups();
             // Keep trying to reach the server, but never swap the village out mid-action.
             if (_server != null && !IsOnline && !_connecting && UiState.Screen == VillageScreen.Home)
             {
@@ -318,10 +341,10 @@ namespace ShinobiDominion.Game
         {
             var building = Village.Find(id);
             if (building == null) return;
-            if (UiState.Screen == VillageScreen.Home && Village.PendingCollection(building, Now) >= 1
-                && CollectFromTap(id))
+            if (UiState.Screen == VillageScreen.Home && Village.PendingCollection(building, Now) >= 1)
             {
-                return;
+                _lastCollectAt = new Vector3(building.Origin.X + building.Definition.width * 0.5f, 2.6f, building.Origin.Z + building.Definition.depth * 0.5f);
+                if (CollectFromTap(id)) return;
             }
             Select(id);
         }
@@ -547,6 +570,11 @@ namespace ShinobiDominion.Game
                 panel.Line(Village.Catalog.BalanceStatus, 18);
                 var high = GameQuality.Current == VisualQuality.High;
                 panel.Line("Fewer trees at Low take effect after a restart.", 17);
+                panel.Action("SoundButton", GameSounds.Muted ? "Sound: Off (tap for On)" : "Sound: On (tap for Off)", () =>
+                {
+                    GameSounds.Muted = !GameSounds.Muted;
+                    OpenSettings();
+                });
                 panel.Action("QualityButton", high ? "Graphics: High (tap for Low)" : "Graphics: Low (tap for High)", () =>
                 {
                     GameQuality.Set(high ? VisualQuality.Low : VisualQuality.High);

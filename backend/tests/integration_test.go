@@ -113,6 +113,7 @@ type heroView struct {
 	ArchetypeID    string `json:"archetypeId"`
 	EvolutionIndex int    `json:"evolutionIndex"`
 	Level          int    `json:"level"`
+	Experience     int64  `json:"experience"`
 	Locked         bool   `json:"locked"`
 	BaseSlot       *int   `json:"baseSlot"`
 }

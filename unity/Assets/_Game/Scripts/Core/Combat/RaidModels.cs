@@ -110,6 +110,10 @@ namespace ShinobiDominion.Core
         public BattleResult Result;
         public long GoldEarned;
         public int BestStars;
+        public long XpEarned;
+        public int LevelsGained;
+        public long CrystalsEarned;
+        public string ItemEarned;
         public ServerState State;
 
         public static RaidOutcome Parse(string json)
@@ -120,8 +124,13 @@ namespace ShinobiDominion.Core
             {
                 Result = result.ToObject<BattleResult>(),
                 GoldEarned = token.Value<long>("goldEarned"),
-                BestStars = token.Value<int>("bestStars")
+                BestStars = token.Value<int>("bestStars"),
+                XpEarned = token.Value<long?>("xpEarned") ?? 0,
+                LevelsGained = token.Value<int?>("levelsGained") ?? 0,
+                CrystalsEarned = token.Value<long?>("crystalsEarned") ?? 0,
+                ItemEarned = token.Value<string>("itemEarned") ?? ""
             };
+            if (outcome.XpEarned < 0 || outcome.CrystalsEarned < 0) throw new FormatException("Server sent a negative reward.");
             if (outcome.GoldEarned < 0) throw new FormatException("Server sent a negative reward.");
             if (token["state"] is JObject state) outcome.State = ServerState.FromToken(state);
             return outcome;

@@ -295,6 +295,7 @@ namespace ShinobiDominion.Tests
             yield return WaitFor(() => Controller.Village.Find(heroBase).AssignedHeroInstanceId == hero.InstanceId);
 
             Controller.OpenAttack();
+            yield return ClickWhenReady("OpenDungeonsButton");
             yield return ClickWhenReady("ScoutButton");
             yield return WaitFor(() => Controller.CurrentRaidPhase == RaidPhase.Prepare);
             var session = Controller.CurrentRaidSession;
@@ -349,6 +350,22 @@ namespace ShinobiDominion.Tests
             yield return ServerState(state => Assert.AreEqual(gold, state.Village.gold, "Gold must match the server"));
             Controller.FinishRaid();
             yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator Campaign_ThroughTheScreen_ShowsLockedStages_AndServerRefusesThem()
+        {
+            yield return PutFirstHeroOnBase();
+            Controller.OpenAttack();
+            yield return ClickWhenReady("OpenDungeonsButton");
+            yield return WaitFor(() => Find("StageNode1") != null);
+            Assert.IsNotNull(Find("StageNode5"), "Chapter one should show five stages");
+
+            // Even if a tampered client asks anyway, the server decides.
+            Controller.ScoutRaid("stage_05");
+            yield return new WaitForSeconds(1f);
+            Assert.IsNull(Controller.CurrentRaidPhase, "A locked stage must not start");
+            Assert.That(Controller.LastMessage, Does.Contain("stage before"));
         }
 
         [UnityTest]

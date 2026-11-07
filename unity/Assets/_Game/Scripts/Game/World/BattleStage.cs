@@ -76,6 +76,8 @@ namespace ShinobiDominion.Game
         private readonly List<Flash> _flashes = new List<Flash>();
         private readonly List<KeyValuePair<float, GameObject>> _expiring = new List<KeyValuePair<float, GameObject>>();
         private readonly List<Mesh> _ownedMeshes = new List<Mesh>();
+        private Mesh _graveMesh;
+        private float _nextNumberAt;
         private Mesh _quad;
         private Mesh _orb;
         private Material[] _orbMaterials;
@@ -87,6 +89,7 @@ namespace ShinobiDominion.Game
         private long _dealtHp;
         private bool _finished;
 
+        public bool DojoDown { get; private set; }
         public bool IsPlaying => _result != null && !_finished;
         public int DamagePercent => _totalHp == 0 ? 100 : (int)(_dealtHp * 100 / _totalHp);
         public int SecondsLeft => Mathf.Max(0, Mathf.CeilToInt((BattleSim.TickLimit - _ticks) / BattleSim.TicksPerSecond));
@@ -368,6 +371,8 @@ namespace ShinobiDominion.Game
                                 unit.Actor.Attack();
                             }
                         }
+                        ShowNumber(center + Vector3.up * 1.6f, entry[4], new Color(1f, 0.95f, 0.8f));
+                        GameSounds.Play(GameSound.Hit, 0.55f);
                         var ranged = direction.magnitude > 2.5f;
                         if (ranged) AddFlash(from, center + Vector3.up * 0.8f, 0.2f, 0.1f, 0.1f, new Color(1f, 0.85f, 0.45f));
                         else AddFlash(center + Vector3.up * 0.6f, center + Vector3.up * 0.6f, 0.12f, 0.05f, 0.25f, new Color(1f, 0.9f, 0.6f));
@@ -378,6 +383,8 @@ namespace ShinobiDominion.Game
                 case BattleEventKind.BuildingDown:
                 {
                     var building = _buildings[(int)entry[2]];
+                    if (building.definitionId == "dojo_hq") DojoDown = true;
+                    if (show) GameSounds.Play(building.isWall ? GameSound.Hit : GameSound.Crumble, building.isWall ? 0.6f : 1f);
                     _view.SetGone(building.id);
                     if (_buildingBars.TryGetValue(building.id, out var bar))
                     {
@@ -398,6 +405,8 @@ namespace ShinobiDominion.Game
                     unit.Bar?.Set((float)entry[5] / unit.MaxHp);
                     if (show)
                     {
+                        GameSounds.Play(GameSound.Shot, 0.4f);
+                        ShowNumber(unit.Go.transform.position + Vector3.up * 2.2f, entry[4], new Color(1f, 0.45f, 0.35f));
                         var building = _buildings[(int)entry[2]];
                         AddFlash(CenterOf(building) + Vector3.up * 2f, unit.Go.transform.position + Vector3.up, 0.18f, 0.09f, 0.09f, new Color(1f, 0.55f, 0.25f));
                     }
@@ -406,6 +415,8 @@ namespace ShinobiDominion.Game
                 case BattleEventKind.HeroDown:
                 {
                     var unit = _units[(int)entry[2]];
+                    AddGrave(unit.Go.transform.position);
+                    if (show) GameSounds.Play(GameSound.Fall);
                     if (show) AddFlash(unit.Go.transform.position + Vector3.up * 0.6f, unit.Go.transform.position + Vector3.up * 0.8f, 0.4f, 0.1f, 0.7f, new Color(0.9f, 0.9f, 1f));
                     unit.Go.SetActive(false);
                     break;
@@ -414,6 +425,7 @@ namespace ShinobiDominion.Game
                 {
                     if (!show) break;
                     var unit = _units[(int)entry[2]];
+                    GameSounds.Play(GameSound.Ability, 0.5f);
                     var at = unit.Go.transform.position + Vector3.up * 0.9f;
                     AddFlash(at, at, 0.35f, 0.15f, 0.55f, AbilityColor((int)entry[3]));
                     break;
@@ -440,19 +452,29 @@ namespace ShinobiDominion.Game
                 {
                     var target = _units[(int)entry[3]];
                     target.Bar?.Set((float)entry[5] / target.MaxHp);
-                    if (show) ShowBlow(_defenders[(int)entry[2]], target);
+                    if (show)
+                    {
+                        ShowBlow(_defenders[(int)entry[2]], target);
+                        ShowNumber(target.Go.transform.position + Vector3.up * 2.2f, entry[4], new Color(1f, 0.45f, 0.35f));
+                    }
                     break;
                 }
                 case BattleEventKind.DefenderDamaged:
                 {
                     var target = _defenders[(int)entry[3]];
                     target.Bar?.Set((float)entry[5] / target.MaxHp);
-                    if (show) ShowBlow(_units[(int)entry[2]], target);
+                    if (show)
+                    {
+                        ShowBlow(_units[(int)entry[2]], target);
+                        ShowNumber(target.Go.transform.position + Vector3.up * 2.2f, entry[4], new Color(1f, 0.95f, 0.8f));
+                    }
                     break;
                 }
                 case BattleEventKind.DefenderDown:
                 {
                     var unit = _defenders[(int)entry[2]];
+                    AddGrave(unit.Go.transform.position);
+                    if (show) GameSounds.Play(GameSound.Fall);
                     if (show) AddFlash(unit.Go.transform.position + Vector3.up * 0.6f, unit.Go.transform.position + Vector3.up * 0.8f, 0.4f, 0.4f, 0.05f, new Color(0.9f, 0.3f, 0.25f));
                     unit.Go.SetActive(false);
                     break;
@@ -485,9 +507,40 @@ namespace ShinobiDominion.Game
             }
         }
 
+        /// <summary>A damage number, at most one every short moment so a big fight stays readable.</summary>
+        private void ShowNumber(Vector3 at, long amount, Color color)
+        {
+            if (Time.time < _nextNumberAt) return;
+            _nextNumberAt = Time.time + 0.08f;
+            FloatingText.Create(transform, _camera, at, amount.ToString("N0"), color);
+        }
+
+        /// <summary>A small stone where a fighter fell, so the battle's cost stays visible.</summary>
+        private void AddGrave(Vector3 worldPosition)
+        {
+            if (_graveMesh == null)
+            {
+                var builder = new MeshBuilder { ContactShade = false };
+                var stone = new Color(0.46f, 0.45f, 0.44f);
+                builder.Box(Vector3.zero, new Vector3(0.34f, 0.06f, 0.24f), new Color(0.3f, 0.26f, 0.22f), ArtSurface.Rock);
+                builder.Box(Vector3.up * 0.06f, new Vector3(0.2f, 0.3f, 0.09f), stone, ArtSurface.Rock);
+                builder.Box(Vector3.up * 0.22f, new Vector3(0.3f, 0.07f, 0.09f), stone, ArtSurface.Rock);
+                _graveMesh = builder.Build("Grave");
+                _ownedMeshes.Add(_graveMesh);
+            }
+            var go = new GameObject("Grave");
+            go.transform.SetParent(transform, false);
+            go.transform.position = new Vector3(worldPosition.x, 0f, worldPosition.z);
+            go.AddComponent<MeshFilter>().sharedMesh = _graveMesh;
+            var renderer = go.AddComponent<MeshRenderer>();
+            renderer.sharedMaterial = Mats.World;
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+        }
+
         /// <summary>One hero striking another: it faces the target, lunges, and a small burst lands.</summary>
         private void ShowBlow(Figure from, Figure to)
         {
+            GameSounds.Play(GameSound.Hit, 0.6f);
             var direction = to.Go.transform.position - from.Go.transform.position;
             direction.y = 0f;
             if (direction.sqrMagnitude > 0.001f)

@@ -311,6 +311,7 @@ namespace ShinobiDominion.Game
             var colors = button.colors;
             colors.disabledColor = new Color(0.55f, 0.55f, 0.55f, 0.75f);
             button.colors = colors;
+            button.onClick.AddListener(() => GameSounds.Play(GameSound.Click));
             if (onClick != null) button.onClick.AddListener(() => onClick());
 
             var layout = rect.gameObject.AddComponent<LayoutElement>();
@@ -567,6 +568,16 @@ namespace ShinobiDominion.Game
         public Button Action(string name, string caption, Action onClick, bool interactable = true, Color? color = null, int fontSize = 22)
         {
             return Ui.Button(_content, name, caption, onClick, interactable, color, fontSize);
+        }
+
+        /// <summary>An empty area of a fixed height, for drawing something custom into.</summary>
+        public RectTransform Block(float height)
+        {
+            var block = Ui.Rect("Block", _content);
+            var layout = block.gameObject.AddComponent<LayoutElement>();
+            layout.minHeight = height;
+            layout.preferredHeight = height;
+            return block;
         }
 
         /// <summary>A row of equal-width small buttons, used for tabs and filters.</summary>

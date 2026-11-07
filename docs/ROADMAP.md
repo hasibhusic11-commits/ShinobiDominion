@@ -53,7 +53,18 @@ All 30 heroes have an original design and a generated model, and only Legendarie
 ## Visual overhaul — done as temporary art, awaiting your review
 Curved-roof ninja architecture for every building, modular walls with level tiers, Hero Bases with figures and emblems, textured ground, forest, mountains, waterfall, toon lighting, smoother camera and a quality setting. See `ART_STATUS.md` for what still needs an artist, and `VISUAL_BASELINE.md` for the before state and asset evaluation.
 
-## Latest test results (2026-11-07, branch `feature/raid-defenders`)
+## Latest test results (2026-11-07, branch `feature/campaign`)
+Dungeon campaign and battle feel, awaiting your playtest (ADR-029).
+| Check | Result |
+|---|---|
+| .NET harness (`tools/core-tests`) | 147 of 147 passed |
+| Unity PlayMode, including live-server tests | 96 of 96 passed |
+| Backend suite, including 9 campaign tests | passed |
+| Backend unit tests with shared battle logs in C# and Go | passed; part of the server build |
+
+Not verified: sounds were checked as non-silent clips, but nobody has listened to them. Not run on a phone. Production-mode tests were not rerun for this branch. Balance has only been tested by simulated teams, not by a person playing.
+
+## Previous test results (2026-11-07, branch `feature/raid-defenders`)
 | Suite | Result |
 |---|---|
 | .NET harness (`tools/core-tests`) | 135 of 135 passed |

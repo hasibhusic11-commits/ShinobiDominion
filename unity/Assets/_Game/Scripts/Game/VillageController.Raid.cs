@@ -31,6 +31,7 @@ namespace ShinobiDominion.Game
             public string SelectedTroop;
             public RaidOutcome Outcome;
             public GameObject StatusBar;
+            public GameObject Hud;
             public Text StatusText;
         }
 
@@ -159,14 +160,9 @@ namespace ShinobiDominion.Game
                             panel.Line($"{record.stars} of 3 stars, {record.damagePercent}% damage. {record.defendersAlive} of {record.defendersTotal} guards still standing.", 19);
                     }
                 }
-                foreach (var raid in RaidData.All)
-                {
-                    var best = _raidList?.FirstOrDefault(r => r.id == raid.id)?.bestStars ?? 0;
-                    panel.Line(raid.displayName, 24);
-                    panel.Line(raid.description, 19);
-                    panel.Line($"Best: {best} of 3 stars.   {raid.goldPerStar:N0} gold for each new star.", 19);
-                    panel.Action("ScoutButton", "Scout", () => ScoutRaid(raid.id), team > 0 && (IsOnline || AllowOfflinePlay), Ui.AccentColor);
-                }
+                panel.Line("Dungeons", 24);
+                panel.Line("Fight through fortified camps for gold, crystals, hero XP and evolution materials.", 19);
+                panel.Action("OpenDungeonsButton", "Open the dungeon map", OpenCampaign, IsOnline || AllowOfflinePlay, Ui.AccentColor);
             });
         }
 
@@ -247,6 +243,7 @@ namespace ShinobiDominion.Game
             stage.Finished += ShowRaidResult;
             _raid = new RaidRun { Session = session, Stage = stage };
             _view.SetVisible(false);
+            if (_life != null) _life.gameObject.SetActive(false);
             _camera.StopMotion();
             _camera.Initialize(MapCenter, RaidCameraSize);
 
@@ -445,6 +442,7 @@ namespace ShinobiDominion.Game
             _camera.Initialize(MapCenter, BattleCameraSize);
             _raid.Stage.Play(outcome.Result, _raid.Placements, _raid.Stacks);
             CreateBattleBar();
+            CreateBattleHud();
         }
 
         private void CreateBattleBar()
@@ -471,7 +469,8 @@ namespace ShinobiDominion.Game
         {
             if (_raid?.StatusText == null || _raid.Phase != RaidPhase.Battle) return;
             var seconds = _raid.Stage.SecondsLeft;
-            _raid.StatusText.text = $"Damage {_raid.Stage.DamagePercent}%    {seconds / 60}:{seconds % 60:00}";
+            _raid.StatusText.text = $"Time left  {seconds / 60}:{seconds % 60:00}";
+            UpdateBattleHud();
         }
 
         // ---------- The result ----------
@@ -481,12 +480,16 @@ namespace ShinobiDominion.Game
             if (_raid == null) return;
             _raid.Phase = RaidPhase.Resolved;
             if (_raid.StatusBar != null) Destroy(_raid.StatusBar);
+            if (_raid.Hud != null) Destroy(_raid.Hud);
+            _battleHud = null;
             var outcome = _raid.Outcome;
             var result = outcome.Result;
             if (outcome.State != null) ApplyServerState(outcome.State);
             var title = result.stars > 0 ? "Victory" : "Defeat";
+            GameSounds.Play(result.stars > 0 ? GameSound.Victory : GameSound.Defeat);
             _panel.Show(title, FinishRaid, panel =>
             {
+                DrawResultStars(panel, result.stars);
                 panel.Line($"{result.stars} of 3 stars", 30, Ui.AccentColor);
                 panel.Line($"Damage dealt: {result.damagePercent}%");
                 panel.Line(result.dojoDestroyed ? "The enemy Dojo fell." : "The enemy Dojo still stands.");
@@ -499,6 +502,7 @@ namespace ShinobiDominion.Game
                 else if (outcome.GoldEarned > 0) panel.Line($"Earned {outcome.GoldEarned:N0} gold");
                 else if (_raid.Session.raid.id == "rival") panel.Line(result.stars == 0 ? "No gold: earn a star to get paid." : "No gold: this rival already paid today, you reached today's limit, or your vault is full.");
                 else panel.Line("No gold: only new stars pay, or your vault is full.");
+                DrawRewardLines(panel, outcome);
                 panel.Action("ReturnHomeButton", "Return to village", FinishRaid, true, Ui.AccentColor);
             });
         }
@@ -513,11 +517,14 @@ namespace ShinobiDominion.Game
         {
             if (_raid == null) return;
             if (_raid.StatusBar != null) Destroy(_raid.StatusBar);
+            if (_raid.Hud != null) Destroy(_raid.Hud);
+            _battleHud = null;
             _raid.Stage.Finished -= ShowRaidResult;
             Destroy(_raid.Stage.gameObject);
             _raid = null;
             _raidCells?.Clear();
             _view.SetVisible(true);
+            if (_life != null) _life.gameObject.SetActive(true);
             _camera.StopMotion();
             _camera.Initialize(MapCenter, HomeCameraSize);
         }

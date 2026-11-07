@@ -38,6 +38,7 @@ The last one kills the server under load and briefly runs it in production mode.
 
 - `sd_rival_start` `{key}`: starts a raid on a rival chosen by the server. `rivalId` is accepted only in development mode, for tests.
 - `sd_defense_log`: the latest 20 raids on this player's village, with no attacker details.
+- Campaign: `sd_raid_start` returns `RAID_LOCKED` for a stage whose previous stage has not been cleared. `sd_raid_deploy` also returns `xpEarned`, `levelsGained`, `crystalsEarned` and `itemEarned`, which the server works out and stores on the raid (`006_campaign.sql`).
 
 ## Tables
 | Table | Holds |

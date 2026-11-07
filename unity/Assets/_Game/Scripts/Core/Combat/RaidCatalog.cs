@@ -41,6 +41,13 @@ namespace ShinobiDominion.Core
         public List<RaidBuildingEntry> buildings = new List<RaidBuildingEntry>();
         public List<RaidWallRun> walls = new List<RaidWallRun>();
         public List<RaidDefenderEntry> defenders = new List<RaidDefenderEntry>();
+        public int chapter = 1;
+        public string chapterName = "";
+        public int stage = 1;
+        public string requires = "";
+        public long xpPerWin;
+        public long firstClearCrystals;
+        public string firstClearItem = "";
 
         /// <summary>Stands each listed hero in the middle of the Hero Base at its cell, as the server does.</summary>
         public List<RaidDefender> ExpandDefenders(BuildingCatalog buildings, HeroCatalog heroes)
@@ -158,9 +165,15 @@ namespace ShinobiDominion.Core
             var document = JsonConvert.DeserializeObject<Document>(json);
             if (document == null || document.schemaVersion != SupportedSchemaVersion)
                 throw new FormatException("Unsupported raid file.");
+            var known = new HashSet<string>();
             foreach (var raid in document.raids)
+            {
                 if (raid.Expand(buildings).Count == 0)
                     throw new FormatException($"Raid {raid.id} has no buildings.");
+                if (!string.IsNullOrEmpty(raid.requires) && !known.Contains(raid.requires))
+                    throw new FormatException($"Raid {raid.id} requires a raid listed later or not at all: {raid.requires}.");
+                known.Add(raid.id);
+            }
             return new RaidCatalog { All = document.raids };
         }
     }

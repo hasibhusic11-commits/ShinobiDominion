@@ -7,6 +7,7 @@ using ShinobiDominion.Core;
 using ShinobiDominion.Game;
 using UnityEngine;
 using UnityEngine.TestTools;
+using UnityEngine.UI;
 using Object = UnityEngine.Object;
 
 namespace ShinobiDominion.Tests
@@ -92,6 +93,7 @@ namespace ShinobiDominion.Tests
             yield return new WaitForSeconds(0.5f);
             _controller.SkipBattle();
             Assert.AreEqual(RaidPhase.Resolved, _controller.CurrentRaidPhase);
+            yield return null;
             Assert.AreEqual(result.defendersAlive, Guards().Count(g => g.activeSelf), "Skipping should leave only the living guards");
             _controller.FinishRaid();
             yield return null;
@@ -112,6 +114,7 @@ namespace ShinobiDominion.Tests
             while (_controller.CurrentRaidPhase == RaidPhase.Battle && Time.realtimeSinceStartup < limit) yield return null;
             Time.timeScale = scale;
             Assert.AreEqual(RaidPhase.Resolved, _controller.CurrentRaidPhase);
+            yield return null;
             _controller.FinishRaid();
             yield return null;
         }
@@ -132,6 +135,93 @@ namespace ShinobiDominion.Tests
             var list = DefenseRecord.ParseList("{\"defenses\":[{\"stars\":2,\"damagePercent\":60,\"defendersAlive\":1,\"defendersTotal\":3,\"atMs\":5}]}");
             Assert.AreEqual(1, list.Count);
             Assert.AreEqual(3, list[0].defendersTotal);
+        }
+
+        [UnityTest]
+        public IEnumerator DungeonMap_ShowsChapters_AndScoutsTheChosenStage()
+        {
+            AssignTeam(1);
+            yield return null;
+            _controller.OpenAttack();
+            yield return null;
+            _controller.OpenCampaign();
+            yield return null;
+            Button Find(string name) => _root.GetComponentsInChildren<Button>(false).FirstOrDefault(b => b.name == name);
+            Assert.IsNotNull(Find("StageNode1"));
+            Assert.IsNotNull(Find("StageNode5"));
+            Assert.IsNull(Find("StageNode6"), "Stage 6 belongs to the next chapter");
+            Find("ChapterTab2").onClick.Invoke();
+            yield return null;
+            Assert.IsNotNull(Find("StageNode6"));
+            Find("StageNode7").onClick.Invoke();
+            yield return null;
+            Find("ScoutButton").onClick.Invoke();
+            yield return null;
+            Assert.AreEqual(RaidPhase.Prepare, _controller.CurrentRaidPhase);
+            Assert.AreEqual("stage_07", _controller.CurrentRaidSession.raid.id);
+            _controller.RetreatRaid();
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator Battle_ShowsHud_GravesAndSound_WithoutErrors()
+        {
+            AssignTeam(6);
+            yield return null;
+            _controller.ScoutRaid("stage_05");
+            _controller.AutoPlaceHeroes();
+            _controller.StartBattle();
+            yield return null;
+            Assert.IsNotNull(GameObject.Find("BattleHud"), "The battle screen should show its panel");
+            var scale = Time.timeScale;
+            Time.timeScale = 20f;
+            var limit = Time.realtimeSinceStartup + 60f;
+            while (_controller.CurrentRaidPhase == RaidPhase.Battle && Time.realtimeSinceStartup < limit) yield return null;
+            Time.timeScale = scale;
+            Assert.AreEqual(RaidPhase.Resolved, _controller.CurrentRaidPhase);
+            yield return null;
+            Assert.IsNull(GameObject.Find("BattleHud"), "The panel should go when the battle ends");
+            var result = _controller.LastRaidOutcome.Result;
+            var falls = result.events.Count(e => e[1] == (long)BattleEventKind.HeroDown || e[1] == (long)BattleEventKind.DefenderDown);
+            var graves = Object.FindObjectsByType<Transform>(FindObjectsSortMode.None).Count(t => t.name == "Grave");
+            Assert.AreEqual(falls, graves, "Every fallen fighter should leave a stone");
+            _controller.FinishRaid();
+            yield return null;
+        }
+
+        [Test]
+        public void EverySound_CanBeMade()
+        {
+            foreach (GameSound sound in Enum.GetValues(typeof(GameSound)))
+            {
+                var clip = GameSounds.ClipFor(sound);
+                Assert.IsNotNull(clip, sound.ToString());
+                Assert.Greater(clip.length, 0f, sound.ToString());
+                var samples = new float[clip.samples];
+                clip.GetData(samples, 0);
+                Assert.Greater(samples.Max(Mathf.Abs), 0.05f, sound + " should not be silent");
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator Village_HasWalkers_ThatMove_AndStayOutOfBuildings()
+        {
+            yield return null;
+            var life = Object.FindAnyObjectByType<VillageLife>();
+            Assert.IsNotNull(life);
+            Assert.Greater(life.WalkerCount, 0);
+            var walkers = life.GetComponentsInChildren<Transform>().Where(t => t.name == "VillageWalker").ToList();
+            var start = walkers.Select(w => w.position).ToList();
+            var scale = Time.timeScale;
+            Time.timeScale = 10f;
+            yield return new WaitForSeconds(30f);
+            Time.timeScale = scale;
+            Assert.IsTrue(walkers.Select((w, i) => (w.position - start[i]).sqrMagnitude > 0.01f).Any(moved => moved), "Someone should have walked");
+            foreach (var walker in walkers)
+            {
+                var cell = new GridCoord(Mathf.FloorToInt(walker.position.x), Mathf.FloorToInt(walker.position.z));
+                if (VillageGrid.InBounds(cell.X, cell.Z)) Assert.AreEqual(VillageGrid.NoOccupant, _controller.Village.Grid.OccupantAt(cell), $"A walker is inside a building at {cell.X},{cell.Z}");
+            }
         }
 
         [UnityTest]
@@ -157,6 +247,14 @@ namespace ShinobiDominion.Tests
             _controller.OpenAttack();
             yield return null;
             yield return ScreenCaptureTests.Capture(camera, texture, Path.Combine(dir, "defenders_attack_panel.png"));
+
+            _controller.OpenCampaign();
+            yield return null;
+            yield return ScreenCaptureTests.Capture(camera, texture, Path.Combine(dir, "campaign_map.png"));
+            _controller.CloseAll();
+            yield return null;
+            _controller.OpenAttack();
+            yield return null;
 
             _controller.ScoutRaid(Garrison);
             yield return null;
@@ -186,6 +284,7 @@ namespace ShinobiDominion.Tests
 
             camera.orthographicSize = 14f;
             camera.transform.position = new Vector3(25f, 0f, 25f) - camera.transform.forward * 80f;
+            canvas.gameObject.SetActive(true);
             yield return ScreenCaptureTests.Capture(camera, texture, Path.Combine(dir, "defenders_battle_wide.png"));
 
             canvas.gameObject.SetActive(true);
