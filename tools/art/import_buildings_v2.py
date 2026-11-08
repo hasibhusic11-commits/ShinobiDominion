@@ -37,12 +37,73 @@ def save(px, path):
 
 meta = json.load(open(META)) if os.path.exists(META) else {}
 found = {}
-for path in sorted(glob.glob(os.path.join(SRC, '*_level_*.png'))):
+def wall_segment(px, left, level):
+    """
+    A one-tile wall segment with a post at each end. Its front end's lowest point is the anchor (where the post's
+    base front corner meets the ground); the far end's lowest point is one tile away. The run is sheared to the
+    game's 2:1 slope, then padded so the anchor is the bottom centre. Returns (name, pixels per tile step).
+    """
+    if left:
+        px = px[:, ::-1]
+    alpha = px[..., 3] > 0.3
+    cols = np.where(alpha.any(0))[0]
+    c0, c1 = cols.min(), cols.max()
+    span = c1 - c0
+
+    def lowest(a, b):
+        best_y, xs = -1, []
+        for x in range(a, b):
+            ys = np.where(alpha[:, x])[0]
+            if not len(ys):
+                continue
+            y = ys.max()
+            if y > best_y:
+                best_y, xs = y, [x]
+            elif y == best_y:
+                xs.append(x)
+        return best_y, int(np.mean(xs))
+
+    yl, xl = lowest(c0, c0 + int(span * 0.35))
+    yr, xr = lowest(c1 - int(span * 0.35), c1 + 1)
+    dx = xr - xl
+    k = (0.5 * dx - (yl - yr)) / dx
+    h, w = px.shape[:2]
+    pad = int(abs(k) * w) + 2
+    out = np.zeros((h + 2 * pad, w, 4), dtype=np.float32)
+    for x in range(w):
+        s = (x - xl) * k
+        i, f = int(np.floor(s)), s - np.floor(s)
+        top = pad - i
+        out[top:top + h, x] += px[:, x] * (1 - f)
+        out[top - 1:top - 1 + h, x] += px[:, x] * f
+    anchor_y = yl + pad
+    half = max(xl - c0, c1 - xl) + 4
+    canvas = np.zeros((anchor_y + 2, 2 * half, 4), dtype=np.float32)
+    src = out[:anchor_y + 2, max(xl - half, 0):xl + half]
+    off = half - (xl - max(xl - half, 0))
+    canvas[:, off:off + src.shape[1]] = src
+    rows = np.where((canvas[..., 3] > 0.04).any(1))[0]
+    canvas = canvas[max(rows.min() - 2, 0):]
+    if left:
+        canvas = canvas[:, ::-1]
+    name = 'wall_seg_%s_%02d' % ('z' if left else 'x', level)
+    save(canvas, os.path.join(OUT, name + '.png'))
+    return name, int(dx)
+
+
+for path in sorted(glob.glob(os.path.join(SRC, '**', '*_level_*.png'), recursive=True)):
     m = re.match(r'(.+)_level_(\d+)\.png$', os.path.basename(path))
     if not m:
         continue
     bid, level = m.group(1), int(m.group(2))
     px = load(path)
+    if bid.startswith('wall_segment_'):
+        name, step = wall_segment(px, bid.endswith('_left'), level)
+        meta[name] = step
+        print('IMPORTED', name, 'step', step)
+        continue
+    if bid == 'wall_post':
+        bid = 'wall_post_v2'
     alpha = px[..., 3] > 0.08
     rows = np.where(alpha.any(1))[0]
     cols = np.where(alpha.any(0))[0]

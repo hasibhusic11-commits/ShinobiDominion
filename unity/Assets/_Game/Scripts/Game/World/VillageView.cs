@@ -216,6 +216,17 @@ namespace ShinobiDominion.Game
                 var south = (mask & Village.WallSouth) != 0;
                 var west = (mask & Village.WallWest) != 0;
 
+                if (SegmentArt)
+                {
+                    // Second-round art: each segment carries a post at both ends and is one tile long, anchored on
+                    // its front post. A wall with no neighbours stands as a lone post.
+                    var post = center - new Vector3(SegmentPostHalf, 0f, SegmentPostHalf);
+                    if (east) Segment($"wall_seg_x_{art:00}", post, BuildingSprites.Order(center + new Vector3(0.5f, 0f, 0f)));
+                    if (north) Segment($"wall_seg_z_{art:00}", post, BuildingSprites.Order(center + new Vector3(0f, 0f, 0.5f)));
+                    if (!north && !east && !south && !west) Segment($"wall_post_v2_{art:00}", post, BuildingSprites.Order(center) + 1);
+                    continue;
+                }
+
                 // Each wall draws the arms that leave it northwards and eastwards; the neighbour's arm brings the
                 // post that stands on this cell. A cell nothing arrives at gets its own post.
                 if (north) Piece($"wall_arm_z_{art:00}", junction, BuildingSprites.Order(center + new Vector3(0f, 0f, 0.5f)));
@@ -225,6 +236,43 @@ namespace ShinobiDominion.Game
 
             for (var i = _used; i < _pieces.Count; i++) _pieces[i].gameObject.SetActive(false);
             for (var i = _shadowsUsed; i < _shadows.Count; i++) _shadows[i].gameObject.SetActive(false);
+        }
+
+        /// <summary>The owner's second wall set (segments with posts), when imported.</summary>
+        private static bool SegmentArt => BuildingSprites.Load("wall_seg_x_01") != null;
+
+        /// <summary>Half the post's width: its front corner sits this far towards the camera from the cell centre.</summary>
+        private const float SegmentPostHalf = 0.17f;
+
+        /// <summary>
+        /// A segment or lone post. Segments are sized so one tile step (listed in art_meta.json in pixels) spans
+        /// one cell; the post uses the same pixel scale as the segments of its level.
+        /// </summary>
+        private void Segment(string name, Vector3 foot, int order)
+        {
+            var sprite = BuildingSprites.Load(name);
+            if (sprite == null) return;
+            var level = name.Substring(name.Length - 2);
+            var step = BuildingSprites.MetaPixels($"wall_seg_x_{level}");
+            if (step <= 0f) step = 184f;
+            var screenWidth = sprite.rect.width / step * 0.70710678f;
+            SpriteRenderer piece;
+            if (_used < _pieces.Count)
+            {
+                piece = _pieces[_used];
+                piece.gameObject.SetActive(true);
+                piece.sprite = sprite;
+                piece.sortingOrder = order;
+                piece.transform.SetPositionAndRotation(foot, BuildingSprites.Upright);
+                var scale = screenWidth / Mathf.Max(sprite.bounds.size.x, 0.001f);
+                piece.transform.localScale = new Vector3(scale, scale * BuildingSprites.Lift, 1f);
+            }
+            else
+            {
+                piece = BuildingSprites.Stand(_renderer.transform, "WallPiece", sprite, foot, screenWidth, order, Color.white);
+                _pieces.Add(piece);
+            }
+            _used++;
         }
 
         private void Shadow(Vector3 center)

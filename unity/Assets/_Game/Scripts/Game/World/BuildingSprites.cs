@@ -36,6 +36,13 @@ namespace ShinobiDominion.Game
         /// lists it in Resources/Buildings/art_meta.json (pixels), so weapons or lanterns may overhang the footprint.
         /// Other art fills its picture with the base, so the picture's width is used.
         /// </summary>
+        /// <summary>A number from art_meta.json (pixels), or 0 when the picture is not listed.</summary>
+        public static float MetaPixels(string name)
+        {
+            if (_baseWidths == null) BaseWidth(null);
+            return _baseWidths.TryGetValue(name, out var pixels) ? pixels : 0f;
+        }
+
         public static float BaseWidth(Sprite sprite)
         {
             if (_baseWidths == null)
@@ -46,6 +53,7 @@ namespace ShinobiDominion.Game
                     foreach (var pair in Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, float>>(meta.text))
                         _baseWidths[pair.Key] = pair.Value;
             }
+            if (sprite == null) return 0f;
             return _baseWidths.TryGetValue(sprite.name, out var pixels) ? pixels / sprite.pixelsPerUnit : sprite.bounds.size.x;
         }
 
