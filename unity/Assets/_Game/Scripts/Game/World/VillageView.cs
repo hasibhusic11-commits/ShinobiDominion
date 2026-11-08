@@ -483,6 +483,7 @@ namespace ShinobiDominion.Game
         private readonly Transform _root;
         private readonly Dictionary<int, Entry> _views = new Dictionary<int, Entry>();
         private readonly WallView _walls;
+        private VillageProps _props;
         private readonly Dictionary<string, Mesh> _meshCache = new Dictionary<string, Mesh>();
         private readonly Dictionary<string, Material[]> _materialCache = new Dictionary<string, Material[]>();
         private readonly System.Func<string, HeroLook> _heroLook;
@@ -498,6 +499,7 @@ namespace ShinobiDominion.Game
             _root = new GameObject("Buildings").transform;
             _root.SetParent(parent, false);
             _walls = new WallView(parent);
+            _props = new VillageProps(village, parent);
             Sync();
         }
 
@@ -512,6 +514,7 @@ namespace ShinobiDominion.Game
         {
             _root.gameObject.SetActive(visible);
             _walls.SetVisible(visible);
+            _props?.SetVisible(visible);
         }
 
         /// <summary>Removes a destroyed building from view. The village data itself is untouched.</summary>
@@ -577,6 +580,7 @@ namespace ShinobiDominion.Game
             }
 
             _walls.Rebuild(_village, _hiddenId, _gone);
+            _props?.Refresh(_hiddenId);
         }
 
         private Entry Create(BuildingInstance building, HeroLook look, string signature)

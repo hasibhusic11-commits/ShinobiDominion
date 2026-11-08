@@ -23,7 +23,7 @@ namespace ShinobiDominion.EditorTools
         {
             var path = assetPath.Replace('\\', '/');
             var ui = path.Contains("/Resources/UI/");
-            var building = path.Contains("/Resources/Buildings/");
+            var building = path.Contains("/Resources/Buildings/") || path.Contains("/Resources/Props/");
             if (!ui && !building) return;
             var importer = (TextureImporter)assetImporter;
             importer.textureType = TextureImporterType.Sprite;
