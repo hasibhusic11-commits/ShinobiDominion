@@ -29,6 +29,26 @@ namespace ShinobiDominion.Game
 
         public static bool Has(string id) => For(id, 1) != null;
 
+        private static Dictionary<string, float> _baseWidths;
+
+        /// <summary>
+        /// Width in world units of the picture's base diamond. Art made to the framing in docs/art/tower_wall_prompts.md
+        /// lists it in Resources/Buildings/art_meta.json (pixels), so weapons or lanterns may overhang the footprint.
+        /// Other art fills its picture with the base, so the picture's width is used.
+        /// </summary>
+        public static float BaseWidth(Sprite sprite)
+        {
+            if (_baseWidths == null)
+            {
+                _baseWidths = new Dictionary<string, float>();
+                var meta = Resources.Load<TextAsset>("Buildings/art_meta");
+                if (meta != null)
+                    foreach (var pair in Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, float>>(meta.text))
+                        _baseWidths[pair.Key] = pair.Value;
+            }
+            return _baseWidths.TryGetValue(sprite.name, out var pixels) ? pixels / sprite.pixelsPerUnit : sprite.bounds.size.x;
+        }
+
         public static Sprite Load(string name)
         {
             if (Cache.TryGetValue(name, out var sprite)) return sprite;
@@ -167,7 +187,7 @@ namespace ShinobiDominion.Game
             var half = (size.x + size.y) * 0.25f;
             transform.SetPositionAndRotation(parent.position + new Vector3(-half, 0f, -half), BuildingSprites.Upright);
             var screenWidth = (size.x + size.y) * 0.70710678f;
-            var scale = screenWidth / Mathf.Max(_renderer.sprite.bounds.size.x, 0.001f);
+            var scale = screenWidth / Mathf.Max(BuildingSprites.BaseWidth(_renderer.sprite), 0.001f);
             var parentScale = parent.lossyScale;
             transform.localScale = new Vector3(scale / parentScale.x, scale * BuildingSprites.Lift / parentScale.y, 1f / parentScale.z);
             _renderer.sortingOrder = OnTop ? short.MaxValue : BuildingSprites.Order(parent.position);
