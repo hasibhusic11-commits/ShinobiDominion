@@ -61,7 +61,7 @@ namespace ShinobiDominion.Game
         /// <summary>An upright picture that grows from <paramref name="start"/> by <paramref name="grow"/> times and fades out.</summary>
         private static void Puff(Transform parent, Sprite sprite, Vector3 at, float start, float grow, float duration, Color color)
         {
-            var renderer = BuildingSprites.Stand(parent, "Puff", sprite, at, start, short.MaxValue - 2, color);
+            var renderer = BuildingSprites.Stand(parent, "Puff", sprite, at, start, BuildingSprites.Order(at) + 60, color);
             var t = renderer.transform;
             var baseScale = t.localScale;
             LMotion.Create(0f, 1f, duration).WithEase(Ease.OutCubic).WithScheduler(Clock)

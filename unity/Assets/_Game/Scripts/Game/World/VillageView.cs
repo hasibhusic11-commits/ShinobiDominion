@@ -473,7 +473,7 @@ namespace ShinobiDominion.Game
             var bubble = Resources.Load<Sprite>(kind == ResourceKind.Crystals ? "Props/collect_bubble_crystal" : "Props/collect_bubble_gold");
             var holder = new GameObject("CollectMarker");
             holder.transform.SetParent(parent, false);
-            var art = BuildingSprites.Stand(holder.transform, "Bubble", bubble, parent.position + Vector3.up * 2.35f, 0.95f, short.MaxValue - 1, Color.white);
+            var art = BuildingSprites.Stand(holder.transform, "Bubble", bubble, parent.position + Vector3.up * 2.35f, 0.95f, BuildingSprites.Order(parent.position) + 40, Color.white);
             art.gameObject.AddComponent<Bob>();
             return holder;
         }
