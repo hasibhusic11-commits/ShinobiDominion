@@ -79,7 +79,6 @@ namespace ShinobiDominion.Game
         private PanelView _panel;
         private RectTransform _uiRoot;
         private bool _dirty;
-        private BuildingThumbnails _thumbnails;
         private float _markerTimer;
 
         // Placement state
@@ -127,7 +126,6 @@ namespace ShinobiDominion.Game
             lifeObject.transform.SetParent(worldRoot, false);
             _life = lifeObject.AddComponent<VillageLife>();
             _life.Initialize(village, TroopData.All[0].id, VillageLifeWalkers);
-            _thumbnails = new BuildingThumbnails(worldRoot);
             RefreshCollectMarkers();
             _grid = new GridOverlay(worldRoot);
             _placementCells = new CellHighlight(worldRoot, "PlacementCells", GoodCell, BadCell, 0.03f);
@@ -147,7 +145,6 @@ namespace ShinobiDominion.Game
             if (Village != null) Village.Changed -= OnVillageChanged;
             if (Roster != null) Roster.Changed -= OnRosterChanged;
             UiState.Changed -= ApplyUiState;
-            _thumbnails?.Dispose();
         }
 
         private const int VillageLifeWalkers = 10;
@@ -234,7 +231,7 @@ namespace ShinobiDominion.Game
         private void RefreshHud()
         {
             _hud.SetWallet(Village.Gold, ServerCrystals ?? Village.Crystals, Village.GoldCapacity, Chakra);
-            _hud.SetIdentity("Player", Village.HqLevel, Power);
+            _hud.SetIdentity("Player", Village.HqLevel);
             _hud.SetPortrait(GuardPortrait());
         }
 
@@ -405,9 +402,7 @@ namespace ShinobiDominion.Game
                 return;
             }
 
-            var definition = building.Definition;
             // Every building, the Altar and the Gate included, shows its action row first, so each one can be moved.
-            _showAltarBuildingOptions = false;
             _panel.Hide();
             ShowActionBar(building);
         }
@@ -726,20 +721,10 @@ namespace ShinobiDominion.Game
             glow.color = new Color(1f, 0.8f, 0.45f, 0.4f);
             var preview = Ui.Rect("Preview", well);
             Ui.Anchor(preview, new Vector2(0.5f, 0.5f), new Vector2(170f, 170f), new Vector2(0f, -4f));
-            var painted = BuildingSprites.For(definition.id, 1);
-            if (painted != null)
-            {
-                var picture = preview.gameObject.AddComponent<Image>();
-                picture.sprite = painted;
-                picture.preserveAspect = true;
-                picture.raycastTarget = false;
-            }
-            else
-            {
-                var image = preview.gameObject.AddComponent<RawImage>();
-                image.texture = _thumbnails.For(definition);
-                image.raycastTarget = false;
-            }
+            var picture = preview.gameObject.AddComponent<Image>();
+            picture.sprite = BuildingSprites.For(definition.id, 1);
+            picture.preserveAspect = true;
+            picture.raycastTarget = false;
 
             var title = HudArt.Label(rect, definition.displayName, HudArt.Display, 18, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.LacquerDeep);
             Ui.Anchor(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(180f, 32f), new Vector2(0f, -12f));

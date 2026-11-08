@@ -61,7 +61,6 @@ namespace ShinobiDominion.Game
 
         private FileRosterStore _rosterStore;
         private bool _rosterDirty;
-        private bool _showAltarBuildingOptions;
         private HeroRarity? _rarityFilter;
         private HeroRole? _roleFilter;
         private HeroAffinity? _affinityFilter;
@@ -168,7 +167,6 @@ namespace ShinobiDominion.Game
             }
         }
 
-        private string WalletInfo => $"Gold {Village.Gold:N0}     Crystals {Village.Crystals:N0}";
 
         // ---------- Hero cards ----------
 
@@ -335,7 +333,6 @@ namespace ShinobiDominion.Game
 
                 panel.Action("AltarOptionsButton", "Altar building options", () =>
                 {
-                    _showAltarBuildingOptions = true;
                     ShowContextPanel();
                 });
             });

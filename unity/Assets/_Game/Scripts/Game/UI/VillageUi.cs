@@ -602,8 +602,7 @@ namespace ShinobiDominion.Game
         private string _shownName;
         private int _shownLevel = -1;
 
-        /// <summary>Name and level. The newest mockup shows no power number, so <paramref name="power"/> is not drawn.</summary>
-        public void SetIdentity(string displayName, int level, long power = 0)
+        public void SetIdentity(string displayName, int level)
         {
             if (displayName != _shownName)
             {

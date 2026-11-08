@@ -134,68 +134,31 @@ namespace ShinobiDominion.Game
     }
 
     /// <summary>
-    /// Draws all walls as one rebuilt mesh from modular parts: a stone footing, a plaster and timber
-    /// body and a tiled cap. Each neighbour adds an arm, so straights, corners, ends and junctions
-    /// all join up. Levels change the materials, so upgrades show without new game logic.
+    /// Draws the walls from the owner's painted pieces (Resources/Buildings, imported by
+    /// tools/art/import_buildings_v2.py). Each segment is one tile long with a post at both ends, anchored on
+    /// its front post: a wall draws the segments that leave it eastwards and northwards, so straights, corners,
+    /// ends and junctions all join up. A wall with no neighbours stands as a lone post.
     /// </summary>
     public sealed class WallView
     {
-        private readonly MeshRenderer _renderer;
-        private readonly MeshFilter _filter;
+        /// <summary>Half the post's width: its front corner sits this far towards the camera from the cell centre.</summary>
+        private const float PostHalf = 0.17f;
+
+        private readonly Transform _root;
+        private readonly List<SpriteRenderer> _pieces = new List<SpriteRenderer>();
+        private readonly List<SpriteRenderer> _shadows = new List<SpriteRenderer>();
+        private int _used;
+        private int _shadowsUsed;
 
         public WallView(Transform parent)
         {
-            var go = new GameObject("Walls");
-            go.transform.SetParent(parent, false);
-            _filter = go.AddComponent<MeshFilter>();
-            _renderer = go.AddComponent<MeshRenderer>();
-            _renderer.sharedMaterial = Mats.World;
+            _root = new GameObject("Walls").transform;
+            _root.SetParent(parent, false);
         }
 
-        public void SetVisible(bool visible) => _renderer.gameObject.SetActive(visible);
-
-        public void Dispose()
-        {
-            if (_filter.sharedMesh != null) Object.Destroy(_filter.sharedMesh);
-        }
-
-        // The painted wall (owner's art pack) is a V: two arms meeting at the front, each ending in a post.
-        // The importer cuts it into the arm that runs along +Z, the arm along +X, and a lone post. One arm is
-        // one cell long: 186 px of picture across 1 / sqrt 2 world units of screen width.
-        private const float WallArmPixels = 186f;
-        private const float WallHalfThickness = 0.25f;
-        private readonly List<SpriteRenderer> _pieces = new List<SpriteRenderer>();
-        private int _used;
-        private readonly List<SpriteRenderer> _shadows = new List<SpriteRenderer>();
-        private int _shadowsUsed;
-
-        /// <summary>Walls stand taller than painted, so a run reads as a wall rather than a fence from the village camera.</summary>
-        private const float WallHeight = 1.35f;
-
-        private static bool Painted => BuildingSprites.Load("wall_arm_z_01") != null;
+        public void SetVisible(bool visible) => _root.gameObject.SetActive(visible);
 
         public void Rebuild(Village village, int hiddenWallId, HashSet<int> gone = null)
-        {
-            if (Painted)
-            {
-                RebuildPainted(village, hiddenWallId, gone);
-                return;
-            }
-
-            var builder = new MeshBuilder();
-            foreach (var building in village.Buildings)
-            {
-                if (!building.Definition.IsWall || building.Id == hiddenWallId) continue;
-                if (gone != null && gone.Contains(building.Id)) continue;
-                AddSegment(builder, village, building, hiddenWallId, gone);
-            }
-
-            var old = _filter.sharedMesh;
-            _filter.sharedMesh = builder.Build("Walls");
-            if (old != null) Object.Destroy(old);
-        }
-
-        private void RebuildPainted(Village village, int hiddenWallId, HashSet<int> gone)
         {
             _used = 0;
             _shadowsUsed = 0;
@@ -208,58 +171,33 @@ namespace ShinobiDominion.Game
 
                 var art = BuildingSprites.ArtLevel(wall.Level);
                 var center = GridSpace.CellCenter(wall.Origin);
-                // The arms meet at the front corner of the wall's base, half a thickness towards the camera.
-                var junction = center - new Vector3(WallHalfThickness, 0f, WallHalfThickness);
+                var post = center - new Vector3(PostHalf, 0f, PostHalf);
                 Shadow(center);
                 var north = (mask & Village.WallNorth) != 0;
                 var east = (mask & Village.WallEast) != 0;
-                var south = (mask & Village.WallSouth) != 0;
-                var west = (mask & Village.WallWest) != 0;
-
-                if (SegmentArt)
-                {
-                    // Second-round art: each segment carries a post at both ends and is one tile long, anchored on
-                    // its front post. A wall with no neighbours stands as a lone post.
-                    var post = center - new Vector3(SegmentPostHalf, 0f, SegmentPostHalf);
-                    if (east) Segment($"wall_seg_x_{art:00}", post, BuildingSprites.Order(center + new Vector3(0.5f, 0f, 0f)));
-                    if (north) Segment($"wall_seg_z_{art:00}", post, BuildingSprites.Order(center + new Vector3(0f, 0f, 0.5f)));
-                    if (!north && !east && !south && !west) Segment($"wall_post_v2_{art:00}", post, BuildingSprites.Order(center) + 1);
-                    continue;
-                }
-
-                // Each wall draws the arms that leave it northwards and eastwards; the neighbour's arm brings the
-                // post that stands on this cell. A cell nothing arrives at gets its own post.
-                if (north) Piece($"wall_arm_z_{art:00}", junction, BuildingSprites.Order(center + new Vector3(0f, 0f, 0.5f)));
-                if (east) Piece($"wall_arm_x_{art:00}", junction, BuildingSprites.Order(center + new Vector3(0.5f, 0f, 0f)));
-                if (!south && !west) Piece($"wall_post_{art:00}", junction, BuildingSprites.Order(center) + 1);
+                if (east) Piece($"wall_seg_x_{art:00}", art, post, BuildingSprites.Order(center + new Vector3(0.5f, 0f, 0f)));
+                if (north) Piece($"wall_seg_z_{art:00}", art, post, BuildingSprites.Order(center + new Vector3(0f, 0f, 0.5f)));
+                if (mask == 0) Piece($"wall_post_v2_{art:00}", art, post, BuildingSprites.Order(center) + 1);
             }
 
             for (var i = _used; i < _pieces.Count; i++) _pieces[i].gameObject.SetActive(false);
             for (var i = _shadowsUsed; i < _shadows.Count; i++) _shadows[i].gameObject.SetActive(false);
         }
 
-        /// <summary>The owner's second wall set (segments with posts), when imported.</summary>
-        private static bool SegmentArt => BuildingSprites.Load("wall_seg_x_01") != null;
-
-        /// <summary>Half the post's width: its front corner sits this far towards the camera from the cell centre.</summary>
-        private const float SegmentPostHalf = 0.17f;
-
         /// <summary>
-        /// A segment or lone post. Segments are sized so one tile step (listed in art_meta.json in pixels) spans
-        /// one cell; the post uses the same pixel scale as the segments of its level.
+        /// A segment or lone post, sized so one tile step (art_meta.json, in pixels) spans one cell; the post uses
+        /// the same pixel scale as the segments of its level.
         /// </summary>
-        private void Segment(string name, Vector3 foot, int order)
+        private void Piece(string name, int art, Vector3 foot, int order)
         {
             var sprite = BuildingSprites.Load(name);
             if (sprite == null) return;
-            var level = name.Substring(name.Length - 2);
-            var step = BuildingSprites.MetaPixels($"wall_seg_x_{level}");
+            var step = BuildingSprites.MetaPixels($"wall_seg_x_{art:00}");
             if (step <= 0f) step = 184f;
             var screenWidth = sprite.rect.width / step * 0.70710678f;
-            SpriteRenderer piece;
             if (_used < _pieces.Count)
             {
-                piece = _pieces[_used];
+                var piece = _pieces[_used];
                 piece.gameObject.SetActive(true);
                 piece.sprite = sprite;
                 piece.sortingOrder = order;
@@ -269,8 +207,7 @@ namespace ShinobiDominion.Game
             }
             else
             {
-                piece = BuildingSprites.Stand(_renderer.transform, "WallPiece", sprite, foot, screenWidth, order, Color.white);
-                _pieces.Add(piece);
+                _pieces.Add(BuildingSprites.Stand(_root, "WallPiece", sprite, foot, screenWidth, order, Color.white));
             }
             _used++;
         }
@@ -285,88 +222,11 @@ namespace ShinobiDominion.Game
             }
             else
             {
-                shadow = BuildingSprites.GroundShadow(_renderer.transform, 1f, 1f, 0.42f);
+                shadow = BuildingSprites.GroundShadow(_root, 1f, 1f, 0.42f);
                 _shadows.Add(shadow);
             }
             shadow.transform.position = center + new Vector3(0.18f, 0.012f, -0.1f);
             _shadowsUsed++;
-        }
-
-        private void Piece(string name, Vector3 foot, int order)
-        {
-            var sprite = BuildingSprites.Load(name);
-            if (sprite == null) return;
-            var screenWidth = sprite.rect.width / WallArmPixels * 0.70710678f;
-            SpriteRenderer piece;
-            if (_used < _pieces.Count)
-            {
-                piece = _pieces[_used];
-                piece.gameObject.SetActive(true);
-                piece.sprite = sprite;
-                piece.sortingOrder = order;
-                piece.transform.SetPositionAndRotation(foot, BuildingSprites.Upright);
-                var scale = screenWidth / Mathf.Max(sprite.bounds.size.x, 0.001f);
-                piece.transform.localScale = new Vector3(scale, scale * BuildingSprites.Lift * WallHeight, 1f);
-            }
-            else
-            {
-                piece = BuildingSprites.Stand(_renderer.transform, "WallPiece", sprite, foot, screenWidth, order, Color.white);
-                var size = piece.transform.localScale;
-                piece.transform.localScale = new Vector3(size.x, size.y * WallHeight, 1f);
-                _pieces.Add(piece);
-            }
-            _used++;
-        }
-
-        private static void AddSegment(MeshBuilder builder, Village village, BuildingInstance wall, int hiddenWallId, HashSet<int> gone)
-        {
-            var center = GridSpace.CellCenter(wall.Origin);
-            var mask = ConnectionsExcluding(village, wall.Origin, hiddenWallId);
-            if (gone != null) mask = WithoutFallen(village, wall.Origin, mask, gone);
-
-            // Upgrades read at a glance: each level is taller, and each tier changes the materials.
-            var skin = BuildingSkin.For("wall", wall.Level);
-            var height = 0.82f + 0.03f * (wall.Level - 1);
-            const float thickness = 0.56f;
-            const float arm = 0.27f;
-
-            var north = (mask & Village.WallNorth) != 0;
-            var south = (mask & Village.WallSouth) != 0;
-            var east = (mask & Village.WallEast) != 0;
-            var west = (mask & Village.WallWest) != 0;
-            var straight = (north && south && !east && !west) || (east && west && !north && !south);
-
-            // Corners, junctions and ends get a heavier post, so the wall has a rhythm.
-            var postHeight = straight ? height : height + 0.24f;
-            var postWidth = straight ? thickness : thickness + 0.16f;
-            Section(builder, center, new Vector2(postWidth, postWidth), postHeight, skin);
-            if (!straight)
-            {
-                var top = center + Vector3.up * (postHeight + 0.2f);
-                builder.Cylinder(top, 0.05f, 0.015f, 0.2f, 5, skin.Amber);
-                if (skin.Tier >= 1) builder.Box(center + new Vector3(0f, height * 0.75f, -postWidth * 0.5f - 0.01f), new Vector3(0.16f, 0.14f, 0.02f), skin.WindowGlow, ArtSurface.Plain, 0f, 0.85f);
-                if (skin.Tier >= 4) builder.Blob(top + Vector3.up * 0.26f, Vector3.one * 0.07f, skin.Crystal, ArtSurface.Plain, 0f, 1f, 5, 3);
-            }
-
-            var offset = 0.14f + arm * 0.5f + 0.09f;
-            if (north) Section(builder, center + new Vector3(0, 0, offset), new Vector2(thickness, arm + 0.04f), height, skin);
-            if (south) Section(builder, center + new Vector3(0, 0, -offset), new Vector2(thickness, arm + 0.04f), height, skin);
-            if (east) Section(builder, center + new Vector3(offset, 0, 0), new Vector2(arm + 0.04f, thickness), height, skin);
-            if (west) Section(builder, center + new Vector3(-offset, 0, 0), new Vector2(arm + 0.04f, thickness), height, skin);
-        }
-
-        private static void Section(MeshBuilder builder, Vector3 at, Vector2 size, float height, BuildingSkin skin)
-        {
-            var foot = height * 0.42f;
-            builder.Box(at, new Vector3(size.x + 0.04f, foot, size.y + 0.04f), skin.Stone, skin.StoneSurface);
-            builder.Box(at + Vector3.up * foot, new Vector3(size.x - 0.02f, height - foot, size.y - 0.02f), skin.Plaster, skin.WallSurface);
-            builder.Box(at + Vector3.up * (height - 0.08f), new Vector3(size.x, 0.08f, size.y), skin.DarkWood, ArtSurface.Wood);
-            var rail = at + Vector3.up * (height * 0.7f);
-            var hx = size.x * 0.5f - 0.005f;
-            var hz = size.y * 0.5f - 0.005f;
-            builder.Quad(rail + new Vector3(-hx, -0.025f, -hz), rail + new Vector3(hx, -0.025f, -hz), rail + new Vector3(hx, 0.025f, -hz), rail + new Vector3(-hx, 0.025f, -hz), Vector3.back, skin.DarkWood, ArtSurface.Wood);
-            builder.Quad(rail + new Vector3(-hx, -0.025f, -hz), rail + new Vector3(-hx, -0.025f, hz), rail + new Vector3(-hx, 0.025f, hz), rail + new Vector3(-hx, 0.025f, -hz), Vector3.left, skin.DarkWood, ArtSurface.Wood);
-            builder.Frustum(at + Vector3.up * height, size.x + 0.16f, size.y + 0.16f, Mathf.Max(size.x - 0.26f, 0.08f), Mathf.Max(size.y - 0.26f, 0.08f), 0.2f, skin.Slate, skin.RoofSurface);
         }
 
         /// <summary>A wall stops joining up to a neighbour that has been destroyed.</summary>
@@ -401,71 +261,6 @@ namespace ShinobiDominion.Game
         }
     }
 
-    /// <summary>Renders each building's real mesh once to a texture, for catalog cards.</summary>
-    public sealed class BuildingThumbnails : System.IDisposable
-    {
-        private const int ThumbnailLayer = 31;
-        private readonly Dictionary<string, RenderTexture> _textures = new Dictionary<string, RenderTexture>();
-        private readonly Camera _camera;
-        private readonly Transform _stage;
-
-        public BuildingThumbnails(Transform parent)
-        {
-            _stage = new GameObject("ThumbnailStage").transform;
-            _stage.SetParent(parent, false);
-            _stage.position = new Vector3(0f, -500f, 0f);
-
-            var cameraObject = new GameObject("ThumbnailCamera", typeof(Camera));
-            cameraObject.transform.SetParent(_stage, false);
-            cameraObject.transform.localRotation = Quaternion.Euler(IsoCamera.Pitch, 45f, 0f);
-            _camera = cameraObject.GetComponent<Camera>();
-            _camera.enabled = false;
-            _camera.orthographic = true;
-            _camera.cullingMask = 1 << ThumbnailLayer;
-            _camera.clearFlags = CameraClearFlags.SolidColor;
-            _camera.backgroundColor = new Color(0f, 0f, 0f, 0f);
-            _camera.nearClipPlane = 0.1f;
-            _camera.farClipPlane = 60f;
-        }
-
-        public Texture For(BuildingDefinition definition)
-        {
-            if (_textures.TryGetValue(definition.id, out var existing) && existing != null) return existing;
-
-            var builder = BuildingMeshes.For(definition, null);
-            var mesh = builder.Build("Thumbnail");
-            var subject = new GameObject("Subject") { layer = ThumbnailLayer };
-            subject.transform.SetParent(_stage, false);
-            subject.AddComponent<MeshFilter>().sharedMesh = mesh;
-            var renderer = subject.AddComponent<MeshRenderer>();
-            renderer.sharedMaterials = builder.LitMaterials();
-
-            var center = mesh.bounds.center;
-            var extent = mesh.bounds.extents.magnitude;
-            _camera.orthographicSize = extent * 1.02f;
-            _camera.transform.localPosition = center - _camera.transform.forward * 30f;
-
-            var texture = new RenderTexture(256, 256, 24);
-            _camera.targetTexture = texture;
-            _camera.Render();
-            _camera.targetTexture = null;
-            _textures[definition.id] = texture;
-
-            // Destroy waits for end of frame, so hide it now or the next thumbnail would include it.
-            subject.SetActive(false);
-            Object.Destroy(subject);
-            Object.Destroy(mesh);
-            return texture;
-        }
-
-        public void Dispose()
-        {
-            foreach (var texture in _textures.Values)
-                if (texture != null) texture.Release();
-            _textures.Clear();
-        }
-    }
-
     /// <summary>Keeps world objects in sync with the Village model, and resolves taps to buildings.</summary>
     public sealed class VillageView
     {
@@ -484,13 +279,10 @@ namespace ShinobiDominion.Game
         private readonly Dictionary<int, Entry> _views = new Dictionary<int, Entry>();
         private readonly WallView _walls;
         private VillageProps _props;
-        private readonly Dictionary<string, Mesh> _meshCache = new Dictionary<string, Mesh>();
-        private readonly Dictionary<string, Material[]> _materialCache = new Dictionary<string, Material[]>();
         private readonly System.Func<string, HeroLook> _heroLook;
         private int _hiddenId;
         private readonly HashSet<int> _gone = new HashSet<int>();
 
-        public int ViewCount => _views.Count;
 
         public VillageView(Village village, Transform parent, System.Func<string, HeroLook> heroLook)
         {
@@ -524,14 +316,6 @@ namespace ShinobiDominion.Game
             Sync();
         }
 
-        public void Dispose()
-        {
-            _walls.Dispose();
-            foreach (var mesh in _meshCache.Values)
-                if (mesh != null) Object.Destroy(mesh);
-            _meshCache.Clear();
-        }
-
         public void Sync()
         {
             var alive = new HashSet<int>();
@@ -540,10 +324,7 @@ namespace ShinobiDominion.Game
                 if (building.Definition.IsWall || _gone.Contains(building.Id)) continue;
                 alive.Add(building.Id);
                 var look = building.AssignedHeroInstanceId != null ? _heroLook(building.AssignedHeroInstanceId) : null;
-                var art = BuildingSprites.Has(building.Definition.id)
-                    ? "art" + BuildingSprites.ArtLevel(building.Level)
-                    : "tier" + BuildingSkin.TierForLevel(building.Level);
-                var signature = $"{building.Definition.id}|{art}|{look?.Key}";
+                var signature = $"{building.Definition.id}|{BuildingSprites.ArtLevel(building.Level)}|{look?.Key}";
                 if (!_views.TryGetValue(building.Id, out var entry) || entry.Signature != signature)
                 {
                     if (entry != null) Object.Destroy(entry.Go);
@@ -555,18 +336,18 @@ namespace ShinobiDominion.Game
                 transform.localPosition = GridSpace.FootprintCenter(building.Footprint);
                 transform.localRotation = GridSpace.ToQuaternion(building.Rotation);
                 entry.Go.SetActive(building.Id != _hiddenId);
+                var footprint = building.Footprint;
+                var height = 1.5f;
                 if (entry.Stand != null)
                 {
                     entry.Stand.Place();
-                    var footprint = building.Footprint;
-                    var height = Mathf.Clamp(entry.Stand.WorldHeight * 0.75f, 0.6f, 4f);
-                    entry.Bounds = new Bounds(transform.position + Vector3.up * (height * 0.5f),
-                        new Vector3(footprint.Width * GridSpace.CellSize, height, footprint.Depth * GridSpace.CellSize));
-                    if (entry.Hero != null)
-                        foreach (var renderer in entry.Hero)
-                            if (renderer != null) renderer.sortingOrder = BuildingSprites.Order(transform.position) + 1;
+                    height = Mathf.Clamp(entry.Stand.WorldHeight * 0.75f, 0.6f, 4f);
                 }
-                else entry.Bounds = entry.Go.GetComponent<MeshRenderer>().bounds;
+                entry.Bounds = new Bounds(transform.position + Vector3.up * (height * 0.5f),
+                    new Vector3(footprint.Width * GridSpace.CellSize, height, footprint.Depth * GridSpace.CellSize));
+                if (entry.Hero != null)
+                    foreach (var renderer in entry.Hero)
+                        if (renderer != null) renderer.sortingOrder = BuildingSprites.Order(transform.position) + 1;
             }
 
             var dead = new List<int>();
@@ -589,14 +370,7 @@ namespace ShinobiDominion.Game
             go.transform.SetParent(_root, false);
             go.transform.localPosition = GridSpace.FootprintCenter(building.Footprint);
             go.transform.localRotation = GridSpace.ToQuaternion(building.Rotation);
-            // The owner's painted picture when there is one; the code-drawn mesh otherwise.
             var stand = BuildingSprites.Attach(go.transform, building.Definition, building.Level, Color.white);
-            if (stand == null)
-            {
-                GetMesh(building.Definition, look, building.Level, signature, out var mesh, out var materials);
-                go.AddComponent<MeshFilter>().sharedMesh = mesh;
-                go.AddComponent<MeshRenderer>().sharedMaterials = materials;
-            }
             AddEffects(go.transform, building.Definition);
             Renderer[] hero = null;
             if (building.Definition.function == BuildingFunction.HeroBase)
@@ -604,8 +378,8 @@ namespace ShinobiDominion.Game
                 var actor = HeroSprites.Spawn(look, go.transform);
                 if (actor != null)
                 {
-                    // The painted base is a low platform; the mesh had a taller pedestal.
-                    actor.transform.localPosition = Vector3.up * (stand != null ? 0.12f : BuildingMeshes.PedestalTop);
+                    // The painted base is a low platform; the hero stands just on top of it.
+                    actor.transform.localPosition = Vector3.up * 0.12f;
                     // Heroes stand large on their bases, so they read clearly from the village camera.
                     actor.transform.localScale = Vector3.one * 1.35f;
                     hero = actor.GetComponentsInChildren<Renderer>(true);
@@ -631,20 +405,6 @@ namespace ShinobiDominion.Game
             }
         }
 
-        private void GetMesh(BuildingDefinition definition, HeroLook hero, int level, string key, out Mesh mesh, out Material[] materials)
-        {
-            if (_meshCache.TryGetValue(key, out mesh))
-            {
-                materials = _materialCache[key];
-                return;
-            }
-            var builder = BuildingMeshes.For(definition, hero, level);
-            mesh = builder.Build(definition.id);
-            materials = builder.LitMaterials();
-            _meshCache[key] = mesh;
-            _materialCache[key] = materials;
-        }
-
         /// <summary>Floating markers over buildings with something to collect. Spatial, so the HUD stays clear.</summary>
         public void SetCollectMarkers(System.Func<BuildingInstance, bool> hasPending)
         {
@@ -661,32 +421,16 @@ namespace ShinobiDominion.Game
 
         private static GameObject CreateMarker(Transform parent, ResourceKind kind)
         {
-            // The owner's painted "ready to collect" bubble, bobbing over the building, when imported.
+            // The owner's painted "ready to collect" bubble, bobbing over the building.
             var bubble = Resources.Load<Sprite>(kind == ResourceKind.Crystals ? "Props/collect_bubble_crystal" : "Props/collect_bubble_gold");
-            if (bubble != null)
-            {
-                var holder = new GameObject("CollectMarker");
-                holder.transform.SetParent(parent, false);
-                var art = BuildingSprites.Stand(holder.transform, "Bubble", bubble, parent.position + Vector3.up * 2.35f, 0.95f, short.MaxValue - 1, Color.white);
-                art.gameObject.AddComponent<Bob>();
-                return holder;
-            }
-
-            var color = kind == ResourceKind.Crystals ? Palette.Crystal : Palette.Amber;
-            var builder = new MeshBuilder();
-            builder.ContactShade = false;
-            builder.Blob(new Vector3(0f, 2.75f, 0f), new Vector3(0.24f, 0.24f, 0.24f), color, ArtSurface.Plain, 0.6f, 0.65f, 8, 5);
-            builder.Frustum(new Vector3(0f, 2.3f, 0f), 0f, 0f, 0.26f, 0.26f, 0.22f, color, ArtSurface.Plain, 0.6f, 0.65f);
-            var marker = new GameObject("CollectMarker");
-            marker.transform.SetParent(parent, false);
-            marker.AddComponent<MeshFilter>().sharedMesh = builder.Build("CollectMarker");
-            var renderer = marker.AddComponent<MeshRenderer>();
-            renderer.sharedMaterials = builder.LitMaterials();
-            renderer.shadowCastingMode = ShadowCastingMode.Off;
-            return marker;
+            var holder = new GameObject("CollectMarker");
+            holder.transform.SetParent(parent, false);
+            var art = BuildingSprites.Stand(holder.transform, "Bubble", bubble, parent.position + Vector3.up * 2.35f, 0.95f, short.MaxValue - 1, Color.white);
+            art.gameObject.AddComponent<Bob>();
+            return holder;
         }
 
-        /// <summary>A ghost for placement: the same silhouette in a see-through tint.</summary>
+        /// <summary>A ghost for placement: the building's picture in a see-through tint, drawn over everything.</summary>
         public GameObject CreateGhost(BuildingDefinition definition, Color tint)
         {
             var go = new GameObject("PlacementGhost");
@@ -694,20 +438,9 @@ namespace ShinobiDominion.Game
             var stand = BuildingSprites.Attach(go.transform, definition, 1, new Color(tint.r, tint.g, tint.b, 0.7f));
             if (stand != null)
             {
-                // Above everything, so the ghost is never hidden while it is dragged.
                 stand.OnTop = true;
                 stand.Place();
-                return go;
             }
-
-            var key = $"{definition.id}|0|";
-            GetMesh(definition, null, 1, key, out var mesh, out var materials);
-            go.AddComponent<MeshFilter>().sharedMesh = mesh;
-            var renderer = go.AddComponent<MeshRenderer>();
-            var ghostMaterials = new Material[materials.Length];
-            for (var i = 0; i < ghostMaterials.Length; i++) ghostMaterials[i] = Mats.Overlay(tint);
-            renderer.sharedMaterials = ghostMaterials;
-            renderer.shadowCastingMode = ShadowCastingMode.Off;
             return go;
         }
 

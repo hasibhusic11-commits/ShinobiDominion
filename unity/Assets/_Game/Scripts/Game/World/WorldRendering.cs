@@ -131,44 +131,6 @@ namespace ShinobiDominion.Game
         /// <summary>Darkens geometry close to the ground, a cheap stand-in for ambient occlusion.</summary>
         public bool ContactShade = true;
 
-        /// <summary>What curved roofs are made of. Set by the building's skin.</summary>
-        public ArtSurface RoofSurface = ArtSurface.Tile;
-
-        /// <summary>Soft painted light: darker at the foot of a building and brighter towards the top.</summary>
-        public void ShadeByHeight(float bottom, float top)
-        {
-            var height = Mathf.Max(MaxY, 0.01f);
-            for (var i = 0; i < _colors.Count; i++)
-            {
-                var factor = Mathf.Lerp(bottom, top, Mathf.Clamp01(_vertices[i].y / height));
-                var c = _colors[i];
-                _colors[i] = new Color(c.r * factor, c.g * factor, c.b * factor, c.a);
-            }
-        }
-
-        /// <summary>The highest point of the mesh close to a spot on the ground.</summary>
-        public float MaxYNear(float x, float z, float radius)
-        {
-            var max = 0f;
-            foreach (var vertex in _vertices)
-            {
-                var dx = vertex.x - x;
-                var dz = vertex.z - z;
-                if (dx * dx + dz * dz <= radius * radius) max = Mathf.Max(max, vertex.y);
-            }
-            return max;
-        }
-
-        public float MaxY
-        {
-            get
-            {
-                var max = 0f;
-                foreach (var vertex in _vertices) max = Mathf.Max(max, vertex.y);
-                return max;
-            }
-        }
-
         public int VertexCount => _vertices.Count;
 
         private static float ScaleFor(ArtSurface surface)
@@ -391,86 +353,6 @@ namespace ShinobiDominion.Game
             }
         }
 
-        /// <summary>
-        /// A hip roof with a concave curve and upturned corners, the signature shape of the village.
-        /// The top half sizes set the ridge, so narrow values make a long ridge line.
-        /// </summary>
-        public void Roof(Vector3 baseCenter, float halfX, float halfZ, float topHalfX, float topHalfZ, float rise, float upturn, Color color, Color trim)
-        {
-            const int rows = 4;
-            const int segments = 6;
-            Vector3 Point(int side, float u, float t)
-            {
-                var hx = Mathf.Lerp(halfX, topHalfX, t);
-                var hz = Mathf.Lerp(halfZ, topHalfZ, t);
-                float x;
-                float z;
-                switch (side)
-                {
-                    case 0: x = Mathf.Lerp(-hx, hx, u); z = -hz; break;
-                    case 1: x = hx; z = Mathf.Lerp(-hz, hz, u); break;
-                    case 2: x = Mathf.Lerp(hx, -hx, u); z = hz; break;
-                    default: x = -hx; z = Mathf.Lerp(hz, -hz, u); break;
-                }
-                var corner = Mathf.Abs(2f * u - 1f);
-                var lift = upturn * corner * corner * corner * (1f - t) * (1f - t);
-                return baseCenter + new Vector3(x, rise * Mathf.Pow(t, 1.7f) + lift, z);
-            }
-
-            var outwards = new[] { Vector3.back, Vector3.right, Vector3.forward, Vector3.left };
-            for (var side = 0; side < 4; side++)
-            {
-                for (var row = 0; row < rows; row++)
-                for (var segment = 0; segment < segments; segment++)
-                {
-                    var t0 = (float)row / rows;
-                    var t1 = (float)(row + 1) / rows;
-                    var u0 = (float)segment / segments;
-                    var u1 = (float)(segment + 1) / segments;
-                    var vary = 0.94f + 0.12f * Mathf.Abs(Mathf.Sin(side * 12.9f + row * 78.2f + segment * 37.7f));
-                    Quad(Point(side, u0, t0), Point(side, u1, t0), Point(side, u1, t1), Point(side, u0, t1),
-                        outwards[side] + Vector3.up, new Color(color.r * vary, color.g * vary, color.b * vary), RoofSurface);
-                }
-
-                // A raised ridge down this corner of the roof, ending in a tile at the upturned tip.
-                var ridge = Mathf.Min(0.035f + Mathf.Max(halfX, halfZ) * 0.012f, 0.06f);
-                var ridgeColor = Color.Lerp(color, Color.black, 0.32f);
-                for (var row = 0; row < rows; row++)
-                {
-                    var a = Point(side, 0f, (float)row / rows);
-                    var b = Point(side, 0f, (float)(row + 1) / rows);
-                    var across = Vector3.Cross(b - a, Vector3.up).normalized * ridge;
-                    var lift = Vector3.up * ridge * 0.9f;
-                    Quad(a - across, b - across, b + lift, a + lift, Vector3.up - across, ridgeColor, ArtSurface.Plain);
-                    Quad(a + across, b + across, b + lift, a + lift, Vector3.up + across, ridgeColor, ArtSurface.Plain);
-                }
-                Blob(Point(side, 0f, 0f) + Vector3.up * ridge, Vector3.one * ridge * 1.5f, trim, ArtSurface.Plain, 0f, 0f, 5, 3);
-
-                // Rafter ends along the eave.
-                var rafters = Mathf.Clamp(Mathf.RoundToInt((side % 2 == 0 ? halfX : halfZ) * 4f), 3, 9);
-                for (var i = 1; i < rafters; i++)
-                {
-                    var at = Point(side, (float)i / rafters, 0f) + Vector3.down * 0.09f;
-                    var along = (Point(side, 0.6f, 0f) - Point(side, 0.4f, 0f)).normalized * 0.022f;
-                    Quad(at - along, at + along, at + along + Vector3.down * 0.05f, at - along + Vector3.down * 0.05f, outwards[side], trim, ArtSurface.Wood);
-                }
-
-                // The eave board: a pale edge that picks the roof line out from a distance.
-                for (var segment = 0; segment < segments; segment++)
-                {
-                    var u0 = (float)segment / segments;
-                    var u1 = (float)(segment + 1) / segments;
-                    var a = Point(side, u0, 0f);
-                    var b = Point(side, u1, 0f);
-                    var down = Vector3.down * 0.09f;
-                    Quad(a + down, b + down, b, a, outwards[side], trim, ArtSurface.Wood);
-                }
-            }
-
-            var capCenter = baseCenter + Vector3.up * rise;
-            Box(capCenter - Vector3.up * 0.02f, new Vector3(topHalfX * 2f + 0.1f, 0.1f, topHalfZ * 2f + 0.1f), trim, ArtSurface.Wood);
-        }
-
         public Mesh Build(string name)
         {
             if (ContactShade)
@@ -503,7 +385,6 @@ namespace ShinobiDominion.Game
         public static readonly Color Stone = new Color(0.82f, 0.80f, 0.74f);
         public static readonly Color DarkStone = new Color(0.56f, 0.56f, 0.56f);
         public static readonly Color Slate = new Color(0.30f, 0.38f, 0.52f);
-        public static readonly Color SlateLight = new Color(0.40f, 0.50f, 0.66f);
         public static readonly Color RoofRed = new Color(0.70f, 0.24f, 0.18f);
         public static readonly Color RoofTeal = new Color(0.20f, 0.50f, 0.50f);
         public static readonly Color Wood = new Color(0.56f, 0.37f, 0.22f);

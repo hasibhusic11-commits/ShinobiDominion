@@ -90,7 +90,6 @@ namespace ShinobiDominion.Game
         private bool _finished;
 
         public bool DojoDown { get; private set; }
-        public bool IsPlaying => _result != null && !_finished;
         public int DamagePercent => _totalHp == 0 ? 100 : (int)(_dealtHp * 100 / _totalHp);
         public int SecondsLeft => Mathf.Max(0, Mathf.CeilToInt((BattleSim.TickLimit - _ticks) / BattleSim.TicksPerSecond));
         public event Action Finished;
@@ -691,7 +690,6 @@ namespace ShinobiDominion.Game
 
         private void OnDestroy()
         {
-            _view?.Dispose();
             foreach (var mesh in _ownedMeshes)
                 if (mesh != null) Destroy(mesh);
         }

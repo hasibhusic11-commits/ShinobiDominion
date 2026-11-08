@@ -740,8 +740,8 @@ namespace ShinobiDominion.Game
                 mesh.Blob(perch + Vector3.up * 0.06f, new Vector3(0.06f, 0.07f, 0.1f), new Color(0.07f, 0.08f, 0.11f), ArtSurface.Plain, 0.3f, 0f, 6, 4);
                 mesh.Rod(perch + new Vector3(0f, 0.09f, -0.09f), perch + new Vector3(0f, 0.08f, -0.17f), 0.016f, 4, kit.Accent, ArtSurface.Plain, 0.3f, 0.003f);
             }
-            if (extras.Contains("spirit_beast")) SpiritBeast(mesh, feet, kit, kit.Evolution >= 3 ? 1.9f : 1f, new Color(1f, 0.72f, 0.22f));
-            if (extras.Contains("spirit_wolf")) SpiritBeast(mesh, feet, kit, kit.Evolution >= 3 ? 1.6f : 1f, new Color(0.84f, 0.92f, 1f));
+            if (extras.Contains("spirit_beast")) SpiritBeast(mesh, feet, kit.Evolution >= 3 ? 1.9f : 1f, new Color(1f, 0.72f, 0.22f));
+            if (extras.Contains("spirit_wolf")) SpiritBeast(mesh, feet, kit.Evolution >= 3 ? 1.6f : 1f, new Color(0.84f, 0.92f, 1f));
         }
 
         private static void Feathers(MeshBuilder mesh, Vector3 neck, HeroKit kit, int count, float length, float halfWidth, float backZ)
@@ -761,7 +761,7 @@ namespace ShinobiDominion.Game
         }
 
         /// <summary>A companion made of glowing spirit: four legs, a blunt head and a raised tail.</summary>
-        private static void SpiritBeast(MeshBuilder mesh, Vector3 feet, HeroKit kit, float size, Color color)
+        private static void SpiritBeast(MeshBuilder mesh, Vector3 feet, float size, Color color)
         {
             var at = feet + new Vector3(-0.55f - size * 0.12f, 0f, 0.3f + size * 0.12f);
             const float glow = 0.7f;

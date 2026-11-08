@@ -38,76 +38,24 @@ namespace ShinobiDominion.Tests
         }
 
         [Test]
-        public void EveryBuilding_HasItsOwnModel_ThatIsNotJustABox()
+        public void EveryBuilding_HasPaintedArt_AtEveryArtLevel()
         {
-            var catalog = Controller.Village.Catalog;
-            var sizes = new System.Collections.Generic.Dictionary<string, int>();
-            foreach (var definition in catalog.All)
+            // Buildings are the owner's painted pictures (ADR-033); the code-drawn meshes are gone, so a missing
+            // picture would leave a building invisible.
+            foreach (var definition in Controller.Village.Catalog.All)
             {
-                var builder = BuildingMeshes.For(definition, null);
-                Assert.Greater(builder.VertexCount, 40, definition.id + " should be real geometry");
-                sizes[definition.id] = builder.VertexCount;
-            }
-            // Different vertex counts are a simple signal that models are not recoloured copies.
-            Assert.Greater(sizes.Values.Distinct().Count(), catalog.All.Count - 2);
-        }
-
-        private static string ColourKey(Mesh mesh) =>
-            string.Join(",", mesh.colors.Select(c => ColorUtility.ToHtmlStringRGB(c)).Distinct().OrderBy(s => s));
-
-        [Test]
-        public void EveryBuilding_LooksDifferentInEachOfItsFiveTiers()
-        {
-            foreach (var definition in Controller.Village.Catalog.All.Where(d => !d.IsWall))
-            {
-                var looks = new[] { 1, 4, 7, 10, 13 }.Select(level => ColourKey(BuildingMeshes.For(definition, null, level).Build("t"))).Distinct().Count();
-                Assert.AreEqual(5, looks, definition.id);
-                Assert.AreEqual(ColourKey(BuildingMeshes.For(definition, null, 13).Build("t")), ColourKey(BuildingMeshes.For(definition, null, 15).Build("t")), "Levels in one tier share a look");
-            }
-        }
-
-        [Test]
-        public void TwoBuildings_NeverShareATexturePack()
-        {
-            var ids = Controller.Village.Catalog.All.Select(d => d.id).ToList();
-            for (var level = 1; level <= 13; level += 3)
-            {
-                var level0 = level;
-                var roofs = ids.Select(id => ColorUtility.ToHtmlStringRGB(BuildingSkin.For(id, level0).Slate)).ToList();
-                Assert.GreaterOrEqual(roofs.Distinct().Count(), ids.Count - 1, "level " + level);
-            }
-        }
-
-        [Test]
-        public void BuildingDetail_StaysNearItsCells_AndWithinBudget()
-        {
-            foreach (var definition in Controller.Village.Catalog.All.Where(d => !d.IsWall))
-            foreach (var level in new[] { 1, 15 })
-            {
-                var builder = BuildingMeshes.For(definition, null, level);
-                Assert.Less(builder.VertexCount, 7000, definition.id + " is too heavy for a phone");
-                var bounds = builder.Build("t").bounds;
-                // Roofs and the Dojo's steps may overhang a little. Props may not wander off.
-                const float overhang = 0.25f;
-                Assert.LessOrEqual(Mathf.Abs(bounds.min.x), definition.width * 0.5f + overhang, definition.id);
-                Assert.LessOrEqual(bounds.max.x, definition.width * 0.5f + overhang, definition.id);
-                Assert.LessOrEqual(Mathf.Abs(bounds.min.z), definition.depth * 0.5f + overhang, definition.id);
-                Assert.LessOrEqual(bounds.max.z, definition.depth * 0.5f + overhang, definition.id);
-            }
-        }
-
-        [Test]
-        public void TierDressing_StaysInsideTheFootprint()
-        {
-            foreach (var definition in Controller.Village.Catalog.All.Where(d => !d.IsWall))
-            {
-                var plain = BuildingMeshes.For(definition, null, 1).Build("t").bounds;
-                var dressed = BuildingMeshes.For(definition, null, 15).Build("t").bounds;
-                // Some models already reach past their cells, such as the Dojo's front steps. Dressing must add nothing beyond that.
-                Assert.GreaterOrEqual(dressed.min.x, Mathf.Min(plain.min.x, -definition.width * 0.5f) - 0.02f, definition.id);
-                Assert.LessOrEqual(dressed.max.x, Mathf.Max(plain.max.x, definition.width * 0.5f) + 0.02f, definition.id);
-                Assert.GreaterOrEqual(dressed.min.z, Mathf.Min(plain.min.z, -definition.depth * 0.5f) - 0.02f, definition.id);
-                Assert.LessOrEqual(dressed.max.z, Mathf.Max(plain.max.z, definition.depth * 0.5f) + 0.02f, definition.id);
+                if (definition.IsWall)
+                {
+                    for (var level = 1; level <= BuildingSprites.ArtLevels; level++)
+                    {
+                        Assert.IsNotNull(BuildingSprites.Load($"wall_seg_x_{level:00}"), $"wall segment x, art level {level}");
+                        Assert.IsNotNull(BuildingSprites.Load($"wall_seg_z_{level:00}"), $"wall segment z, art level {level}");
+                        Assert.IsNotNull(BuildingSprites.Load($"wall_post_v2_{level:00}"), $"wall post, art level {level}");
+                    }
+                    continue;
+                }
+                for (var level = 1; level <= BuildingSprites.GameLevels; level++)
+                    Assert.IsNotNull(BuildingSprites.For(definition.id, level), $"{definition.id} level {level}");
             }
         }
 
@@ -146,13 +94,16 @@ namespace ShinobiDominion.Tests
         [Test]
         public void AllVillageArt_SharesOneMaterial()
         {
-            var materials = _root.GetComponentsInChildren<MeshRenderer>()
-                .Where(r => r.gameObject.name.Contains("_") || r.gameObject.name == "Walls")
-                .SelectMany(r => r.sharedMaterials)
-                .Distinct()
+            // Buildings, walls and scenery are sprites; one shared material lets them batch. Heroes have their own.
+            var roots = new[] { "Buildings", "Walls", "Props" };
+            var renderers = _root.GetComponentsInChildren<SpriteRenderer>()
+                .Where(r => r.GetComponentInParent<HeroSpriteActor>() == null && r.transform.GetComponentsInParent<Transform>().Any(t => roots.Contains(t.name)))
                 .ToArray();
-            Assert.AreEqual(1, materials.Length, "Buildings and walls must batch on a single material");
-            Assert.AreEqual("ShinobiDominion/Toon", materials[0].shader.name);
+            Assert.Greater(renderers.Length, 0, "The village shows painted sprites");
+            var materials = renderers.Select(r => r.sharedMaterial).Distinct().ToArray();
+            Assert.AreEqual(1, materials.Length, "Buildings, walls and scenery must batch on a single material");
+            Assert.IsFalse(_root.GetComponentsInChildren<MeshRenderer>().Any(r => r.transform.GetComponentsInParent<Transform>().Any(t => t.name == "Buildings")),
+                "No building is drawn as a mesh any more");
         }
 
         [Test]

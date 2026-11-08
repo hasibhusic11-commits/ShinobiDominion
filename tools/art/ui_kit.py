@@ -522,69 +522,6 @@ def parchment(folder, name, w=200, h=200):
     framed(w, h, 14, 3, 11, 2, paper, folder, name)
 
 
-# ---------- Home screen pieces (docs/ui/target_home_mockup.png). Stand-ins until the painted sheet P1 arrives;
-# the painted versions are saved under the same names so the game picks them up without code changes. ----------
-
-def action_tile(folder, name, pressed=False):
-    """A square action button: heavy gold frame, navy inside, and a gold strip along the bottom for the label."""
-    w = h = 128
-    x, y = grid(w, h)
-    img = np.zeros(x.shape + (4,), np.float32)
-    sd = rounded_rect_sd(x, y, 0, 0, w, h, 16)
-    depth = -sd
-    v = y / h
-    paint(img, np.broadcast_to(INK_DARK, x.shape + (4,)).copy(), smooth(sd))
-    paint(img, brass_band(np.clip((depth - 3) / 9, 0, 1), v), smooth(sd + 3))
-    paint(img, np.broadcast_to(INK_DARK, x.shape + (4,)).copy(), smooth(sd + 12))
-    inner = rounded_rect_sd(x, y, 14, 14, w - 14, h - 14, 6)
-    top, bottom = (hexc('22305A'), hexc('0B1226')) if not pressed else (hexc('162140'), hexc('070C1A'))
-    paint(img, lerp(top, bottom, np.clip((y - 14) / 100, 0, 1)), smooth(inner))
-    over(img, hexc('000000', 0.5), smooth(inner) * np.clip(1 + inner / 8, 0, 1))
-    strip = rounded_rect_sd(x, y, 10, h - 34, w - 10, h - 6, 6)
-    paint(img, np.broadcast_to(INK_DARK, x.shape + (4,)).copy(), smooth(strip))
-    paint(img, brass_band(np.clip((y - (h - 32)) / 24, 0, 1), np.clip((y - (h - 32)) / 24, 0, 1)), smooth(strip + 2))
-    for cx, cy in ((10, 10), (w - 10, 10)):
-        d = np.sqrt((x - cx) ** 2 + (y - cy) ** 2)
-        over(img, INK_DARK, smooth(d - 7))
-        paint(img, lerp(BRASS_HI, BRASS_LO, np.clip(((x - cx) * 0.6 + (y - cy) * 0.8) / 6 * 0.5 + 0.5, 0, 1)), smooth(d - 5.5))
-    if not pressed:
-        over(img, hexc('FFFFFF', 0.12), smooth(rounded_rect_sd(x, y, 16, 16, w - 16, 50, 5)))
-    save(name, img, folder)
-
-
-def arrow_plaque(folder, name, w=420, h=60, tip=34):
-    """A long name plaque with pointed gold tips at both ends."""
-    x, y = grid(w, h)
-    img = np.zeros(x.shape + (4,), np.float32)
-    cy = h / 2
-    def shape(pad):
-        body = (x > tip - pad) & (x < w - tip + pad) & (y > 6 - pad) & (y < h - 6 + pad)
-        left = (x <= tip) & (x > np.abs(y - cy) * tip / (cy - 2) - pad) & (np.abs(y - cy) < cy - 2 + pad)
-        right = (x >= w - tip) & (x < w - np.abs(y - cy) * tip / (cy - 2) + pad) & (np.abs(y - cy) < cy - 2 + pad)
-        return (body | left | right).astype(np.float32)
-    outer = shape(0)
-    over(img, INK_DARK, dilate(outer, 3 * SS))
-    paint(img, brass_band(np.clip(np.abs(y - cy) / cy, 0, 1) * 0 + 0.2, y / h), outer)
-    inner = (x > tip + 6) & (x < w - tip - 6) & (y > 14) & (y < h - 14)
-    over(img, INK_DARK, dilate(inner.astype(np.float32), 2 * SS))
-    paint(img, lerp(hexc('22305A'), hexc('0B1226'), np.clip((y - 14) / (h - 28), 0, 1)), inner.astype(np.float32))
-    save(name, img, folder)
-
-
-def player_plate(folder, name, w=300, h=84, tip=30):
-    """The player's name plate: flat on the left, arrow-shaped on the right, gold-framed navy."""
-    x, y = grid(w, h)
-    img = np.zeros(x.shape + (4,), np.float32)
-    cy = h / 2
-    shape = ((x < w - tip) | (x < w - np.abs(y - cy) * tip / cy)) & (y > 2) & (y < h - 2) & (x > 0)
-    over(img, INK_DARK, dilate(shape.astype(np.float32), 3 * SS))
-    paint(img, brass_band(np.full(x.shape, 0.25, np.float32), y / h), shape.astype(np.float32))
-    inner = ((x < w - tip - 6) | (x < w - 6 - np.abs(y - cy) * (tip - 6) / (cy - 8))) & (y > 10) & (y < h - 10) & (x > 8)
-    over(img, INK_DARK, dilate(inner.astype(np.float32), 2 * SS))
-    paint(img, lerp(hexc('22305A'), hexc('0B1226'), np.clip((y - 10) / (h - 20), 0, 1)), inner.astype(np.float32))
-    save(name, img, folder)
-
-
 def spiked_ring(folder, name, size=320):
     """The ATTACK ring: a heavy gold ring with four gold spikes pointing up, down, left and right."""
     x, y = grid(size, size)
@@ -611,13 +548,7 @@ def spiked_ring(folder, name, size=320):
 
 
 def home_kit(folder):
-    action_tile(folder, 'tile_action')
-    action_tile(folder, 'tile_action_pressed', pressed=True)
-    arrow_plaque(folder, 'plaque_arrow_s40')
-    player_plate(folder, 'plate_player')
     spiked_ring(folder, 'medal_attack_spikes')
-    framed(64, 64, 10, 3, 6, 2, vertical(GOLD_TOP, hexc('8A5E22'), 6, 58), folder, 'btn_plus', gloss=0.25)
-    face(64, 30, CRIMSON_LIGHT, CRIMSON, CRIMSON_DARK, folder, 'badge')
     icon('chakra', [(lambda x, y: poly_mask(x, y, [(64, 10), (90, 56), (96, 76), (88, 98), (64, 114), (40, 98), (32, 76), (38, 56)]), hexc('3FA2F0')),
                     (lambda x, y: ellipse_mask(x, y, 52, 70, 8, 14), hexc('CFEBFF'))], folder)
     icon('mail', [(lambda x, y: (rounded_rect_sd(x, y, 14, 30, 114, 100, 6) <= 0).astype(np.float32), hexc('EFE6D0')),
@@ -668,7 +599,6 @@ def heavy_kit_v2(folder):
     framed(160, 70, 14, 3, 5, 2, vertical(hexc('5A5A62'), hexc('1C1C21'), 10, 62), folder, 'btn_charcoal_s24', gloss=0.10, lip=7)
     gem_frame(208, 20, 40, folder, 'frame_s80')
     soft_shadow(folder, 'shadow_s32')
-    heavy_ring(320, folder, 'medal_ring_attack', rivets=10, band=0.13)
     heavy_ring(256, folder, 'medal_ring', band=0.13)
     heavy_ring(256, folder, 'medal_ring_thin', band=0.09)
     halo(288, folder, 'medal_halo')
@@ -691,7 +621,6 @@ def main_v1(folder):
 
 def main_kit(folder):
     os.makedirs(folder, exist_ok=True)
-    ring(320, 160, 136, 8, folder, 'medal_ring_attack')
     ring(256, 128, 108, 0, folder, 'medal_ring')
     ring(256, 128, 114, 0, folder, 'medal_ring_thin')
     face(320, 138, CRIMSON_LIGHT, CRIMSON, CRIMSON_DARK, folder, 'medal_face_crimson')

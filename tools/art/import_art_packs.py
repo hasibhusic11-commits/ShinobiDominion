@@ -10,10 +10,10 @@ UI pack (ShinobiDominion_UI_Buttons_Icons_Complete):
   The pack's sprites carry a magenta fringe left from keying; edge pixels close to magenta are turned into the
   dark outline colour. Chakra is shown purple, as in the owner's mockup, so its drop is hue-shifted.
 Banner sheet (owner's P3 sheet on green): crystal gem and three original clan banners -> Resources/UI/banner_*.png
-Building pack: every level sprite cropped to its silhouette -> Resources/Buildings/<id>_NN.png. The wall's
-  V-shaped piece is cut into its two arms (one per grid axis) and an end post, so walls join on the grid.
+Building pack: every level sprite cropped to its silhouette -> Resources/Buildings/<id>_NN.png. Walls and the two
+  towers are skipped: they come from the owner's later art (import_buildings_v2.py).
 """
-import bpy, sys, os, glob, json
+import bpy, sys, os, glob
 import numpy as np
 
 args = sys.argv[sys.argv.index('--') + 1:]
@@ -126,20 +126,6 @@ def largest_shape(px):
     return px
 
 
-def shear(px, k, from_right):
-    """Lifts each column by k px per px of distance from the junction edge (rows are bottom-first)."""
-    h, w = px.shape[:2]
-    lift = int(np.ceil(k * w)) + 1
-    out = np.zeros((h + lift, w, 4), dtype=np.float32)
-    for x in range(w):
-        d = (w - 1 - x) if from_right else x
-        s = d * k
-        i, f = int(s), s - int(s)
-        out[i:i + h, x] += px[:, x] * (1 - f)
-        out[i + 1:i + 1 + h, x] += px[:, x] * f
-    return out
-
-
 count = 0
 # Medallion buttons.
 for family_dir in sorted(glob.glob(os.path.join(UI_PACK, 'buttons/medallions/*'))):
@@ -188,41 +174,15 @@ for name, (x0, x1) in {'gem_crystal': (0, 0.215), 'banner_tomoe': (0.195, 0.47),
     save(fit(part, 256), os.path.join(UI_OUT, name + '.png'))
     count += 1
 
-# Buildings.
-metrics = {}
+# Buildings. Walls, the Defense Tower and the Spirit Turret come from the owner's later art
+# (tools/art/import_buildings_v2.py), so this first pack's versions are skipped.
+LATER = ('wall', 'defense_tower', 'spirit_turret')
 for family_dir in sorted(glob.glob(os.path.join(BUILD_PACK, 'Sprites/*'))):
     bid = os.path.basename(family_dir)
+    if bid in LATER:
+        continue
     for level in range(1, 11):
         px = load(os.path.join(family_dir, '%s_level_%02d.png' % (bid, level)))
-        if bid != 'wall':
-            save(crop(px), os.path.join(B_OUT, '%s_%02d.png' % (bid, level)))
-            count += 1
-            continue
-        px = crop(px, pad=0)
-        save(px, os.path.join(B_OUT, "wall_%02d.png" % level))  # whole V, for the catalog card
-        h, w = px.shape[:2]
-        alpha = px[..., 3] > 0.3
-        # Rows are bottom-first: the highest opaque row of each column marks the posts, the lowest the junction.
-        top = np.array([np.where(alpha[:, x])[0].max() if alpha[:, x].any() else -1 for x in range(w)])
-        bottom = np.array([np.where(alpha[:, x])[0].min() if alpha[:, x].any() else h for x in range(w)])
-        low = np.where(bottom <= bottom.min() + 1)[0]
-        cx = int(round(low.mean()))
-        left_peak = np.where(top[:cx] >= top[:cx].max() - 2)[0]
-        right_peak = np.where(top[cx:] >= top[cx:].max() - 2)[0] + cx
-        post_l, post_r = int(round(left_peak.mean())), int(round(right_peak.mean()))
-        post_half = 44
-        # The painted V is flatter than the game's true isometric grid (a run rises 0.5 px per px across at the game's 30 degree camera).
-        # Shearing each arm's columns up keeps verticals vertical and lands the end post on the next cell.
-        span = cx - post_l
-        rise = bottom[post_l] - bottom[cx]
-        k = max((0.5 * span - rise) / span, 0.0)
-        save(shear(px[:, :cx + 1], k, from_right=True), os.path.join(B_OUT, 'wall_arm_z_%02d.png' % level))
-        save(shear(px[:, cx:], k, from_right=False), os.path.join(B_OUT, 'wall_arm_x_%02d.png' % level))
-        post = px[:, max(post_l - post_half, 0):post_l + post_half]
-        save(crop(post, pad=0), os.path.join(B_OUT, 'wall_post_%02d.png' % level))
-        metrics[level + 100] = dict(span=int(span), shear=round(float(k), 3))
-        metrics[level] = dict(width=w, height=h, junction=cx, post_left=post_l, post_right=post_r,
-                              post_bottom_left=int(bottom[post_l]))
-        count += 3
-print('METRICS', json.dumps(metrics))
+        save(crop(px), os.path.join(B_OUT, '%s_%02d.png' % (bid, level)))
+        count += 1
 print('IMPORTED', count)

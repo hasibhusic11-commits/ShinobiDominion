@@ -63,47 +63,6 @@ namespace ShinobiDominion.Game
             return Make(key, texture);
         }
 
-        /// <summary>
-        /// A heavy metal frame with an empty middle, nine-sliced so it fits any card. A dark outline, a
-        /// bevelled band lit from above, and a thin dark line on the inside edge.
-        /// </summary>
-        public static Sprite CardFrame(HeroRarity rarity)
-        {
-            var key = "cardframe" + rarity;
-            if (Cached(key, out var cached)) return cached;
-            var (_, _, metal) = Palette(rarity);
-            const int size = 96;
-            const float radius = 12f;
-            const float outline = 2.5f;
-            const float band = 9f;
-            const float inner = 2.5f;
-            var texture = NewTexture(size, size);
-            var ink = new Color(0.10f, 0.06f, 0.04f, 1f);
-            for (var y = 0; y < size; y++)
-            for (var x = 0; x < size; x++)
-            {
-                var depth = -RoundedDistance(x + 0.5f, y + 0.5f, size, size, radius);
-                Color color;
-                if (depth < 0f) color = Color.clear;
-                else if (depth < outline) color = ink;
-                else if (depth < outline + band)
-                {
-                    // Bevel: light on the outer half, shade on the inner half, and brighter towards the top.
-                    var across = (depth - outline) / band;
-                    var height = (float)y / (size - 1);
-                    var light = Mathf.Lerp(1.25f, 0.7f, across) * Mathf.Lerp(0.82f, 1.12f, height);
-                    color = new Color(metal.r * light, metal.g * light, metal.b * light, 1f);
-                }
-                else if (depth < outline + band + inner) color = ink;
-                else color = Color.clear;
-                color.a *= Mathf.Clamp01(depth + 0.5f);
-                texture.SetPixel(x, y, color);
-            }
-            texture.Apply();
-            var slice = Mathf.Ceil(radius + outline + band + inner + 2f);
-            return Make(key, texture, new Vector4(slice, slice, slice, slice));
-        }
-
         /// <summary>Clear at the top, dark at the bottom: lets a name sit on top of a painting.</summary>
         public static Sprite Shade
         {

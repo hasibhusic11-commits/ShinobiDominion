@@ -307,44 +307,6 @@ namespace ShinobiDominion.Game
         }
     }
 
-    /// <summary>
-    /// A square action tile: a gold-framed navy button with the icon in the middle and its label on a gold strip
-    /// along the bottom. Pressing swaps to the pressed frame; disabled tiles fade and shake when tapped.
-    /// </summary>
-    public static class Tile
-    {
-        public static Button Create(Transform parent, string name, string icon, string caption, Action onClick, bool interactable, float size)
-        {
-            var rect = Ui.Rect(name, parent);
-            rect.sizeDelta = new Vector2(size, size);
-            HudArt.Picture(rect, "Shadow", "shadow", new Vector2(0.5f, 0f), new Vector2(size * 1.1f, size * 0.32f), new Vector2(0f, -size * 0.1f));
-            var frameRect = Ui.Rect("Frame", rect);
-            Ui.Stretch(frameRect);
-            var frame = frameRect.gameObject.AddComponent<Image>();
-            frame.sprite = HudArt.Sprite("tile_action");
-            var picture = HudArt.Picture(rect, "Icon", "icon_" + icon, new Vector2(0.5f, 0.5f), new Vector2(size * 0.52f, size * 0.52f), new Vector2(0f, size * 0.09f));
-            var label = HudArt.Label(rect, caption, HudArt.Display, Mathf.RoundToInt(size * 0.15f), TextAnchor.MiddleCenter,
-                new Color32(0x2A, 0x1A, 0x08, 0xFF), new Color(1f, 0.92f, 0.7f, 0.45f));
-            Ui.Anchor(label.rectTransform, new Vector2(0.5f, 0f), new Vector2(size * 0.9f, size * 0.24f), new Vector2(0f, size * 0.05f));
-            if (!interactable)
-            {
-                frame.color = new Color(0.55f, 0.55f, 0.58f, 1f);
-                picture.color = new Color(1f, 1f, 1f, 0.4f);
-            }
-
-            var button = rect.gameObject.AddComponent<Button>();
-            button.targetGraphic = frame;
-            button.interactable = interactable;
-            button.transition = Selectable.Transition.SpriteSwap;
-            button.spriteState = new SpriteState { pressedSprite = HudArt.Sprite("tile_action_pressed"), highlightedSprite = frame.sprite, selectedSprite = frame.sprite, disabledSprite = frame.sprite };
-            button.onClick.AddListener(() => GameSounds.Play(GameSound.Click));
-            if (onClick != null) button.onClick.AddListener(() => onClick());
-            UiMotion.Pressable(button);
-            rect.gameObject.AddComponent<DeniedShake>();
-            return button;
-        }
-    }
-
     /// <summary>A disabled button gives a short shake and a dull click when tapped, so it never feels dead.</summary>
     public sealed class DeniedShake : MonoBehaviour, UnityEngine.EventSystems.IPointerClickHandler
     {

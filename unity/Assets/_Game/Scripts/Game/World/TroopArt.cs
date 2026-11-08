@@ -63,50 +63,5 @@ namespace ShinobiDominion.Game
                 mesh.Cylinder(new Vector3(side, 0.26f, 0f) * scale, 0.035f * scale, 0.04f * scale, 0.2f * scale, 5, cloth, ArtSurface.Plain, 0f, 0f, false);
             mesh.Blob(Vector3.up * 0.6f * scale, Vector3.one * 0.13f * scale, Skin, ArtSurface.Plain, 0f, 0f, 7, 4);
         }
-
-        /// <summary>Tents around a fire, with a small flag: a camp, not a house.</summary>
-        private static void Camp(MeshBuilder mesh, float w, float d)
-        {
-            var y = Foundation(mesh, w, d, 0.1f);
-            mesh.Box(new Vector3(0f, y, 0f), new Vector3(w - 0.32f, 0.02f, d - 0.32f), new Color(0.72f, 0.60f, 0.42f), ArtSurface.Dirt);
-            y += 0.02f;
-
-            void Tent(Vector3 at, float size)
-            {
-                var canvas = Color.Lerp(S.Plaster, S.Slate, 0.28f);
-                var half = size * 0.5f;
-                var top = at + Vector3.up * size * 0.8f;
-                mesh.Quad(at + new Vector3(-half, 0f, -half), at + new Vector3(half, 0f, -half), top + new Vector3(half * 0.8f, 0f, 0f), top + new Vector3(-half * 0.8f, 0f, 0f), Vector3.back + Vector3.up, canvas, S.WallSurface, 0.15f);
-                mesh.Quad(at + new Vector3(-half, 0f, half), at + new Vector3(half, 0f, half), top + new Vector3(half * 0.8f, 0f, 0f), top + new Vector3(-half * 0.8f, 0f, 0f), Vector3.forward + Vector3.up, canvas, S.WallSurface, 0.15f);
-                mesh.Quad(at + new Vector3(-half, 0f, -half), at + new Vector3(-half, 0f, half), top + new Vector3(-half * 0.8f, 0f, 0f), top + new Vector3(-half * 0.8f, 0f, 0f), Vector3.left, S.Slate, S.RoofSurface);
-                mesh.Quad(at + new Vector3(half, 0f, -half), at + new Vector3(half, 0f, half), top + new Vector3(half * 0.8f, 0f, 0f), top + new Vector3(half * 0.8f, 0f, 0f), Vector3.right, S.Slate, S.RoofSurface);
-                Strip(mesh, top + new Vector3(-half * 0.8f, 0f, 0f), top + new Vector3(half * 0.8f, 0f, 0f), 0.05f, Vector3.up, S.DarkWood);
-                // The dark opening that says someone sleeps here.
-                mesh.Quad(at + new Vector3(-half - 0.012f, 0f, -half * 0.35f), at + new Vector3(-half - 0.012f, 0f, half * 0.35f), at + new Vector3(-half * 0.92f, size * 0.42f, 0f), at + new Vector3(-half * 0.92f, size * 0.42f, 0f), Vector3.left, new Color(0.08f, 0.07f, 0.08f));
-            }
-
-            Tent(new Vector3(0.62f, y, 0.62f), 1.05f);
-            Tent(new Vector3(-0.62f, y, 0.68f), 0.85f);
-            Tent(new Vector3(0.72f, y, -0.62f), 0.85f);
-
-            // A ring of stones around the fire.
-            var fire = new Vector3(-0.42f, y, -0.42f);
-            for (var i = 0; i < 7; i++)
-            {
-                var a = i * Mathf.PI * 2f / 7f;
-                mesh.Blob(fire + new Vector3(Mathf.Cos(a), 0.03f, Mathf.Sin(a)) * 0.23f, new Vector3(0.06f, 0.04f, 0.06f), S.DarkStone, ArtSurface.Plain, 0f, 0f, 5, 3);
-            }
-            mesh.Cylinder(fire, 0.13f, 0f, 0.34f, 6, S.Flame, ArtSurface.Plain, 0.5f, 1f);
-            mesh.Box(fire + new Vector3(0f, 0f, 0f), new Vector3(0.28f, 0.03f, 0.05f), S.DarkWood);
-
-            // Weapons stacked ready, and a camp flag.
-            var pole = new Vector3(-w * 0.5f + 0.32f, y, d * 0.5f - 0.3f);
-            mesh.Cylinder(pole, 0.03f, 0.022f, 1.45f, 5, S.DarkWood, ArtSurface.Wood);
-            mesh.Quad(pole + Vector3.up * 1.42f, pole + new Vector3(0.48f, 1.34f, 0f), pole + new Vector3(0.48f, 1.1f, 0f), pole + Vector3.up * 1.04f, Vector3.back, S.Slate, ArtSurface.Plain, 0.8f);
-            foreach (var offset in new[] { -0.06f, 0.06f })
-                Strip(mesh, new Vector3(0.06f + offset, y, -1.1f), new Vector3(0.06f - offset, y + 0.55f, -1.1f), 0.022f, Vector3.back, S.Wood);
-            Barrel(mesh, new Vector3(-1.05f, y, 0.08f), 0.8f);
-            Sack(mesh, new Vector3(-0.62f, y, -1.1f), 0.8f, Burlap);
-        }
     }
 }
