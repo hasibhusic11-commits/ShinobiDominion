@@ -50,6 +50,9 @@ namespace ShinobiDominion.Game
                 case "trophy": return "Rankings";
                 case "friends": return "Friends";
                 case "quests": return "Quests";
+                case "gift": return "Gifts";
+                case "chest": return "Treasure Chest";
+                case "crystal_chest": return "Crystal Chest";
                 default: return shortcut;
             }
         }

@@ -89,6 +89,20 @@ Follows the owner's ADR-021. Up to four Troop Camps, gated by Dojo level, and a 
 - Troop names and all numbers are test values. Offline practice troops aren't saved.
 
 
+## ADR-033: The owner's newest mockup and art packs, decided on 2026-11-07
+The owner sent a newer home screen (`docs/ui/target_home_mockup_v2.webp`) and two art packs (UI buttons and icons;
+every building at levels 1 to 10), and asked for both. This replaces ADR-032's layout.
+- ATTACK moves to the bottom left, as the pack's painted crimson medallion.
+- A column of round shortcuts runs down the left: gifts, rankings, quests, friends, mail. Settings moves to the top
+  right beside an original clan banner (the owner's red tomoe banner, not a Naruto symbol).
+- Currencies read gold, crystals, chakra (purple), each on the pack's bar with a "+". Power is no longer drawn.
+- Two chest buttons on the right. There is no chest, gift, mail, ranking, friends or quest feature yet: each opens a
+  plain "coming in a later update" window, with no timer and no badge count, so nothing pretends to work.
+- A tapped building's actions are the pack's painted medallions (five states each) in a row at the bottom right.
+- Buildings are the pack's painted pictures, standing upright on their footprint's front corner. The game keeps 15
+  levels; the 10 pictures spread over them (level 1 shows picture 1, level 15 shows picture 10). Rules, footprints,
+  the grid and the server are unchanged. Walls are the pack's V piece cut into one arm per grid axis plus a post.
+
 ## ADR-032: The owner's home screen mockup, decided on 2026-11-07
 The owner sent a painted home screen and asked for it exactly. This replaces ADR-017's ATTACK-only bottom.
 - Bottom left: a row of round shortcuts (mail, rankings, friends, quests, settings). Settings moved here from the

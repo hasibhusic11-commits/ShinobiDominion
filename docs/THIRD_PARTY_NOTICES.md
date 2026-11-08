@@ -17,6 +17,8 @@ Consumed as packages, not vendored:
 | Kenney Fantasy UI Borders 1.0 (one border, `Resources/UI/kenney_fret_s16.png`, tinted brass) | kenney.nl, downloaded 2026-11-07 | CC0 1.0; licence in `unity/Assets/_Game/Art/UI/Licences/` |
 | Cinzel (variable) | Google Fonts, github.com/google/fonts | SIL Open Font License 1.1; licence in `unity/Assets/_Game/Art/UI/Licences/` |
 | Rubik (variable) | Google Fonts, github.com/google/fonts | SIL Open Font License 1.1; licence in `unity/Assets/_Game/Art/UI/Licences/` |
+| Owner art packs: "ShinobiDominion_UI_Buttons_Icons_Complete" and "ShinobiDominion_All_InGame_Buildings_Levels_1-10" (`Resources/UI/medal_*`, `icon_*`, `hud_*`, `badge_*`, `Resources/Buildings/*`), imported by `tools/art/import_art_packs.py` | Supplied by the owner, 2026-11-07; prototype art, to be reviewed before release | Owner-supplied. Some icon pictograms are renders of Font Awesome 4 glyphs: SIL Open Font License 1.1 (fontawesome.com/v4/license) |
+| Owner banner and crystal sheet (`tools/art/sources/owner_p3_crystal_banners.webp`, `Resources/UI/banner_*`, `gem_crystal`) | Supplied by the owner in chat, 2026-11-07 | Owner-supplied |
 | NUnit, NUnit3TestAdapter, Microsoft.NET.Test.Sdk (`tools/core-tests` only, not shipped) | NuGet | MIT |
 
 Add an entry here whenever code is copied or a package is added.

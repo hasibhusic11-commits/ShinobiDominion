@@ -397,53 +397,58 @@ namespace ShinobiDominion.Game
         private readonly Text _monogram;
         private readonly Text _identity;
         private readonly Text _level;
-        private readonly Text _power;
+        // Shortcuts and chests belong to the home screen; raids and full screens hide them with ATTACK.
+        private readonly System.Collections.Generic.List<GameObject> _homeOnly = new System.Collections.Generic.List<GameObject>();
         private readonly Text _gold;
         private readonly Text _chakra;
         private readonly Text _crystals;
         private readonly RectTransform _goldFill;
         private readonly Image _goldFillImage;
 
-        // Layout from the owner's mockup (docs/ui/target_home_mockup.png), in reference units (1280 x 720).
+        // Layout from the owner's newest mockup (docs/ui/target_home_mockup_v2.webp), in reference units (1280 x 720):
+        // portrait and name top left, three currencies top centre, clan banner and settings top right, a column of
+        // round shortcuts down the left, chests down the right, and ATTACK alone at the bottom left.
         private const float Margin = 12f;
-        private const float BarWidth = 214f;
-        private const float BarHeight = 48f;
-        private const float BarGap = 34f;
-        private const float AttackSize = 178f;
-        private const float RoundIcon = 64f;
+        private const float BarWidth = 210f;
+        private const float BarHeight = 46f;
+        private const float BarGap = 22f;
+        private const float AttackSize = 176f;
+        private const float RoundIcon = 58f;
+        private const float ColumnTop = 150f;
+        private const float ColumnStep = 70f;
 
         public HudView(RectTransform parent, Action onAttack, Action onSettings, Action<string> onShortcut, Action<string> onShop)
         {
             Root = Ui.Rect("Hud", parent);
             Ui.Stretch(Root);
 
-            // Player: an arrow-shaped plate with name and level, a smaller plate with power, and the portrait ring over both.
+            // Player: name on the pack's nameplate, a star and level on a second plate under it, the portrait ring over both.
             var plate = Ui.Rect("TopLeft", Root);
-            Ui.Anchor(plate, new Vector2(0f, 1f), new Vector2(236f, 66f), new Vector2(84f, -Margin));
+            Ui.Anchor(plate, new Vector2(0f, 1f), new Vector2(232f, 50f), new Vector2(100f, -Margin - 4f));
             var plateImage = plate.gameObject.AddComponent<Image>();
-            plateImage.sprite = HudArt.Sprite("plate_player");
+            plateImage.sprite = HudArt.Sprite("hud_player_nameplate");
             plateImage.raycastTarget = false;
             HudArt.DropShadow(plate);
             _identity = HudArt.Label(plate, string.Empty, HudArt.Display, 23, TextAnchor.MiddleLeft, HudArt.Ivory, HudArt.LacquerDeep);
-            Ui.Anchor(_identity.rectTransform, new Vector2(0f, 1f), new Vector2(170f, 30f), new Vector2(46f, -6f));
-            _level = HudArt.Label(plate, string.Empty, HudArt.Display, 18, TextAnchor.MiddleLeft, HudArt.BrassLight, HudArt.LacquerDeep);
-            Ui.Anchor(_level.rectTransform, new Vector2(0f, 0f), new Vector2(170f, 26f), new Vector2(46f, 6f));
+            Ui.Stretch(_identity.rectTransform, 34f, 2f, 30f, 0f);
+            _identity.resizeTextForBestFit = true;
+            _identity.resizeTextMinSize = 14;
+            _identity.resizeTextMaxSize = 23;
 
-            var power = Ui.Rect("PowerPlate", Root);
-            Ui.Anchor(power, new Vector2(0f, 1f), new Vector2(190f, 42f), new Vector2(102f, -82f));
-            var powerImage = power.gameObject.AddComponent<Image>();
-            powerImage.sprite = HudArt.Sprite("plaque_arrow_s40");
-            powerImage.type = Image.Type.Sliced;
-            powerImage.pixelsPerUnitMultiplier = 1.4f;
-            powerImage.raycastTarget = false;
-            HudArt.Picture(power, "Icon", "icon_power", new Vector2(0f, 0.5f), new Vector2(34f, 34f), new Vector2(22f, 0f));
-            _power = HudArt.Label(power, "0", HudArt.Numbers, 21, TextAnchor.MiddleLeft, HudArt.Ivory, HudArt.LacquerDeep);
-            Ui.Stretch(_power.rectTransform, 62f, 2f, 26f, 2f);
+            var levelPlate = Ui.Rect("LevelPlate", Root);
+            Ui.Anchor(levelPlate, new Vector2(0f, 1f), new Vector2(176f, 40f), new Vector2(104f, -Margin - 58f));
+            var levelImage = levelPlate.gameObject.AddComponent<Image>();
+            levelImage.sprite = HudArt.Sprite("hud_player_nameplate");
+            levelImage.raycastTarget = false;
+            HudArt.Picture(levelPlate, "Star", "icon_star", new Vector2(0f, 0.5f), new Vector2(30f, 30f), new Vector2(28f, 1f)).preserveAspect = true;
+            _level = HudArt.Label(levelPlate, string.Empty, HudArt.Display, 20, TextAnchor.MiddleLeft, HudArt.BrassLight, HudArt.LacquerDeep);
+            Ui.Stretch(_level.rectTransform, 62f, 1f, 20f, 0f);
 
             var avatar = Ui.Rect("Avatar", Root);
-            Ui.Anchor(avatar, new Vector2(0f, 1f), new Vector2(118f, 118f), new Vector2(6f, -4f));
-            HudArt.Picture(avatar, "Shadow", "shadow", new Vector2(0.5f, 0f), new Vector2(118f, 36f), new Vector2(0f, -12f));
-            HudArt.Picture(avatar, "Face", "medal_face_lacquer", new Vector2(0.5f, 0.5f), new Vector2(104f, 104f), Vector2.zero);
+            Ui.Anchor(avatar, new Vector2(0f, 1f), new Vector2(124f, 124f), new Vector2(4f, -4f));
+            HudArt.Picture(avatar, "Shadow", "shadow", new Vector2(0.5f, 0f), new Vector2(124f, 36f), new Vector2(0f, -12f));
+            // The pack's ring has a navy middle, so it goes first and the portrait (or the initial) sits on it.
+            HudArt.Picture(avatar, "Ring", "hud_portrait_ring", new Vector2(0.5f, 0.5f), new Vector2(124f, 124f), Vector2.zero).preserveAspect = true;
             var portraitMask = Ui.Rect("PortraitMask", avatar);
             Ui.Anchor(portraitMask, new Vector2(0.5f, 0.5f), new Vector2(92f, 92f), Vector2.zero);
             portraitMask.gameObject.AddComponent<Image>().sprite = UiSkin.Disc(Color.white, Color.white, Color.white, 0f);
@@ -452,30 +457,45 @@ namespace ShinobiDominion.Game
             _portrait.enabled = false;
             _monogram = HudArt.Label(avatar, "P", HudArt.Display, 40, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.LacquerDeep);
             Ui.Stretch(_monogram.rectTransform);
-            HudArt.Picture(avatar, "Ring", "medal_ring", new Vector2(0.5f, 0.5f), new Vector2(118f, 118f), Vector2.zero);
 
-            // Currencies: gold, chakra and crystals, each a bar with its picture on the left and a "+" on the right.
-            _crystals = Counter(Root, "Crystals", "crystals", -Margin, onShop, out _, out _);
-            _chakra = Counter(Root, "Chakra", "chakra", -(Margin + BarWidth + BarGap), onShop, out _, out _);
-            _gold = Counter(Root, "Gold", "gold", -(Margin + 2f * (BarWidth + BarGap)), onShop, out _goldFill, out _goldFillImage);
+            // Top right: the gear, and the clan banner beside it.
+            var settings = Medal.Create(Root, "SettingsButton", MedalKind.IconOnly, "settings", null, onSettings, true, 62f);
+            Ui.Anchor((RectTransform)settings.transform, new Vector2(1f, 1f), new Vector2(62f, 62f), new Vector2(-Margin, -Margin));
+            SettingsButton = settings;
+            var banner = HudArt.Picture(Root, "ClanBanner", "banner_tomoe", new Vector2(1f, 1f), new Vector2(64f, 100f), new Vector2(-Margin - 78f, -2f));
+            banner.preserveAspect = true;
 
-            // The shortcut row at the bottom left, decided by the owner on 2026-11-07 (ADR-032).
-            var names = new[] { ("MailButton", "mail"), ("TrophyButton", "trophy"), ("FriendsButton", "friends"), ("QuestsButton", "quests"), ("SettingsButton", "settings") };
-            Button settings = null;
+            // Currencies: gold, crystals and chakra, each on the pack's bar with its picture on the left and a "+".
+            var barsRight = -(Margin + 78f + 64f + 22f);
+            _chakra = Counter(Root, "Chakra", "chakra", barsRight, onShop, out _, out _);
+            _crystals = Counter(Root, "Crystals", "crystals", barsRight - (BarWidth + BarGap), onShop, out _, out _);
+            _gold = Counter(Root, "Gold", "gold", barsRight - 2f * (BarWidth + BarGap), onShop, out _goldFill, out _goldFillImage);
+
+            // The left column of round shortcuts (gift, rankings, quests, friends, mail).
+            var names = new[] { ("GiftButton", "gift"), ("TrophyButton", "trophy"), ("QuestsButton", "quests"), ("FriendsButton", "friends"), ("MailButton", "mail") };
             for (var i = 0; i < names.Length; i++)
             {
                 var (name, icon) = names[i];
-                var action = name == "SettingsButton" ? onSettings : (Action)(() => onShortcut(icon));
-                var button = Medal.Create(Root, name, MedalKind.IconOnly, icon, null, action, true, RoundIcon);
-                Ui.Anchor((RectTransform)button.transform, new Vector2(0f, 0f), new Vector2(RoundIcon, RoundIcon), new Vector2(16f + i * 76f, 14f));
-                if (name == "SettingsButton") settings = button;
+                var button = Medal.Create(Root, name, MedalKind.IconOnly, icon, null, () => onShortcut(icon), true, RoundIcon);
+                _homeOnly.Add(button.gameObject);
+                Ui.Anchor((RectTransform)button.transform, new Vector2(0f, 1f), new Vector2(RoundIcon, RoundIcon), new Vector2(Margin + 14f, -(ColumnTop + i * ColumnStep)));
             }
-            SettingsButton = settings;
 
-            // ATTACK: the crimson medallion in its spiked gold ring, the most important button on the screen.
+            // The right column: the two chests from the mockup. There is no chest feature yet, so they carry no
+            // timer and open the "coming in a later update" window like the other unbuilt shortcuts.
+            var chests = new[] { ("ChestButton", "chest"), ("CrystalChestButton", "crystal_chest") };
+            for (var i = 0; i < chests.Length; i++)
+            {
+                var (name, key) = chests[i];
+                var chest = Medal.Create(Root, name, MedalKind.IconOnly, i == 0 ? "chest" : "crystals", null, () => onShortcut(key), true, 66f);
+                _homeOnly.Add(chest.gameObject);
+                Ui.Anchor((RectTransform)chest.transform, new Vector2(1f, 1f), new Vector2(66f, 66f), new Vector2(-Margin - 10f, -(ColumnTop + 40f + i * 96f)));
+            }
+
+            // ATTACK: the pack's painted crimson medallion, alone at the bottom left.
             AttackButton = Medal.Create(Root, "AttackButton", MedalKind.Attack, "attack", "Attack", onAttack, true, AttackSize);
             var attackRect = (RectTransform)AttackButton.transform;
-            Ui.Anchor(attackRect, new Vector2(1f, 0f), new Vector2(AttackSize, AttackSize), new Vector2(-10f, 6f));
+            Ui.Anchor(attackRect, new Vector2(0f, 0f), new Vector2(AttackSize, AttackSize), new Vector2(10f, 8f));
             var glow = HudArt.Picture(attackRect, "Glow", "glow", new Vector2(0.5f, 0.5f), new Vector2(AttackSize * 1.2f, AttackSize * 1.2f), Vector2.zero);
             glow.color = new Color(1f, 0.8f, 0.45f, 0f);
             glow.transform.SetAsFirstSibling();
@@ -485,24 +505,28 @@ namespace ShinobiDominion.Game
         private static Text Counter(RectTransform root, string name, string icon, float right, Action<string> onShop, out RectTransform fill, out Image fillImage)
         {
             var plate = Ui.Rect(name + "Pill", root);
-            Ui.Anchor(plate, new Vector2(1f, 1f), new Vector2(BarWidth, BarHeight), new Vector2(right - 20f, -Margin - 6f));
-            HudArt.Plate(plate, "counter_s30");
+            Ui.Anchor(plate, new Vector2(1f, 1f), new Vector2(BarWidth, BarHeight), new Vector2(right, -Margin - 8f));
+            var bar = plate.gameObject.AddComponent<Image>();
+            bar.sprite = HudArt.Sprite("hud_resource_bar");
+            bar.raycastTarget = false;
             HudArt.DropShadow(plate);
-            HudArt.Picture(plate, "Icon", "icon_" + icon, new Vector2(0f, 0.5f), new Vector2(62f, 62f), new Vector2(-26f, 2f));
+            // The bar's own socket holds a painted coin; a round navy socket covers it so each currency shows its own picture.
+            HudArt.Picture(plate, "Socket", "hud_small_round_button", new Vector2(0f, 0.5f), new Vector2(56f, 56f), new Vector2(-6f, 0f)).preserveAspect = true;
+            var picture = HudArt.Picture(plate, "Icon", icon == "crystals" ? "gem_crystal" : "icon_" + icon, new Vector2(0f, 0.5f), new Vector2(48f, 48f), new Vector2(-2f, 1f));
+            picture.preserveAspect = true;
             var text = HudArt.Label(plate, string.Empty, HudArt.Numbers, 24, TextAnchor.MiddleRight, HudArt.Ivory, HudArt.LacquerDeep);
-            Ui.Stretch(text.rectTransform, 40f, 6f, 34f, 2f);
+            Ui.Stretch(text.rectTransform, 48f, 4f, 50f, 2f);
             var plus = Ui.Rect("Plus", plate);
-            Ui.Anchor(plus, new Vector2(1f, 0.5f), new Vector2(44f, 44f), new Vector2(22f, 0f));
+            Ui.Anchor(plus, new Vector2(1f, 0.5f), new Vector2(46f, 46f), new Vector2(10f, 0f));
             var plusImage = plus.gameObject.AddComponent<Image>();
-            plusImage.sprite = HudArt.Sprite("btn_plus");
+            plusImage.sprite = HudArt.Sprite("hud_plus_button");
+            plusImage.preserveAspect = true;
             var plusButton = plus.gameObject.AddComponent<Button>();
             plusButton.name = name + "ShopButton";
             plusButton.targetGraphic = plusImage;
             plusButton.onClick.AddListener(() => GameSounds.Play(GameSound.Click));
             plusButton.onClick.AddListener(() => onShop(icon));
             UiMotion.Pressable(plusButton);
-            var sign = HudArt.Label(plus, "+", HudArt.Numbers, 30, TextAnchor.MiddleCenter, HudArt.Ivory, new Color32(0x4A, 0x2C, 0x08, 0xFF));
-            Ui.Stretch(sign.rectTransform, 0f, 2f, 0f, 0f);
             fill = null;
             fillImage = null;
             if (name != "Gold") return text;
@@ -511,8 +535,8 @@ namespace ShinobiDominion.Game
             track.anchorMin = new Vector2(0f, 0f);
             track.anchorMax = new Vector2(1f, 0f);
             track.pivot = new Vector2(0.5f, 0f);
-            track.offsetMin = new Vector2(40f, 7f);
-            track.offsetMax = new Vector2(-34f, 13f);
+            track.offsetMin = new Vector2(50f, 6f);
+            track.offsetMax = new Vector2(-48f, 11f);
             var trackImage = track.gameObject.AddComponent<Image>();
             trackImage.sprite = HudArt.Sprite("track_s8");
             trackImage.type = Image.Type.Sliced;
@@ -534,7 +558,6 @@ namespace ShinobiDominion.Game
         private long _shownChakra = -1;
         private long _shownCrystals = -1;
         private long _shownCapacity = -1;
-        private long _shownPower = -1;
 
         /// <summary>Numbers roll to their new value; a gain bounces the bar, a loss flashes it red once.</summary>
         public void SetWallet(long gold, long crystals, long goldCapacity = 0, long chakra = 0)
@@ -579,6 +602,7 @@ namespace ShinobiDominion.Game
         private string _shownName;
         private int _shownLevel = -1;
 
+        /// <summary>Name and level. The newest mockup shows no power number, so <paramref name="power"/> is not drawn.</summary>
         public void SetIdentity(string displayName, int level, long power = 0)
         {
             if (displayName != _shownName)
@@ -589,13 +613,8 @@ namespace ShinobiDominion.Game
             }
             if (level != _shownLevel)
             {
-                _level.text = "Lv " + level;
+                _level.text = "Lv. " + level;
                 _shownLevel = level;
-            }
-            if (power != _shownPower)
-            {
-                _power.text = power.ToString("N0");
-                _shownPower = power;
             }
         }
 
@@ -609,6 +628,8 @@ namespace ShinobiDominion.Game
 
         public void SetAttackVisible(bool visible)
         {
+            foreach (var piece in _homeOnly)
+                if (piece.activeSelf != visible) piece.SetActive(visible);
             if (AttackButton.gameObject.activeSelf != visible) AttackButton.gameObject.SetActive(visible);
         }
     }

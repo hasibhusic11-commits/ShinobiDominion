@@ -119,11 +119,134 @@ namespace ShinobiDominion.Game
             }
         }
 
+        /// <summary>The owner's painted medallion family (UI pack) for an icon name, or null when it has none.</summary>
+        public static string FamilyFor(string icon)
+        {
+            switch (icon)
+            {
+                case null: return null;
+                default: return Resources.Load<Sprite>($"UI/medal_{icon}_normal") != null ? icon : null;
+            }
+        }
+
         /// <summary>
-        /// A round medallion button: shadow, face (the part that darkens when pressed), brass ring, icon, and a
-        /// caption under it. Disabled medallions get a charcoal face and a faded icon, and shake when tapped.
+        /// A round medallion button. With a painted family from the owner's UI pack, the picture swaps between
+        /// its normal, hover, pressed and disabled paintings (selected uses its own). Without one, it is a round
+        /// frame with the icon on top. Captions sit on a small plate under the medallion; ATTACK writes its word
+        /// across the bottom. Disabled medallions shake when tapped.
         /// </summary>
         public static Button Create(Transform parent, string name, MedalKind kind, string icon, string caption, Action onClick, bool interactable, float size, bool selected = false)
+        {
+            var family = FamilyFor(icon);
+            return family != null
+                ? Painted(parent, name, kind, family, caption, onClick, interactable, size, selected)
+                : Framed(parent, name, kind, icon, caption, onClick, interactable, size, selected);
+        }
+
+        private static Button Painted(Transform parent, string name, MedalKind kind, string family, string caption, Action onClick, bool interactable, float size, bool selected)
+        {
+            var rect = Ui.Rect(name, parent);
+            rect.sizeDelta = new Vector2(size, size);
+            if (selected && interactable)
+            {
+                var halo = HudArt.Picture(rect, "Glow", "medal_halo", new Vector2(0.5f, 0.5f), new Vector2(size * 1.22f, size * 1.22f), Vector2.zero);
+                UiMotion.Breathe(halo, 0.95f, 1.8f);
+            }
+            var shadow = HudArt.Picture(rect, "Shadow", "shadow", new Vector2(0.5f, 0f), new Vector2(size * 1.0f, size * 0.3f), new Vector2(0f, -size * 0.08f));
+            shadow.color = new Color(1f, 1f, 1f, 0.85f);
+
+            var faceRect = Ui.Rect("Face", rect);
+            Ui.Stretch(faceRect);
+            var face = faceRect.gameObject.AddComponent<Image>();
+            var normal = HudArt.Sprite($"medal_{family}_{(selected ? "selected" : "normal")}");
+            face.sprite = normal;
+            face.preserveAspect = true;
+
+            if (kind == MedalKind.Attack)
+            {
+                var word = HudArt.Label(rect, caption.ToUpperInvariant(), HudArt.Display, Mathf.RoundToInt(size * 0.17f), TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.CrimsonDark);
+                Ui.Anchor(word.rectTransform, new Vector2(0.5f, 0f), new Vector2(size * 1.05f, size * 0.24f), new Vector2(0f, size * 0.1f));
+            }
+            else if (!string.IsNullOrEmpty(caption))
+            {
+                Caption(rect, caption, size, interactable);
+            }
+
+            var button = rect.gameObject.AddComponent<Button>();
+            button.targetGraphic = face;
+            button.interactable = interactable;
+            button.transition = Selectable.Transition.SpriteSwap;
+            button.spriteState = new SpriteState
+            {
+                highlightedSprite = HudArt.Sprite($"medal_{family}_hover"),
+                pressedSprite = HudArt.Sprite($"medal_{family}_pressed"),
+                selectedSprite = normal,
+                disabledSprite = HudArt.Sprite($"medal_{family}_disabled")
+            };
+            Finish(button, onClick);
+            return button;
+        }
+
+        /// <summary>A caption on a small dark plate under a medallion, as in the owner's mockup.</summary>
+        private static void Caption(RectTransform medal, string caption, float size, bool interactable)
+        {
+            var plate = Ui.Rect("Caption", medal);
+            Ui.Anchor(plate, new Vector2(0.5f, 0f), new Vector2(size * 1.12f, Mathf.Max(26f, size * 0.27f)), new Vector2(0f, -size * 0.16f));
+            var image = plate.gameObject.AddComponent<Image>();
+            image.sprite = HudArt.Sprite("hud_building_nameplate");
+            image.raycastTarget = false;
+            var label = HudArt.Label(plate, caption, HudArt.Display, Mathf.RoundToInt(Mathf.Clamp(size * 0.17f, 14f, 20f)), TextAnchor.MiddleCenter,
+                interactable ? HudArt.Ivory : HudArt.IvoryMuted, HudArt.LacquerDeep);
+            Ui.Stretch(label.rectTransform, 10f, 1f, 10f, 0f);
+            label.resizeTextForBestFit = true;
+            label.resizeTextMinSize = 11;
+            label.resizeTextMaxSize = label.fontSize;
+        }
+
+        private static void Finish(Button button, Action onClick)
+        {
+            button.onClick.AddListener(() => GameSounds.Play(GameSound.Click));
+            if (onClick != null) button.onClick.AddListener(() => onClick());
+            UiMotion.Pressable(button);
+            button.gameObject.AddComponent<DeniedShake>();
+        }
+
+        /// <summary>A round frame (the pack's small round button) with a painted icon, for buttons with no medallion family.</summary>
+        private static Button Framed(Transform parent, string name, MedalKind kind, string icon, string caption, Action onClick, bool interactable, float size, bool selected)
+        {
+            if (kind != MedalKind.IconOnly) return Classic(parent, name, kind, icon, caption, onClick, interactable, size, selected);
+            var rect = Ui.Rect(name, parent);
+            rect.sizeDelta = new Vector2(size, size);
+            HudArt.Picture(rect, "Shadow", "shadow", new Vector2(0.5f, 0f), new Vector2(size * 1.0f, size * 0.3f), new Vector2(0f, -size * 0.08f));
+            var faceRect = Ui.Rect("Face", rect);
+            Ui.Stretch(faceRect);
+            var face = faceRect.gameObject.AddComponent<Image>();
+            face.sprite = HudArt.Sprite("hud_small_round_button");
+            if (!string.IsNullOrEmpty(icon))
+            {
+                var picture = HudArt.Picture(rect, "Icon", "icon_" + icon, new Vector2(0.5f, 0.5f), new Vector2(size * 0.6f, size * 0.6f), Vector2.zero);
+                picture.preserveAspect = true;
+                if (!interactable) picture.color = new Color(1f, 1f, 1f, 0.45f);
+            }
+            if (!interactable) face.color = new Color(0.55f, 0.55f, 0.58f, 1f);
+            if (!string.IsNullOrEmpty(caption)) Caption(rect, caption, size, interactable);
+            var button = rect.gameObject.AddComponent<Button>();
+            button.targetGraphic = face;
+            button.interactable = interactable;
+            var colors = button.colors;
+            colors.normalColor = Color.white;
+            colors.highlightedColor = new Color(1.08f, 1.08f, 1.08f, 1f);
+            colors.selectedColor = Color.white;
+            colors.pressedColor = new Color(0.78f, 0.78f, 0.78f, 1f);
+            colors.disabledColor = Color.white;
+            colors.fadeDuration = 0.06f;
+            button.colors = colors;
+            Finish(button, onClick);
+            return button;
+        }
+
+        /// <summary>The earlier code-drawn medallion, kept for kinds the painted pack does not cover.</summary>
+        private static Button Classic(Transform parent, string name, MedalKind kind, string icon, string caption, Action onClick, bool interactable, float size, bool selected)
         {
             var rect = Ui.Rect(name, parent);
             rect.sizeDelta = new Vector2(size, size);

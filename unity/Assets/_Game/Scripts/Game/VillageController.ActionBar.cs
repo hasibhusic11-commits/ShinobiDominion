@@ -12,9 +12,9 @@ namespace ShinobiDominion.Game
     /// </summary>
     public sealed partial class VillageController
     {
-        private const float ActionSize = 104f;
-        private const float InfoSize = 104f;
-        private const float ActionGap = 14f;
+        private const float ActionSize = 108f;
+        private const float InfoSize = 108f;
+        private const float ActionGap = 18f;
 
         private GameObject _actionBar;
         private int _actionBarBuilding = -1;
@@ -75,7 +75,7 @@ namespace ShinobiDominion.Game
 
             actions.Add(new BarAction { Name = "MoveButton", Caption = "Move", Icon = "move", Kind = MedalKind.Secondary, OnClick = () => BeginMove(building.Id), Enabled = true });
             if (definition.removable)
-                actions.Add(new BarAction { Name = "RemoveButton", Caption = "Remove", Icon = "close", Kind = MedalKind.Destructive, OnClick = () => RemoveSelected(building.Id), Enabled = true });
+                actions.Add(new BarAction { Name = "RemoveButton", Caption = "Remove", Icon = "remove", Kind = MedalKind.Destructive, OnClick = () => RemoveSelected(building.Id), Enabled = true });
             return actions;
         }
 
@@ -91,12 +91,12 @@ namespace ShinobiDominion.Game
                 case BuildingFunction.HeroBase:
                     return new BarAction { Name = "ChangeHeroButton", Caption = "Hero", Icon = "hero", Kind = MedalKind.Primary, OnClick = () => ShowHeroPicker(building.Id), Enabled = Roster.HeroCount > 0 };
                 case BuildingFunction.SummoningGate:
-                    return new BarAction { Name = "OpenGateButton", Caption = "Summon", Icon = "gate", Kind = MedalKind.Primary, OnClick = ShowSummoningGate, Enabled = IsOnline };
+                    return new BarAction { Name = "OpenGateButton", Caption = "Summon", Icon = "summon", Kind = MedalKind.Primary, OnClick = ShowSummoningGate, Enabled = IsOnline };
                 case BuildingFunction.Training:
                     return new BarAction { Name = "TrainButton", Caption = "Train", Icon = "train", Kind = MedalKind.Primary, OnClick = () => ShowBuildingDetails(building.Id), Enabled = true };
                 case BuildingFunction.Collector:
                     var pending = Village.PendingCollection(building, Now);
-                    return new BarAction { Name = "CollectButton", Caption = "Collect", Icon = "gold", Kind = MedalKind.Primary, OnClick = () => Collect(building.Id), Enabled = pending > 0 };
+                    return new BarAction { Name = "CollectButton", Caption = "Collect", Icon = "collect", Kind = MedalKind.Primary, OnClick = () => Collect(building.Id), Enabled = pending > 0 };
             }
             if (building.Definition.IsWall)
             {
@@ -115,12 +115,18 @@ namespace ShinobiDominion.Game
             _actionBar = bar.gameObject;
             _actionBarBuilding = building.Id;
 
-            // Name plate: the building on the left, its level on the right.
+            // Owner's newest mockup (docs/ui/target_home_mockup_v2.webp): the painted medallions sit in a row at
+            // the bottom right, each with its caption plate, and the building's name plate floats above the row.
+            var width = 0f;
+            foreach (var action in actions) width += (action.Kind == MedalKind.IconOnly ? InfoSize : ActionSize) + ActionGap;
+            width -= ActionGap;
+            const float right = 18f;
+            const float bottom = 34f;
+
             var plate = Ui.Rect("NamePlate", bar);
-            Ui.Anchor(plate, new Vector2(0.5f, 0f), new Vector2(430f, 52f), new Vector2(0f, 140f));
+            Ui.Anchor(plate, new Vector2(1f, 0f), new Vector2(Mathf.Max(width, 420f), 54f), new Vector2(-right - (width - Mathf.Max(width, 420f)) / 2f, bottom + ActionSize + 44f));
             var plateImage = plate.gameObject.AddComponent<Image>();
-            plateImage.sprite = HudArt.Sprite("plaque_arrow_s40");
-            plateImage.type = Image.Type.Sliced;
+            plateImage.sprite = HudArt.Sprite("hud_building_nameplate");
             plateImage.raycastTarget = false;
             HudArt.DropShadow(plate);
             var title = HudArt.Label(plate, $"{building.Definition.displayName}  (Lv {building.Level})", HudArt.Display, 22, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.LacquerDeep);
@@ -131,22 +137,18 @@ namespace ShinobiDominion.Game
 
             if (!string.IsNullOrEmpty(LastMessage) && LastMessage != VillageErrorText.Describe(VillageError.None))
             {
-                var note = HudArt.Label(bar, LastMessage, HudArt.Numbers, 17, TextAnchor.MiddleCenter, HudArt.BrassLight, HudArt.LacquerDeep);
-                Ui.Anchor(note.rectTransform, new Vector2(0.5f, 0f), new Vector2(640f, 26f), new Vector2(0f, 196f));
+                var note = HudArt.Label(bar, LastMessage, HudArt.Numbers, 17, TextAnchor.MiddleRight, HudArt.BrassLight, HudArt.LacquerDeep);
+                Ui.Anchor(note.rectTransform, new Vector2(1f, 0f), new Vector2(640f, 26f), new Vector2(-right, bottom + ActionSize + 104f));
             }
 
-            // The row is sized from its contents, so two actions or five always sit centred.
-            var width = 0f;
-            foreach (var action in actions) width += (action.Kind == MedalKind.IconOnly ? InfoSize : ActionSize) + ActionGap;
-            width -= ActionGap;
-            var x = -width / 2f;
+            var x = -right - width;
             var index = 0;
             foreach (var action in actions)
             {
                 var size = action.Kind == MedalKind.IconOnly ? InfoSize : ActionSize;
-                var tile = Tile.Create(bar, action.Name, action.Icon, action.Caption, action.OnClick, action.Enabled, size);
-                var rect = (RectTransform)tile.transform;
-                Ui.Anchor(rect, new Vector2(0.5f, 0f), new Vector2(size, size), new Vector2(x + size / 2f, 18f));
+                var medal = Medal.Create(bar, action.Name, action.Kind, action.Icon, action.Caption, action.OnClick, action.Enabled, size);
+                var rect = (RectTransform)medal.transform;
+                Ui.Anchor(rect, new Vector2(1f, 0f), new Vector2(size, size), new Vector2(x + size, bottom));
                 if (!string.IsNullOrEmpty(action.Cost)) CostTag(rect, action.Cost, action.CostShort);
                 UiMotion.PopIn(rect, 0.04f * index++, 0.6f, 0.22f);
                 x += size + ActionGap;

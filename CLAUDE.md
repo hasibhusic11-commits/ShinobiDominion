@@ -16,7 +16,7 @@ dotnet test tools/core-tests/ShinobiDominion.Core.Tests.csproj
 ```
 
 ## Do not
-- Add anything docked to the bottom of the idle screen except ATTACK and the owner's shortcut row at the bottom left (ADR-032), or any energy or stamina counter.
+- Add anything to the bottom of the idle screen except ATTACK at the bottom left and the owner's left column of round shortcuts (ADR-033), or any energy or stamina counter. The bottom right is for a tapped building's action medallions only.
 - Open the build catalog from anywhere but the Builder Hall.
 - Add pity, guarantees or duplicate protection to summoning, or roll on the client.
 - Trust the client for currency, inventory, placement or battle results once a server exists.

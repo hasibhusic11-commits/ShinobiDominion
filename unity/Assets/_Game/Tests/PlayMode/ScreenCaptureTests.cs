@@ -133,7 +133,7 @@ namespace ShinobiDominion.Tests
             game.IsoCamera.ZoomAt(5f, new Vector2(texture.width * 0.5f, texture.height * 0.5f));
 
             var renderers = root.GetComponentsInChildren<MeshRenderer>();
-            var vertices = renderers.Sum(r => r.GetComponent<MeshFilter>().sharedMesh.vertexCount);
+            var vertices = renderers.Sum(r => { var f = r.GetComponent<MeshFilter>(); return f != null && f.sharedMesh != null ? f.sharedMesh.vertexCount : 0; });
             var materials = renderers.SelectMany(r => r.sharedMaterials).Distinct().Count();
             File.WriteAllText(Path.Combine(dir, "stats.txt"), $"renderers={renderers.Length} vertices={vertices} materials={materials}");
 

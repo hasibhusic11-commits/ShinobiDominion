@@ -59,22 +59,25 @@ namespace ShinobiDominion.Tests
         }
 
         [Test]
-        public void IdleHome_BottomHasOnlyAttackAndTheShortcutRow()
+        public void IdleHome_BottomHasOnlyAttackAndTheLeftColumn()
         {
-            // ADR-032: the owner added the shortcut row at the bottom left; nothing else may sit down there.
-            var allowed = new[] { "AttackButton", "MailButton", "TrophyButton", "FriendsButton", "QuestsButton", "SettingsButton" };
+            // ADR-033: the owner's newest mockup puts ATTACK at the bottom left under a column of round shortcuts;
+            // the bottom right stays empty until a building is tapped.
+            var column = new[] { "GiftButton", "TrophyButton", "QuestsButton", "FriendsButton", "MailButton" };
             var bottom = Buttons().Where(b => ScreenRect((RectTransform)b.transform).yMin < Screen.height / 3f).Select(b => b.name).ToArray();
-            CollectionAssert.AreEquivalent(allowed, bottom);
+            CollectionAssert.Contains(bottom, "AttackButton");
+            CollectionAssert.IsSubsetOf(bottom, column.Concat(new[] { "AttackButton" }).ToArray());
             var attack = Buttons().First(b => b.name == "AttackButton");
             StringAssert.AreEqualIgnoringCase("ATTACK", attack.GetComponentInChildren<Text>().text);
-            Assert.IsFalse(Buttons().Any(b => b.name != "AttackButton" && ScreenRect((RectTransform)b.transform).xMin > Screen.width * 0.5f && ScreenRect((RectTransform)b.transform).yMin < Screen.height / 3f), "The bottom right belongs to ATTACK alone");
+            Assert.IsFalse(Buttons().Any(b => ScreenRect((RectTransform)b.transform).xMin > Screen.width * 0.5f && ScreenRect((RectTransform)b.transform).yMin < Screen.height / 3f),
+                "Nothing sits at the bottom right of the idle screen");
         }
 
         [Test]
-        public void IdleHome_AttackIsAtBottomRight()
+        public void IdleHome_AttackIsAtBottomLeft()
         {
             var rect = ScreenRect((RectTransform)Controller.Hud.AttackButton.transform);
-            Assert.Greater(rect.center.x, Screen.width * 0.5f);
+            Assert.Less(rect.center.x, Screen.width * 0.5f);
             Assert.Less(rect.center.y, Screen.height * 0.5f);
         }
 

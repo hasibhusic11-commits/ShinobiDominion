@@ -726,9 +726,20 @@ namespace ShinobiDominion.Game
             glow.color = new Color(1f, 0.8f, 0.45f, 0.4f);
             var preview = Ui.Rect("Preview", well);
             Ui.Anchor(preview, new Vector2(0.5f, 0.5f), new Vector2(170f, 170f), new Vector2(0f, -4f));
-            var image = preview.gameObject.AddComponent<RawImage>();
-            image.texture = _thumbnails.For(definition);
-            image.raycastTarget = false;
+            var painted = BuildingSprites.For(definition.id, 1);
+            if (painted != null)
+            {
+                var picture = preview.gameObject.AddComponent<Image>();
+                picture.sprite = painted;
+                picture.preserveAspect = true;
+                picture.raycastTarget = false;
+            }
+            else
+            {
+                var image = preview.gameObject.AddComponent<RawImage>();
+                image.texture = _thumbnails.For(definition);
+                image.raycastTarget = false;
+            }
 
             var title = HudArt.Label(rect, definition.displayName, HudArt.Display, 18, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.LacquerDeep);
             Ui.Anchor(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(180f, 32f), new Vector2(0f, -12f));

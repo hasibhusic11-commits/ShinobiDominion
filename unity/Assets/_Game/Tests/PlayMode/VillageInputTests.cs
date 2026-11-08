@@ -101,6 +101,28 @@ namespace ShinobiDominion.Tests
 
         private Vector2 ScreenOf(int x, int z) => Cam.WorldToScreenPoint(GridSpace.CellCenter(new GridCoord(x, z)));
 
+        /// <summary>A visible patch of bare ground with no building near it and no UI over it, whatever the HUD layout.</summary>
+        private Vector2 EmptyGround()
+        {
+            var events = UnityEngine.EventSystems.EventSystem.current;
+            for (var x = 2; x < VillageGrid.Size - 2; x++)
+            for (var z = 2; z < VillageGrid.Size - 2; z++)
+            {
+                var clear = true;
+                for (var dx = -2; dx <= 2 && clear; dx++)
+                for (var dz = -2; dz <= 2 && clear; dz++)
+                    if (Controller.Village.BuildingAt(new GridCoord(x + dx, z + dz)) != null) clear = false;
+                if (!clear) continue;
+                var point = ScreenOf(x, z);
+                if (point.x < Screen.width * 0.2f || point.x > Screen.width * 0.8f || point.y < Screen.height * 0.2f || point.y > Screen.height * 0.8f) continue;
+                var hits = new System.Collections.Generic.List<UnityEngine.EventSystems.RaycastResult>();
+                events.RaycastAll(new UnityEngine.EventSystems.PointerEventData(events) { position = point }, hits);
+                if (hits.Count == 0) return point;
+            }
+            Assert.Fail("No bare ground on screen");
+            return Vector2.zero;
+        }
+
         private static Vector2 ScreenOf(Component ui)
         {
             var corners = new Vector3[4];
@@ -131,7 +153,7 @@ namespace ShinobiDominion.Tests
             Assert.IsTrue(Controller.ActionBarOpen, "A building shows its action row");
             Assert.IsFalse(Controller.Panel.IsOpen, "and not a big panel over the village");
 
-            yield return Click(ScreenOf(36, 20));
+            yield return Click(EmptyGround());
             Assert.AreEqual(VillageScreen.Home, Controller.UiState.Screen);
             Assert.IsFalse(Controller.ActionBarOpen);
             Assert.IsFalse(Controller.Panel.IsOpen);
