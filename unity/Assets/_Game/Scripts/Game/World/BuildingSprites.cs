@@ -204,3 +204,24 @@ namespace ShinobiDominion.Game
         private void LateUpdate() => Place();
     }
 }
+
+namespace ShinobiDominion.Game
+{
+    /// <summary>A slow up-and-down float, for markers over buildings.</summary>
+    public sealed class Bob : UnityEngine.MonoBehaviour
+    {
+        private UnityEngine.Vector3 _start;
+        private float _phase;
+
+        private void Start()
+        {
+            _start = transform.localPosition;
+            _phase = UnityEngine.Random.value * 6.28f;
+        }
+
+        private void Update()
+        {
+            transform.localPosition = _start + UnityEngine.Vector3.up * (UnityEngine.Mathf.Sin(UnityEngine.Time.time * 2.4f + _phase) * 0.08f);
+        }
+    }
+}

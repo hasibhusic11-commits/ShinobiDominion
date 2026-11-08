@@ -661,6 +661,17 @@ namespace ShinobiDominion.Game
 
         private static GameObject CreateMarker(Transform parent, ResourceKind kind)
         {
+            // The owner's painted "ready to collect" bubble, bobbing over the building, when imported.
+            var bubble = Resources.Load<Sprite>(kind == ResourceKind.Crystals ? "Props/collect_bubble_crystal" : "Props/collect_bubble_gold");
+            if (bubble != null)
+            {
+                var holder = new GameObject("CollectMarker");
+                holder.transform.SetParent(parent, false);
+                var art = BuildingSprites.Stand(holder.transform, "Bubble", bubble, parent.position + Vector3.up * 2.35f, 0.95f, short.MaxValue - 1, Color.white);
+                art.gameObject.AddComponent<Bob>();
+                return holder;
+            }
+
             var color = kind == ResourceKind.Crystals ? Palette.Crystal : Palette.Amber;
             var builder = new MeshBuilder();
             builder.ContactShade = false;
