@@ -432,5 +432,42 @@ namespace ShinobiDominion.Tests
             }
             Assert.IsEmpty(problems, string.Join("\n", problems));
         }
+
+        // ---------- Ability charge (owner's rule, 2026-11-08) ----------
+
+        private static List<long[]> ChargeOf(BattleResult result, int index, int side) =>
+            result.events.Where(e => e[1] == (long)BattleEventKind.Charge && e[2] == index && e[4] == side).ToList();
+
+        [Test]
+        public void Special_FiresAfterFiveLandedHits_ThenTheBarEmpties()
+        {
+            var result = BattleSim.Run(Outpost(), new List<BattleHeroInput> { Hero("f", "Fighter", 50000, 60, 20, 3, 3) });
+            var charge = ChargeOf(result, 0, 0).Select(e => e[3]).ToList();
+            Assert.GreaterOrEqual(charge.Count, 6, "The fighter fights long enough to fill its bar");
+            CollectionAssert.AreEqual(new long[] { 1, 2, 3, 4, 5, 0 }, charge.Take(6).ToArray(), "One step per landed hit, then empty when the special fires");
+            var fullTick = ChargeOf(result, 0, 0).First(e => e[3] == BattleSim.ChargeFull)[0];
+            var firstSpecial = result.events.First(e => e[1] == (long)BattleEventKind.Ability && e[2] == 0)[0];
+            Assert.Greater(firstSpecial, fullTick, "The special fires on the hit after the bar fills, never before");
+            Assert.IsTrue(charge.All(c => c >= 0 && c <= BattleSim.ChargeFull));
+        }
+
+        [Test]
+        public void Troops_HaveNoChargeBar()
+        {
+            var team = new List<BattleHeroInput> { Hero("f", "Fighter", 5000, 60, 20, 3, 3) };
+            for (var i = 0; i < 6; i++)
+                team.Add(new BattleHeroInput { id = "t" + i, role = "Fighter", hp = 110, attack = 14, defense = 5, isTroop = true, x = 2 + i, z = 2 });
+            var result = BattleSim.Run(Outpost(), team);
+            Assert.IsFalse(result.events.Any(e => e[1] == (long)BattleEventKind.Charge && e[4] == 0 && e[2] >= 1), "Only the hero charges");
+        }
+
+        [Test]
+        public void Defenders_ChargeOnLandedHits_Too()
+        {
+            var result = BattleSim.Run(Outpost(), MixedTeam(4), Guards(4));
+            var guardCharge = result.events.Where(e => e[1] == (long)BattleEventKind.Charge && e[4] == 1).ToList();
+            Assert.IsNotEmpty(guardCharge, "Guards fill their bars by landing hits");
+            Assert.IsTrue(guardCharge.All(e => e[3] >= 0 && e[3] <= BattleSim.ChargeFull));
+        }
     }
 }

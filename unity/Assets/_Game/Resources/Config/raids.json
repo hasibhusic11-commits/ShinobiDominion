@@ -312,25 +312,25 @@
         },
         {
           "def": "defense_tower",
-          "level": 3,
+          "level": 2,
           "x": 17,
           "z": 16
         },
         {
           "def": "defense_tower",
-          "level": 3,
+          "level": 2,
           "x": 31,
           "z": 32
         },
         {
           "def": "defense_tower",
-          "level": 3,
+          "level": 2,
           "x": 31,
           "z": 16
         },
         {
           "def": "spirit_turret",
-          "level": 3,
+          "level": 2,
           "x": 17,
           "z": 32
         },
@@ -542,31 +542,31 @@
         },
         {
           "def": "defense_tower",
-          "level": 4,
+          "level": 3,
           "x": 31,
           "z": 16
         },
         {
           "def": "defense_tower",
-          "level": 4,
+          "level": 3,
           "x": 17,
           "z": 32
         },
         {
           "def": "defense_tower",
-          "level": 4,
+          "level": 3,
           "x": 17,
           "z": 16
         },
         {
           "def": "defense_tower",
-          "level": 4,
+          "level": 3,
           "x": 31,
           "z": 32
         },
         {
           "def": "spirit_turret",
-          "level": 4,
+          "level": 3,
           "x": 24,
           "z": 16
         },
@@ -784,37 +784,37 @@
         },
         {
           "def": "defense_tower",
-          "level": 5,
+          "level": 4,
           "x": 15,
           "z": 17
         },
         {
           "def": "defense_tower",
-          "level": 5,
+          "level": 4,
           "x": 33,
           "z": 31
         },
         {
           "def": "defense_tower",
-          "level": 5,
+          "level": 4,
           "x": 33,
           "z": 17
         },
         {
           "def": "defense_tower",
-          "level": 5,
+          "level": 4,
           "x": 15,
           "z": 31
         },
         {
           "def": "spirit_turret",
-          "level": 5,
+          "level": 4,
           "x": 24,
           "z": 17
         },
         {
           "def": "spirit_turret",
-          "level": 5,
+          "level": 4,
           "x": 24,
           "z": 31
         },
@@ -1050,43 +1050,43 @@
         },
         {
           "def": "defense_tower",
-          "level": 6,
+          "level": 5,
           "x": 33,
           "z": 14
         },
         {
           "def": "defense_tower",
-          "level": 6,
+          "level": 5,
           "x": 15,
           "z": 34
         },
         {
           "def": "defense_tower",
-          "level": 6,
+          "level": 5,
           "x": 15,
           "z": 14
         },
         {
           "def": "defense_tower",
-          "level": 6,
+          "level": 5,
           "x": 33,
           "z": 34
         },
         {
           "def": "defense_tower",
-          "level": 6,
+          "level": 5,
           "x": 24,
           "z": 14
         },
         {
           "def": "spirit_turret",
-          "level": 6,
+          "level": 5,
           "x": 24,
           "z": 34
         },
         {
           "def": "spirit_turret",
-          "level": 6,
+          "level": 5,
           "x": 15,
           "z": 24
         },
@@ -1328,49 +1328,49 @@
         },
         {
           "def": "defense_tower",
-          "level": 7,
+          "level": 6,
           "x": 16,
           "z": 15
         },
         {
           "def": "defense_tower",
-          "level": 7,
+          "level": 6,
           "x": 32,
           "z": 33
         },
         {
           "def": "defense_tower",
-          "level": 7,
+          "level": 6,
           "x": 32,
           "z": 15
         },
         {
           "def": "defense_tower",
-          "level": 7,
+          "level": 6,
           "x": 16,
           "z": 33
         },
         {
           "def": "defense_tower",
-          "level": 7,
+          "level": 6,
           "x": 24,
           "z": 15
         },
         {
           "def": "defense_tower",
-          "level": 7,
+          "level": 6,
           "x": 24,
           "z": 33
         },
         {
           "def": "spirit_turret",
-          "level": 7,
+          "level": 6,
           "x": 16,
           "z": 24
         },
         {
           "def": "spirit_turret",
-          "level": 7,
+          "level": 6,
           "x": 32,
           "z": 24
         },
@@ -1624,49 +1624,49 @@
         },
         {
           "def": "defense_tower",
-          "level": 8,
+          "level": 7,
           "x": 34,
           "z": 16
         },
         {
           "def": "defense_tower",
-          "level": 8,
+          "level": 7,
           "x": 14,
           "z": 32
         },
         {
           "def": "defense_tower",
-          "level": 8,
+          "level": 7,
           "x": 14,
           "z": 16
         },
         {
           "def": "defense_tower",
-          "level": 8,
+          "level": 7,
           "x": 34,
           "z": 32
         },
         {
           "def": "defense_tower",
-          "level": 8,
+          "level": 7,
           "x": 24,
           "z": 16
         },
         {
           "def": "defense_tower",
-          "level": 8,
+          "level": 7,
           "x": 24,
           "z": 32
         },
         {
           "def": "spirit_turret",
-          "level": 8,
+          "level": 7,
           "x": 14,
           "z": 24
         },
         {
           "def": "spirit_turret",
-          "level": 8,
+          "level": 7,
           "x": 34,
           "z": 24
         },

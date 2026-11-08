@@ -2,7 +2,7 @@
   "scenarios": [
     {
       "name": "mixed team, strong",
-      "checksum": "129657e63259c746", "stars": 3, "damagePercent": 100, "endTick": 443, "heroesAlive": 6,
+      "checksum": "955af415171f6f0c", "stars": 3, "damagePercent": 100, "endTick": 455, "heroesAlive": 6,
       "team": [
         { "id": "a", "role": "Tank", "hp": 6000, "attack": 240, "defense": 240, "x": 10, "z": 10 },
         { "id": "b", "role": "Fighter", "hp": 4800, "attack": 360, "defense": 160, "x": 11, "z": 10 },
@@ -14,7 +14,7 @@
     },
     {
       "name": "mixed team, weak",
-      "checksum": "084d266c4fc302fb", "stars": 3, "damagePercent": 100, "endTick": 1040, "heroesAlive": 6,
+      "checksum": "29fee55453e34ada", "stars": 3, "damagePercent": 100, "endTick": 1014, "heroesAlive": 6,
       "team": [
         { "id": "a", "role": "Tank", "hp": 1500, "attack": 60, "defense": 60, "x": 40, "z": 40 },
         { "id": "b", "role": "Fighter", "hp": 1200, "attack": 90, "defense": 40, "x": 41, "z": 41 },
@@ -26,7 +26,7 @@
     },
     {
       "name": "heroes and troops together",
-      "checksum": "f8e5fd10d4084284", "stars": 3, "damagePercent": 100, "endTick": 1800, "heroesAlive": 1,
+      "checksum": "0c49c155263e99bd", "stars": 3, "damagePercent": 100, "endTick": 1800, "heroesAlive": 1,
       "team": [
         { "id": "a", "role": "Control", "hp": 2000, "attack": 200, "defense": 60, "x": 25, "z": 5 },
         { "id": "militia", "role": "Fighter", "hp": 110, "attack": 14, "defense": 5, "x": 10, "z": 10, "isTroop": true },
@@ -40,14 +40,14 @@
     },
     {
       "name": "one legendary alone",
-      "checksum": "bcb6cac228ca9021", "stars": 3, "damagePercent": 100, "endTick": 1240, "heroesAlive": 1,
+      "checksum": "d3957d013aba0c10", "stars": 3, "damagePercent": 100, "endTick": 1252, "heroesAlive": 1,
       "team": [
         { "id": "a", "role": "Fighter", "hp": 28000, "attack": 1140, "defense": 455, "x": 25, "z": 45 }
       ]
     },
     {
       "name": "defended, attackers win",
-      "checksum": "4ca012d2bb398f8c", "stars": 3, "damagePercent": 100, "endTick": 474, "heroesAlive": 6, "defendersAlive": 0,
+      "checksum": "753b8505a2b340f3", "stars": 3, "damagePercent": 100, "endTick": 485, "heroesAlive": 6, "defendersAlive": 0,
       "team": [
         { "id": "a", "role": "Tank", "hp": 6000, "attack": 240, "defense": 240, "x": 10, "z": 10 },
         { "id": "b", "role": "Fighter", "hp": 4800, "attack": 360, "defense": 160, "x": 11, "z": 10 },
@@ -66,7 +66,7 @@
     },
     {
       "name": "defended, guards win",
-      "checksum": "e5c6f2880be7197c", "stars": 0, "damagePercent": 0, "endTick": 333, "heroesAlive": 0, "defendersAlive": 5,
+      "checksum": "b9f41ade55b596df", "stars": 0, "damagePercent": 0, "endTick": 349, "heroesAlive": 0, "defendersAlive": 5,
       "team": [
         { "id": "a", "role": "Tank", "hp": 6000, "attack": 240, "defense": 240, "x": 10, "z": 10 },
         { "id": "b", "role": "Fighter", "hp": 4800, "attack": 360, "defense": 160, "x": 11, "z": 10 },
@@ -85,7 +85,7 @@
     },
     {
       "name": "defended, close fight",
-      "checksum": "68110d38fe4106ba", "stars": 0, "damagePercent": 0, "endTick": 473, "heroesAlive": 0, "defendersAlive": 5,
+      "checksum": "6f5f32deaf70c032", "stars": 0, "damagePercent": 0, "endTick": 501, "heroesAlive": 0, "defendersAlive": 5,
       "team": [
         { "id": "a", "role": "Tank", "hp": 6000, "attack": 240, "defense": 240, "x": 10, "z": 10 },
         { "id": "b", "role": "Fighter", "hp": 4800, "attack": 360, "defense": 160, "x": 11, "z": 10 },

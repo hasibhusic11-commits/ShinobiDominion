@@ -72,7 +72,9 @@ def build_stage(stage):
         if i >= len(spots):
             break
         defn = "spirit_turret" if i >= towers else "defense_tower"
-        buildings.append(place(defn, min(15, 1 + stage // 2), *spots[i]))
+        # Towers rise with odd stages only, so each pair of stages shares a tower level (rebalanced for the
+        # 5-hit ability bar, 2026-11-08: stage 10 was a level too hot once specials stopped charging while walking).
+        buildings.append(place(defn, min(15, (stage + 1) // 2), *spots[i]))
 
     economy = ["gold_vault", "gold_mine", "builder_hall", "crystal_mine", "gold_mine", "troop_camp"]
     filler = [(cx - 6, cz - 6), (cx + 4, cz - 6), (cx - 6, cz + 4), (cx + 4, cz + 4), (cx - 7, cz - 1), (cx + 5, cz - 1)]

@@ -25,6 +25,8 @@ namespace ShinobiDominion.Game
             public float HomeX;
             public float HomeZ;
             public Bar Bar;
+            /// <summary>The ability charge bar under the health bar (heroes and defenders only; troops have no special).</summary>
+            public Bar Charge;
             public string InstanceId;
             public float Px;
             public float Pz;
@@ -42,10 +44,16 @@ namespace ShinobiDominion.Game
             public GameObject Root;
             public Transform Fill;
             public float Width;
+            public float Height = BarHeight;
+            public MeshRenderer FillRenderer;
+            public Material Normal;
+            public Material Full;
 
             public void Set(float fraction)
             {
-                Fill.localScale = new Vector3(Width * Mathf.Clamp01(fraction), BarHeight * 0.7f, 1f);
+                Fill.localScale = new Vector3(Width * Mathf.Clamp01(fraction), Height * 0.7f, 1f);
+                // A full charge bar turns bright: the special fires on the hero's next chance.
+                if (Full != null) FillRenderer.sharedMaterial = fraction >= 1f ? Full : Normal;
             }
         }
 
@@ -132,6 +140,7 @@ namespace ShinobiDominion.Game
                 PlaceFigure(figure);
                 figure.Bar = CreateBar(figure.Go.transform.position + Vector3.up * (figure.Actor != null ? 3.5f : 3.1f), 1.4f, new Color(0.9f, 0.25f, 0.2f));
                 figure.Bar.Root.transform.SetParent(figure.Go.transform, true);
+                figure.Charge = CreateChargeBar(figure);
                 _defenders.Add(figure);
             }
         }
@@ -238,6 +247,7 @@ namespace ShinobiDominion.Game
                 figure.MaxHp = member.hp;
                 figure.Bar = CreateBar(figure.Go.transform.position + Vector3.up * (figure.Actor != null ? 3.5f : 3.1f), 1.4f, new Color(0.35f, 0.85f, 0.35f));
                 figure.Bar.Root.transform.SetParent(figure.Go.transform, true);
+                figure.Charge = CreateChargeBar(figure);
                 _units.Add(figure);
             }
 
@@ -284,10 +294,12 @@ namespace ShinobiDominion.Game
             foreach (var unit in _units)
             {
                 if (unit.Bar != null && _camera != null) unit.Bar.Root.transform.rotation = _camera.transform.rotation;
+                if (unit.Charge != null && _camera != null) unit.Charge.Root.transform.rotation = _camera.transform.rotation;
             }
             foreach (var unit in _defenders)
             {
                 if (unit.Bar != null && _camera != null) unit.Bar.Root.transform.rotation = _camera.transform.rotation;
+                if (unit.Charge != null && _camera != null) unit.Charge.Root.transform.rotation = _camera.transform.rotation;
             }
             UpdateFlashes();
 
@@ -487,6 +499,13 @@ namespace ShinobiDominion.Game
                     AddFlash(at, at, 0.35f, 0.15f, 0.55f, AbilityColor((int)entry[3]));
                     break;
                 }
+                case BattleEventKind.Charge:
+                {
+                    var list = entry[4] == 0 ? _units : _defenders;
+                    var index = (int)entry[2];
+                    if (index >= 0 && index < list.Count) list[index].Charge?.Set((float)entry[3] / BattleSim.ChargeFull);
+                    break;
+                }
                 case BattleEventKind.DefenderHeal:
                 {
                     var unit = _defenders[(int)entry[2]];
@@ -587,7 +606,23 @@ namespace ShinobiDominion.Game
             return bar;
         }
 
-        private Bar CreateBar(Vector3 at, float width, Color color)
+        /// <summary>
+        /// The gold ability bar just under a hero's health bar. It fills one step per landed hit
+        /// (BattleSim.ChargeFull steps) and glows when full; the special fires and it empties.
+        /// </summary>
+        private Bar CreateChargeBar(Figure figure)
+        {
+            var at = figure.Go.transform.position + Vector3.up * ((figure.Actor != null ? 3.5f : 3.1f) - BarHeight * 1.25f);
+            var bar = CreateBar(at, 1.4f, new Color(0.98f, 0.76f, 0.22f), 0.55f);
+            bar.Root.name = "ChargeBar";
+            bar.Root.transform.SetParent(figure.Go.transform, true);
+            bar.Normal = bar.FillRenderer.sharedMaterial;
+            bar.Full = Mats.OnTop(new Color(0.75f, 0.98f, 1f));
+            bar.Set(0f);
+            return bar;
+        }
+
+        private Bar CreateBar(Vector3 at, float width, Color color, float heightScale = 1f)
         {
             var root = new GameObject("HealthBar");
             root.transform.SetParent(transform, false);
@@ -607,9 +642,11 @@ namespace ShinobiDominion.Game
                 return piece.transform;
             }
 
-            Piece("Back", new Color(0.08f, 0.07f, 0.08f, 0.9f), -width * 0.5f - 0.03f, 0f, width + 0.06f, BarHeight, 0.01f);
-            var bar = new Bar { Root = root, Width = width };
-            bar.Fill = Piece("Fill", color, -width * 0.5f, 0f, width, BarHeight * 0.7f, 0f);
+            var height = BarHeight * heightScale;
+            Piece("Back", new Color(0.08f, 0.07f, 0.08f, 0.9f), -width * 0.5f - 0.03f, 0f, width + 0.06f, height, 0.01f);
+            var bar = new Bar { Root = root, Width = width, Height = height };
+            bar.Fill = Piece("Fill", color, -width * 0.5f, 0f, width, height * 0.7f, 0f);
+            bar.FillRenderer = bar.Fill.GetComponent<MeshRenderer>();
             return bar;
         }
 

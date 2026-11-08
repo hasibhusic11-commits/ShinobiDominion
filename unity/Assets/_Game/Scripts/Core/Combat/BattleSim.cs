@@ -74,7 +74,9 @@ namespace ShinobiDominion.Core
         /// <summary>a = defender, b = role number.</summary>
         DefenderAbility = 13,
         /// <summary>a = defender healed, b = amount, c = defender HP now.</summary>
-        DefenderHeal = 14
+        DefenderHeal = 14,
+        /// <summary>a = unit (c = 0) or defender (c = 1), b = ability charge now, 0 to BattleSim.ChargeFull.</summary>
+        Charge = 15
     }
 
     public sealed class BattleResult
@@ -120,12 +122,17 @@ namespace ShinobiDominion.Core
         private const int DefenderAggro = 800;
         private const int DefenderLeash = 1400;
 
-        // Per role: attack range, walking speed per tick, ticks between attacks, ability cooldown,
-        // and percent of attack dealt to buildings.
+        /// <summary>
+        /// Landed hits that fill a hero's ability bar (owner's rule, 2026-11-08). At full, the special fires and the
+        /// bar empties: a power strike for fighters, assassins and mages on their next hit; guard, mend or stun for
+        /// tanks, supports and controls as soon as it can do something. Troops have no special.
+        /// </summary>
+        public const int ChargeFull = 5;
+
+        // Per role: attack range, walking speed per tick, ticks between attacks, and percent of attack dealt to buildings.
         private static readonly int[] Ranges = { 120, 120, 120, 500, 400, 400 };
         private static readonly int[] Speeds = { 9, 11, 16, 10, 10, 10 };
         private static readonly int[] Intervals = { 15, 12, 8, 20, 18, 18 };
-        private static readonly int[] Cooldowns = { 100, 60, 50, 70, 80, 70 };
         private static readonly int[] DamagePercents = { 70, 100, 100, 100, 80, 60 };
 
         public static int RoleNumber(string role)
@@ -161,7 +168,7 @@ namespace ShinobiDominion.Core
             public bool NeedsPlan = true;
             public int Idle;
             public int AttackTimer;
-            public int AbilityTimer;
+            public int Charge;
             public int GuardTimer;
             public bool IsTroop;
         }
@@ -181,7 +188,7 @@ namespace ShinobiDominion.Core
             public int HomeX;
             public int HomeZ;
             public int AttackTimer;
-            public int AbilityTimer;
+            public int Charge;
             public int GuardTimer;
         }
 
@@ -233,7 +240,6 @@ namespace ShinobiDominion.Core
                     Defense = h.defense,
                     Px = h.x * CellUnits + CellUnits / 2,
                     Pz = h.z * CellUnits + CellUnits / 2,
-                    AbilityTimer = Cooldowns[role] / 2,
                     IsTroop = h.isTroop
                 };
             }).ToArray();
@@ -255,8 +261,7 @@ namespace ShinobiDominion.Core
                     Tx = px,
                     Tz = pz,
                     HomeX = d.x,
-                    HomeZ = d.z,
-                    AbilityTimer = Cooldowns[role] / 2
+                    HomeZ = d.z
                 };
             }).ToArray();
         }
@@ -350,12 +355,40 @@ namespace ShinobiDominion.Core
         private void Log(BattleEventKind kind, long a, long b = 0, long c = 0, long d = 0) =>
             _result.events.Add(new[] { _tick, (long)kind, a, b, c, d });
 
+        // ---------- Ability charge ----------
+
+        /// <summary>A landed hit adds one charge, up to full. Troops have no special.</summary>
+        private void Gain(Unit unit)
+        {
+            if (unit.IsTroop || unit.Charge >= ChargeFull) return;
+            unit.Charge++;
+            Log(BattleEventKind.Charge, unit.Index, unit.Charge, 0);
+        }
+
+        private void Spend(Unit unit)
+        {
+            unit.Charge = 0;
+            Log(BattleEventKind.Charge, unit.Index, 0, 0);
+        }
+
+        private void Gain(Defender defender)
+        {
+            if (defender.Charge >= ChargeFull) return;
+            defender.Charge++;
+            Log(BattleEventKind.Charge, defender.Index, defender.Charge, 1);
+        }
+
+        private void Spend(Defender defender)
+        {
+            defender.Charge = 0;
+            Log(BattleEventKind.Charge, defender.Index, 0, 1);
+        }
+
         // ---------- Heroes ----------
 
         private void StepUnit(Unit unit)
         {
             if (unit.AttackTimer > 0) unit.AttackTimer--;
-            if (unit.AbilityTimer > 0) unit.AbilityTimer--;
             if (unit.GuardTimer > 0) unit.GuardTimer--;
             if (unit.Idle > 0) unit.Idle--;
             SelfAbility(unit);
@@ -424,13 +457,13 @@ namespace ShinobiDominion.Core
 
         private void SelfAbility(Unit unit)
         {
-            if (unit.AbilityTimer > 0 || unit.IsTroop) return;
+            if (unit.Charge < ChargeFull || unit.IsTroop) return;
             switch (unit.Role)
             {
                 case RoleTank:
                     // Guard: towers in range aim at this hero, and it takes half damage.
                     unit.GuardTimer = 40;
-                    unit.AbilityTimer = Cooldowns[RoleTank];
+                    Spend(unit);
                     Log(BattleEventKind.Ability, unit.Index, RoleTank);
                     break;
                 case RoleSupport:
@@ -451,7 +484,7 @@ namespace ShinobiDominion.Core
                         }
                         Log(BattleEventKind.Heal, other.Index, amount, other.Hp);
                     }
-                    if (healed) unit.AbilityTimer = Cooldowns[RoleSupport];
+                    if (healed) Spend(unit);
                     break;
                 case RoleControl:
                     // Stun: silences the closest working tower within reach.
@@ -472,7 +505,7 @@ namespace ShinobiDominion.Core
                     if (best >= 0)
                     {
                         _structures[best].StunTimer = 30;
-                        unit.AbilityTimer = Cooldowns[RoleControl];
+                        Spend(unit);
                         Log(BattleEventKind.Ability, unit.Index, RoleControl);
                         Log(BattleEventKind.Stun, _structures[best].Input.id);
                     }
@@ -485,7 +518,7 @@ namespace ShinobiDominion.Core
             var base_ = unit.Attack * DamagePercents[unit.Role] / 100;
             var percent = 100L;
             var splash = 0;
-            if (unit.AbilityTimer == 0 && !unit.IsTroop)
+            if (unit.Charge >= ChargeFull && !unit.IsTroop)
             {
                 switch (unit.Role)
                 {
@@ -503,10 +536,11 @@ namespace ShinobiDominion.Core
                 }
                 if (percent != 100)
                 {
-                    unit.AbilityTimer = Cooldowns[unit.Role];
+                    Spend(unit);
                     Log(BattleEventKind.Ability, unit.Index, unit.Role);
                 }
             }
+            if (percent == 100) Gain(unit);
 
             var input = _structures[focus].Input;
             var cx = input.x * CellUnits + input.width * CellUnits / 2;
@@ -582,15 +616,16 @@ namespace ShinobiDominion.Core
         private void StrikeDefender(Unit unit, Defender defender)
         {
             var percent = 100L;
-            if (unit.AbilityTimer == 0 && !unit.IsTroop)
+            if (unit.Charge >= ChargeFull && !unit.IsTroop)
             {
                 percent = BurstPercent(unit.Role);
                 if (percent != 100)
                 {
-                    unit.AbilityTimer = Cooldowns[unit.Role];
+                    Spend(unit);
                     Log(BattleEventKind.Ability, unit.Index, unit.Role);
                 }
             }
+            if (percent == 100) Gain(unit);
             var amount = unit.Attack * percent / 100 * 100 / (100 + defender.Defense);
             if (defender.GuardTimer > 0) amount /= 2;
             amount = Math.Min(Math.Max(amount, 1), defender.Hp);
@@ -602,16 +637,15 @@ namespace ShinobiDominion.Core
         private void StepDefender(Defender defender)
         {
             if (defender.AttackTimer > 0) defender.AttackTimer--;
-            if (defender.AbilityTimer > 0) defender.AbilityTimer--;
             if (defender.GuardTimer > 0) defender.GuardTimer--;
 
             var target = ClosestAttacker(defender);
-            if (defender.AbilityTimer == 0)
+            if (defender.Charge >= ChargeFull)
             {
                 if (defender.Role == RoleTank && target != null)
                 {
                     defender.GuardTimer = 40;
-                    defender.AbilityTimer = Cooldowns[RoleTank];
+                    Spend(defender);
                     Log(BattleEventKind.DefenderAbility, defender.Index, RoleTank);
                 }
                 else if (defender.Role == RoleSupport)
@@ -675,21 +709,22 @@ namespace ShinobiDominion.Core
                 }
                 Log(BattleEventKind.DefenderHeal, other.Index, amount, other.Hp);
             }
-            if (healed) healer.AbilityTimer = Cooldowns[RoleSupport];
+            if (healed) Spend(healer);
         }
 
         private void DefenderStrike(Defender defender, Unit unit)
         {
             var percent = 100L;
-            if (defender.AbilityTimer == 0)
+            if (defender.Charge >= ChargeFull)
             {
                 percent = BurstPercent(defender.Role);
                 if (percent != 100)
                 {
-                    defender.AbilityTimer = Cooldowns[defender.Role];
+                    Spend(defender);
                     Log(BattleEventKind.DefenderAbility, defender.Index, defender.Role);
                 }
             }
+            if (percent == 100) Gain(defender);
             var amount = defender.Attack * percent / 100 * 100 / (100 + unit.Defense);
             if (unit.GuardTimer > 0) amount /= 2;
             amount = Math.Min(Math.Max(amount, 1), unit.Hp);

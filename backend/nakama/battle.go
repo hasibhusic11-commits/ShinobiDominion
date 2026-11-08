@@ -45,6 +45,12 @@ const (
 	eventDefenderDown    = 12
 	eventDefenderAbility = 13
 	eventDefenderHeal    = 14
+	// a = unit (c = 0) or defender (c = 1), b = ability charge now, 0 to chargeFull.
+	eventCharge = 15
+
+	// Landed hits that fill a hero's ability bar (owner's rule, 2026-11-08). At full, the special fires and the
+	// bar empties. Mirrors BattleSim.ChargeFull.
+	chargeFull = 5
 
 	// How far a defender notices attackers, and how far from its post it will chase them.
 	defenderAggro = 800
@@ -55,7 +61,6 @@ var (
 	roleRanges         = []int{120, 120, 120, 500, 400, 400}
 	roleSpeeds         = []int{9, 11, 16, 10, 10, 10}
 	roleIntervals      = []int{15, 12, 8, 20, 18, 18}
-	roleCooldowns      = []int{100, 60, 50, 70, 80, 70}
 	roleDamagePercents = []int64{70, 100, 100, 100, 80, 60}
 )
 
@@ -141,7 +146,7 @@ type battleUnit struct {
 	needsPlan   bool
 	idle        int
 	attackTimer int
-	abilityTimer int
+	charge      int
 	guardTimer  int
 	isTroop     bool
 }
@@ -160,7 +165,7 @@ type battleDefender struct {
 	homeX        int
 	homeZ        int
 	attackTimer  int
-	abilityTimer int
+	charge       int
 	guardTimer   int
 }
 
@@ -222,7 +227,7 @@ func runDefendedBattle(buildings []battleBuildingInput, heroes []battleHeroInput
 		sim.units = append(sim.units, &battleUnit{
 			index: i, role: role, hp: h.Hp, maxHp: h.Hp, attack: h.Attack, defense: h.Defense,
 			px: h.X*cellUnits + cellUnits/2, pz: h.Z*cellUnits + cellUnits/2,
-			target: -1, blocker: -1, needsPlan: true, abilityTimer: roleCooldowns[role] / 2, isTroop: h.IsTroop,
+			target: -1, blocker: -1, needsPlan: true, isTroop: h.IsTroop,
 		})
 	}
 	for i, d := range defenders {
@@ -233,7 +238,7 @@ func runDefendedBattle(buildings []battleBuildingInput, heroes []battleHeroInput
 		px, pz := d.X*cellUnits+cellUnits/2, d.Z*cellUnits+cellUnits/2
 		sim.defenders = append(sim.defenders, &battleDefender{
 			index: i, role: role, hp: d.Hp, maxHp: d.Hp, attack: d.Attack, defense: d.Defense,
-			px: px, pz: pz, tx: px, tz: pz, homeX: d.X, homeZ: d.Z, abilityTimer: roleCooldowns[role] / 2,
+			px: px, pz: pz, tx: px, tz: pz, homeX: d.X, homeZ: d.Z,
 		})
 	}
 	sim.play()
@@ -381,14 +386,40 @@ func (s *battleSim) log(kind int, a, b, c, d int64) {
 	s.result.Events = append(s.result.Events, []int64{int64(s.tick), int64(kind), a, b, c, d})
 }
 
+// ---------- Ability charge ----------
+
+// gainUnit: a landed hit adds one charge, up to full. Troops have no special.
+func (s *battleSim) gainUnit(unit *battleUnit) {
+	if unit.isTroop || unit.charge >= chargeFull {
+		return
+	}
+	unit.charge++
+	s.log(eventCharge, int64(unit.index), int64(unit.charge), 0, 0)
+}
+
+func (s *battleSim) spendUnit(unit *battleUnit) {
+	unit.charge = 0
+	s.log(eventCharge, int64(unit.index), 0, 0, 0)
+}
+
+func (s *battleSim) gainDefender(defender *battleDefender) {
+	if defender.charge >= chargeFull {
+		return
+	}
+	defender.charge++
+	s.log(eventCharge, int64(defender.index), int64(defender.charge), 1, 0)
+}
+
+func (s *battleSim) spendDefender(defender *battleDefender) {
+	defender.charge = 0
+	s.log(eventCharge, int64(defender.index), 0, 1, 0)
+}
+
 // ---------- Heroes ----------
 
 func (s *battleSim) stepUnit(unit *battleUnit) {
 	if unit.attackTimer > 0 {
 		unit.attackTimer--
-	}
-	if unit.abilityTimer > 0 {
-		unit.abilityTimer--
 	}
 	if unit.guardTimer > 0 {
 		unit.guardTimer--
@@ -508,12 +539,15 @@ func clampHit(amount, hp int64) int64 {
 
 func (s *battleSim) strikeDefender(unit *battleUnit, defender *battleDefender) {
 	percent := int64(100)
-	if unit.abilityTimer == 0 && !unit.isTroop {
+	if unit.charge >= chargeFull && !unit.isTroop {
 		percent = burstPercent(unit.role)
 		if percent != 100 {
-			unit.abilityTimer = roleCooldowns[unit.role]
+			s.spendUnit(unit)
 			s.log(eventAbility, int64(unit.index), int64(unit.role), 0, 0)
 		}
+	}
+	if percent == 100 {
+		s.gainUnit(unit)
 	}
 	amount := unit.attack * percent / 100 * 100 / (100 + defender.defense)
 	if defender.guardTimer > 0 {
@@ -531,18 +565,15 @@ func (s *battleSim) stepDefender(defender *battleDefender) {
 	if defender.attackTimer > 0 {
 		defender.attackTimer--
 	}
-	if defender.abilityTimer > 0 {
-		defender.abilityTimer--
-	}
 	if defender.guardTimer > 0 {
 		defender.guardTimer--
 	}
 
 	target := s.closestAttacker(defender)
-	if defender.abilityTimer == 0 {
+	if defender.charge >= chargeFull {
 		if defender.role == roleTank && target != nil {
 			defender.guardTimer = 40
-			defender.abilityTimer = roleCooldowns[roleTank]
+			s.spendDefender(defender)
 			s.log(eventDefenderAbility, int64(defender.index), roleTank, 0, 0)
 		} else if defender.role == roleSupport {
 			s.mendDefenders(defender)
@@ -609,18 +640,21 @@ func (s *battleSim) mendDefenders(healer *battleDefender) {
 		s.log(eventDefenderHeal, int64(other.index), amount, other.hp, 0)
 	}
 	if healed {
-		healer.abilityTimer = roleCooldowns[roleSupport]
+		s.spendDefender(healer)
 	}
 }
 
 func (s *battleSim) defenderStrike(defender *battleDefender, unit *battleUnit) {
 	percent := int64(100)
-	if defender.abilityTimer == 0 {
+	if defender.charge >= chargeFull {
 		percent = burstPercent(defender.role)
 		if percent != 100 {
-			defender.abilityTimer = roleCooldowns[defender.role]
+			s.spendDefender(defender)
 			s.log(eventDefenderAbility, int64(defender.index), int64(defender.role), 0, 0)
 		}
+	}
+	if percent == 100 {
+		s.gainDefender(defender)
 	}
 	amount := defender.attack * percent / 100 * 100 / (100 + unit.defense)
 	if unit.guardTimer > 0 {
@@ -687,13 +721,13 @@ func (s *battleSim) logMove(unit *battleUnit) {
 }
 
 func (s *battleSim) selfAbility(unit *battleUnit) {
-	if unit.abilityTimer > 0 || unit.isTroop {
+	if unit.charge < chargeFull || unit.isTroop {
 		return
 	}
 	switch unit.role {
 	case roleTank:
 		unit.guardTimer = 40
-		unit.abilityTimer = roleCooldowns[roleTank]
+		s.spendUnit(unit)
 		s.log(eventAbility, int64(unit.index), roleTank, 0, 0)
 	case roleSupport:
 		healed := false
@@ -718,7 +752,7 @@ func (s *battleSim) selfAbility(unit *battleUnit) {
 			s.log(eventHeal, int64(other.index), amount, other.hp, 0)
 		}
 		if healed {
-			unit.abilityTimer = roleCooldowns[roleSupport]
+			s.spendUnit(unit)
 		}
 	case roleControl:
 		best := -1
@@ -736,7 +770,7 @@ func (s *battleSim) selfAbility(unit *battleUnit) {
 		}
 		if best >= 0 {
 			s.structures[best].stunTimer = 30
-			unit.abilityTimer = roleCooldowns[roleControl]
+			s.spendUnit(unit)
 			s.log(eventAbility, int64(unit.index), roleControl, 0, 0)
 			s.log(eventStun, int64(s.structures[best].input.ID), 0, 0, 0)
 		}
@@ -747,7 +781,7 @@ func (s *battleSim) strike(unit *battleUnit, focus int) {
 	base := unit.attack * roleDamagePercents[unit.role] / 100
 	percent := int64(100)
 	splash := 0
-	if unit.abilityTimer == 0 && !unit.isTroop {
+	if unit.charge >= chargeFull && !unit.isTroop {
 		switch unit.role {
 		case roleFighter:
 			percent = 150
@@ -759,9 +793,12 @@ func (s *battleSim) strike(unit *battleUnit, focus int) {
 			splash = 250
 		}
 		if percent != 100 {
-			unit.abilityTimer = roleCooldowns[unit.role]
+			s.spendUnit(unit)
 			s.log(eventAbility, int64(unit.index), int64(unit.role), 0, 0)
 		}
+	}
+	if percent == 100 {
+		s.gainUnit(unit)
 	}
 
 	input := s.structures[focus].input
