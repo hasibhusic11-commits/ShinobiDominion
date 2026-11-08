@@ -30,4 +30,5 @@ Following the create-game-assets workflow: one approved visual target, then fami
 
 ## Visual target
 - Approved: the owner's Defense Tower levels 1, 5 and 10 (ChatGPT, 2026-11-07).
-- Under test: Blender-rendered models (`tools/art/blender_buildings.py`), checked side by side in the game.
+- Tried and rejected (2026-11-08): Blender-rendered models (`tools/art/blender_buildings.py`, Defense Tower and Gold
+  Mine). Exact angle and scale, but flat and grey next to the painted art at game size. Kept as a tool only.

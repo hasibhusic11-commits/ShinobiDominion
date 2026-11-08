@@ -27,9 +27,11 @@ def hexc(h, a=1.0):
 
 
 PALETTE = {
-    'slate': '#33456E', 'slate_dark': '#1E2742', 'crimson': '#B02A2C', 'timber': '#8A5530', 'timber_dark': '#5A3420',
-    'plank': '#A8703E', 'stone': '#9A9184', 'stone_dark': '#6F685E', 'gold': '#E8B544', 'banner': '#C8302B',
-    'glow': '#FFC870', 'rope': '#C9A56A', 'steel': '#B8BEC6', 'slit': '#22160E',
+    'slate': '#3A5590', 'slate_dark': '#22305A', 'crimson': '#C8302E', 'timber': '#9A5E30', 'timber_dark': '#64391E',
+    'plank': '#C08048', 'stone': '#A8A090', 'stone_dark': '#7A7266', 'gold': '#F2C14E', 'banner': '#D8342C',
+    'glow': '#FFD07A', 'rope': '#D9B677', 'steel': '#C4CAD2', 'slit': '#22160E', 'rock': '#857E74',
+    'rock_dark': '#5E5850', 'moss': '#5E8F2E', 'earth': '#8A6440', 'flame': '#FF8A20', 'nugget': '#FFC838',
+    'cave': '#1A0F08', 'iron': '#4A4A52',
 }
 
 # ---------------------------------------------------------------- scene
@@ -55,26 +57,46 @@ except AttributeError:
 world = bpy.data.worlds.new('World')
 scene.world = world
 world.use_nodes = True
-world.node_tree.nodes['Background'].inputs[0].default_value = hexc('#9FB4D8')
-world.node_tree.nodes['Background'].inputs[1].default_value = 0.55
+world.node_tree.nodes['Background'].inputs[0].default_value = hexc('#C8D4F0')
+world.node_tree.nodes['Background'].inputs[1].default_value = 0.75
 
 materials = {}
 
 
-def mat(name, color=None, rough=0.75, emit=0.0, metal=0.0):
-    key = (name, color, emit)
+def mat(name, color=None, rough=0.75, emit=0.0, metal=0.0, paint=0.22):
+    """
+    A material with a painted feel: the base colour drifts lighter and darker in soft blotches (a noise
+    texture), the way a hand-painted surface varies, instead of one flat CG colour.
+    """
+    key = (name, color, emit, metal)
     if key in materials:
         return materials[key]
     m = bpy.data.materials.new(name)
     m.use_nodes = True
-    bsdf = m.node_tree.nodes['Principled BSDF']
+    nodes, links = m.node_tree.nodes, m.node_tree.links
+    bsdf = nodes['Principled BSDF']
     c = hexc(color or PALETTE[name])
-    bsdf.inputs['Base Color'].default_value = c
     bsdf.inputs['Roughness'].default_value = rough
     bsdf.inputs['Metallic'].default_value = metal
     if emit:
+        bsdf.inputs['Base Color'].default_value = c
         bsdf.inputs['Emission Color'].default_value = c
         bsdf.inputs['Emission Strength'].default_value = emit
+    else:
+        coord = nodes.new('ShaderNodeTexCoord')
+        noise = nodes.new('ShaderNodeTexNoise')
+        noise.inputs['Scale'].default_value = 3.5
+        noise.inputs['Detail'].default_value = 3.0
+        links.new(coord.outputs['Object'], noise.inputs['Vector'])
+        ramp = nodes.new('ShaderNodeValToRGB')
+        dark = tuple(v * (1 - paint) for v in c[:3]) + (1,)
+        light = tuple(min(1.0, v * (1 + paint * 1.4) + 0.01) for v in c[:3]) + (1,)
+        ramp.color_ramp.elements[0].color = dark
+        ramp.color_ramp.elements[1].color = light
+        ramp.color_ramp.elements[0].position = 0.3
+        ramp.color_ramp.elements[1].position = 0.7
+        links.new(noise.outputs['Fac'], ramp.inputs['Fac'])
+        links.new(ramp.outputs['Color'], bsdf.inputs['Base Color'])
     materials[key] = m
     return m
 
@@ -374,13 +396,110 @@ def defense_tower(level):
     return half
 
 
-BUILDERS = {'defense_tower': defense_tower}
+def rock(center, size, material, seed, flat=True, squash=0.75, outline=0.03):
+    """A chunky faceted boulder: a low-poly sphere with its points pushed in and out."""
+    r = random.Random(seed)
+    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=2, radius=1, location=center)
+    o = bpy.context.active_object
+    for v in o.data.vertices:
+        v.co *= 1 + r.uniform(-0.18, 0.12)
+    o.scale = (size * r.uniform(0.9, 1.15), size * r.uniform(0.9, 1.15), size * squash)
+    o.rotation_euler = (0, 0, r.uniform(0, 6.28))
+    bpy.ops.object.transform_apply(scale=True, rotation=True)
+    if not flat:
+        bpy.ops.object.shade_smooth()
+    return finish(o, material, 0, outline)
+
+
+def torch(at, level):
+    """A torch on a post, flame glowing."""
+    at = Vector(at)
+    tapered_post(at, at + Vector((0, 0, 0.75)), 0.045, 0.04, mat('timber_dark'))
+    cylinder(at + Vector((0, 0, 0.8)), 0.08, 0.12, mat('gold' if level >= 5 else 'iron', metal=0.4, rough=0.4), verts=8, radius2=0.11)
+    cylinder(at + Vector((0, 0, 0.98)), 0.09, 0.26, mat('flame', emit=6.0), verts=8, radius2=0.0, outline=0.012)
+    sphere(at + Vector((0, 0, 0.9)), 0.07, mat('glow', emit=8.0), outline=0)
+
+
+def gold_mine(level):
+    """
+    A gold mine on a 3x3 footprint: a mound of faceted boulders with moss, a timber-framed tunnel glowing gold
+    on the front-right face (-Y), rails running out to a cart heaped with nuggets, and torches either side.
+    Higher levels add more gold, gold trim, lanterns and glowing crystals.
+    """
+    half = 1.5
+    # Earth slab filling the footprint, with a kerb of small stones.
+    box((0, 0, 0.06), (half * 2 - 0.06, half * 2 - 0.06, 0.12), mat('earth'), bevel=0.04, outline=0.02)
+    seed = 11
+    for side in range(4):
+        ang = side * math.pi / 2
+        for i in range(7):
+            p = Vector((-half + 0.2 + i * (2 * half - 0.4) / 6, -half + 0.16, 0.12))
+            p.rotate(Matrix.Rotation(ang, 3, 'Z'))
+            seed += 1
+            rock(tuple(p), 0.16, mat('rock'), seed, outline=0.015)
+    # The mound: big boulders at the back, smaller towards the front, moss on top.
+    mound = [((0.55, 0.65, 0.55), 0.95), ((-0.45, 0.75, 0.5), 0.85), ((0.9, -0.05, 0.4), 0.7), ((-0.85, 0.05, 0.38), 0.72),
+             ((0.1, 0.25, 0.95), 0.8), ((0.55, 0.4, 1.25), 0.5), ((-0.25, 0.55, 1.2), 0.55), ((0.95, 0.85, 0.3), 0.6),
+             ((-0.9, 0.85, 0.3), 0.6), ((0.0, 0.95, 0.35), 0.65)]
+    mound = [((c[0] * 0.9, c[1] * 0.8 + 0.3, c[2] * 0.9), s * 0.85) for c, s in mound]
+    for i, (c, s) in enumerate(mound):
+        rock(c, s, mat('rock' if i % 3 else 'rock_dark'), 100 + i)
+        if c[2] > 0.7 or i % 2 == 0:
+            moss = sphere((c[0], c[1], c[2] + s * 0.55), s * 0.55, mat('moss'), scale=(1, 1, 0.35), outline=0.02)
+    # Gold veins in the rock, more with each level.
+    for i in range(2 + level):
+        r = random.Random(500 + i)
+        c = mound[r.randrange(len(mound))]
+        p = Vector(c[0]) + Vector((r.uniform(-0.3, 0.3), -abs(r.uniform(0.2, 0.5)), r.uniform(-0.1, 0.3)))
+        sphere(tuple(p), 0.07 + 0.01 * level, mat('nugget', emit=0.6, metal=0.6), outline=0.012)
+    # Tunnel mouth on the front-right face: dark cave, golden glow, timber frame with a little shingle roof.
+    door = Vector((0.15, -0.55, 0))
+    box(tuple(door + Vector((0, 0.2, 0.64))), (1.12, 0.6, 1.28), mat('cave'), bevel=0.02, outline=0)
+    box(tuple(door + Vector((0, -0.115, 0.42))), (0.86, 0.02, 0.72), mat('glow', '#FFB040', emit=1.6 + 0.15 * level), bevel=0, outline=0)
+    box(tuple(door + Vector((0, -0.12, 0.85))), (0.86, 0.025, 0.4), mat('cave'), bevel=0, outline=0)
+    frame = mat('gold') if level >= 6 else mat('timber_dark')
+    for sx in (-0.6, 0.6):
+        tapered_post(door + Vector((sx, -0.12, 0)), door + Vector((sx * 0.92, -0.12, 1.35)), 0.1, 0.085, mat('timber'))
+    tapered_post(door + Vector((-0.78, -0.14, 1.38)), door + Vector((0.78, -0.14, 1.38)), 0.1, 0.1, frame)
+    tapered_post(door + Vector((-0.55, -0.14, 1.12)), door + Vector((0.55, -0.14, 1.12)), 0.04, 0.04, mat('rope'))
+    if level >= 2:
+        # A red crest cloth hung from the lintel.
+        box(tuple(door + Vector((0, -0.12, 0.9))), (0.32, 0.03, 0.34), mat('banner'), bevel=0.01, outline=0.012)
+        cylinder(door + Vector((0, -0.14, 0.9)), 0.08, 0.02, mat('gold'), verts=16, rot=(math.pi / 2, 0, 0), outline=0.008)
+    # Rails and sleepers running out of the tunnel to the front edge.
+    for sx in (-0.17, 0.17):
+        tapered_post(door + Vector((sx, 0.1, 0.16)), Vector((door.x + sx, -half + 0.15, 0.16)), 0.022, 0.022, mat('steel', metal=0.6, rough=0.4))
+    for k in range(5):
+        y = door.y + 0.05 - k * 0.2
+        box((door.x, y, 0.13), (0.5, 0.1, 0.04), mat('timber_dark'), bevel=0.01, outline=0.01)
+    # The mine cart, heaped with nuggets.
+    cart = Vector((door.x + 0.05, -1.0, 0.0))
+    box(tuple(cart + Vector((0, 0, 0.42))), (0.62, 0.5, 0.36), mat('timber'), bevel=0.03, outline=0.022)
+    for zz in (0.3, 0.55):
+        box(tuple(cart + Vector((0, 0, zz))), (0.65, 0.53, 0.05), mat('gold' if level >= 5 else 'iron', metal=0.5, rough=0.4), bevel=0.01, outline=0.012)
+    for sx in (-0.22, 0.22):
+        for sy in (-0.27, 0.27):
+            cylinder(cart + Vector((sx, sy, 0.2)), 0.11, 0.06, mat('iron', metal=0.5, rough=0.5), verts=12, rot=(math.pi / 2, 0, 0), outline=0.015)
+    r = random.Random(9)
+    for i in range(10 + level * 3):
+        p = cart + Vector((r.uniform(-0.25, 0.25), r.uniform(-0.2, 0.2), 0.62 + r.uniform(0, 0.12 + 0.02 * level)))
+        rock(tuple(p), r.uniform(0.07, 0.11), mat('nugget', metal=0.7, rough=0.3), 900 + i, squash=0.8, outline=0.012)
+    # Torches either side of the tunnel; lanterns from level 4; glowing crystals from level 7.
+    torch((door.x - 0.75, door.y - 0.2, 0.1), level)
+    torch((door.x + 0.75, door.y - 0.2, 0.1), level)
+    if level >= 7:
+        for i, c in enumerate(((-0.5, 0.5, 1.5), (0.6, 0.6, 1.55))):
+            cylinder(c, 0.1, 0.4, mat('glow', '#5FE0FF', emit=3.0), verts=6, radius2=0.0, outline=0.015)
+    return half
+
+
+BUILDERS = {'defense_tower': defense_tower, 'gold_mine': gold_mine}
 half = BUILDERS[BUILDING](LEVEL)
 
 # ---------------------------------------------------------------- light and camera
 
 sun = bpy.data.lights.new('Sun', 'SUN')
-sun.energy = 4.2
+sun.energy = 4.6
 sun.color = hexc('#FFE8C8')[:3]
 sun.angle = math.radians(8)
 sun_obj = bpy.data.objects.new('Sun', sun)
