@@ -89,6 +89,15 @@ Follows the owner's ADR-021. Up to four Troop Camps, gated by Dojo level, and a 
 - Troop names and all numbers are test values. Offline practice troops aren't saved.
 
 
+## ADR-034: A 30 degree camera, closer default zoom, ground shadows, decided on 2026-11-07
+The owner compared the village with screenshots of two well-known base builders: ours was too far away, at the
+wrong angle for the painted art, and the buildings looked pasted on.
+- The camera looks down at 30 degrees (the classic 2:1 angle the owner's art is painted for), not 35.264.
+- Home opens at orthographic size 7 (was 10), battles at 11 (was 15). Zoom in now stops at 3.5 (was 5); zoom out
+  still reaches the whole map.
+- Every painted building and wall cell has a soft ground shadow; walls stand 35% taller than painted.
+- New tower and wall art is requested from the owner with exact framing (`docs/art/tower_wall_prompts.md`).
+
 ## ADR-033: The owner's newest mockup and art packs, decided on 2026-11-07
 The owner sent a newer home screen (`docs/ui/target_home_mockup_v2.webp`) and two art packs (UI buttons and icons;
 every building at levels 1 to 10), and asked for both. This replaces ADR-032's layout.

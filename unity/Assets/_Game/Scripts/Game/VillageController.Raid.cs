@@ -37,8 +37,8 @@ namespace ShinobiDominion.Game
 
         private static readonly Vector3 MapCenter = new Vector3(25f, 0f, 25f);
         private const float RaidCameraSize = 24f;
-        private const float BattleCameraSize = 15f;
-        private const float HomeCameraSize = 10f;
+        private const float BattleCameraSize = 11f;
+        private const float HomeCameraSize = 7f;
 
         private const int TroopsPerTap = 5;
 

@@ -211,11 +211,11 @@ for family_dir in sorted(glob.glob(os.path.join(BUILD_PACK, 'Sprites/*'))):
         right_peak = np.where(top[cx:] >= top[cx:].max() - 2)[0] + cx
         post_l, post_r = int(round(left_peak.mean())), int(round(right_peak.mean()))
         post_half = 44
-        # The painted V is flatter than the game's true isometric grid (a run rises 0.577 px per px across).
+        # The painted V is flatter than the game's true isometric grid (a run rises 0.5 px per px across at the game's 30 degree camera).
         # Shearing each arm's columns up keeps verticals vertical and lands the end post on the next cell.
         span = cx - post_l
         rise = bottom[post_l] - bottom[cx]
-        k = max((0.5774 * span - rise) / span, 0.0)
+        k = max((0.5 * span - rise) / span, 0.0)
         save(shear(px[:, :cx + 1], k, from_right=True), os.path.join(B_OUT, 'wall_arm_z_%02d.png' % level))
         save(shear(px[:, cx:], k, from_right=False), os.path.join(B_OUT, 'wall_arm_x_%02d.png' % level))
         post = px[:, max(post_l - post_half, 0):post_l + post_half]

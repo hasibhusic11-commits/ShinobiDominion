@@ -214,7 +214,7 @@ namespace ShinobiDominion.Tests
             // The map's diamond is about 41 world units tall on screen, so it must fit in the view.
             Assert.Greater(size * 2f, 41f);
             iso.ZoomAt(0.001f, new Vector2(Screen.width * 0.5f, Screen.height * 0.5f));
-            Assert.GreaterOrEqual(iso.Camera.orthographicSize, 5f);
+            Assert.GreaterOrEqual(iso.Camera.orthographicSize, 3.5f, "Zooming in stops at a close view of a few buildings (ADR-034)");
         }
     }
 }

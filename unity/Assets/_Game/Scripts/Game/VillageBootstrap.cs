@@ -69,7 +69,7 @@ namespace ShinobiDominion.Game
             cameraObject.transform.SetParent(transform, false);
             cameraObject.tag = "MainCamera";
             IsoCamera = cameraObject.AddComponent<IsoCamera>();
-            IsoCamera.Initialize(new Vector3(25f, 0f, 25f), 10f);
+            IsoCamera.Initialize(new Vector3(25f, 0f, 25f), 7f);
 
             var ui = new UiRoot(transform);
             Controller = gameObject.AddComponent<VillageController>();

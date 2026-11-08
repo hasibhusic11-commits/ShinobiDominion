@@ -10,8 +10,14 @@ namespace ShinobiDominion.Game
     [RequireComponent(typeof(Camera))]
     public sealed class IsoCamera : MonoBehaviour
     {
+        /// <summary>
+        /// 30 degrees down: the classic 2:1 angle the owner's building art is painted for (ADR-034). It was 35.264
+        /// (true isometric), which made the painted bases sit wrongly on the grid.
+        /// </summary>
+        public const float Pitch = 30f;
+
         private const float Distance = 70f;
-        private const float MinSize = 5f;
+        private const float MinSize = 3.5f;
         private const float MaxSize = 30f;
         private const float PanMargin = 4f;
 
@@ -38,7 +44,7 @@ namespace ShinobiDominion.Game
             Camera.allowMSAA = GameQuality.Current == VisualQuality.High;
             Camera.clearFlags = CameraClearFlags.SolidColor;
             Camera.backgroundColor = Palette.Sky.linear;
-            transform.rotation = Quaternion.Euler(35.264f, 45f, 0f);
+            transform.rotation = Quaternion.Euler(IsoCamera.Pitch, 45f, 0f);
             _focus = focus;
             Apply();
         }

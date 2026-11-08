@@ -166,6 +166,11 @@ namespace ShinobiDominion.Game
         private const float WallHalfThickness = 0.25f;
         private readonly List<SpriteRenderer> _pieces = new List<SpriteRenderer>();
         private int _used;
+        private readonly List<SpriteRenderer> _shadows = new List<SpriteRenderer>();
+        private int _shadowsUsed;
+
+        /// <summary>Walls stand taller than painted, so a run reads as a wall rather than a fence from the village camera.</summary>
+        private const float WallHeight = 1.35f;
 
         private static bool Painted => BuildingSprites.Load("wall_arm_z_01") != null;
 
@@ -193,6 +198,7 @@ namespace ShinobiDominion.Game
         private void RebuildPainted(Village village, int hiddenWallId, HashSet<int> gone)
         {
             _used = 0;
+            _shadowsUsed = 0;
             foreach (var wall in village.Buildings)
             {
                 if (!wall.Definition.IsWall || wall.Id == hiddenWallId) continue;
@@ -204,6 +210,7 @@ namespace ShinobiDominion.Game
                 var center = GridSpace.CellCenter(wall.Origin);
                 // The arms meet at the front corner of the wall's base, half a thickness towards the camera.
                 var junction = center - new Vector3(WallHalfThickness, 0f, WallHalfThickness);
+                Shadow(center);
                 var north = (mask & Village.WallNorth) != 0;
                 var east = (mask & Village.WallEast) != 0;
                 var south = (mask & Village.WallSouth) != 0;
@@ -217,6 +224,24 @@ namespace ShinobiDominion.Game
             }
 
             for (var i = _used; i < _pieces.Count; i++) _pieces[i].gameObject.SetActive(false);
+            for (var i = _shadowsUsed; i < _shadows.Count; i++) _shadows[i].gameObject.SetActive(false);
+        }
+
+        private void Shadow(Vector3 center)
+        {
+            SpriteRenderer shadow;
+            if (_shadowsUsed < _shadows.Count)
+            {
+                shadow = _shadows[_shadowsUsed];
+                shadow.gameObject.SetActive(true);
+            }
+            else
+            {
+                shadow = BuildingSprites.GroundShadow(_renderer.transform, 1f, 1f, 0.42f);
+                _shadows.Add(shadow);
+            }
+            shadow.transform.position = center + new Vector3(0.18f, 0.012f, -0.1f);
+            _shadowsUsed++;
         }
 
         private void Piece(string name, Vector3 foot, int order)
@@ -233,11 +258,13 @@ namespace ShinobiDominion.Game
                 piece.sortingOrder = order;
                 piece.transform.SetPositionAndRotation(foot, BuildingSprites.Upright);
                 var scale = screenWidth / Mathf.Max(sprite.bounds.size.x, 0.001f);
-                piece.transform.localScale = new Vector3(scale, scale * BuildingSprites.Lift, 1f);
+                piece.transform.localScale = new Vector3(scale, scale * BuildingSprites.Lift * WallHeight, 1f);
             }
             else
             {
                 piece = BuildingSprites.Stand(_renderer.transform, "WallPiece", sprite, foot, screenWidth, order, Color.white);
+                var size = piece.transform.localScale;
+                piece.transform.localScale = new Vector3(size.x, size.y * WallHeight, 1f);
                 _pieces.Add(piece);
             }
             _used++;
@@ -342,7 +369,7 @@ namespace ShinobiDominion.Game
 
             var cameraObject = new GameObject("ThumbnailCamera", typeof(Camera));
             cameraObject.transform.SetParent(_stage, false);
-            cameraObject.transform.localRotation = Quaternion.Euler(35.264f, 45f, 0f);
+            cameraObject.transform.localRotation = Quaternion.Euler(IsoCamera.Pitch, 45f, 0f);
             _camera = cameraObject.GetComponent<Camera>();
             _camera.enabled = false;
             _camera.orthographic = true;

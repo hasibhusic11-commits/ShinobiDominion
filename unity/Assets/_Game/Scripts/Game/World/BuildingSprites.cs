@@ -15,8 +15,8 @@ namespace ShinobiDominion.Game
         public const int ArtLevels = 10;
         public const int GameLevels = 15;
 
-        /// <summary>A vertical picture under the 35.264 degree camera looks squashed by cos(35.264); this undoes it.</summary>
-        public const float Lift = 1.2247449f;
+        /// <summary>A vertical picture under the 30 degree camera looks squashed by cos(30); this undoes it.</summary>
+        public const float Lift = 1.1547005f;
 
         public static readonly Quaternion Upright = Quaternion.Euler(0f, 45f, 0f);
 
@@ -64,10 +64,61 @@ namespace ShinobiDominion.Game
         /// Puts a building picture on its footprint. The picture's bottom is the footprint's front corner (the
         /// one nearest the camera) and its width is the footprint's width on screen, (w + d) / sqrt 2.
         /// </summary>
+        /// <summary>Draws before every standing picture, so shadows always lie under them.</summary>
+        public const int ShadowOrder = -32000;
+
+        private static Sprite _shadow;
+
+        /// <summary>A soft rounded square, dark in the middle and fading out, built once in code.</summary>
+        public static Sprite ShadowSprite
+        {
+            get
+            {
+                if (_shadow != null) return _shadow;
+                const int size = 64;
+                var texture = new Texture2D(size, size, TextureFormat.RGBA32, true) { wrapMode = TextureWrapMode.Clamp, name = "GroundShadow" };
+                var pixels = new Color32[size * size];
+                for (var y = 0; y < size; y++)
+                for (var x = 0; x < size; x++)
+                {
+                    var dx = Mathf.Abs((x + 0.5f) / size * 2f - 1f);
+                    var dy = Mathf.Abs((y + 0.5f) / size * 2f - 1f);
+                    var d = Mathf.Pow(Mathf.Pow(dx, 4f) + Mathf.Pow(dy, 4f), 0.25f);
+                    var a = Mathf.Clamp01((1f - d) / 0.35f);
+                    pixels[y * size + x] = new Color32(10, 14, 6, (byte)(a * a * 255f));
+                }
+                texture.SetPixels32(pixels);
+                texture.Apply(true, true);
+                _shadow = Sprite.Create(texture, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), size);
+                return _shadow;
+            }
+        }
+
+        /// <summary>
+        /// A shadow lying on the ground, a little larger than the footprint and pushed towards the lower right,
+        /// so the building looks planted instead of pasted on. Turns with its parent, like the footprint does.
+        /// </summary>
+        public static SpriteRenderer GroundShadow(Transform parent, float width, float depth, float alpha)
+        {
+            var go = new GameObject("GroundShadow");
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = new Vector3(0.22f, 0.015f, -0.12f);
+            go.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            go.transform.localScale = new Vector3(width * 1.12f, depth * 1.12f, 1f);
+            var renderer = go.AddComponent<SpriteRenderer>();
+            renderer.sprite = ShadowSprite;
+            renderer.color = new Color(1f, 1f, 1f, alpha);
+            renderer.sortingOrder = ShadowOrder;
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+            return renderer;
+        }
+
         public static IsoStand Attach(Transform root, BuildingDefinition definition, int level, Color tint)
         {
             var sprite = For(definition.id, level);
             if (sprite == null) return null;
+            GroundShadow(root, definition.width, definition.depth, tint.a < 1f ? 0.25f : 0.55f);
             var renderer = Stand(root, "Art", sprite, root.position, 1f, 0, tint);
             var stand = renderer.gameObject.AddComponent<IsoStand>();
             stand.Init(definition.width, definition.depth, renderer);
