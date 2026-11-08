@@ -148,7 +148,28 @@ namespace ShinobiDominion.Game
             _focus.x = Mathf.Clamp(_focus.x, -PanMargin, size + PanMargin);
             _focus.z = Mathf.Clamp(_focus.z, -PanMargin, size + PanMargin);
             _focus.y = 0f;
-            transform.position = _focus - transform.forward * Distance;
+            transform.position = _focus - transform.forward * Distance + _shakeOffset;
+        }
+
+        // Screen shake (game-feel skill): impacts add "trauma", which decays smoothly; the shake is trauma squared, so
+        // small hits barely move the view and big ones punch. It moves only the camera, never the world.
+        private float _trauma;
+        private float _shakeTime;
+        private Vector3 _shakeOffset;
+
+        /// <summary>Adds shake, 0 to 1. Hits add up; they never reset it.</summary>
+        public void AddTrauma(float amount) => _trauma = Mathf.Clamp01(_trauma + amount);
+
+        private void LateUpdate()
+        {
+            if (_trauma <= 0f && _shakeOffset == Vector3.zero) return;
+            var dt = Time.unscaledDeltaTime;
+            _trauma = Mathf.Max(_trauma - 1.6f * dt, 0f);
+            _shakeTime += dt * 32f;
+            var shake = _trauma * _trauma;
+            var reach = Camera.orthographicSize * 0.035f;
+            _shakeOffset = (transform.right * Mathf.Sin(_shakeTime * 1.7f) + transform.up * Mathf.Sin(_shakeTime * 2.3f) * 0.7f) * (reach * shake);
+            Apply();
         }
     }
 

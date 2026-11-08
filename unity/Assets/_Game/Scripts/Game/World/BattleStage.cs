@@ -372,6 +372,7 @@ namespace ShinobiDominion.Game
                         }
                         ShowNumber(center + Vector3.up * 1.6f, entry[4], new Color(1f, 0.95f, 0.8f));
                         GameSounds.Play(GameSound.Hit, 0.55f);
+                        _view.HitFlash(building.id);
                         var ranged = direction.magnitude > 2.5f;
                         if (ranged) AddFlash(from, center + Vector3.up * 0.8f, 0.2f, 0.1f, 0.1f, new Color(1f, 0.85f, 0.45f));
                         else AddFlash(center + Vector3.up * 0.6f, center + Vector3.up * 0.6f, 0.12f, 0.05f, 0.25f, new Color(1f, 0.9f, 0.6f));
@@ -384,6 +385,7 @@ namespace ShinobiDominion.Game
                     var building = _buildings[(int)entry[2]];
                     if (building.definitionId == "dojo_hq") DojoDown = true;
                     if (show) GameSounds.Play(building.isWall ? GameSound.Hit : GameSound.Crumble, building.isWall ? 0.6f : 1f);
+                    if (show) Impact(building);
                     _view.SetGone(building.id);
                     if (_buildingBars.TryGetValue(building.id, out var bar))
                     {
@@ -609,6 +611,23 @@ namespace ShinobiDominion.Game
             var bar = new Bar { Root = root, Width = width };
             bar.Fill = Piece("Fill", color, -width * 0.5f, 0f, width, BarHeight * 0.7f, 0f);
             return bar;
+        }
+
+        /// <summary>
+        /// Game feel when a building falls: the view shakes and time freezes for an instant, more for bigger targets
+        /// and most for the Dojo. Walls only nudge the view. Visual only; the battle result is already decided.
+        /// </summary>
+        private void Impact(BattleBuildingInput building)
+        {
+            var view = _camera != null ? _camera.GetComponent<IsoCamera>() : null;
+            if (building.isWall)
+            {
+                if (view != null) view.AddTrauma(0.12f);
+                return;
+            }
+            var dojo = building.definitionId == "dojo_hq";
+            if (view != null) view.AddTrauma(dojo ? 0.85f : 0.4f);
+            Feel.HitStop(dojo ? Feel.Tier.Large : Feel.Tier.Medium);
         }
 
         private void AddFlash(Vector3 from, Vector3 to, float duration, float startSize, float endSize, Color color)

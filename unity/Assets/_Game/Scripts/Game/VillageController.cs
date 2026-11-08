@@ -150,6 +150,7 @@ namespace ShinobiDominion.Game
         private const int VillageLifeWalkers = 10;
         private VillageLife _life;
         private long _lastGold = -1;
+        private long _lastCrystals = -1;
         private Vector3? _lastCollectAt;
 
         /// <summary>Gold rising after a tap shows on the building it came from, online or off.</summary>
@@ -160,9 +161,19 @@ namespace ShinobiDominion.Game
             {
                 GameSounds.Play(GameSound.Coin);
                 FloatingText.Create(_worldRoot, _camera.Camera, _lastCollectAt.Value, "+" + (gold - _lastGold).ToString("N0"), new Color(1f, 0.85f, 0.3f), 0.14f);
+                _hud.FlyCoins(_camera.Camera.WorldToScreenPoint(_lastCollectAt.Value), false);
                 _lastCollectAt = null;
             }
             _lastGold = gold;
+            var crystals = Village.Crystals;
+            if (_lastCrystals >= 0 && crystals > _lastCrystals && _lastCollectAt.HasValue && _raid == null)
+            {
+                GameSounds.Play(GameSound.Coin, 0.7f);
+                FloatingText.Create(_worldRoot, _camera.Camera, _lastCollectAt.Value, "+" + (crystals - _lastCrystals).ToString("N0"), new Color(0.7f, 0.85f, 1f), 0.14f);
+                _hud.FlyCoins(_camera.Camera.WorldToScreenPoint(_lastCollectAt.Value), true);
+                _lastCollectAt = null;
+            }
+            _lastCrystals = crystals;
         }
 
         private void Update()

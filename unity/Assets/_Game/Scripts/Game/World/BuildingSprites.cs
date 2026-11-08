@@ -169,6 +169,9 @@ namespace ShinobiDominion.Game
         /// <summary>Draws over everything else, for the placement ghost.</summary>
         public bool OnTop;
 
+        /// <summary>Squash and stretch on top of the normal size (Feel.Pop). One when at rest.</summary>
+        public Vector2 Juice = Vector2.one;
+
         /// <summary>Height of the picture in world units, for tap bounds.</summary>
         public float WorldHeight => _renderer.sprite.bounds.size.y * transform.lossyScale.y;
 
@@ -197,7 +200,7 @@ namespace ShinobiDominion.Game
             var screenWidth = (size.x + size.y) * 0.70710678f;
             var scale = screenWidth / Mathf.Max(BuildingSprites.BaseWidth(_renderer.sprite), 0.001f);
             var parentScale = parent.lossyScale;
-            transform.localScale = new Vector3(scale / parentScale.x, scale * BuildingSprites.Lift / parentScale.y, 1f / parentScale.z);
+            transform.localScale = new Vector3(scale * Juice.x / parentScale.x, scale * BuildingSprites.Lift * Juice.y / parentScale.y, 1f / parentScale.z);
             _renderer.sortingOrder = OnTop ? short.MaxValue : BuildingSprites.Order(parent.position);
         }
 

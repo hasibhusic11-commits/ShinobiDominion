@@ -283,6 +283,9 @@ namespace ShinobiDominion.Game
         private int _hiddenId;
         private readonly HashSet<int> _gone = new HashSet<int>();
 
+        // What each building looked like at the last sync, so placing, upgrading and moving can be celebrated.
+        private readonly Dictionary<int, (int Level, GridCoord Origin)> _known = new Dictionary<int, (int, GridCoord)>();
+        private bool _ready;
 
         public VillageView(Village village, Transform parent, System.Func<string, HeroLook> heroLook)
         {
@@ -348,6 +351,7 @@ namespace ShinobiDominion.Game
                 if (entry.Hero != null)
                     foreach (var renderer in entry.Hero)
                         if (renderer != null) renderer.sortingOrder = BuildingSprites.Order(transform.position) + 1;
+                Celebrate(building, entry);
             }
 
             var dead = new List<int>();
@@ -362,7 +366,51 @@ namespace ShinobiDominion.Game
 
             _walls.Rebuild(_village, _hiddenId, _gone);
             _props?.Refresh(_hiddenId);
+            _ready = true;
         }
+
+        /// <summary>
+        /// Game feel for the village: a new building drops in with a squash and a puff of dust, an upgrade pops with a
+        /// golden burst and its new level, and a moved building lands with a small bounce. Only after the first sync, so
+        /// loading a village is quiet.
+        /// </summary>
+        private void Celebrate(BuildingInstance building, Entry entry)
+        {
+            // A building being moved is hidden; it celebrates when it lands, so its old place is kept until then.
+            if (building.Id == _hiddenId) return;
+            var had = _known.TryGetValue(building.Id, out var before);
+            _known[building.Id] = (building.Level, building.Origin);
+            if (!_ready || entry.Stand == null) return;
+            var center = entry.Go.transform.position;
+            var size = new Vector2(building.Footprint.Width, building.Footprint.Depth) * GridSpace.CellSize;
+            if (!had)
+            {
+                Feel.Pop(entry.Stand, Feel.Tier.Medium);
+                Feel.Dust(_root, center, size);
+                GameSounds.Play(GameSound.Fall, 0.7f);
+            }
+            else if (building.Level > before.Level)
+            {
+                Feel.Pop(entry.Stand, Feel.Tier.Medium);
+                Feel.LevelBurst(_root, center + Vector3.up * entry.Stand.WorldHeight * 0.45f, Mathf.Max(size.x, size.y) * 1.2f);
+                GameSounds.Play(GameSound.Star);
+                var viewer = Camera.main;
+                if (viewer != null)
+                    FloatingText.Create(_root, viewer, center + Vector3.up * (entry.Stand.WorldHeight * 0.8f + 0.4f), $"Level {building.Level}!", new Color(1f, 0.86f, 0.35f), 0.16f);
+            }
+            else if (before.Origin.X != building.Origin.X || before.Origin.Z != building.Origin.Z)
+            {
+                Feel.Pop(entry.Stand, Feel.Tier.Small);
+                Feel.Dust(_root, center, size * 0.8f);
+            }
+        }
+
+        /// <summary>A struck building flashes red for a moment (raids).</summary>
+        public void HitFlash(int instanceId)
+        {
+            if (_views.TryGetValue(instanceId, out var entry) && entry.Stand != null) Feel.HitFlash(entry.Stand.Renderer);
+        }
+
 
         private Entry Create(BuildingInstance building, HeroLook look, string signature)
         {

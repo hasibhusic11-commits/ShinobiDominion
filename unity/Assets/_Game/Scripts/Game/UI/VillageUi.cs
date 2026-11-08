@@ -1,4 +1,5 @@
 using System;
+using LitMotion;
 using System.Collections.Generic;
 using ShinobiDominion.Core;
 using UnityEngine;
@@ -614,6 +615,63 @@ namespace ShinobiDominion.Game
             {
                 _level.text = "Lv. " + level;
                 _shownLevel = level;
+            }
+        }
+
+        /// <summary>
+        /// Game feel for collecting: a handful of coins (or crystals) burst out where the building is on screen,
+        /// then swoop into their counter, which bounces as they land. Purely visual; the wallet already changed.
+        /// </summary>
+        public void FlyCoins(Vector2 screen, bool crystals)
+        {
+            var counter = (crystals ? _crystals : _gold).transform.parent as RectTransform;
+            if (counter == null) return;
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(Root, screen, null, out var start);
+            var icon = counter.Find("Icon") as RectTransform;
+            var end = (Vector2)Root.InverseTransformPoint((icon != null ? icon : counter).position);
+            var count = 7;
+            for (var i = 0; i < count; i++)
+            {
+                var coin = Ui.Rect("FlyingCoin", Root);
+                coin.anchorMin = coin.anchorMax = coin.pivot = new Vector2(0.5f, 0.5f);
+                coin.sizeDelta = new Vector2(34f, 34f);
+                coin.anchoredPosition = start;
+                var image = coin.gameObject.AddComponent<Image>();
+                image.sprite = HudArt.Sprite(crystals ? "gem_crystal" : "icon_gold");
+                image.preserveAspect = true;
+                image.raycastTarget = false;
+                var angle = (i / (float)count) * Mathf.PI * 2f + UnityEngine.Random.value * 0.6f;
+                var scatter = start + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle) * 0.7f + 0.4f) * UnityEngine.Random.Range(40f, 75f);
+                var control = (scatter + end) * 0.5f + new Vector2(0f, 140f);
+                var last = i == count - 1;
+                var delay = i * 0.035f;
+                LMotion.Create(0f, 1f, 0.75f).WithDelay(delay).WithScheduler(MotionScheduler.UpdateIgnoreTimeScale)
+                    .WithOnComplete(() =>
+                    {
+                        if (coin != null) UnityEngine.Object.Destroy(coin.gameObject);
+                        UiMotion.Punch(counter, 0.1f, 0.25f);
+                        if (last) GameSounds.Play(GameSound.Coin, 0.5f);
+                    })
+                    .Bind(t =>
+                    {
+                        if (coin == null) return;
+                        // Burst out for the first quarter, then swoop along a curve into the counter.
+                        if (t < 0.25f)
+                        {
+                            var k = 1f - Mathf.Pow(1f - t / 0.25f, 3f);
+                            coin.anchoredPosition = Vector2.Lerp(start, scatter, k);
+                            coin.localScale = Vector3.one * Mathf.Lerp(0.4f, 1.15f, k);
+                        }
+                        else
+                        {
+                            var u = (t - 0.25f) / 0.75f;
+                            u *= u;
+                            var a = Vector2.Lerp(scatter, control, u);
+                            var b = Vector2.Lerp(control, end, u);
+                            coin.anchoredPosition = Vector2.Lerp(a, b, u);
+                            coin.localScale = Vector3.one * Mathf.Lerp(1.15f, 0.7f, u);
+                        }
+                    }).AddTo(coin.gameObject);
             }
         }
 
