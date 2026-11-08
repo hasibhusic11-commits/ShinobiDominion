@@ -47,3 +47,4 @@ desktop.ini
 # Local server settings for the game client
 unity/Assets/_Game/Resources/Config/server.local.json
 unity/Assets/_Game/Resources/Config/server.local.json.meta
+__pycache__/
