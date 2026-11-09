@@ -277,6 +277,32 @@ namespace ShinobiDominion.Game
             });
         }
 
+        /// <summary>Spends Mana on one hero level. Online, only the server's answer changes anything.</summary>
+        public void TrainHero(string instanceId)
+        {
+            if (RefuseWhenNoServer()) return;
+            if (IsOnline)
+            {
+                var hero = Roster.Find(instanceId);
+                var key = KeyFor($"hero_train|{instanceId}|{hero?.Level}");
+                Run(async () =>
+                {
+                    var state = await _server.TrainHeroAsync(key, instanceId);
+                    ClearKey();
+                    ApplyServerState(state);
+                    LastMessage = null;
+                    ShowHeroDetail(instanceId);
+                }, () => ShowHeroDetail(instanceId));
+                return;
+            }
+            var result = Roster.TryTrainWithMana(instanceId, Village, out var manaError);
+            LastMessage = result == HeroError.None ? null
+                : result == HeroError.InvalidAmount ? VillageErrorText.Describe(manaError)
+                : HeroErrorText.Describe(result);
+            RefreshHud();
+            ShowHeroDetail(instanceId);
+        }
+
         private void DevMaxLevelOnline(string instanceId)
         {
             Run(async () =>

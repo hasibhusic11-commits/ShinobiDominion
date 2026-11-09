@@ -28,6 +28,11 @@ type vectorOp struct {
 	AtZ      *int     `json:"atZ"`
 	Gold     *int64   `json:"gold"`
 	Crystals *int64   `json:"crystals"`
+	Mana     *int64   `json:"mana"`
+	HeroLevel int     `json:"heroLevel"`
+	HeroXp   int64    `json:"heroXp"`
+	ToLevel  *int     `json:"toLevel"`
+	ToXp     *int64   `json:"toXp"`
 	Count    *int     `json:"count"`
 	CountDef string   `json:"countDef"`
 	Level    *int     `json:"level"`
@@ -45,6 +50,7 @@ type vectorFile struct {
 		Name          string     `json:"name"`
 		StartGold     int64      `json:"startGold"`
 		StartCrystals int64      `json:"startCrystals"`
+		StartMana     int64      `json:"startMana"`
 		Ops           []vectorOp `json:"ops"`
 	} `json:"scenarios"`
 }
@@ -89,6 +95,11 @@ func TestSharedRuleScenarios(t *testing.T) {
 	for _, scenario := range vectors.Scenarios {
 		t.Run(scenario.Name, func(t *testing.T) {
 			v := newVillage(catalog, scenario.StartGold, scenario.StartCrystals, 1)
+			v.mana = scenario.StartMana
+			heroes, heroErr := loadCatalog(heroesJSON)
+			if heroErr != nil {
+				t.Fatal(heroErr)
+			}
 			labels := map[string]int{}
 			clock := int64(3600000 * 1000)
 			troops, troopErr := loadTroopCatalog(troopsJSON)
@@ -122,6 +133,31 @@ func TestSharedRuleScenarios(t *testing.T) {
 					}
 					if op.Gold != nil && v.gold != *op.Gold {
 						t.Fatalf("%s: gold %d, want %d", where, v.gold, *op.Gold)
+					}
+					if op.Mana != nil && v.mana != *op.Mana {
+						t.Fatalf("%s: mana %d, want %d", where, v.mana, *op.Mana)
+					}
+					continue
+				case "setMana":
+					v.mana = *op.Mana
+					continue
+				case "trainHero":
+					want := op.Expect
+					if want == "None" {
+						want = ""
+					}
+					level, xp, got := heroes.trainLevel(v, op.HeroLevel, op.HeroXp)
+					if string(got) != want {
+						t.Fatalf("%s trainHero: got %q, want %q", where, got, op.Expect)
+					}
+					if op.ToLevel != nil && level != *op.ToLevel {
+						t.Fatalf("%s: hero level %d, want %d", where, level, *op.ToLevel)
+					}
+					if op.ToXp != nil && xp != *op.ToXp {
+						t.Fatalf("%s: hero xp %d, want %d", where, xp, *op.ToXp)
+					}
+					if op.Mana != nil && v.mana != *op.Mana {
+						t.Fatalf("%s: mana %d, want %d", where, v.mana, *op.Mana)
 					}
 					continue
 				case "advanceHours":
@@ -176,6 +212,9 @@ func TestSharedRuleScenarios(t *testing.T) {
 				}
 				if op.Crystals != nil && v.crystals != *op.Crystals {
 					t.Fatalf("%s: crystals %d, want %d", where, v.crystals, *op.Crystals)
+				}
+				if op.Mana != nil && v.mana != *op.Mana {
+					t.Fatalf("%s: mana %d, want %d", where, v.mana, *op.Mana)
 				}
 				if op.Count != nil {
 					def := op.CountDef

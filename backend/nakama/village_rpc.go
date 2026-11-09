@@ -32,22 +32,29 @@ func (s *Server) createStarterVillage(ctx context.Context, tx *sql.Tx, userID st
 			return err
 		}
 	}
-	gold := s.buildings.StartingGold
-	if _, err := tx.ExecContext(ctx, `UPDATE sd_player SET gold = $1, next_building_id = $2, village_ready = TRUE WHERE user_id = $3`, gold, len(starterLayout)+1, userID); err != nil {
+	gold, mana := s.buildings.StartingGold, s.buildings.StartingMana
+	if _, err := tx.ExecContext(ctx, `UPDATE sd_player SET gold = $1, mana = $2, next_building_id = $3, village_ready = TRUE WHERE user_id = $4`, gold, mana, len(starterLayout)+1, userID); err != nil {
 		return err
 	}
-	_, err := tx.ExecContext(ctx, `INSERT INTO sd_currency_ledger (user_id, delta, balance_after, reason, ref, currency) VALUES ($1, $2, $2, 'starting_grant', 'account', 'gold')`, userID, gold)
+	if _, err := tx.ExecContext(ctx, `INSERT INTO sd_currency_ledger (user_id, delta, balance_after, reason, ref, currency) VALUES ($1, $2, $2, 'starting_grant', 'account', 'gold')`, userID, gold); err != nil {
+		return err
+	}
+	if mana == 0 {
+		return nil
+	}
+	_, err := tx.ExecContext(ctx, `INSERT INTO sd_currency_ledger (user_id, delta, balance_after, reason, ref, currency) VALUES ($1, $2, $2, 'starting_grant', 'account', 'mana')`, userID, mana)
 	return err
 }
 
 // loadVillage reads the player's village. The caller must already hold the player lock.
 func (s *Server) loadVillage(ctx context.Context, tx *sql.Tx, userID string, crystals int64) (*village, error) {
-	var gold int64
+	var gold, mana int64
 	var nextID int
-	if err := tx.QueryRowContext(ctx, `SELECT gold, next_building_id FROM sd_player WHERE user_id = $1`, userID).Scan(&gold, &nextID); err != nil {
+	if err := tx.QueryRowContext(ctx, `SELECT gold, mana, next_building_id FROM sd_player WHERE user_id = $1`, userID).Scan(&gold, &mana, &nextID); err != nil {
 		return nil, err
 	}
 	v := newVillage(s.buildings, gold, crystals, nextID)
+	v.mana, v.loadedMana = mana, mana
 	rows, err := tx.QueryContext(ctx, `SELECT id, definition_id, x, z, rotation, level, last_collected_ms FROM sd_building WHERE user_id = $1 ORDER BY id`, userID)
 	if err != nil {
 		return nil, err
@@ -97,11 +104,16 @@ func persistVillage(ctx context.Context, tx *sql.Tx, userID string, v *village, 
 			return err
 		}
 	}
-	if _, err := tx.ExecContext(ctx, `UPDATE sd_player SET gold = $1, crystals = $2, next_building_id = $3 WHERE user_id = $4`, v.gold, v.crystals, v.nextID, userID); err != nil {
+	if _, err := tx.ExecContext(ctx, `UPDATE sd_player SET gold = $1, crystals = $2, mana = $3, next_building_id = $4 WHERE user_id = $5`, v.gold, v.crystals, v.mana, v.nextID, userID); err != nil {
 		return err
 	}
 	if v.gold != beforeGold {
 		if _, err := tx.ExecContext(ctx, `INSERT INTO sd_currency_ledger (user_id, delta, balance_after, reason, ref, currency) VALUES ($1, $2, $3, $4, $5, 'gold')`, userID, v.gold-beforeGold, v.gold, reason, ref); err != nil {
+			return err
+		}
+	}
+	if v.mana != v.loadedMana {
+		if _, err := tx.ExecContext(ctx, `INSERT INTO sd_currency_ledger (user_id, delta, balance_after, reason, ref, currency) VALUES ($1, $2, $3, $4, $5, 'mana')`, userID, v.mana-v.loadedMana, v.mana, reason, ref); err != nil {
 			return err
 		}
 	}
@@ -120,6 +132,7 @@ type villageState struct {
 	NextInstanceID int             `json:"nextInstanceId"`
 	Gold           int64           `json:"gold"`
 	Crystals       int64           `json:"crystals"`
+	Mana           int64           `json:"mana"`
 	Buildings      []buildingState `json:"buildings"`
 }
 
@@ -136,7 +149,7 @@ type buildingState struct {
 
 func loadVillageState(ctx context.Context, tx *sql.Tx, userID string, crystals int64) (*villageState, error) {
 	state := &villageState{SchemaVersion: 1, MapVersion: 1, Crystals: crystals, Buildings: []buildingState{}}
-	if err := tx.QueryRowContext(ctx, `SELECT gold, next_building_id FROM sd_player WHERE user_id = $1`, userID).Scan(&state.Gold, &state.NextInstanceID); err != nil {
+	if err := tx.QueryRowContext(ctx, `SELECT gold, mana, next_building_id FROM sd_player WHERE user_id = $1`, userID).Scan(&state.Gold, &state.Mana, &state.NextInstanceID); err != nil {
 		return nil, err
 	}
 	rows, err := tx.QueryContext(ctx, `SELECT b.id, b.definition_id, b.x, b.z, b.rotation, b.level, b.last_collected_ms,

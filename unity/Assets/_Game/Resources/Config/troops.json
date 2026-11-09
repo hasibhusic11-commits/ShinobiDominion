@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "balanceStatus": "PROPOSED TEST VALUES AND PROVISIONAL NAMES - NOT APPROVED",
   "troops": [
-    { "id": "militia", "displayName": "Village Militia", "description": "Cheap fighters who rush the nearest building.", "space": 1, "goldCost": 25, "requiredHall": 1, "role": "Fighter", "hp": 110, "attack": 14, "defense": 5 },
-    { "id": "kunai_thrower", "displayName": "Kunai Thrower", "description": "Frail, but strikes from a distance.", "space": 2, "goldCost": 60, "requiredHall": 1, "role": "Mage", "hp": 90, "attack": 26, "defense": 3 },
-    { "id": "shadow_runner", "displayName": "Shadow Runner", "description": "Fast, and goes straight for the towers.", "space": 3, "goldCost": 110, "requiredHall": 2, "role": "Assassin", "hp": 190, "attack": 36, "defense": 8 },
-    { "id": "shield_bearer", "displayName": "Shield Bearer", "description": "Slow and very hard to bring down.", "space": 4, "goldCost": 140, "requiredHall": 3, "role": "Tank", "hp": 680, "attack": 24, "defense": 28 },
-    { "id": "iron_ox_rider", "displayName": "Iron Ox Rider", "description": "A heavy charger that takes up a lot of room.", "space": 8, "goldCost": 360, "requiredHall": 5, "role": "Fighter", "hp": 1450, "attack": 85, "defense": 32 }
+    { "id": "militia", "displayName": "Village Militia", "description": "Cheap fighters who rush the nearest building.", "space": 1, "goldCost": 25, "manaCost": 10, "requiredHall": 1, "role": "Fighter", "hp": 110, "attack": 14, "defense": 5 },
+    { "id": "kunai_thrower", "displayName": "Kunai Thrower", "description": "Frail, but strikes from a distance.", "space": 2, "goldCost": 60, "manaCost": 20, "requiredHall": 1, "role": "Mage", "hp": 90, "attack": 26, "defense": 3 },
+    { "id": "shadow_runner", "displayName": "Shadow Runner", "description": "Fast, and goes straight for the towers.", "space": 3, "goldCost": 110, "manaCost": 40, "requiredHall": 2, "role": "Assassin", "hp": 190, "attack": 36, "defense": 8 },
+    { "id": "shield_bearer", "displayName": "Shield Bearer", "description": "Slow and very hard to bring down.", "space": 4, "goldCost": 140, "manaCost": 50, "requiredHall": 3, "role": "Tank", "hp": 680, "attack": 24, "defense": 28 },
+    { "id": "iron_ox_rider", "displayName": "Iron Ox Rider", "description": "A heavy charger that takes up a lot of room.", "space": 8, "goldCost": 360, "manaCost": 120, "requiredHall": 5, "role": "Fighter", "hp": 1450, "attack": 85, "defense": 32 }
   ]
 }

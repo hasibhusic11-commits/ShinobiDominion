@@ -32,6 +32,7 @@ type troopDef struct {
 	DisplayName  string `json:"displayName"`
 	Space        int    `json:"space"`
 	GoldCost     int64  `json:"goldCost"`
+	ManaCost     int64  `json:"manaCost"`
 	RequiredHall int    `json:"requiredHall"`
 	Role         string `json:"role"`
 	Hp           int64  `json:"hp"`
@@ -57,7 +58,7 @@ func loadTroopCatalog(data []byte) (*troopCatalog, error) {
 	}
 	catalog := &troopCatalog{all: document.Troops, byID: map[string]*troopDef{}}
 	for _, troop := range document.Troops {
-		if troop.Space < 1 || troop.GoldCost < 0 || troop.Hp < 1 || troop.RequiredHall < 1 {
+		if troop.Space < 1 || troop.GoldCost < 0 || troop.ManaCost < 0 || troop.Hp < 1 || troop.RequiredHall < 1 {
 			return nil, errors.New("troop " + troop.ID + " has invalid values")
 		}
 		if _, err := roleNumber(troop.Role); err != nil {
@@ -114,11 +115,17 @@ func train(v *village, catalog *troopCatalog, counts map[string]int, troopID str
 	if usedSpace(catalog, counts)+int64(troop.Space)*int64(count) > v.troopCapacity() {
 		return vCampsFull
 	}
+	// Training costs gold and Mana (ADR-038). Both are checked before either is taken.
 	cost := troop.GoldCost * int64(count)
 	if v.gold < cost {
 		return vFunds
 	}
+	manaCost := troop.ManaCost * int64(count)
+	if v.mana < manaCost {
+		return vNoMana
+	}
 	v.gold -= cost
+	v.spendMana(manaCost)
 	counts[troopID] += count
 	return vOK
 }

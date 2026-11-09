@@ -4,6 +4,8 @@
   "catalystByTransition": ["awakening_scroll", "ascension_stone", "sovereign_scroll"],
   "xpPerLevelBase": 100,
   "xpPerLevelStep": 10,
+  "manaPerLevelBase": 20,
+  "manaPerLevelStep": 5,
   "heroes": [
     {
       "id": "river_scout", "displayName": "River Scout", "rarity": "Common", "role": "Assassin", "affinity": "Water", "contentComplete": true, "retired": true,

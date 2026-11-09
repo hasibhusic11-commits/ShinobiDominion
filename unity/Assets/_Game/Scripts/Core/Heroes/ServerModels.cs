@@ -129,6 +129,7 @@ namespace ShinobiDominion.Core
                 case "NOT_EVOLVABLE": return "Only Legendary heroes evolve";
                 case "AT_MAX_EVOLUTION": return "Already in final form";
                 case "LEVEL_TOO_LOW": return "Must be level 200 in this form";
+                case "AT_MAX_LEVEL": return "Already at level 200";
                 case "SAME_INSTANCE": return "A hero cannot be its own duplicate";
                 case "WRONG_ARCHETYPE": return "Duplicate must be the exact same hero";
                 case "DUPLICATE_LOCKED": return "That copy is locked";

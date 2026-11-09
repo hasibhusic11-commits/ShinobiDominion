@@ -29,7 +29,8 @@ namespace ShinobiDominion.Core
         NoTrainingHall,
         TroopLocked,
         CampsFull,
-        OneHeroOnly
+        OneHeroOnly,
+        InsufficientMana
     }
 
     public static class VillageErrorText
@@ -62,6 +63,7 @@ namespace ShinobiDominion.Core
                 case VillageError.NoTrainingHall: return "Build a Training Hall first";
                 case VillageError.TroopLocked: return "Upgrade the Training Hall first";
                 case VillageError.CampsFull: return "Your Troop Camps are full";
+                case VillageError.InsufficientMana: return "Not enough Mana";
                 default: return error.ToString();
             }
         }
@@ -84,6 +86,8 @@ namespace ShinobiDominion.Core
         public VillageGrid Grid { get; } = new VillageGrid();
         public long Gold { get; private set; }
         public long Crystals { get; private set; }
+        /// <summary>Mana, the third currency (ADR-038). Earned at Mana Mills; trains troops and heroes.</summary>
+        public long Mana { get; private set; }
         public int NextInstanceId { get; private set; } = 1;
 
         public IEnumerable<BuildingInstance> Buildings => _buildings.Values;
@@ -97,6 +101,7 @@ namespace ShinobiDominion.Core
             Catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
             Gold = catalog.StartingGold;
             Crystals = catalog.StartingCrystals;
+            Mana = catalog.StartingMana;
         }
 
         public int HqLevel
@@ -139,6 +144,18 @@ namespace ShinobiDominion.Core
         {
             Gold -= gold;
             Changed?.Invoke();
+        }
+
+        /// <summary>
+        /// The one way Mana leaves the wallet: troop training, hero training and, once it exists,
+        /// research. Mirrors the server's spendMana. Online, the server's answer replaces this.
+        /// </summary>
+        public VillageError TrySpendMana(long amount)
+        {
+            if (amount < 0 || Mana < amount) return VillageError.InsufficientMana;
+            Mana -= amount;
+            Changed?.Invoke();
+            return VillageError.None;
         }
 
         // ---------- Placement ----------
@@ -420,6 +437,12 @@ namespace ShinobiDominion.Core
                 collected = Math.Min(pending, room);
                 Gold += collected;
             }
+            else if (building.Definition.produces == ResourceKind.Mana)
+            {
+                // Mana has no village-wide cap: each mill's own storedCap is the only limit (ADR-038).
+                collected = pending;
+                Mana += collected;
+            }
             else
             {
                 collected = pending;
@@ -444,7 +467,8 @@ namespace ShinobiDominion.Core
                 mapVersion = VillageSave.CurrentMapVersion,
                 nextInstanceId = NextInstanceId,
                 gold = Gold,
-                crystals = Crystals
+                crystals = Crystals,
+                mana = Mana
             };
             foreach (var building in _buildings.Values.OrderBy(b => b.Id))
             {
@@ -489,13 +513,14 @@ namespace ShinobiDominion.Core
                 throw new VillageSaveException($"Unsupported save schema {save.schemaVersion}.");
             if (save.mapVersion != VillageSave.CurrentMapVersion)
                 throw new VillageSaveException($"Unsupported map version {save.mapVersion}.");
-            if (save.gold < 0 || save.crystals < 0)
+            if (save.gold < 0 || save.crystals < 0 || save.mana < 0)
                 throw new VillageSaveException("Negative currency in save.");
 
             _buildings.Clear();
             Grid.ClearAll();
             Gold = save.gold;
             Crystals = save.crystals;
+            Mana = save.mana;
 
             var heroes = new HashSet<string>();
             var maxId = 0;

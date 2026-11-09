@@ -21,6 +21,7 @@ namespace ShinobiDominion.Core
         public int nextInstanceId;
         public long gold;
         public long crystals;
+        public long mana;
         public List<BuildingSave> buildings = new List<BuildingSave>();
 
         public string ToJson() => JsonConvert.SerializeObject(this, Formatting.Indented);

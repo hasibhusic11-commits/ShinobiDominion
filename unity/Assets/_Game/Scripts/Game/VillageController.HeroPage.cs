@@ -225,6 +225,12 @@ namespace ShinobiDominion.Game
             }
 
             var instanceId = hero.InstanceId;
+            // Hero training (ADR-038): Mana buys one level. The server sets the price and decides.
+            if (hero.Level < HeroMath.MaxLevel)
+            {
+                var manaCost = Roster.ManaToLevelUp(hero.Level);
+                Ui.Button(box, "TrainHeroButton", $"Train +1 level ({manaCost:N0} Mana)", () => TrainHero(instanceId), Village.Mana >= manaCost, Ui.AccentColor, 19);
+            }
             Ui.Button(box, "LockButton", hero.Locked ? "Unlock" : "Lock", () =>
             {
                 if (IsOnline)

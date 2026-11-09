@@ -73,6 +73,8 @@ namespace ShinobiDominion.Core
         public List<string> catalystByTransition = new List<string>();
         public long xpPerLevelBase;
         public long xpPerLevelStep;
+        public long manaPerLevelBase;
+        public long manaPerLevelStep;
         public List<HeroArchetype> heroes = new List<HeroArchetype>();
     }
 
@@ -85,6 +87,8 @@ namespace ShinobiDominion.Core
         public IReadOnlyList<string> CatalystByTransition { get; }
         public long XpPerLevelBase { get; }
         public long XpPerLevelStep { get; }
+        public long ManaPerLevelBase { get; }
+        public long ManaPerLevelStep { get; }
         public string BalanceStatus { get; }
 
         private HeroCatalog(HeroCatalogFile file)
@@ -93,6 +97,8 @@ namespace ShinobiDominion.Core
             CatalystByTransition = file.catalystByTransition;
             XpPerLevelBase = file.xpPerLevelBase;
             XpPerLevelStep = file.xpPerLevelStep;
+            ManaPerLevelBase = file.manaPerLevelBase;
+            ManaPerLevelStep = file.manaPerLevelStep;
             BalanceStatus = file.balanceStatus;
             _byId = file.heroes.ToDictionary(h => h.id);
         }
@@ -322,6 +328,32 @@ namespace ShinobiDominion.Core
             if (hero.Level >= HeroMath.MaxLevel) return HeroError.AtMaxLevel;
 
             hero.Experience = checked(hero.Experience + amount);
+            while (hero.Level < HeroMath.MaxLevel && hero.Experience >= XpToNextLevel(hero.Level))
+            {
+                hero.Experience -= XpToNextLevel(hero.Level);
+                hero.Level++;
+            }
+            if (hero.Level >= HeroMath.MaxLevel) hero.Experience = 0;
+            Changed?.Invoke();
+            return HeroError.None;
+        }
+
+        /// <summary>Mana to buy one level from this level. Test values from heroes.json (ADR-038).</summary>
+        public long ManaToLevelUp(int level) => Catalog.ManaPerLevelBase + Catalog.ManaPerLevelStep * (level - 1);
+
+        /// <summary>
+        /// Hero training at the Hero Altar: Mana buys exactly one level, and XP already earned toward
+        /// the next level is kept. Mirrors the server's trainLevel; online, the server decides.
+        /// </summary>
+        public HeroError TryTrainWithMana(string instanceId, Village village, out VillageError manaError)
+        {
+            manaError = VillageError.None;
+            var hero = Find(instanceId);
+            if (hero == null) return HeroError.HeroNotFound;
+            if (hero.Level >= HeroMath.MaxLevel) return HeroError.AtMaxLevel;
+            manaError = village.TrySpendMana(ManaToLevelUp(hero.Level));
+            if (manaError != VillageError.None) return HeroError.InvalidAmount;
+            hero.Level++;
             while (hero.Level < HeroMath.MaxLevel && hero.Experience >= XpToNextLevel(hero.Level))
             {
                 hero.Experience -= XpToNextLevel(hero.Level);

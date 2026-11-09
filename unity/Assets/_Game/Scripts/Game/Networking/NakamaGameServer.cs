@@ -32,6 +32,7 @@ namespace ShinobiDominion.Game
         Task<List<DefenseRecord>> DefenseLogAsync();
         Task<RaidOutcome> RaidDeployAsync(string key, string attackId, IList<RaidPlacement> placements, IList<RaidTroopStack> troops);
         Task<ServerState> TrainTroopsAsync(string key, string troopId, int count);
+        Task<ServerState> TrainHeroAsync(string key, string instanceId);
     }
 
     public sealed class GameServerException : Exception
@@ -142,6 +143,9 @@ namespace ShinobiDominion.Game
 
         public async Task<ServerState> TrainTroopsAsync(string key, string troopId, int count) =>
             ServerState.Parse(await CallAsync("sd_troop_train", new { key, troopId, count }));
+
+        public async Task<ServerState> TrainHeroAsync(string key, string instanceId) =>
+            ServerState.Parse(await CallAsync("sd_hero_train", new { key, instanceId }));
 
         public async Task<ServerOdds> GetOddsAsync() => ServerOdds.Parse(await CallAsync("sd_summon_odds", null));
 

@@ -70,9 +70,10 @@ func armyHero(t *testing.T) *player {
 }
 
 // winWithArmy trains 30 militia and lands them with the hero, as a player clearing an early stage would.
+// It tops up gold and Mana first, since troops cost both (ADR-038).
 func winWithArmy(t *testing.T, p *player, id string) campaignDeploy {
 	t.Helper()
-	grant(t, p, map[string]interface{}{"setGold": 20000})
+	grant(t, p, map[string]interface{}{"setGold": 20000, "setMana": 1000})
 	if _, err := trainTroops(p, "k-"+randomHex(8), "militia", 30); err != nil {
 		t.Fatal(err)
 	}

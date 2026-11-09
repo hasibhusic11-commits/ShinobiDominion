@@ -114,6 +114,7 @@
     {
       "name": "training needs a hall and room in the camps",
       "startGold": 20000,
+      "startMana": 500,
       "ops": [
         { "op": "train", "troop": "militia", "count": 1, "expect": "NoTrainingHall" },
         { "op": "train", "troop": "dragon", "count": 1, "expect": "BadTroop" },
@@ -123,9 +124,9 @@
         { "op": "train", "troop": "militia", "count": 1, "expect": "CampsFull" },
         { "op": "place", "def": "troop_camp", "x": 10, "z": 10, "expect": "None", "gold": 18100 },
         { "op": "train", "troop": "iron_ox_rider", "count": 1, "expect": "TroopLocked" },
-        { "op": "train", "troop": "kunai_thrower", "count": 7, "expect": "None", "gold": 17680 },
+        { "op": "train", "troop": "kunai_thrower", "count": 7, "expect": "None", "gold": 17680, "mana": 360 },
         { "op": "train", "troop": "kunai_thrower", "count": 1, "expect": "CampsFull" },
-        { "op": "train", "troop": "militia", "count": 1, "expect": "None", "gold": 17655 },
+        { "op": "train", "troop": "militia", "count": 1, "expect": "None", "gold": 17655, "mana": 350 },
         { "op": "train", "troop": "militia", "count": 1, "expect": "CampsFull" },
         { "op": "setGold", "gold": 1 },
         { "op": "place", "def": "wall", "x": 40, "z": 40, "expect": "InsufficientFunds" }
@@ -253,6 +254,51 @@
         { "op": "collect", "target": "m", "expect": "StorageFull", "gold": 20000 },
         { "op": "place", "def": "gold_vault", "x": 10, "z": 10, "expect": "None", "gold": 19500 },
         { "op": "collect", "target": "m", "expect": "None", "gold": 21800 }
+      ]
+    },
+    {
+      "name": "mana mill pays mana, capped only by the mill",
+      "startGold": 5000,
+      "ops": [
+        { "op": "place", "def": "mana_mill", "x": 1, "z": 1, "expect": "None", "label": "m", "gold": 4400, "mana": 0 },
+        { "op": "place", "def": "mana_mill", "x": 10, "z": 10, "expect": "LimitReached" },
+        { "op": "collect", "target": "m", "expect": "NothingToCollect", "mana": 0 },
+        { "op": "advanceHours", "hours": 1 },
+        { "op": "collect", "target": "m", "expect": "None", "gold": 4400, "mana": 200 },
+        { "op": "collect", "target": "m", "expect": "NothingToCollect", "mana": 200 },
+        { "op": "advanceHours", "hours": 1000 },
+        { "op": "collect", "target": "m", "expect": "None", "mana": 1000 },
+        { "op": "upgrade", "target": "m", "expect": "None", "gold": 3800, "level": 2 },
+        { "op": "advanceHours", "hours": 1 },
+        { "op": "collect", "target": "m", "expect": "None", "mana": 1280 }
+      ]
+    },
+    {
+      "name": "training refuses when short of mana and charges nothing",
+      "startGold": 20000,
+      "startMana": 15,
+      "ops": [
+        { "op": "place", "def": "training_grounds", "x": 1, "z": 1, "expect": "None" },
+        { "op": "place", "def": "troop_camp", "x": 10, "z": 10, "expect": "None", "gold": 18100 },
+        { "op": "train", "troop": "militia", "count": 2, "expect": "InsufficientMana", "gold": 18100, "mana": 15 },
+        { "op": "train", "troop": "militia", "count": 1, "expect": "None", "gold": 18075, "mana": 5 },
+        { "op": "setGold", "gold": 0 },
+        { "op": "setMana", "mana": 1000 },
+        { "op": "train", "troop": "militia", "count": 1, "expect": "InsufficientFunds", "gold": 0, "mana": 1000 }
+      ]
+    },
+    {
+      "name": "hero training buys one level with mana and keeps earned xp",
+      "startGold": 0,
+      "startMana": 100,
+      "ops": [
+        { "op": "trainHero", "heroLevel": 1, "heroXp": 50, "expect": "None", "toLevel": 2, "toXp": 50, "mana": 80 },
+        { "op": "trainHero", "heroLevel": 3, "heroXp": 0, "expect": "None", "toLevel": 4, "toXp": 0, "mana": 50 },
+        { "op": "trainHero", "heroLevel": 10, "heroXp": 0, "expect": "InsufficientMana", "toLevel": 10, "mana": 50 },
+        { "op": "trainHero", "heroLevel": 1, "heroXp": 115, "expect": "None", "toLevel": 3, "toXp": 5, "mana": 30 },
+        { "op": "trainHero", "heroLevel": 200, "heroXp": 0, "expect": "AtMaxLevel", "toLevel": 200, "mana": 30 },
+        { "op": "setMana", "mana": 1010 },
+        { "op": "trainHero", "heroLevel": 199, "heroXp": 900, "expect": "None", "toLevel": 200, "toXp": 0, "mana": 0 }
       ]
     },
     {

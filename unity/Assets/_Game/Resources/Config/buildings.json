@@ -3,6 +3,7 @@
   "balanceStatus": "PROPOSED TEST VALUES - NOT APPROVED",
   "startingGold": 5000,
   "startingCrystals": 100,
+  "startingMana": 500,
   "baseGoldCapacity": 20000,
   "buildings": [
     {
@@ -243,6 +244,26 @@
         {"hp":2640,"upgradeCost":384000,"requiredHq":9,"production":33,"storedCap":152,"might":39},
         {"hp":3080,"upgradeCost":540000,"requiredHq":12,"production":36,"storedCap":176,"might":42},
         {"hp":3600,"upgradeCost":0,"requiredHq":12,"production":40,"storedCap":208,"might":45}
+      ]
+    },
+    {
+      "id": "mana_mill", "displayName": "Mana Mill", "description": "Produces Mana over time. Mana trains troops and heroes.", "category": "Resources", "function": "Collector", "width": 3, "depth": 3, "costGold": 600, "maxCountByHqLevel": [1, 1, 2, 2, 3], "produces": "Mana",
+      "levels": [
+        {"hp":400,"upgradeCost":600,"requiredHq":1,"production":200,"storedCap":800,"might":3},
+        {"hp":460,"upgradeCost":1200,"requiredHq":1,"production":280,"storedCap":1040,"might":6},
+        {"hp":540,"upgradeCost":2400,"requiredHq":1,"production":360,"storedCap":1280,"might":9},
+        {"hp":640,"upgradeCost":4200,"requiredHq":1,"production":440,"storedCap":1600,"might":12},
+        {"hp":740,"upgradeCost":7200,"requiredHq":3,"production":540,"storedCap":1920,"might":15},
+        {"hp":880,"upgradeCost":12000,"requiredHq":3,"production":640,"storedCap":2400,"might":18},
+        {"hp":1040,"upgradeCost":19200,"requiredHq":3,"production":760,"storedCap":2880,"might":21},
+        {"hp":1220,"upgradeCost":30000,"requiredHq":6,"production":880,"storedCap":3440,"might":24},
+        {"hp":1420,"upgradeCost":45000,"requiredHq":6,"production":1000,"storedCap":4000,"might":27},
+        {"hp":1660,"upgradeCost":66000,"requiredHq":6,"production":1140,"storedCap":4800,"might":30},
+        {"hp":1940,"upgradeCost":96000,"requiredHq":9,"production":1300,"storedCap":5600,"might":33},
+        {"hp":2260,"upgradeCost":138000,"requiredHq":9,"production":1460,"storedCap":6400,"might":36},
+        {"hp":2640,"upgradeCost":192000,"requiredHq":9,"production":1640,"storedCap":7600,"might":39},
+        {"hp":3080,"upgradeCost":270000,"requiredHq":12,"production":1820,"storedCap":8800,"might":42},
+        {"hp":3600,"upgradeCost":0,"requiredHq":12,"production":2000,"storedCap":10400,"might":45}
       ]
     },
     {

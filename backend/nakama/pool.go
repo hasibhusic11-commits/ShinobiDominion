@@ -58,6 +58,9 @@ type HeroCatalog struct {
 	Catalysts     []string    `json:"catalystByTransition"`
 	XpBase        int64       `json:"xpPerLevelBase"`
 	XpStep        int64       `json:"xpPerLevelStep"`
+	// Mana to buy one hero level: base + step * (level - 1). Test values (ADR-038).
+	ManaBase      int64       `json:"manaPerLevelBase"`
+	ManaStep      int64       `json:"manaPerLevelStep"`
 	Heroes        []Archetype `json:"heroes"`
 	byID          map[string]Archetype
 }
@@ -76,6 +79,9 @@ func loadCatalog(data []byte) (*HeroCatalog, error) {
 			return nil, errors.New("each transition needs its own catalyst")
 		}
 		seen[c] = true
+	}
+	if catalog.ManaBase < 0 || catalog.ManaStep < 0 {
+		return nil, errors.New("hero Mana costs cannot be negative")
 	}
 	catalog.byID = map[string]Archetype{}
 	for _, h := range catalog.Heroes {

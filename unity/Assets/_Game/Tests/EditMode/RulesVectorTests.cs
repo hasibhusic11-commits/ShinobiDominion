@@ -58,11 +58,13 @@ namespace ShinobiDominion.Tests
             start.nextInstanceId = 1;
             start.gold = scenario.Value<long>("startGold");
             start.crystals = scenario.Value<long?>("startCrystals") ?? 0;
+            start.mana = scenario.Value<long?>("startMana") ?? 0;
             village.Restore(start);
 
             var labels = new Dictionary<string, int>();
             var army = new Army();
             var troops = TroopCatalog.FromJson(ReadConfig("troops.json"));
+            var heroes = HeroCatalog.FromJson(ReadConfig("heroes.json"));
             long clock = TimeSpan.TicksPerHour * 1000;
             var step = 0;
             foreach (var op in scenario["ops"])
@@ -87,6 +89,23 @@ namespace ShinobiDominion.Tests
                         var trained = army.TryTrain(village, troops, op.Value<string>("troop"), op.Value<int>("count"));
                         Assert.AreEqual(op.Value<string>("expect"), trained.ToString(), where);
                         if (op["gold"] != null) Assert.AreEqual(op.Value<long>("gold"), village.Gold, where + " gold");
+                        if (op["mana"] != null) Assert.AreEqual(op.Value<long>("mana"), village.Mana, where + " mana");
+                        continue;
+                    case "setMana":
+                        var manaSave = village.ToSave();
+                        manaSave.mana = op.Value<long>("mana");
+                        village.Restore(manaSave);
+                        continue;
+                    case "trainHero":
+                        var roster = new HeroRoster(heroes);
+                        var hero = roster.AddHero("thunder_empress", 0, op.Value<int>("heroLevel"));
+                        hero.Experience = op.Value<long?>("heroXp") ?? 0;
+                        var heroResult = roster.TryTrainWithMana(hero.InstanceId, village, out var manaError);
+                        var got = heroResult == HeroError.InvalidAmount ? manaError.ToString() : heroResult.ToString();
+                        Assert.AreEqual(op.Value<string>("expect"), got, where);
+                        if (op["toLevel"] != null) Assert.AreEqual(op.Value<int>("toLevel"), hero.Level, where + " hero level");
+                        if (op["toXp"] != null) Assert.AreEqual(op.Value<long>("toXp"), hero.Experience, where + " hero xp");
+                        if (op["mana"] != null) Assert.AreEqual(op.Value<long>("mana"), village.Mana, where + " mana");
                         continue;
                     case "advanceHours":
                         clock += TimeSpan.TicksPerHour * op.Value<long>("hours");
@@ -105,6 +124,7 @@ namespace ShinobiDominion.Tests
                 Assert.AreEqual(op.Value<string>("expect"), actual.ToString(), where);
                 if (op["gold"] != null) Assert.AreEqual(op.Value<long>("gold"), village.Gold, where + " gold");
                 if (op["crystals"] != null) Assert.AreEqual(op.Value<long>("crystals"), village.Crystals, where + " crystals");
+                if (op["mana"] != null) Assert.AreEqual(op.Value<long>("mana"), village.Mana, where + " mana");
                 if (op["count"] != null)
                     Assert.AreEqual(op.Value<int>("count"), village.CountOf(op.Value<string>("countDef") ?? op.Value<string>("def")), where + " count");
                 if (op["level"] != null)

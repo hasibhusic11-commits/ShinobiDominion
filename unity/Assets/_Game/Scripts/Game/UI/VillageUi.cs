@@ -401,7 +401,7 @@ namespace ShinobiDominion.Game
         // Shortcuts and chests belong to the home screen; raids and full screens hide them with ATTACK.
         private readonly System.Collections.Generic.List<GameObject> _homeOnly = new System.Collections.Generic.List<GameObject>();
         private readonly Text _gold;
-        private readonly Text _chakra;
+        private readonly Text _mana;
         private readonly Text _crystals;
         private readonly RectTransform _goldFill;
         private readonly Image _goldFillImage;
@@ -468,7 +468,8 @@ namespace ShinobiDominion.Game
 
             // Currencies: gold, gems and mana, each on the pack's bar with its picture on the left and a "+".
             var barsRight = -(Margin + 78f + 64f + 22f);
-            _chakra = Counter(Root, "Chakra", "chakra", barsRight, onShop, out _, out _);
+            // The picture is still named icon_chakra; the currency is Mana (owner, 2026-11-08).
+            _mana = Counter(Root, "Mana", "chakra", barsRight, onShop, out _, out _);
             _crystals = Counter(Root, "Crystals", "crystals", barsRight - (BarWidth + BarGap), onShop, out _, out _);
             _gold = Counter(Root, "Gold", "gold", barsRight - 2f * (BarWidth + BarGap), onShop, out _goldFill, out _goldFillImage);
 
@@ -556,22 +557,22 @@ namespace ShinobiDominion.Game
         }
 
         private long _shownGold = -1;
-        private long _shownChakra = -1;
+        private long _shownMana = -1;
         private long _shownCrystals = -1;
         private long _shownCapacity = -1;
 
         /// <summary>Numbers roll to their new value; a gain bounces the bar, a loss flashes it red once.</summary>
-        public void SetWallet(long gold, long crystals, long goldCapacity = 0, long chakra = 0)
+        public void SetWallet(long gold, long crystals, long goldCapacity = 0, long mana = 0)
         {
             if (gold != _shownGold)
             {
                 Roll(_gold, _shownGold, gold);
                 _shownGold = gold;
             }
-            if (chakra != _shownChakra)
+            if (mana != _shownMana)
             {
-                Roll(_chakra, _shownChakra, chakra);
-                _shownChakra = chakra;
+                Roll(_mana, _shownMana, mana);
+                _shownMana = mana;
             }
             if (crystals != _shownCrystals)
             {

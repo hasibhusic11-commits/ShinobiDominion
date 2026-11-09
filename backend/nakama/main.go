@@ -155,6 +155,7 @@ func (s *Server) register(initializer runtime.Initializer, logger runtime.Logger
 		"sd_village_upgrade": s.rpcUpgrade,
 		"sd_village_collect": s.rpcCollect,
 		"sd_troop_train":  s.rpcTroopTrain,
+		"sd_hero_train":   s.rpcHeroTrain,
 		"sd_raid_list":    s.rpcRaidList,
 		"sd_raid_start":   s.rpcRaidStart,
 		"sd_raid_deploy":  s.rpcRaidDeploy,
@@ -898,6 +899,7 @@ type devGrantRequest struct {
 	ClearItems  bool             `json:"clearItems"`
 	MaxLevelFor string           `json:"maxLevelFor"`
 	SetGold     *int64           `json:"setGold"`
+	SetMana     *int64           `json:"setMana"`
 	SetDojoLevel *int `json:"setDojoLevel"`
 	ResetVillage bool            `json:"resetVillage"`
 	BackdateCollectHours int64   `json:"backdateCollectHours"`
@@ -1003,6 +1005,21 @@ func (s *Server) rpcDevGrant(ctx context.Context, logger runtime.Logger, db *sql
 				return err
 			}
 		}
+		if request.SetMana != nil {
+			if *request.SetMana < 0 {
+				return errBadRequest
+			}
+			var before int64
+			if err := tx.QueryRowContext(ctx, `SELECT mana FROM sd_player WHERE user_id = $1`, userID).Scan(&before); err != nil {
+				return err
+			}
+			if _, err := tx.ExecContext(ctx, `UPDATE sd_player SET mana = $1 WHERE user_id = $2`, *request.SetMana, userID); err != nil {
+				return err
+			}
+			if _, err := tx.ExecContext(ctx, `INSERT INTO sd_currency_ledger (user_id, delta, balance_after, reason, ref, currency) VALUES ($1, $2, $3, 'dev_grant', 'dev', 'mana')`, userID, *request.SetMana-before, *request.SetMana); err != nil {
+				return err
+			}
+		}
 		if request.BackdateCollectHours != 0 {
 			if _, err := tx.ExecContext(ctx, `UPDATE sd_building SET last_collected_ms = last_collected_ms - $1 WHERE user_id = $2`, request.BackdateCollectHours*3600000, userID); err != nil {
 				return err
@@ -1037,6 +1054,8 @@ type auditResponse struct {
 	RollsWithHero int64 `json:"rollsWithHero"`
 	Gold          int64 `json:"gold"`
 	GoldLedgerSum int64 `json:"goldLedgerSum"`
+	Mana          int64 `json:"mana"`
+	ManaLedgerSum int64 `json:"manaLedgerSum"`
 }
 
 // rpcDevAudit reports totals that must always agree, used to prove crash recovery.
@@ -1053,8 +1072,10 @@ func (s *Server) rpcDevAudit(ctx context.Context, logger runtime.Logger, db *sql
 		(SELECT count(*) FROM sd_summon_roll WHERE user_id = $1),
 		(SELECT count(*) FROM sd_summon_roll r JOIN sd_hero h ON h.instance_id = r.instance_id WHERE r.user_id = $1),
 		COALESCE((SELECT gold FROM sd_player WHERE user_id = $1), 0),
-		COALESCE((SELECT sum(delta) FROM sd_currency_ledger WHERE user_id = $1 AND currency = 'gold'), 0)`, userID).
-		Scan(&audit.Crystals, &audit.LedgerSum, &audit.SummonDebits, &audit.Rolls, &audit.RollsWithHero, &audit.Gold, &audit.GoldLedgerSum)
+		COALESCE((SELECT sum(delta) FROM sd_currency_ledger WHERE user_id = $1 AND currency = 'gold'), 0),
+		COALESCE((SELECT mana FROM sd_player WHERE user_id = $1), 0),
+		COALESCE((SELECT sum(delta) FROM sd_currency_ledger WHERE user_id = $1 AND currency = 'mana'), 0)`, userID).
+		Scan(&audit.Crystals, &audit.LedgerSum, &audit.SummonDebits, &audit.Rolls, &audit.RollsWithHero, &audit.Gold, &audit.GoldLedgerSum, &audit.Mana, &audit.ManaLedgerSum)
 	if err != nil {
 		return "", err
 	}

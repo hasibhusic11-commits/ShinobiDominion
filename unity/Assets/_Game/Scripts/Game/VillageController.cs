@@ -241,7 +241,7 @@ namespace ShinobiDominion.Game
 
         private void RefreshHud()
         {
-            _hud.SetWallet(Village.Gold, ServerCrystals ?? Village.Crystals, Village.GoldCapacity, Chakra);
+            _hud.SetWallet(Village.Gold, ServerCrystals ?? Village.Crystals, Village.GoldCapacity, Mana);
             _hud.SetIdentity("Player", Village.HqLevel);
             _hud.SetPortrait(GuardPortrait());
         }
@@ -475,7 +475,7 @@ namespace ShinobiDominion.Game
                     panel.Line($"All camps: {Army.UsedSpace(TroopData)} of {Army.Capacity(Village)} space used. Train troops at the Training Hall.");
                     break;
                 case BuildingFunction.Research:
-                    panel.Line("This building's features arrive in a later phase.", 20, Ui.AccentColor);
+                    panel.Line("Research arrives in a later phase. It will cost Mana.", 20, Ui.AccentColor);
                     break;
                 case BuildingFunction.Collector:
                     var pending = Village.PendingCollection(building, Now);

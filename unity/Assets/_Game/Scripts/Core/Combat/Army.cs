@@ -13,6 +13,7 @@ namespace ShinobiDominion.Core
         public string description;
         public int space;
         public long goldCost;
+        public long manaCost;
         public int requiredHall = 1;
         public string role;
         public long hp;
@@ -41,7 +42,7 @@ namespace ShinobiDominion.Core
                 throw new FormatException("Unsupported troop file.");
             foreach (var troop in document.troops)
             {
-                if (troop.space < 1 || troop.goldCost < 0 || troop.hp < 1 || troop.requiredHall < 1)
+                if (troop.space < 1 || troop.goldCost < 0 || troop.manaCost < 0 || troop.hp < 1 || troop.requiredHall < 1)
                     throw new FormatException($"Troop {troop.id} has invalid values.");
                 BattleSim.RoleNumber(troop.role);
             }
@@ -92,6 +93,7 @@ namespace ShinobiDominion.Core
             if (hall < troop.requiredHall) return VillageError.TroopLocked;
             if (UsedSpace(catalog) + troop.space * count > Capacity(village)) return VillageError.CampsFull;
             if (!village.CanAfford(troop.goldCost * count, 0)) return VillageError.InsufficientFunds;
+            if (village.Mana < troop.manaCost * count) return VillageError.InsufficientMana;
             return VillageError.None;
         }
 
@@ -99,7 +101,9 @@ namespace ShinobiDominion.Core
         {
             var error = CheckTrain(village, catalog, troopId, count);
             if (error != VillageError.None) return error;
-            village.PayGold(catalog.Find(troopId).goldCost * count);
+            var troop = catalog.Find(troopId);
+            village.PayGold(troop.goldCost * count);
+            village.TrySpendMana(troop.manaCost * count);
             _counts[troopId] = CountOf(troopId) + count;
             return VillageError.None;
         }

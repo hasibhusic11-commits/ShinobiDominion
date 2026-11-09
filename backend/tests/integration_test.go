@@ -131,6 +131,7 @@ type buildingView struct {
 type villageView struct {
 	Gold      int64          `json:"gold"`
 	Crystals  int64          `json:"crystals"`
+	Mana      int64          `json:"mana"`
 	NextID    int            `json:"nextInstanceId"`
 	Buildings []buildingView `json:"buildings"`
 }

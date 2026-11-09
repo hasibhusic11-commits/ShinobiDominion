@@ -39,7 +39,8 @@ namespace ShinobiDominion.Core
     {
         None,
         Gold,
-        Crystals
+        Crystals,
+        Mana
     }
 
     /// <summary>
@@ -110,6 +111,7 @@ namespace ShinobiDominion.Core
         public string balanceStatus;
         public long startingGold;
         public long startingCrystals;
+        public long startingMana;
         public long baseGoldCapacity;
         public List<BuildingDefinition> buildings = new List<BuildingDefinition>();
     }
@@ -124,6 +126,7 @@ namespace ShinobiDominion.Core
         public IReadOnlyList<BuildingDefinition> All { get; }
         public long StartingGold { get; }
         public long StartingCrystals { get; }
+        public long StartingMana { get; }
         public long BaseGoldCapacity { get; }
         public string BalanceStatus { get; }
 
@@ -132,6 +135,7 @@ namespace ShinobiDominion.Core
             All = file.buildings;
             StartingGold = file.startingGold;
             StartingCrystals = file.startingCrystals;
+            StartingMana = file.startingMana;
             BaseGoldCapacity = file.baseGoldCapacity;
             BalanceStatus = file.balanceStatus;
             _byId = file.buildings.ToDictionary(definition => definition.id);

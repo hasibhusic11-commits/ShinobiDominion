@@ -121,6 +121,15 @@ namespace ShinobiDominion.Tests
             controller.Select(campId);
             yield return shot("19_troop_camp");
             controller.CloseAll();
+
+            // The Mana Mill (ADR-038), three hours into production so its Collect action shows.
+            Assert.AreEqual(VillageError.None, village.TryPlace("mana_mill", new GridCoord(24, 15), Rotation.R0, 0, out var millId), "Mana Mill placement");
+            var milled = village.ToSave();
+            milled.buildings.Find(b => b.id == millId).lastCollectedUtcTicks = DateTime.UtcNow.Ticks - TimeSpan.TicksPerHour * 3;
+            village.Restore(milled);
+            controller.Select(millId);
+            yield return shot("25_mana_mill");
+            controller.CloseAll();
             controller.OpenAttack();
             yield return shot("20_raid_choose");
             controller.ScoutRaid("ridge_outpost");

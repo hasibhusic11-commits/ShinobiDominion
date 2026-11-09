@@ -36,6 +36,7 @@ const (
 	vStorageFull    vErr = "StorageFull"
 	vNotAWall       vErr = "NotAWall"
 	vDojoTooLow     vErr = "DojoTooLow"
+	vNoMana         vErr = "InsufficientMana"
 )
 
 // BuildingLevel is one row of a building's level table.
@@ -100,6 +101,7 @@ func (d *BuildingDef) maxCountAt(hqLevel int) int {
 type BuildingCatalog struct {
 	SchemaVersion    int           `json:"schemaVersion"`
 	StartingGold     int64         `json:"startingGold"`
+	StartingMana     int64         `json:"startingMana"`
 	BaseGoldCapacity int64         `json:"baseGoldCapacity"`
 	Buildings        []*BuildingDef `json:"buildings"`
 	byID             map[string]*BuildingDef
@@ -179,6 +181,9 @@ type village struct {
 	catalog  *BuildingCatalog
 	gold     int64
 	crystals int64
+	mana     int64
+	// loadedMana is the balance when the village was read, so the ledger can record the change.
+	loadedMana int64
 	nextID   int
 	byID     map[int]*building
 	grid     [gridSize * gridSize]int
@@ -510,7 +515,8 @@ func (v *village) collect(id int, nowMs int64) (int64, vErr) {
 		return 0, vNothingCollect
 	}
 	var collected int64
-	if b.Def.Produces == "Gold" {
+	switch b.Def.Produces {
+	case "Gold":
 		room := v.goldCapacity() - v.gold
 		if room <= 0 {
 			return 0, vStorageFull
@@ -520,7 +526,11 @@ func (v *village) collect(id int, nowMs int64) (int64, vErr) {
 			collected = room
 		}
 		v.gold += collected
-	} else {
+	case "Mana":
+		// Mana has no village-wide cap: each mill's own storedCap is the only limit (ADR-038).
+		collected = pending
+		v.mana += collected
+	default:
 		collected = pending
 		v.crystals += collected
 	}
@@ -530,4 +540,14 @@ func (v *village) collect(id int, nowMs int64) (int64, vErr) {
 	b.LastCollectedMs = nowMs - leftover*3600000/rate
 	v.updated[id] = b
 	return collected, vOK
+}
+
+// spendMana is the one way Mana leaves the wallet. Troop training and hero training use it now,
+// and research will when it exists (ADR-038). It mirrors Village.TrySpendMana in C#.
+func (v *village) spendMana(amount int64) vErr {
+	if amount < 0 || v.mana < amount {
+		return vNoMana
+	}
+	v.mana -= amount
+	return vOK
 }

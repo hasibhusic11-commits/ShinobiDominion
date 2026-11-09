@@ -10,8 +10,11 @@ namespace ShinobiDominion.Game
     /// </summary>
     public sealed partial class VillageController
     {
-        /// <summary>Mana, the third currency (owner, 2026-11-08: Gold, Gems, Mana). It reads 0 until the Mana Mill exists.</summary>
-        public long Chakra => 0;
+        /// <summary>
+        /// Mana, the third currency (owner, 2026-11-08: Gold, Gems, Mana; ADR-038). Online this is the
+        /// server's balance, carried in the village snapshot; it is never changed here.
+        /// </summary>
+        public long Mana => Village.Mana;
 
         private Sprite GuardPortrait()
         {

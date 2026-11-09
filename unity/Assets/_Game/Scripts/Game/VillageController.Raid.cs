@@ -97,7 +97,7 @@ namespace ShinobiDominion.Game
                     continue;
                 }
                 var error = Army.CheckTrain(Village, TroopData, troop.id, 1);
-                panel.Action(name, $"{troop.displayName} ({Army.CountOf(troop.id)})   {troop.goldCost:N0} gold, {troop.space} space", () => TrainTroop(troop.id, 1), error == VillageError.None, null, 18);
+                panel.Action(name, $"{troop.displayName} ({Army.CountOf(troop.id)})   {troop.goldCost:N0} gold, {troop.manaCost:N0} Mana, {troop.space} space", () => TrainTroop(troop.id, 1), error == VillageError.None, null, 18);
             }
         }
 

@@ -88,6 +88,16 @@ Follows the owner's ADR-021. Up to four Troop Camps, gated by Dojo level, and a 
 - A raid still needs at least one hero. At most 200 troops can land in one raid, to bound the server's work.
 - Troop names and all numbers are test values. Offline practice troops aren't saved.
 
+## ADR-038: Mana, the third currency, and the Mana Mill, decided by the owner on 2026-11-08
+The owner named the currencies Gold, Gems and Mana, and chose that Mana pays for hero upgrades, troop training and research. **Every number below is an unapproved test value.**
+- **Wallet:** `mana` is a column on `sd_player` (migration `008_mana.sql`, `CHECK (mana >= 0)`), next to gold and crystals, so the one player lock covers all three. Every change writes a `currency = 'mana'` ledger row, and the dev audit checks the balance against the ledger. The state RPC returns it as `village.mana`; the HUD's purple counter shows it (the picture is still `icon_chakra`).
+- **Starting Mana:** new villages get `startingMana` (500) from `buildings.json`. Players from before the migration start at 0 and build a Mill.
+- **Mana Mill** (`mana_mill`): a 3 x 3 Collector, 600 gold, limits 1/1/2/2/3 at Dojo 1 to 5, so a new player can build one at once. Level 1 makes 200 an hour and holds 800; level 15 makes 2,000 and holds 10,400. Upgrade costs are double the Gold Mine's. Mana has no village-wide storage cap: each Mill's own `storedCap` is the only limit, so no Mana storage building is needed yet. Collection uses the server clock only. Art: the owner's water-wheel painting as art levels 1 to 3, reused for 4 to 10 until upgraded paintings exist.
+- **Troops cost Mana as well as gold:** militia 10, kunai thrower 20, shadow runner 40, shield bearer 50, iron ox rider 120 (`manaCost` in `troops.json`). Gold is checked first, then Mana, and nothing is taken unless both are there.
+- **Hero training** (`sd_hero_train`, Hero Altar hero page): Mana buys exactly one level, costing `manaPerLevelBase + manaPerLevelStep x (level - 1)` from `heroes.json` (20 + 5 per level: 20 at level 1, 1,010 at level 199, about 102,000 from 1 to 200). XP already earned toward the next level is kept. Raid XP still levels heroes as before. Evolution is unchanged: no Mana cost was added to it, because rule 6 fixes what a transition needs.
+- **Research does not exist yet.** The Research Hut still says its features arrive later. The only hook is the shared spend rule, `Village.TrySpendMana` in C# and `spendMana` in Go, which research should call when it is built.
+- **Refusal:** `InsufficientMana`, the same name on both sides, shown as "Not enough Mana".
+- Client and server rules are kept in step by new scenarios in `rules_vectors.json` (production and the cap, collection, training refusals, hero training).
 
 ## ADR-037: The heroes are 3D models, decided by the owner on 2026-11-08
 Replaces the sprite-hero direction for the eight Legendaries. The owner asked for 3D heroes and paid for Meshy Pro.
