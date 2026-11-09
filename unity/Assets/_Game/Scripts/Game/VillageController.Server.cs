@@ -32,7 +32,9 @@ namespace ShinobiDominion.Game
         public void ConnectToServer(IGameServer server)
         {
             _server = server;
-            if (_server != null) ConnectTask = ConnectAsync();
+            if (_server == null) return;
+            ShowLoading();
+            ConnectTask = ConnectAsync();
         }
 
         private async Task ConnectAsync()
@@ -61,6 +63,7 @@ namespace ShinobiDominion.Game
             finally
             {
                 _connecting = false;
+                HideLoading();
             }
         }
 

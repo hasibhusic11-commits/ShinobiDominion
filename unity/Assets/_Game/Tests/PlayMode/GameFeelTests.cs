@@ -146,5 +146,24 @@ namespace ShinobiDominion.Tests
             yield return new WaitForSecondsRealtime(1f);
             Assert.Less(Vector3.Distance(rest, camera.transform.position), 0.001f, "and settles exactly where it was");
         }
+        [UnityTest]
+        public IEnumerator CaptureLoadingScreen()
+        {
+            var dir = System.Environment.GetEnvironmentVariable("SD_CAPTURE_DIR");
+            if (string.IsNullOrEmpty(dir)) Assert.Ignore("SD_CAPTURE_DIR not set.");
+            Directory.CreateDirectory(dir);
+            LogAssert.ignoreFailingMessages = true;
+            var game = _root.GetComponent<VillageBootstrap>();
+            var camera = game.IsoCamera.Camera;
+            var canvas = _root.GetComponentInChildren<Canvas>();
+            var texture = new RenderTexture(1600, 900, 24) { antiAliasing = 4 };
+            camera.targetTexture = texture;
+            canvas.renderMode = RenderMode.ScreenSpaceCamera;
+            canvas.worldCamera = camera;
+            canvas.planeDistance = 5f;
+            typeof(VillageController).GetMethod("ShowLoading", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).Invoke(Controller, null);
+            yield return ScreenCaptureTests.Capture(camera, texture, Path.Combine(dir, "00_loading.png"));
+            camera.targetTexture = null;
+        }
     }
 }

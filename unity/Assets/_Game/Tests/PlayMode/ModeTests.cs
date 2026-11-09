@@ -434,5 +434,12 @@ namespace ShinobiDominion.Tests
             yield return WaitFor(() => Find("TrialAgainButton") != null);
             if (fight.Won) Assert.Greater(fight.CrystalsEarned, 0, "The first clear pays");
         }
+        [UnityTest]
+        public IEnumerator LoadingScreen_LiftsOnceTheServerAnswers()
+        {
+            Assert.IsFalse(Controller.LoadingShowing, "Connected, so the loading screen has gone");
+            yield return new WaitForSecondsRealtime(0.5f);
+            Assert.IsFalse(_root.GetComponentsInChildren<RectTransform>(true).Any(r => r.name == "LoadingScreen"), "It fades out and is removed");
+        }
     }
 }
