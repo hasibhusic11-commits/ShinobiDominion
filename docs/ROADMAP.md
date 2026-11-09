@@ -92,6 +92,8 @@ Verified:
 - Builders send up sparks and dust over upgrading buildings.
 - New players get a five-step guide with an arrow (collect, summon, assign, first battle, first upgrade). It never blocks a tap, can be skipped, and is remembered.
 
+**Music:** background music composed in code: koto, drone and taiko in the village, with drums and a shaker in battle. There is a Music switch in the Menu. Samples are in `docs/audio/`. Nobody has listened to it yet.
+
 **Trial Tower (ADR-045):** a fifth battle mode. Climb 30 floors of guardian heroes; each floor pays once, on its first clear.
 
 **Hero gear (ADR-044):** Weapon, Armor and Charm on every hero, upgraded with gold and Mana from the hero page. The server applies gear in every battle.
@@ -115,7 +117,7 @@ Verified:
 | .NET harness (`tools/core-tests`) | 177 of 177 passed |
 | Go unit tests, including Siege balance and Arena duels | passed; part of the server build |
 | Backend suite, including gift, quest, Siege, Arena, timer, research, guild, chest, shop, gear and Trial Tower tests | passed |
-| Unity PlayMode against the live server, including `ModeTests`, `UpgradeTimerTests` and `GuideTests` | 128 of 128 passed |
+| Unity PlayMode against the live server, including `ModeTests`, `UpgradeTimerTests` and `GuideTests` | 130 of 130 passed |
 
 **Not verified:** how any of it feels in your hands, on a phone, or with two real people in the Arena. Siege and Arena numbers are test values.
 

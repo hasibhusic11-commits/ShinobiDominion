@@ -35,6 +35,7 @@ namespace ShinobiDominion.Game
 
         private void Awake()
         {
+            GameMusic.Ensure();
             // Phones default to 30 frames a second, which makes panning and every animation look choppy.
             QualitySettings.vSyncCount = 0;
             Application.targetFrameRate = 60;

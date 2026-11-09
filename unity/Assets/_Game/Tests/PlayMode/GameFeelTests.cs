@@ -37,6 +37,69 @@ namespace ShinobiDominion.Tests
         }
 
         [UnityTest]
+        public IEnumerator Music_Plays_AndItsSwitchIsRemembered()
+        {
+            var wasMuted = GameMusic.Muted;
+            GameMusic.Muted = false;
+            yield return null;
+            Assert.IsTrue(GameMusic.Playing, "Music starts with the game");
+            GameMusic.Muted = true;
+            yield return null;
+            Assert.IsFalse(GameMusic.Playing);
+            GameMusic.Muted = wasMuted;
+        }
+
+        [Test]
+        public void Music_IsAudible_NeverClips_AndIsSavedForListening()
+        {
+            var go = new GameObject("MusicProbe");
+            var music = go.AddComponent<GameMusic>();
+            var fill = typeof(GameMusic).GetMethod("Fill", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            foreach (var battle in new[] { false, true })
+            {
+                typeof(GameMusic).GetField("_targetIntensity", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).SetValue(music, battle ? 1f : 0f);
+                typeof(GameMusic).GetField("_intensity", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).SetValue(music, battle ? 1f : 0f);
+                var data = new float[22050 * 8];
+                fill.Invoke(music, new object[] { data });
+                var sum = 0.0;
+                var peak = 0f;
+                foreach (var s in data)
+                {
+                    sum += s * s;
+                    peak = Mathf.Max(peak, Mathf.Abs(s));
+                }
+                var rms = System.Math.Sqrt(sum / data.Length);
+                Assert.Greater(rms, 0.02, "The music should be heard");
+                Assert.Less(rms, 0.4, "The music should stay in the background");
+                Assert.Less(peak, 1f, "The music must never clip");
+                var dir = System.Environment.GetEnvironmentVariable("SD_CAPTURE_DIR");
+                if (!string.IsNullOrEmpty(dir)) WriteWav(Path.Combine(dir, battle ? "music_battle.wav" : "music_village.wav"), data);
+            }
+            Object.DestroyImmediate(go);
+        }
+
+        private static void WriteWav(string path, float[] samples)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            using (var writer = new BinaryWriter(File.Create(path)))
+            {
+                writer.Write(System.Text.Encoding.ASCII.GetBytes("RIFF"));
+                writer.Write(36 + samples.Length * 2);
+                writer.Write(System.Text.Encoding.ASCII.GetBytes("WAVEfmt "));
+                writer.Write(16);
+                writer.Write((short)1);
+                writer.Write((short)1);
+                writer.Write(22050);
+                writer.Write(22050 * 2);
+                writer.Write((short)2);
+                writer.Write((short)16);
+                writer.Write(System.Text.Encoding.ASCII.GetBytes("data"));
+                writer.Write(samples.Length * 2);
+                foreach (var s in samples) writer.Write((short)(Mathf.Clamp(s, -1f, 1f) * 32767f));
+            }
+        }
+
+        [UnityTest]
         public IEnumerator Pop_SquashesTheBuilding_ThenSettlesAtItsNormalSize()
         {
             var stand = _root.GetComponentsInChildren<IsoStand>().First();

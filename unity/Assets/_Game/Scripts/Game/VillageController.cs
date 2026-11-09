@@ -183,6 +183,7 @@ namespace ShinobiDominion.Game
             UpdateGoldPopups();
             UpdateTimerPills();
             UpdateGuide();
+            GameMusic.Intensity = _raid != null && _raid.Phase == RaidPhase.Battle ? 1f : 0f;
             PollGuild();
             FetchRaidListWhenFree();
             // Keep trying to reach the server, but never swap the village out mid-action.
@@ -599,6 +600,11 @@ namespace ShinobiDominion.Game
                 panel.Action("SoundButton", GameSounds.Muted ? "Sound: Off (tap for On)" : "Sound: On (tap for Off)", () =>
                 {
                     GameSounds.Muted = !GameSounds.Muted;
+                    OpenSettings();
+                });
+                panel.Action("MusicButton", GameMusic.Muted ? "Music: Off (tap for On)" : "Music: On (tap for Off)", () =>
+                {
+                    GameMusic.Muted = !GameMusic.Muted;
                     OpenSettings();
                 });
                 panel.Action("QualityButton", high ? "Graphics: High (tap for Low)" : "Graphics: Low (tap for High)", () =>
