@@ -92,7 +92,6 @@ func (d *BuildingDef) at(level int) BuildingLevel {
 }
 
 func (d *BuildingDef) isWall() bool    { return d.Function == "Wall" }
-func (d *BuildingDef) removable() bool { return d.Removable == nil || *d.Removable }
 
 func (d *BuildingDef) maxCountAt(hqLevel int) int {
 	if len(d.MaxCountByHQ) == 0 {
@@ -451,22 +450,13 @@ func (v *village) move(id, x, z, rotation int) vErr {
 	return vOK
 }
 
+// remove always refuses: placed buildings are never removed, only moved (owner, 2026-11-09, ADR-051). It mirrors
+// the client's TryRemove, so an old or tampered client gets the same answer.
 func (v *village) remove(id int) vErr {
-	b, ok := v.byID[id]
-	if !ok {
+	if _, ok := v.byID[id]; !ok {
 		return vNotFound
 	}
-	if !b.Def.removable() {
-		return vNotRemovable
-	}
-	if b.UpgradeDoneMs > 0 {
-		return vUpgrading
-	}
-	v.fill(b, 0)
-	delete(v.byID, id)
-	delete(v.updated, id)
-	v.deleted = append(v.deleted, id)
-	return vOK
+	return vNotRemovable
 }
 
 func (v *village) upgrade(id int, nowMs int64) vErr {

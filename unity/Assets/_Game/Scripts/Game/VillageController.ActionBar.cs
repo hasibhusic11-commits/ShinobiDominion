@@ -87,8 +87,6 @@ namespace ShinobiDominion.Game
             }
 
             actions.Add(new BarAction { Name = "MoveButton", Caption = "Move", Icon = "move", Kind = MedalKind.Secondary, OnClick = () => BeginMove(building.Id), Enabled = true });
-            if (definition.removable)
-                actions.Add(new BarAction { Name = "RemoveButton", Caption = "Remove", Icon = "remove", Kind = MedalKind.Destructive, OnClick = () => RemoveSelected(building.Id), Enabled = !building.Upgrading });
             return actions;
         }
 

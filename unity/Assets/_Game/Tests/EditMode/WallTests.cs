@@ -170,12 +170,12 @@ namespace ShinobiDominion.Tests
         }
 
         [Test]
-        public void Wall_CanBeRemovedAndCellReused()
+        public void Wall_CannotBeRemoved_OnlyMoved()
         {
             var village = TestCatalog.EmptyVillage();
             village.TryPlaceWallRun(new GridCoord(3, 3), new GridCoord(3, 3), Now);
-            Assert.AreEqual(VillageError.None, village.TryRemove(village.BuildingAt(new GridCoord(3, 3)).Id));
-            Assert.AreEqual(VillageError.None, village.TryPlaceWallRun(new GridCoord(3, 3), new GridCoord(3, 3), Now));
+            Assert.AreEqual(VillageError.NotRemovable, village.TryRemove(village.BuildingAt(new GridCoord(3, 3)).Id), "ADR-051");
+            Assert.IsNotNull(village.BuildingAt(new GridCoord(3, 3)));
         }
     }
 }

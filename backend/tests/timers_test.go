@@ -49,8 +49,6 @@ func TestUpgrades_TakeTime_NeedBuilders_AndFinishForGemsOnce(t *testing.T) {
 	}
 	_, err = buildingOp(p, "sd_village_upgrade", "k-"+randomHex(8), first.ID)
 	expectError(t, err, "AlreadyUpgrading")
-	_, err = buildingOp(p, "sd_village_remove", "k-"+randomHex(8), first.ID)
-	expectError(t, err, "AlreadyUpgrading")
 	if _, err := buildingOp(p, "sd_village_upgrade", "k-"+randomHex(8), second.ID); err != nil {
 		t.Fatal(err)
 	}

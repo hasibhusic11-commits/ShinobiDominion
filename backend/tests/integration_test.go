@@ -1145,18 +1145,25 @@ func TestVillage_ConcurrentSecondBase_LimitHolds(t *testing.T) {
 	}
 }
 
-func TestVillage_RemovingABase_ReleasesItsHero(t *testing.T) {
+// Placed buildings are never removed, only moved (ADR-051): the server refuses, and the base keeps its hero.
+func TestVillage_NothingCanBeRemoved(t *testing.T) {
 	p := blank(t, 0)
 	s := grant(t, p, map[string]interface{}{"archetypeId": legend})
 	slot := baseIDs(s)[0]
 	if _, err := p.rpc("sd_assign_hero", map[string]interface{}{"slot": slot, "instanceId": s.Heroes[0].InstanceID}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := buildingOp(p, "sd_village_remove", "k-"+randomHex(8), slot); err != nil {
-		t.Fatal(err)
+	before := mustState(t, p)
+	for _, b := range before.Village.Buildings {
+		_, err := buildingOp(p, "sd_village_remove", "k-"+randomHex(8), b.ID)
+		expectError(t, err, "NotRemovable")
 	}
-	if final := mustState(t, p); final.Heroes[0].BaseSlot != nil {
-		t.Fatalf("hero still points at a removed base: %+v", final.Heroes[0])
+	final := mustState(t, p)
+	if len(final.Village.Buildings) != len(before.Village.Buildings) || final.Village.Gold != before.Village.Gold {
+		t.Fatal("a refused remove changed the village")
+	}
+	if final.Heroes[0].BaseSlot == nil {
+		t.Fatalf("the hero left its base: %+v", final.Heroes[0])
 	}
 }
 

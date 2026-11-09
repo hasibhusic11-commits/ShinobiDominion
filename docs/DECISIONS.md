@@ -88,6 +88,14 @@ Follows the owner's ADR-021. Up to four Troop Camps, gated by Dojo level, and a 
 - A raid still needs at least one hero. At most 200 troops can land in one raid, to bound the server's work.
 - Troop names and all numbers are test values. Offline practice troops aren't saved.
 
+## ADR-051: Buildings are moved, never removed, 2026-11-09
+The owner's rule, like Castle Clash. Once placed, a building, tower, wall or trap stays. It can be moved, upgraded and (for towers) switched, but never removed.
+
+- The Remove button is gone from the action row and the details panel.
+- `Village.TryRemove` and the server's `village.remove` always answer `NotRemovable` (`NotFound` for an unknown id). `sd_village_remove` still exists, so an old or tampered client gets that refusal instead of an unknown call.
+- `removable` in `buildings.json` now only decides what the build catalog offers. The Town Hall is not offered.
+- The shared rules vectors and the tests that removed buildings now check the refusal.
+
 ## ADR-050: Raids are fought live, card by card, and the server fights them again, 2026-11-09
 The owner chose real-time deploying, like Castle Clash (`GENRE_GAP_REVIEW.md`). This replaces placing everything before Start Battle. The server still decides every result.
 

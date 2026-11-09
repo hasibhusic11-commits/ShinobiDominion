@@ -56,7 +56,7 @@ namespace ShinobiDominion.Core
                 case VillageError.NotFound: return "Building no longer exists";
                 case VillageError.NotRotatable: return "This building cannot rotate";
                 case VillageError.MaxLevel: return "Already at maximum level";
-                case VillageError.NotRemovable: return "This building cannot be removed";
+                case VillageError.NotRemovable: return "Buildings can't be removed, only moved";
                 case VillageError.NotAHeroBase: return "Only a Hero Base can hold a hero";
                 case VillageError.HeroAlreadyAssigned: return "That hero is already on another base";
                 case VillageError.OneHeroOnly: return "Up to six heroes can be on bases at once. Take a hero off its base first.";
@@ -255,17 +255,11 @@ namespace ShinobiDominion.Core
             return VillageError.None;
         }
 
-        public VillageError TryRemove(int id)
-        {
-            var building = Find(id);
-            if (building == null) return VillageError.NotFound;
-            if (!building.Definition.removable) return VillageError.NotRemovable;
-            if (building.Upgrading) return VillageError.AlreadyUpgrading;
-            Grid.Clear(building.Footprint);
-            _buildings.Remove(id);
-            Changed?.Invoke();
-            return VillageError.None;
-        }
+        /// <summary>
+        /// Placed buildings are never removed, only moved (owner, 2026-11-09, ADR-051). Kept as one answer the
+        /// server's remove mirrors, so a request for it is refused the same way on both sides.
+        /// </summary>
+        public VillageError TryRemove(int id) => Find(id) == null ? VillageError.NotFound : VillageError.NotRemovable;
 
         /// <summary>The other buildings this one can switch into, in catalog order (the Arrow, Cannon and Magic Towers).</summary>
         public IEnumerable<BuildingDefinition> SwitchOptions(BuildingInstance building) =>

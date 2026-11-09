@@ -270,7 +270,7 @@ namespace ShinobiDominion.Tests
         }
 
         [UnityTest]
-        public IEnumerator WallRun_MoveUpgradeAndRemove_AllGoThroughTheServer()
+        public IEnumerator WallRun_MoveAndUpgrade_GoThroughTheServer_AndNothingIsRemovable()
         {
             Controller.Select(First("builder_hall").Id);
             yield return null;
@@ -295,11 +295,13 @@ namespace ShinobiDominion.Tests
             yield return ClickWhenReady("UpgradeButton");
             yield return WaitFor(() => Controller.Village.Find(heroBase).Level == 2);
 
-            yield return ClickWhenReady("RemoveButton");
-            yield return WaitFor(() => Controller.Village.Find(heroBase) == null);
+            // Buildings are moved, never removed (ADR-051): there is no Remove button.
+            Controller.Select(heroBase);
+            yield return null;
+            Assert.IsNull(Find("RemoveButton"), "Nothing offers to remove a building");
             yield return ServerState(state =>
             {
-                Assert.IsFalse(state.Village.buildings.Any(b => b.id == heroBase), "The server must have removed it too");
+                Assert.IsTrue(state.Village.buildings.Any(b => b.id == heroBase), "The base is still on the server");
                 Assert.AreEqual(5, state.Village.buildings.Count(b => b.definitionId == Village.WallId));
             });
         }

@@ -85,16 +85,16 @@
       ]
     },
     {
-      "name": "removing",
+      "name": "nothing can be removed, only moved (ADR-051)",
       "startGold": 5000,
       "ops": [
         { "op": "place", "def": "builder_hall", "x": 1, "z": 1, "expect": "None", "label": "h" },
         { "op": "remove", "target": "h", "expect": "NotRemovable" },
         { "op": "remove", "id": 999, "expect": "NotFound" },
         { "op": "walls", "x": 8, "z": 8, "x2": 8, "z2": 8, "expect": "None" },
-        { "op": "remove", "atX": 8, "atZ": 8, "expect": "None", "gold": 4975 },
-        { "op": "occupied", "x": 8, "z": 8, "expect": "false" },
-        { "op": "walls", "x": 8, "z": 8, "x2": 8, "z2": 8, "expect": "None", "gold": 4950 }
+        { "op": "remove", "atX": 8, "atZ": 8, "expect": "NotRemovable", "gold": 4975 },
+        { "op": "occupied", "x": 8, "z": 8, "expect": "true" },
+        { "op": "walls", "x": 8, "z": 8, "x2": 8, "z2": 8, "expect": "Overlap", "gold": 4975 }
       ]
     },
     {
@@ -329,7 +329,7 @@
         { "op": "upgrade", "target": "a", "expect": "None", "level": 2 },
         { "op": "upgrading", "target": "a", "expect": "true" },
         { "op": "upgrade", "target": "a", "expect": "AlreadyUpgrading", "level": 2 },
-        { "op": "remove", "target": "a", "expect": "AlreadyUpgrading", "countDef": "gold_mine", "count": 2 },
+        { "op": "remove", "target": "a", "expect": "NotRemovable", "countDef": "gold_mine", "count": 2 },
         { "op": "upgrade", "target": "m", "expect": "None", "level": 2 },
         { "op": "upgrade", "target": "t", "expect": "NoFreeBuilder", "level": 2 },
         { "op": "finish", "target": "t", "expect": "NotUpgrading", "crystals": 100 },

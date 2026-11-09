@@ -449,8 +449,8 @@ namespace ShinobiDominion.Game
                     var group = Village.ConnectedWalls(building.Id);
                     panel.Action("UpgradeGroupButton", $"Upgrade connected walls ({group.Count})", () => Upgrade(building.Id, true));
                 }
+                // Buildings are moved, never removed (ADR-051).
                 panel.Action("MoveButton", "Move", () => BeginMove(building.Id));
-                if (definition.removable) panel.Action("RemoveButton", "Remove", () => RemoveSelected(building.Id), !building.Upgrading);
             });
         }
 
@@ -582,20 +582,6 @@ namespace ShinobiDominion.Game
                 return;
             }
             RunAndRefresh(Village.TryCollect(id, Now, out _));
-        }
-
-        private void RemoveSelected(int id)
-        {
-            if (RefuseWhenNoServer()) return;
-            if (IsOnline)
-            {
-                VillageRequest($"remove|{id}", key => _server.RemoveAsync(key, id), CloseAll, ShowContextPanel);
-                return;
-            }
-            var error = Village.TryRemove(id);
-            LastMessage = VillageErrorText.Describe(error);
-            if (error == VillageError.None) CloseAll();
-            else ShowContextPanel();
         }
 
         // ---------- Attack and settings ----------

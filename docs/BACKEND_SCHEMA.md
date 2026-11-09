@@ -31,7 +31,7 @@ The last one kills the server under load and briefly runs it in production mode.
 | `sd_village_place` | `key`, `definitionId`, `x`, `z`, `rotation` |
 | `sd_village_walls` | `key`, `x1`, `z1`, `x2`, `z2` |
 | `sd_village_move` | `key`, `id`, `x`, `z`, `rotation` |
-| `sd_village_remove` | `key`, `id`. A hero on that base becomes unassigned. |
+| `sd_village_remove` | `key`, `id`. Always refused with `NotRemovable` (`NotFound` for an unknown id): buildings are moved, never removed (ADR-051). |
 | `sd_village_upgrade` | `key`, `id`, `group` (upgrades all connected walls) |
 | `sd_village_collect` | `key`, `id`. The amount comes from the server's clock. |
 | `sd_dev_grant`, `sd_dev_audit` | Exist only when `SD_DEV_MODE` is exactly `true` |

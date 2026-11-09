@@ -78,8 +78,8 @@ later.
 - Name plate at bottom centre, 64 above the action row: 420 x 46 lacquer plate with brass rim; building name in
   display 24 on the left, "Lv 3 / 15" in Rubik 18 on the right.
 - Action row at bottom centre, 14 from the bottom: medallions 96 round, 18 apart, in this order: Info (icon-only,
-  72), the building's own action (primary), Upgrade (secondary), Move (secondary), Remove (destructive, only if
-  removable). Each has a 16 label under it. Upgrade also carries a cost tag: a small lacquer pill with a coin icon
+  72), the building's own action (primary), Upgrade (secondary), Move (secondary). There is no Remove: buildings
+  are moved, never removed (ADR-051). Each has a 16 label under it. Upgrade also carries a cost tag: a small lacquer pill with a coin icon
   and "800", crimson text when unaffordable.
 - Row width is computed from the action count; never more than 5 actions, so it always fits between the left edge
   and ATTACK, including at 4:3.
