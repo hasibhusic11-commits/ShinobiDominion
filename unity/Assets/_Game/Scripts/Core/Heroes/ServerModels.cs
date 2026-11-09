@@ -186,6 +186,8 @@ namespace ShinobiDominion.Core
                 case "HERO_LEVEL_TOO_LOW_FOR_GEAR": return "Level the hero up first.";
                 case "CHEST_NOT_READY": return "The chest is still refilling.";
                 case "OFFER_NOT_FOUND": return "That offer is gone.";
+                case "TRIAL_LOCKED": return "Clear the floor below first.";
+                case "TRIAL_NOT_FOUND": return "That floor does not exist.";
                 default: return "Could not reach the server. Your request is safe to retry.";
             }
         }

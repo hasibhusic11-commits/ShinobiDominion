@@ -57,6 +57,7 @@
     { "id": "summon", "title": "Summon a hero", "target": 1, "crystals": 20 }
   ],
   "dailyGift": { "crystals": 50, "gold": 1000, "mana": 300 },
+  "trials": { "displayName": "Trial Tower", "floors": 30, "levelPerFloor": 6, "powerPercentBase": 50, "powerPercentPerFloor": 6, "shrineHpBase": 900, "shrineHpPerFloor": 120, "crystalsBase": 10, "crystalsPerFloor": 2, "manaPerFloor": 120 },
   "treasureChest": { "hours": 4, "goldPerDojoLevel": 500, "manaPerDojoLevel": 150 },
   "shop": [
     { "id": "gold_pouch", "name": "Pouch of gold", "crystals": 50, "gold": 5000 },

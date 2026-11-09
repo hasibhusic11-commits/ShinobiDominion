@@ -35,6 +35,7 @@ namespace ShinobiDominion.Core
 
         public bool IsArena => Mode == "arena";
         public bool IsSiege => Mode == "siege";
+        public bool IsTrial => Mode == "trial";
 
         /// <summary>Everyone who attacked, in battle order, exactly as the server built them. Used to check a fight.</summary>
         public List<BattleHeroInput> ToUnits(TroopCatalog troops)
@@ -80,7 +81,7 @@ namespace ShinobiDominion.Core
                 TroopPercent = token.Value<long?>("troopPercent") ?? 100
             };
             if (fight.TroopPercent < 1) throw new FormatException("Server sent impossible attackers.");
-            if (fight.Mode != "arena" && fight.Mode != "siege") throw new FormatException("Server sent an unknown mode.");
+            if (fight.Mode != "arena" && fight.Mode != "siege" && fight.Mode != "trial") throw new FormatException("Server sent an unknown mode.");
             if (fight.GoldEarned < 0 || fight.ManaEarned < 0 || fight.CrystalsEarned < 0) throw new FormatException("Server sent a negative reward.");
             if (fight.Stars < 0 || fight.Stars > 3) throw new FormatException("Server sent impossible stars.");
             fight.Session = new RaidSession
@@ -113,6 +114,26 @@ namespace ShinobiDominion.Core
         {
             var token = ServerState.ParseObject(json);
             return token["levels"] is JArray levels ? levels.ToObject<List<SiegeSummary>>() : new List<SiegeSummary>();
+        }
+    }
+
+    /// <summary>A floor of the Trial Tower (ADR-045).</summary>
+    public sealed class TrialFloor
+    {
+        public int floor;
+        public string archetypeId;
+        public int evolution;
+        public int level;
+        public long shrineHp;
+        public long crystals;
+        public long mana;
+        public bool cleared;
+        public bool open;
+
+        public static List<TrialFloor> ParseList(string json)
+        {
+            var token = ServerState.ParseObject(json);
+            return token["floors"] is JArray floors ? floors.ToObject<List<TrialFloor>>() : new List<TrialFloor>();
         }
     }
 

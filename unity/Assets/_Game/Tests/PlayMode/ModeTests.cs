@@ -100,11 +100,11 @@ namespace ShinobiDominion.Tests
         }
 
         [UnityTest]
-        public IEnumerator BattleMenu_ShowsAllFourModes()
+        public IEnumerator BattleMenu_ShowsAllFiveModes()
         {
             Controller.OpenAttack();
             yield return WaitFor(() => Find("OpenSiegeButton") != null);
-            foreach (var name in new[] { "FindRivalButton", "OpenDungeonsButton", "OpenSiegeButton", "OpenArenaButton" })
+            foreach (var name in new[] { "FindRivalButton", "OpenDungeonsButton", "OpenSiegeButton", "OpenArenaButton", "OpenTrialsButton" })
                 Assert.IsNotNull(Find(name), name + " should be on the Battle menu");
             Assert.IsTrue(Find("OpenSiegeButton").interactable, "A village defends itself even without a hero");
         }
@@ -415,6 +415,24 @@ namespace ShinobiDominion.Tests
             Assert.AreEqual(before.Attack * 105 / 100, after.Attack, "A level 1 weapon adds 5% attack");
             Assert.AreEqual(before.Hp, after.Hp);
             yield return Await(_direct.GetStateAsync(), s => StringAssert.Contains("\"gear\":[1,0,0]", s.RosterJson.Replace(" ", "").Replace("\n", "").Replace("\r", "")));
+        }
+        [UnityTest]
+        public IEnumerator TrialTower_FirstFloor_ThroughTheScreens()
+        {
+            yield return PutFirstHeroOnBase();
+            Controller.OpenAttack();
+            yield return ClickWhenReady("OpenTrialsButton");
+            yield return WaitFor(() => Find("TrialFloor1") != null);
+            Assert.IsFalse(Find("TrialFloor2").interactable, "Floor 2 opens after floor 1");
+            Find("TrialFloor1").onClick.Invoke();
+            yield return WaitFor(() => Controller.CurrentRaidPhase == RaidPhase.Battle);
+            var fight = Controller.LastModeFight;
+            Assert.IsTrue(fight.IsTrial);
+            Assert.AreEqual(1, fight.Level);
+            CheckFightMatchesLocalRules();
+            Controller.SkipBattle();
+            yield return WaitFor(() => Find("TrialAgainButton") != null);
+            if (fight.Won) Assert.Greater(fight.CrystalsEarned, 0, "The first clear pays");
         }
     }
 }

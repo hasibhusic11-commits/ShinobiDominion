@@ -54,7 +54,7 @@ All 30 heroes have an original design and a generated model, and only Legendarie
 Curved-roof ninja architecture for every building, modular walls with level tiers, Hero Bases with figures and emblems, textured ground, forest, mountains, waterfall, toon lighting, smoother camera and a quality setting. See `ART_STATUS.md` for what still needs an artist, and `VISUAL_BASELINE.md` for the before state and asset evaluation.
 
 ## Game modes, quests and smoothness: built 2026-11-08 while you slept, awaiting your playtest
-ATTACK now opens a Battle menu with four modes (ADR-039):
+ATTACK now opens a Battle menu with five modes (the Trial Tower came later) (ADR-039):
 - **Raid:** rival villages.
 - **Dungeons.**
 - **Village Siege:** 10 levels of waves against your own village.
@@ -92,6 +92,8 @@ Verified:
 - Builders send up sparks and dust over upgrading buildings.
 - New players get a five-step guide with an arrow (collect, summon, assign, first battle, first upgrade). It never blocks a tap, can be skipped, and is remembered.
 
+**Trial Tower (ADR-045):** a fifth battle mode. Climb 30 floors of guardian heroes; each floor pays once, on its first clear.
+
 **Hero gear (ADR-044):** Weapon, Armor and Charm on every hero, upgraded with gold and Mana from the hero page. The server applies gear in every battle.
 
 **Chest and shop (ADR-043):** a free Treasure Chest every 4 hours, and a gem shop that swaps gems for gold or Mana at fixed rates. No real money anywhere. Every home-screen button now works.
@@ -112,8 +114,8 @@ Verified:
 |---|---|
 | .NET harness (`tools/core-tests`) | 177 of 177 passed |
 | Go unit tests, including Siege balance and Arena duels | passed; part of the server build |
-| Backend suite, including gift, quest, Siege, Arena, timer, research, guild, chest, shop and gear tests | passed |
-| Unity PlayMode against the live server, including `ModeTests`, `UpgradeTimerTests` and `GuideTests` | 127 of 127 passed |
+| Backend suite, including gift, quest, Siege, Arena, timer, research, guild, chest, shop, gear and Trial Tower tests | passed |
+| Unity PlayMode against the live server, including `ModeTests`, `UpgradeTimerTests` and `GuideTests` | 128 of 128 passed |
 
 **Not verified:** how any of it feels in your hands, on a phone, or with two real people in the Arena. Siege and Arena numbers are test values.
 

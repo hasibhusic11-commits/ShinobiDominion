@@ -173,6 +173,8 @@ func (s *Server) register(initializer runtime.Initializer, logger runtime.Logger
 		"sd_chest_open":   s.rpcChestOpen,
 		"sd_shop_buy":     s.rpcShopBuy,
 		"sd_gear_upgrade": s.rpcGearUpgrade,
+		"sd_trial_list":   s.rpcTrialList,
+		"sd_trial_fight":  s.rpcTrialFight,
 		"sd_troop_train":  s.rpcTroopTrain,
 		"sd_hero_train":   s.rpcHeroTrain,
 		"sd_raid_list":    s.rpcRaidList,

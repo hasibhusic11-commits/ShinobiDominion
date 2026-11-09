@@ -88,6 +88,26 @@ Follows the owner's ADR-021. Up to four Troop Camps, gated by Dojo level, and a 
 - A raid still needs at least one hero. At most 200 troops can land in one raid, to bound the server's work.
 - Troop names and all numbers are test values. Offline practice troops aren't saved.
 
+## ADR-045: The Trial Tower, added on 2026-11-09 while the owner slept
+A fifth battle mode, like the genre's hero trials. Numbers are test values in the `trials` block of `modes.json`.
+
+**The floors**
+- 30 floors. Each has a fixed guardian hero:
+  - Commons on the low floors, then Elites, then Legendaries.
+  - The Legendaries evolve on the highest floors.
+- Guardians gain 6 levels per floor.
+- Guardian strength runs from 56% on floor 1 to 230% on floor 30.
+- Tests check that any new Common hero can clear floor 1, and that a level 1 Legendary cannot clear floor 30.
+
+**Fights**
+- Each fight is an Arena-style duel: your hero against the guardian, for the guardian's shrine.
+- The server fights it.
+
+**Rewards and limits**
+- The first clear of a floor pays gems and Mana and opens the next floor.
+- Replays are free, the same every time, and pay nothing.
+- There is no daily limit and no energy.
+
 ## ADR-044: Hero gear, added on 2026-11-09 while the owner slept
 The brief puts equipment in the Hero Altar, and Castle Clash heroes have gear. Claude chose the simplest version that fits one hero at a time. Numbers are test values in the `gear` block of `heroes.json`, read by both client and server.
 

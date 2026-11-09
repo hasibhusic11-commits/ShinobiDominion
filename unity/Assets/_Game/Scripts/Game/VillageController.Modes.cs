@@ -55,7 +55,8 @@ namespace ShinobiDominion.Game
                     new ModeTile { Button = "FindRivalButton", Title = "Raid", Blurb = "Raid a real player's village as they left it.", Go = "Find a rival", Art = 1, Open = IsOnline && team > 0, Action = FindRival },
                     new ModeTile { Button = "OpenDungeonsButton", Title = "Dungeons", Blurb = $"15 fortified camps. {dungeonStars} of {RaidData.All.Count * 3} stars.", Go = "Open the map", Art = 2, Open = IsOnline || AllowOfflinePlay, Action = OpenCampaign },
                     new ModeTile { Button = "OpenSiegeButton", Title = "Village Siege", Blurb = "Waves storm your own village. Hold them off.", Go = "Defend", Art = 3, Open = ModesOnline, Action = OpenSiege },
-                    new ModeTile { Button = "OpenArenaButton", Title = "Arena", Blurb = "Hero against hero, for points and rank.", Go = "Enter", Art = 4, Open = ModesOnline && team > 0, Action = OpenArena }
+                    new ModeTile { Button = "OpenArenaButton", Title = "Arena", Blurb = "Hero against hero, for points and rank.", Go = "Enter", Art = 4, Open = ModesOnline && team > 0, Action = OpenArena },
+                    new ModeTile { Button = "OpenTrialsButton", Title = "Trial Tower", Blurb = "Climb floor by floor past ever-stronger guardians.", Go = "Climb", Art = 5, Open = ModesOnline && team > 0, Action = OpenTrials }
                 };
                 var block = panel.Block(560f);
                 for (var i = 0; i < tiles.Length; i++) DrawModeTile(block, tiles[i], i, tiles.Length);
@@ -79,7 +80,9 @@ namespace ShinobiDominion.Game
             art.type = Image.Type.Simple;
             art.preserveAspect = false;
             art.raycastTarget = false;
-            art.color = tile.Open ? Color.white : new Color(0.45f, 0.45f, 0.48f);
+            // The three stony maps get their own colour, so each mode reads as its own place.
+            var tint = tile.Art == 3 ? new Color(1f, 0.7f, 0.62f) : tile.Art == 4 ? new Color(1f, 0.86f, 0.55f) : tile.Art == 5 ? new Color(0.7f, 0.82f, 1f) : Color.white;
+            art.color = tile.Open ? tint : tint * new Color(0.45f, 0.45f, 0.48f);
             HudArt.DropShadow(rect, 6f, 10f, 0.5f);
             var frame = Ui.Rect("Frame", rect);
             Ui.Stretch(frame);
@@ -95,13 +98,16 @@ namespace ShinobiDominion.Game
             shade.SetSiblingIndex(artRect.GetSiblingIndex() + 1);
 
             var title = HudArt.Label(rect, tile.Title, HudArt.Display, 30, TextAnchor.UpperCenter, HudArt.BrassLight, HudArt.LacquerDeep);
-            Ui.Anchor(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(260f, 52f), new Vector2(0f, -16f));
+            Ui.Anchor(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(280f, 52f), new Vector2(0f, -16f));
+            title.resizeTextForBestFit = true;
+            title.resizeTextMinSize = 18;
+            title.resizeTextMaxSize = 30;
             var blurb = HudArt.Label(rect, tile.Blurb, HudArt.Numbers, 18, TextAnchor.UpperCenter, HudArt.Ivory, HudArt.LacquerDeep);
-            Ui.Anchor(blurb.rectTransform, new Vector2(0.5f, 1f), new Vector2(240f, 160f), new Vector2(0f, -86f));
+            Ui.Anchor(blurb.rectTransform, new Vector2(0.5f, 1f), new Vector2(220f, 160f), new Vector2(0f, -86f));
             blurb.horizontalOverflow = HorizontalWrapMode.Wrap;
 
             var go = Ui.Button(rect, tile.Button, tile.Go, tile.Action, tile.Open, tile.Open ? Ui.AttackColor : (Color?)null, 21);
-            Ui.Anchor((RectTransform)go.transform, new Vector2(0.5f, 0f), new Vector2(200f, 56f), new Vector2(0f, 18f));
+            Ui.Anchor((RectTransform)go.transform, new Vector2(0.5f, 0f), new Vector2(180f, 56f), new Vector2(0f, 18f));
             if (tile.Open) UiMotion.PopIn(rect, 0.04f * index, 0.85f, 0.26f);
         }
 
@@ -243,7 +249,7 @@ namespace ShinobiDominion.Game
             var result = fight.Result;
             if (fight.State != null) ApplyServerState(fight.State);
             GameSounds.Play(fight.Won ? GameSound.Victory : GameSound.Defeat);
-            var title = fight.IsSiege ? (fight.Won ? "Village held!" : "The village fell") : (fight.Won ? "Victory" : "Defeat");
+            var title = fight.IsSiege ? (fight.Won ? "Village held!" : "The village fell") : fight.IsTrial ? (fight.Won ? $"Floor {fight.Level} cleared!" : "The guardian stands") : (fight.Won ? "Victory" : "Defeat");
             _panel.Show(title, FinishModeFight, panel =>
             {
                 DrawResultStars(panel, fight.Stars);
@@ -253,6 +259,11 @@ namespace ShinobiDominion.Game
                     panel.Line($"{result.damagePercent}% of your village was damaged. " + (result.dojoDestroyed ? "The Dojo fell." : "The Dojo stands."));
                     var landed = fight.Troops.Sum(s => s.count);
                     panel.Line($"Attackers beaten: {landed - result.heroesAlive} of {landed}");
+                }
+                else if (fight.IsTrial)
+                {
+                    panel.Line($"{fight.Title}: {fight.OpponentName}", 24, new Color(1f, 0.9f, 0.66f));
+                    panel.Line(result.dojoDestroyed ? "The guardian's shrine fell." : "The guardian's shrine still stands. Strengthen your hero and try again.");
                 }
                 else
                 {
@@ -272,8 +283,10 @@ namespace ShinobiDominion.Game
                 if (fight.ManaEarned > 0) Reveal(panel.Line($"Earned {fight.ManaEarned:N0} Mana", 21, Ui.AccentColor));
                 if (fight.CrystalsEarned > 0) Reveal(panel.Line($"Earned {fight.CrystalsEarned:N0} gems", 21, Ui.AccentColor));
                 if (fight.GoldEarned + fight.ManaEarned + fight.CrystalsEarned == 0)
-                    panel.Line(fight.IsSiege ? (fight.Won ? "No reward: only new stars pay." : "No reward this time.") : (fight.Won ? "No reward: today's paid wins are used up, or your vault is full." : "No reward this time."), 19);
-                if (fight.IsSiege)
+                    panel.Line(fight.IsSiege || fight.IsTrial ? (fight.Won ? "No reward: only the first clear pays." : "No reward this time.") : (fight.Won ? "No reward: today's paid wins are used up, or your vault is full." : "No reward this time."), 19);
+                if (fight.IsTrial)
+                    panel.Action("TrialAgainButton", fight.Won ? "Back to the tower" : "Try again", () => { EndRaid(); OpenTrials(); }, true, Ui.AccentColor);
+                else                 if (fight.IsSiege)
                     panel.Action("SiegeAgainButton", fight.Won ? "Back to the Siege" : "Try again", () => { EndRaid(); OpenSiege(); }, true, Ui.AccentColor);
                 else
                     panel.Action("ArenaAgainButton", "Fight again", () => { EndRaid(); OpenArena(); }, true, Ui.AccentColor);
