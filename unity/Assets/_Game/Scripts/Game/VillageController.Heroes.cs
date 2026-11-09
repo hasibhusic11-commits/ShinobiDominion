@@ -147,13 +147,6 @@ namespace ShinobiDominion.Game
             return LookOf(archetype, hero.EvolutionIndex);
         }
 
-        private string FormName(HeroInstance hero)
-        {
-            var archetype = Roster.ArchetypeOf(hero);
-            if (!archetype.CanEvolve || hero.EvolutionIndex >= archetype.forms.Count) return archetype.displayName;
-            return archetype.forms[hero.EvolutionIndex].formName;
-        }
-
         private static string EvolutionLabel(int evolution) =>
             evolution == 0 ? "Base" : "Evo " + new string('I', evolution);
 

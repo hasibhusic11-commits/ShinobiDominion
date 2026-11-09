@@ -176,6 +176,25 @@ namespace ShinobiDominion.Tests
             Assert.AreEqual(1, roster.Find(mainId).Level);
             Assert.IsNull(roster.Find(duplicateId));
             Assert.AreEqual(0, roster.ItemCount("awakening_scroll"));
+
+            // The hero page now shows one blue evolution star.
+            Controller.ShowHeroDetail(mainId);
+            yield return null;
+            Assert.AreEqual(1, Object.FindObjectsByType<Image>(FindObjectsSortMode.None).Count(i => i.name == "EvolutionStar"));
+        }
+
+        [UnityTest]
+        public IEnumerator HeroPage_BaseForm_HasNoStars_AllFourSkills_AndNoEvoRow()
+        {
+            var hero = Controller.Roster.Heroes.First(h => h.ArchetypeId == "solar_beast_sage" && h.EvolutionIndex == 0);
+            Controller.ShowHeroDetail(hero.InstanceId);
+            yield return null;
+            Assert.AreEqual(0, Object.FindObjectsByType<Image>(FindObjectsSortMode.None).Count(i => i.name == "EvolutionStar"), "No evolutions, no stars");
+            for (var i = 0; i < 4; i++) Assert.IsNotNull(Find("Skill" + i), "Skill row " + i);
+            var texts = Object.FindObjectsByType<Text>(FindObjectsSortMode.None).Select(t => t.text).ToList();
+            Assert.IsFalse(texts.Any(t => t == "Ready" || t == "Evo I" || t == "Evo II" || t == "Evo III"), "The old Ready / Evo row is gone");
+            Assert.Contains("SOLAR BEAST SAGE", texts, "The name plate shows the hero's real name");
+            Assert.IsTrue(texts.Contains("Beast Stride") && texts.Contains("Celestial Guardian"));
         }
 
         [UnityTest]

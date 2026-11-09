@@ -20,9 +20,9 @@
       "baseHp": 1200, "baseAttack": 140, "baseDefense": 55, "growthHp": 34, "growthAttack": 5, "growthDefense": 2, "primaryColor": "#C9772B",
       "skills": [
         { "id": "sun_palm", "displayName": "Sun Palm", "description": "A heavy open-handed blow.", "unlockEvolution": 0 },
-        { "id": "beast_stride", "displayName": "Beast Stride", "description": "Leaps to a target wrapped in a spirit-beast outline.", "unlockEvolution": 1 },
-        { "id": "radiant_roar", "displayName": "Radiant Roar", "description": "A wave of Spirit Force strikes nearby foes.", "unlockEvolution": 2 },
-        { "id": "celestial_guardian", "displayName": "Celestial Guardian", "description": "A radiant guardian fights at the Sage's side.", "unlockEvolution": 3 }
+        { "id": "beast_stride", "displayName": "Beast Stride", "description": "A surging dash empowered by solar force.", "unlockEvolution": 1 },
+        { "id": "radiant_roar", "displayName": "Radiant Roar", "description": "A blazing roar that empowers allies and shakes foes.", "unlockEvolution": 2 },
+        { "id": "celestial_guardian", "displayName": "Celestial Guardian", "description": "Summons radiant beast energy to shield and counterattack.", "unlockEvolution": 3 }
       ],
       "forms": [
         { "formName": "Wandering Sage", "summary": "Simple orange and gray training clothes, a modest silhouette.", "primaryColor": "#C9772B", "vfxBudget": 0, "portraitAssetId": "portrait_solar_0", "modelAssetId": "model_solar_0" },

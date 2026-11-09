@@ -162,55 +162,6 @@ namespace ShinobiDominion.Game
             }
         }
 
-        /// <summary>
-        /// A painted stage for the hero page: a dusk sky in the hero's colour, layered mountains, and a
-        /// stone floor. Each affinity gets its own sky.
-        /// </summary>
-        public static Sprite Stage(Color sky)
-        {
-            var key = "stage" + ColorUtility.ToHtmlStringRGB(sky);
-            if (Cached(key, out var cached)) return cached;
-            const int width = 480;
-            const int height = 270;
-            var texture = NewTexture(width, height);
-            var horizon = height * 0.36f;
-            var top = Color.Lerp(sky, Color.black, 0.55f);
-            var low = Color.Lerp(sky, Color.white, 0.45f);
-            var far = Color.Lerp(sky, new Color(0.35f, 0.38f, 0.5f), 0.5f);
-            var near = Color.Lerp(sky, new Color(0.12f, 0.12f, 0.2f), 0.7f);
-            var stone = new Color(0.42f, 0.40f, 0.46f);
-            for (var y = 0; y < height; y++)
-            for (var x = 0; x < width; x++)
-            {
-                Color color;
-                if (y > horizon)
-                {
-                    var v = (y - horizon) / (height - horizon);
-                    color = Color.Lerp(low, top, Mathf.Pow(v, 0.8f));
-                    var farRidge = horizon + 40f + Mathf.PerlinNoise(x * 0.012f, 3.1f) * 70f;
-                    var nearRidge = horizon + 10f + Mathf.PerlinNoise(x * 0.02f + 9f, 1.7f) * 50f;
-                    if (y < farRidge) color = Color.Lerp(far, low, 0.35f * (1f - (farRidge - y) / 80f));
-                    if (y < nearRidge) color = near;
-                }
-                else
-                {
-                    // Flagstones in perspective, lit from the middle.
-                    var depth = 1f - y / horizon;
-                    var spread = (x - width * 0.5f) / (width * 0.5f);
-                    var rowLine = Mathf.Abs(Mathf.Sin(Mathf.Pow(depth + 0.15f, 1.6f) * 22f)) < 0.07f;
-                    var colLine = Mathf.Abs(Mathf.Sin(spread / (0.3f + depth) * 6f)) < 0.05f;
-                    var light = Mathf.Lerp(1.15f, 0.55f, Mathf.Abs(spread) * 0.8f + depth * 0.35f);
-                    color = stone * light;
-                    if (rowLine || colLine) color *= 0.72f;
-                    color = Color.Lerp(color, sky * 0.6f, 0.15f);
-                }
-                color.a = 1f;
-                texture.SetPixel(x, y, color);
-            }
-            texture.Apply();
-            return Make(key, texture);
-        }
-
         /// <summary>A night forest clearing with a glowing ring, for the Summoning Gate.</summary>
         public static Sprite GateScene
         {
@@ -261,6 +212,134 @@ namespace ShinobiDominion.Game
             var qy = Mathf.Abs(y - height * 0.5f) - (height * 0.5f - radius);
             var outside = new Vector2(Mathf.Max(qx, 0f), Mathf.Max(qy, 0f)).magnitude;
             return outside + Mathf.Min(Mathf.Max(qx, qy), 0f) - radius;
+        }
+
+        /// <summary>
+        /// The hero page's shrine hall: dark lacquered wood walls lit warm from the middle, two crimson pillars with
+        /// gold bands framing the hero, a large sanctum circle glowing in the hero's affinity colour behind them, a
+        /// dark beam with a gold rule along the top, and a polished plank floor reflecting the glow. Painted once per
+        /// colour. <paramref name="centreX"/> is where the hero stands, as a share of the width.
+        /// </summary>
+        public static Sprite Shrine(Color aura, float centreX)
+        {
+            var key = "shrine" + ColorUtility.ToHtmlStringRGB(aura) + centreX.ToString("0.00");
+            if (Cached(key, out var cached)) return cached;
+            const int width = 960;
+            const int height = 540;
+            const float aspect = width / (float)height;
+            const float floorLine = 0.27f;
+            var texture = NewTexture(width, height);
+            var pixels = new Color32[width * height];
+            var wallLow = new Color(0.20f, 0.12f, 0.09f);
+            var wallTop = new Color(0.05f, 0.04f, 0.08f);
+            var gold = new Color(0.93f, 0.73f, 0.33f);
+            var crimson = new Color(0.62f, 0.10f, 0.09f);
+            var warm = new Color(1f, 0.72f, 0.38f);
+            var ringCentre = new Vector2(centreX, 0.6f);
+            const float ring = 0.25f;
+            for (var y = 0; y < height; y++)
+            for (var x = 0; x < width; x++)
+            {
+                var u = (x + 0.5f) / width;
+                var v = (y + 0.5f) / height;
+                Color c;
+                if (v > floorLine)
+                {
+                    var t = (v - floorLine) / (1f - floorLine);
+                    c = Color.Lerp(wallLow, wallTop, Mathf.Pow(t, 0.8f));
+                    // Lacquered wall panels and a carved rail.
+                    var panel = Mathf.Repeat((u - centreX) * 16f, 1f);
+                    if (panel < 0.035f) c *= 0.72f;
+                    else if (panel < 0.07f) c *= 1.12f;
+                    if (Mathf.Abs(v - 0.47f) < 0.006f) c = Color.Lerp(c, gold * 0.55f, 0.8f);
+                    // Warm light pooled behind the hero.
+                    var dl = new Vector2((u - centreX) * aspect, (v - 0.45f) * 1.2f).sqrMagnitude;
+                    c += warm * (0.42f * Mathf.Exp(-dl / 0.45f));
+                    // The sanctum circle: deep affinity colour inside, gold rings, faint spokes, soft outer glow.
+                    var d = new Vector2((u - ringCentre.x) * aspect, v - ringCentre.y);
+                    var r = d.magnitude;
+                    if (r < ring)
+                    {
+                        var inner = Color.Lerp(aura * 0.55f, aura * 0.25f + new Color(0.02f, 0.02f, 0.05f), r / ring);
+                        c = Color.Lerp(c, inner, 0.85f);
+                        var angle = Mathf.Atan2(d.y, d.x);
+                        if (r > ring * 0.62f && r < ring * 0.9f && Mathf.Abs(Mathf.Sin(angle * 6f)) < 0.025f) c = Color.Lerp(c, gold, 0.45f);
+                    }
+                    foreach (var line in new[] { 1f, 0.92f, 0.62f })
+                        if (Mathf.Abs(r - ring * line) < 0.0042f) c = Color.Lerp(c, gold, line == 1f ? 0.95f : 0.6f);
+                    c += aura * (0.35f * Mathf.Exp(-Mathf.Pow(Mathf.Max(r - ring, 0f) / 0.07f, 2f)) * (r > ring ? 1f : 0f));
+                    // Two crimson pillars with gold bands, round-shaded.
+                    foreach (var side in new[] { -1f, 1f })
+                    {
+                        var px = centreX + side * 0.205f;
+                        var half = 0.024f;
+                        var k = (u - px) / half;
+                        if (Mathf.Abs(k) < 1f)
+                        {
+                            var shade = Mathf.Lerp(1.15f, 0.45f, (k + 1f) * 0.5f) * Mathf.Sqrt(1f - k * k + 0.05f);
+                            var col = crimson * shade;
+                            if (Mathf.Abs(v - 0.33f) < 0.012f || Mathf.Abs(v - 0.87f) < 0.012f || Mathf.Abs(v - 0.36f) < 0.004f) col = gold * shade * 1.05f;
+                            c = col;
+                        }
+                    }
+                    // The top beam.
+                    if (v > 0.93f) c = Color.Lerp(new Color(0.08f, 0.05f, 0.05f), new Color(0.15f, 0.08f, 0.06f), (v - 0.93f) / 0.07f);
+                    if (Mathf.Abs(v - 0.93f) < 0.004f) c = gold * 0.9f;
+                }
+                else
+                {
+                    // Polished planks running to the back, the sanctum glow reflected in them.
+                    var depth = (floorLine - v) / floorLine;
+                    var spread = (u - centreX) / (0.12f + depth * 0.9f);
+                    var seam = Mathf.Abs(Mathf.Sin(spread * 9f)) < 0.06f;
+                    c = Color.Lerp(new Color(0.24f, 0.13f, 0.08f), new Color(0.13f, 0.07f, 0.05f), depth);
+                    if (seam) c *= 0.7f;
+                    var reflect = Mathf.Exp(-((u - centreX) * (u - centreX) * 9f + depth * depth * 5f));
+                    c += Color.Lerp(warm, aura, 0.5f) * (0.35f * reflect);
+                    if (Mathf.Abs(v - floorLine) < 0.003f) c = gold * 0.5f;
+                }
+                // Vignette keeps the eye on the middle.
+                var vx = (u - centreX) * 1.3f;
+                var vy = v - 0.5f;
+                c *= Mathf.Clamp01(1.08f - 0.9f * (vx * vx + vy * vy * 0.8f));
+                c.a = 1f;
+                pixels[y * width + x] = c;
+            }
+            texture.SetPixels32(pixels);
+            texture.Apply();
+            return Make(key, texture);
+        }
+
+        /// <summary>A five-point star, white with a soft edge, for tinting (the evolution stars).</summary>
+        public static Sprite Star
+        {
+            get
+            {
+                const string key = "star5";
+                if (Cached(key, out var cached)) return cached;
+                const int size = 128;
+                var texture = NewTexture(size, size);
+                var pixels = new Color32[size * size];
+                var centre = (size - 1) * 0.5f;
+                for (var y = 0; y < size; y++)
+                for (var x = 0; x < size; x++)
+                {
+                    var dx = (x - centre) / centre;
+                    var dy = (y - centre) / centre;
+                    var r = Mathf.Sqrt(dx * dx + dy * dy);
+                    var a = Mathf.Atan2(dx, dy);
+                    // Radius of the star outline at this angle: five points, inner radius 0.45.
+                    var sector = Mathf.Repeat(a, 2f * Mathf.PI / 5f) / (2f * Mathf.PI / 5f);
+                    var tip = Mathf.Abs(sector - 0.5f) * 2f;
+                    var edge = Mathf.Lerp(0.45f, 0.95f, tip * tip);
+                    var alpha = Mathf.Clamp01((edge - r) * 22f);
+                    var light = Mathf.Lerp(1f, 0.78f, Mathf.Clamp01(r / edge));
+                    pixels[y * size + x] = new Color(light, light, light, alpha);
+                }
+                texture.SetPixels32(pixels);
+                texture.Apply();
+                return Make(key, texture);
+            }
         }
     }
 }

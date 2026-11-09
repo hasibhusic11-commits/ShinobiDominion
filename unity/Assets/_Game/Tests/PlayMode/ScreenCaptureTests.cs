@@ -98,6 +98,11 @@ namespace ShinobiDominion.Tests
             var evolving = roster.Heroes.First(h => h.ArchetypeId == "solar_beast_sage" && h.Level == HeroMath.MaxLevel);
             controller.ShowHeroDetail(evolving.InstanceId);
             yield return shot("12_hero_detail");
+            // The same hero shown at its second evolution, for the blue stars (put back straight after).
+            evolving.EvolutionIndex = 2;
+            controller.ShowHeroDetail(evolving.InstanceId);
+            yield return shot("13_hero_detail_evolved");
+            evolving.EvolutionIndex = 0;
             controller.ShowEvolution(evolving.InstanceId);
             yield return shot("11_evolution_requirements");
             controller.CloseAll();
