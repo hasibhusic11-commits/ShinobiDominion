@@ -16,6 +16,16 @@
     { "heroId": "crimson_eye_prodigy", "form": -1, "path": "Heroes3D/crimson_eye_prodigy", "enabled": true, "note": "3D, made with Meshy from the owner's painting (ADR-037)." },
     { "heroId": "void_sovereign", "form": -1, "path": "Heroes3D/void_sovereign", "enabled": true, "note": "3D, made with Meshy from the owner's painting (ADR-037)." },
     { "heroId": "ashen_flame_lord", "form": -1, "path": "Heroes3D/ashen_flame_lord", "enabled": true, "note": "3D, made with Meshy from the owner's painting (ADR-037)." },
-    { "heroId": "storm_crow_shinobi", "form": -1, "path": "Heroes3D/storm_crow_shinobi", "enabled": true, "note": "3D, made with Meshy from the owner's painting (ADR-037)." }
+    { "heroId": "storm_crow_shinobi", "form": -1, "path": "Heroes3D/storm_crow_shinobi", "enabled": true, "note": "3D, made with Meshy from the owner's painting (ADR-037)." },
+    { "heroId": "ember_recruit", "form": -1, "path": "Heroes3D/ember_recruit", "enabled": true, "note": "Common. 3D, made with Meshy from the owner's painting (ADR-037)." },
+    { "heroId": "reed_archer", "form": -1, "path": "Heroes3D/reed_archer", "enabled": true, "note": "Common. 3D, made with Meshy from the owner's painting (ADR-037)." },
+    { "heroId": "stone_apprentice", "form": -1, "path": "Heroes3D/stone_apprentice", "enabled": true, "note": "Common. 3D, made with Meshy from the owner's painting (ADR-037)." },
+    { "heroId": "talisman_novice", "form": -1, "path": "Heroes3D/talisman_novice", "enabled": true, "note": "Common. 3D, made with Meshy from the owner's painting (ADR-037)." },
+    { "heroId": "bell_guard", "form": -1, "path": "Heroes3D/bell_guard", "enabled": true, "note": "Common. 3D, made with Meshy from the owner's painting (ADR-037)." },
+    { "heroId": "mist_courier", "form": -1, "path": "Heroes3D/mist_courier", "enabled": true, "note": "Common. 3D, made with Meshy from the owner's painting (ADR-037)." },
+    { "heroId": "spark_tinkerer", "form": -1, "path": "Heroes3D/spark_tinkerer", "enabled": true, "note": "Common. 3D, made with Meshy from the owner's painting (ADR-037)." },
+    { "heroId": "ash_monk", "form": -1, "path": "Heroes3D/ash_monk", "enabled": true, "note": "Common. 3D, made with Meshy from the owner's painting (ADR-037)." },
+    { "heroId": "moth_herbalist", "form": -1, "path": "Heroes3D/moth_herbalist", "enabled": true, "note": "Common. 3D, made with Meshy from the owner's painting (ADR-037)." },
+    { "heroId": "gale_runner", "form": -1, "path": "Heroes3D/gale_runner", "enabled": true, "note": "Common. 3D, made with Meshy from the owner's painting (ADR-037)." }
   ]
 }

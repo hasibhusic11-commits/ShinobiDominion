@@ -62,11 +62,19 @@ namespace ShinobiDominion.Tests
         private static Transform Bone(Component actor, string bone) =>
             actor.GetComponentsInChildren<Transform>().First(t => t.name == bone);
 
-        private static readonly string[] AllHeroes =
+        private static readonly string[] Legendaries =
         {
             "solar_beast_sage", "thunder_empress", "stone_titan", "moonfang_oracle",
             "crimson_eye_prodigy", "void_sovereign", "ashen_flame_lord", "storm_crow_shinobi"
         };
+
+        private static readonly string[] Commons =
+        {
+            "ember_recruit", "reed_archer", "stone_apprentice", "talisman_novice", "bell_guard",
+            "mist_courier", "spark_tinkerer", "ash_monk", "moth_herbalist", "gale_runner"
+        };
+
+        private static readonly string[] AllHeroes = Legendaries.Concat(Commons).ToArray();
 
         [UnityTest]
         public IEnumerator Hero3D_AppearsOnHeroBase_AndPlaysAllThreeAnimations()
@@ -332,18 +340,22 @@ namespace ShinobiDominion.Tests
             var triangles = bodies.Sum(r => r.sharedMesh.triangles.Length / 3);
             log.Add($"crowd 30 heroes: {bodies.Length} skinned bodies, {triangles:N0} triangles, {clock.ElapsedMilliseconds / 60f:F1} ms a frame in the editor");
 
-            // All eight heroes side by side, for review.
-            var lineup = new GameObject("Lineup");
-            for (var i = 0; i < AllHeroes.Length; i++)
-            {
-                var one = HeroSprites.Spawn(new HeroLook { DesignId = AllHeroes[i], Evolution = 0 }, lineup.transform);
-                one.transform.position = camera.transform.position + camera.transform.forward * 80f + camera.transform.right * ((i - 3.5f) * 1.25f) - Vector3.up * 0.6f;
-            }
+            // Each rarity side by side, for review.
             Object.Destroy(crowd);
-            camera.orthographicSize = 3f;
-            for (var i = 0; i < 20; i++) yield return null;
-            yield return ScreenCaptureTests.Capture(camera, wide, Path.Combine(dir, "all_heroes_lineup.png"));
-            Object.Destroy(lineup);
+            foreach (var (row, file) in new[] { (Legendaries, "all_heroes_lineup.png"), (Commons, "commons_lineup.png") })
+            {
+                var lineup = new GameObject("Lineup");
+                for (var i = 0; i < row.Length; i++)
+                {
+                    var one = HeroSprites.Spawn(new HeroLook { DesignId = row[i], Evolution = 0 }, lineup.transform);
+                    one.transform.position = camera.transform.position + camera.transform.forward * 80f + camera.transform.right * ((i - (row.Length - 1) * 0.5f) * 1.25f) - Vector3.up * 0.6f;
+                }
+                camera.orthographicSize = row.Length > 8 ? 3.6f : 3f;
+                for (var i = 0; i < 20; i++) yield return null;
+                yield return ScreenCaptureTests.Capture(camera, wide, Path.Combine(dir, file));
+                Object.Destroy(lineup);
+                yield return null;
+            }
             File.WriteAllLines(Path.Combine(dir, "hero_report.txt"), log);
 
             camera.targetTexture = null;

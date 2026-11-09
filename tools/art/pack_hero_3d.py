@@ -12,7 +12,7 @@ import bpy, sys, os, math
 from mathutils import Vector
 
 args = sys.argv[sys.argv.index('--') + 1:]
-src, out, hero = args[0], args[1], args[2]
+src, out, hero = os.path.abspath(args[0]), os.path.abspath(args[1]), args[2]
 with_staff = len(args) > 3 and args[3] == 'staff'
 os.makedirs(out, exist_ok=True)
 
@@ -48,8 +48,8 @@ for a in rest_actions:
 # Library clips by their Meshy names, mapped to the game's names.
 names = {
     'idle': ['Idle'],
-    'attack': ['Kung_Fu_Punch', 'Right_Hand_Sword_Slash', 'mage_soell_cast'],
-    'special': ['Punch_Forward_with_Both_Fists', 'Charged_Slash', 'Charged_Spell_Cast'],
+    'attack': ['Kung_Fu_Punch', 'Right_Hand_Sword_Slash', 'mage_soell_cast', 'Archery_Shot', 'Roundhouse_Kick'],
+    'special': ['Punch_Forward_with_Both_Fists', 'Charged_Slash', 'Charged_Spell_Cast', 'Draw_and_Shoot_from_Back', 'Flying_Fist_Kick'],
     'hit': ['Face_Punch_Reaction'],
     'death': ['dying_backwards'],
 }
@@ -108,13 +108,21 @@ def keep_in_place(action):
                 k.handle_right[1] = first
 
 
+def cut(action, longest, before, length):
+    """A clip longer than `longest` frames keeps `length` frames, starting `before` frames ahead of the strike."""
+    if action.frame_range[1] - action.frame_range[0] <= longest:
+        return
+    peak = strike_frame(action)
+    start = max(int(action.frame_range[0]), min(peak - before, int(action.frame_range[1]) - length + 1))
+    action.use_frame_range = True
+    action.frame_start = start
+    action.frame_end = start + length - 1
+
+
 attack = clips['attack']
-if attack.frame_range[1] - attack.frame_range[0] > 60:
-    peak = strike_frame(attack)
-    start = max(int(attack.frame_range[0]), peak - 18)
-    attack.use_frame_range = True
-    attack.frame_start = start
-    attack.frame_end = start + 34
+cut(attack, 60, 18, 35)
+# Very long specials (Draw_and_Shoot_from_Back is 236 frames) become one move of two seconds.
+cut(clips['special'], 150, 40, 60)
 keep_in_place(attack)
 keep_in_place(clips['special'])
 
@@ -178,12 +186,26 @@ if with_staff:
 
 # The colour texture, at 1024 px, saved next to the FBX.
 material = body.material_slots[0].material
-image = next(n.image for n in material.node_tree.nodes if n.type == 'TEX_IMAGE' and n.image)
+node = next(n for n in material.node_tree.nodes if n.type == 'TEX_IMAGE' and n.image)
+image = node.image
+if not image.has_data or image.size[0] == 0:
+    # Some rig FBXs point to a texture file Meshy never downloaded; the rig's GLB carries the same one inside.
+    before_images = set(bpy.data.images)
+    before = set(bpy.data.objects)
+    bpy.ops.import_scene.gltf(filepath=os.path.join(src, 'rig', 'rigged_character.glb'))
+    delete([o for o in bpy.data.objects if o not in before])
+    image = max((i for i in bpy.data.images if i not in before_images and i.size[0] > 0), key=lambda i: i.size[0] * i.size[1])
+    node.image = image
+    print('TEXTURE from rigged_character.glb', tuple(image.size))
 image.scale(1024, 1024)
 color_path = os.path.join(out, hero + '_color.png')
 image.filepath_raw = color_path
 image.file_format = 'PNG'
-image.save()
+if image.packed_file:
+    image.unpack(method="REMOVE")  # keep the pixels, drop the pack, so save writes the file
+image.save(filepath=color_path)
+if not os.path.exists(color_path):
+    raise SystemExit("TEXTURE NOT SAVED " + color_path)
 image.filepath = color_path
 material.name = hero
 
