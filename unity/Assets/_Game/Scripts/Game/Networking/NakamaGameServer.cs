@@ -48,6 +48,12 @@ namespace ShinobiDominion.Game
         Task<ServerState> FinishUpgradeAsync(string key, int id);
         Task<ServerState> ResearchStartAsync(string key, string troopId);
         Task<ServerState> ResearchFinishAsync(string key, string troopId);
+        Task<string> SetNameAsync(string name);
+        Task<GuildView> GuildViewAsync();
+        Task<GuildView> GuildCreateAsync(string key, string name, string description);
+        Task<GuildView> GuildJoinAsync(string key, string guildId);
+        Task<GuildView> GuildLeaveAsync(string key);
+        Task<GuildView> GuildChatAsync(string key, string text);
     }
 
     public sealed class GameServerException : Exception
@@ -175,6 +181,19 @@ namespace ShinobiDominion.Game
         public async Task<ServerState> ResearchStartAsync(string key, string troopId) => ServerState.Parse(await CallAsync("sd_research_start", new { key, troopId }));
 
         public async Task<ServerState> ResearchFinishAsync(string key, string troopId) => ServerState.Parse(await CallAsync("sd_research_finish", new { key, troopId }));
+
+        public async Task<string> SetNameAsync(string name) =>
+            Newtonsoft.Json.Linq.JObject.Parse(await CallAsync("sd_set_name", new { name })).Value<string>("name");
+
+        public async Task<GuildView> GuildViewAsync() => GuildView.Parse(await CallAsync("sd_guild_view", null));
+
+        public async Task<GuildView> GuildCreateAsync(string key, string name, string description) => GuildView.Parse(await CallAsync("sd_guild_create", new { key, name, description }));
+
+        public async Task<GuildView> GuildJoinAsync(string key, string guildId) => GuildView.Parse(await CallAsync("sd_guild_join", new { key, guildId }));
+
+        public async Task<GuildView> GuildLeaveAsync(string key) => GuildView.Parse(await CallAsync("sd_guild_leave", new { key }));
+
+        public async Task<GuildView> GuildChatAsync(string key, string text) => GuildView.Parse(await CallAsync("sd_guild_chat", new { key, text }));
 
         public async Task<ServerState> TrainTroopsAsync(string key, string troopId, int count) =>
             ServerState.Parse(await CallAsync("sd_troop_train", new { key, troopId, count }));

@@ -92,6 +92,11 @@ Verified:
 - Builders send up sparks and dust over upgrading buildings.
 - New players get a five-step guide with an arrow (collect, summon, assign, first battle, first upgrade). It never blocks a tap, can be skipped, and is remembered.
 
+**Guilds and names (ADR-042):**
+- Set your name in the Menu.
+- The friends shortcut opens Guilds: found one for 300 gems, or join one (up to 30 members), with a member list and guild chat.
+- Chat has no word filter or reporting yet, which a public release needs.
+
 **Research (ADR-041):**
 - The Research Hut runs troop studies paid in Mana: +8% HP and attack per level.
 - One study runs at a time; gems finish one at once.
@@ -103,8 +108,8 @@ Verified:
 |---|---|
 | .NET harness (`tools/core-tests`) | 174 of 174 passed |
 | Go unit tests, including Siege balance and Arena duels | passed; part of the server build |
-| Backend suite, including gift, quest, Siege, Arena, timer and research tests | passed |
-| Unity PlayMode against the live server, including `ModeTests`, `UpgradeTimerTests` and `GuideTests` | 122 of 122 passed |
+| Backend suite, including gift, quest, Siege, Arena, timer, research and guild tests | passed |
+| Unity PlayMode against the live server, including `ModeTests`, `UpgradeTimerTests` and `GuideTests` | 125 of 125 passed |
 
 **Not verified:** how any of it feels in your hands, on a phone, or with two real people in the Arena. Siege and Arena numbers are test values.
 

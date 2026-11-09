@@ -30,7 +30,7 @@ namespace ShinobiDominion.Game
             {
                 case "mail": return "Mail";
                 case "trophy": return "Rankings";
-                case "friends": return "Friends";
+                case "friends": return "Guild";
                 case "quests": return "Quests";
                 case "gift": return "Daily Gift";
                 case "chest": return "Treasure Chest";
@@ -39,7 +39,7 @@ namespace ShinobiDominion.Game
             }
         }
 
-        /// <summary>Mail, rankings, quests and the gift open their screens (ADR-039). Friends and the chests do not exist yet, and say so plainly.</summary>
+        /// <summary>Mail, rankings, quests and the gift open their screens (ADR-039). The chests do not exist yet, and say so plainly.</summary>
         public void OpenShortcut(string shortcut)
         {
             CloseAll();
@@ -49,6 +49,7 @@ namespace ShinobiDominion.Game
                 case "trophy": OpenRankings(); return;
                 case "quests": OpenQuests(); return;
                 case "gift": OpenGift(); return;
+                case "friends": OpenGuild(); return;
             }
             _panel.ShowWindow(ShortcutTitle(shortcut), new Vector2(640f, 300f), CloseAll, content =>
             {

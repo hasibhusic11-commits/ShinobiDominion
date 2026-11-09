@@ -183,6 +183,7 @@ namespace ShinobiDominion.Game
             UpdateGoldPopups();
             UpdateTimerPills();
             UpdateGuide();
+            PollGuild();
             FetchRaidListWhenFree();
             // Keep trying to reach the server, but never swap the village out mid-action.
             if (_server != null && !IsOnline && !_connecting && UiState.Screen == VillageScreen.Home)
@@ -247,7 +248,7 @@ namespace ShinobiDominion.Game
         private void RefreshHud()
         {
             _hud.SetWallet(Village.Gold, ServerCrystals ?? Village.Crystals, Village.GoldCapacity, Mana);
-            _hud.SetIdentity("Player", Village.HqLevel);
+            _hud.SetIdentity(PlayerName, Village.HqLevel);
             _hud.SetPortrait(GuardPortrait());
         }
 
@@ -592,6 +593,7 @@ namespace ShinobiDominion.Game
             {
                 panel.Line(IsOnline ? "Connected. Your village is saved on the server." : "Not connected to the server.");
                 panel.Line(Village.Catalog.BalanceStatus, 18);
+                if (IsOnline) panel.Action("NameButton", $"Name: {PlayerName} (tap to change)", ShowNameWindow);
                 var high = GameQuality.Current == VisualQuality.High;
                 panel.Line("Fewer trees at Low take effect after a restart.", 17);
                 panel.Action("SoundButton", GameSounds.Muted ? "Sound: Off (tap for On)" : "Sound: On (tap for Off)", () =>

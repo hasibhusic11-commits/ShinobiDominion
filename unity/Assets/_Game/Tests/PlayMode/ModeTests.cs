@@ -309,5 +309,78 @@ namespace ShinobiDominion.Tests
             yield return shot("51_summon_results");
             camera.targetTexture = null;
         }
+        [UnityTest]
+        public IEnumerator Guild_FoundChatAndLeave_ThroughTheScreens()
+        {
+            Controller.OpenShortcut("friends");
+            yield return WaitFor(() => Find("FoundGuildButton") != null);
+            var guildName = "Test" + Guid.NewGuid().ToString("N").Substring(0, 6);
+            _root.GetComponentsInChildren<InputField>().First(f => f.name == "GuildNameInput").text = guildName;
+            long gems = 0;
+            yield return Await(_direct.GetStateAsync(), s => gems = s.Crystals);
+            Find("FoundGuildButton").onClick.Invoke();
+            yield return WaitFor(() => Find("SendChatButton") != null);
+            Assert.AreEqual(guildName, Controller.CurrentGuild.guild.name);
+            Assert.AreEqual(gems - 300, Controller.ServerCrystals, "Founding costs 300 gems");
+
+            _root.GetComponentsInChildren<InputField>().First(f => f.name == "GuildChatInput").text = "hello <b>guild</b>";
+            Find("SendChatButton").onClick.Invoke();
+            yield return WaitFor(() => Controller.CurrentGuild.chat.Count == 1);
+            Assert.AreEqual("hello <b>guild</b>", Controller.CurrentGuild.chat[0].text, "Text is shown as typed, never as markup");
+            Assert.IsTrue(_root.GetComponentsInChildren<Text>().Where(t => t.text.Contains("hello")).All(t => !t.supportRichText));
+
+            Find("LeaveGuildButton").onClick.Invoke();
+            yield return null;
+            Assert.IsNotNull(Controller.CurrentGuild.guild, "The first tap only asks");
+            Find("LeaveGuildButton").onClick.Invoke();
+            yield return WaitFor(() => Find("FoundGuildButton") != null);
+            Assert.IsNull(Controller.CurrentGuild.guild);
+        }
+
+        [UnityTest]
+        public IEnumerator Name_SetInTheMenu_ShowsOnTheHud()
+        {
+            Controller.SetPlayerName("  Night Owl ");
+            yield return WaitFor(() => Controller.PlayerName == "Night Owl");
+            StringAssert.Contains("Night Owl", AllText);
+            Controller.SetPlayerName("<x>");
+            yield return WaitFor(() => Controller.LastMessage != null);
+            Assert.AreEqual("Night Owl", Controller.PlayerName, "A refused name changes nothing");
+        }
+
+        [UnityTest]
+        public IEnumerator CaptureGuildScreens()
+        {
+            var dir = Environment.GetEnvironmentVariable("SD_CAPTURE_DIR");
+            if (string.IsNullOrEmpty(dir)) Assert.Ignore("SD_CAPTURE_DIR not set.");
+            Directory.CreateDirectory(dir);
+            LogAssert.ignoreFailingMessages = true;
+            var game = _root.GetComponent<VillageBootstrap>();
+            var camera = game.IsoCamera.Camera;
+            var canvas = _root.GetComponentInChildren<Canvas>();
+            var texture = new RenderTexture(1600, 900, 24) { antiAliasing = 4 };
+            camera.targetTexture = texture;
+            canvas.renderMode = RenderMode.ScreenSpaceCamera;
+            canvas.worldCamera = camera;
+            canvas.planeDistance = 5f;
+            Controller.SetPlayerName("Captain Ash");
+            yield return WaitFor(() => Controller.PlayerName == "Captain Ash");
+            Controller.OpenShortcut("friends");
+            yield return WaitFor(() => Find("FoundGuildButton") != null);
+            yield return ScreenCaptureTests.Capture(camera, texture, Path.Combine(dir, "70_guild_browse.png"));
+            _root.GetComponentsInChildren<InputField>().First(f => f.name == "GuildNameInput").text = "Ash" + Guid.NewGuid().ToString("N").Substring(0, 4);
+            _root.GetComponentsInChildren<InputField>().First(f => f.name == "GuildMottoInput").text = "We hold the ridge";
+            Find("FoundGuildButton").onClick.Invoke();
+            yield return WaitFor(() => Find("SendChatButton") != null);
+            _root.GetComponentsInChildren<InputField>().First(f => f.name == "GuildChatInput").text = "Welcome to the guild!";
+            Find("SendChatButton").onClick.Invoke();
+            yield return WaitFor(() => Controller.CurrentGuild.chat.Count == 1);
+            yield return ScreenCaptureTests.Capture(camera, texture, Path.Combine(dir, "71_guild.png"));
+            Find("LeaveGuildButton").onClick.Invoke();
+            yield return null;
+            Find("LeaveGuildButton").onClick.Invoke();
+            yield return WaitFor(() => Find("FoundGuildButton") != null);
+            camera.targetTexture = null;
+        }
     }
 }

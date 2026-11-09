@@ -49,7 +49,7 @@ namespace ShinobiDominion.Game
             if (_syncAfterSettle && IsOnline && !_busy && _raid == null)
             {
                 _syncAfterSettle = false;
-                Run(async () => ApplyServerState(await _server.GetStateAsync()));
+                Fetch(async () => ApplyServerState(await _server.GetStateAsync()));
             }
         }
 

@@ -113,7 +113,7 @@ namespace ShinobiDominion.Game
             LastMessage = null;
             _siegeList = null;
             ShowSiege();
-            Run(async () =>
+            Fetch(async () =>
             {
                 _siegeList = await Modes.SiegeListAsync();
                 if (UiState.Screen == VillageScreen.AttackFlow && _raid == null) ShowSiege();
@@ -169,7 +169,7 @@ namespace ShinobiDominion.Game
             LastMessage = null;
             _arenaBoard = null;
             ShowArena();
-            Run(async () =>
+            Fetch(async () =>
             {
                 _arenaBoard = await Modes.ArenaBoardAsync();
                 if (UiState.Screen == VillageScreen.AttackFlow && _raid == null) ShowArena();
@@ -307,7 +307,7 @@ namespace ShinobiDominion.Game
         private void OpenRankings(System.Action back)
         {
             if (RefuseShortcutOffline("Rankings")) return;
-            Run(async () =>
+            Fetch(async () =>
             {
                 _arenaBoard = await Modes.ArenaBoardAsync();
                 ShowRankings(back);
@@ -335,7 +335,7 @@ namespace ShinobiDominion.Game
         public void OpenQuests()
         {
             if (RefuseShortcutOffline("Quests")) return;
-            Run(async () =>
+            Fetch(async () =>
             {
                 _questBoard = await Modes.QuestBoardAsync();
                 ShowQuests();
@@ -387,7 +387,7 @@ namespace ShinobiDominion.Game
         public void OpenGift()
         {
             if (RefuseShortcutOffline("Daily Gift")) return;
-            Run(async () =>
+            Fetch(async () =>
             {
                 _questBoard = await Modes.QuestBoardAsync();
                 ShowGift();
@@ -431,7 +431,7 @@ namespace ShinobiDominion.Game
         public void OpenMail()
         {
             if (RefuseShortcutOffline("Mail")) return;
-            Run(async () =>
+            Fetch(async () =>
             {
                 _defenseLog = await _server.DefenseLogAsync();
                 ShowMail();

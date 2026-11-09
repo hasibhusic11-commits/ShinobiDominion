@@ -16,6 +16,8 @@ namespace ShinobiDominion.Core
         public Dictionary<string, int> Troops = new Dictionary<string, int>();
         /// <summary>Research levels and running studies (ADR-041), by troop id.</summary>
         public Dictionary<string, ResearchEntry> Research = new Dictionary<string, ResearchEntry>();
+        /// <summary>The name other players see (ADR-042).</summary>
+        public string Name;
 
         public static ServerState Parse(string json) => FromToken(ParseObject(json));
 
@@ -24,7 +26,8 @@ namespace ShinobiDominion.Core
             var state = new ServerState
             {
                 Crystals = token.Value<long>("crystals"),
-                RosterJson = token.ToString(Formatting.None)
+                RosterJson = token.ToString(Formatting.None),
+                Name = token.Value<string>("name")
             };
             if (state.Crystals < 0) throw new FormatException("Server returned negative crystals.");
             if (token["village"] is JObject village) state.Village = village.ToObject<VillageSave>();
@@ -170,6 +173,14 @@ namespace ShinobiDominion.Core
                 case "QUEST_ALREADY_CLAIMED": return "Already claimed today.";
                 case "GIFT_ALREADY_OPENED": return "Today's gift is already opened. Come back tomorrow.";
                 case "NO_ARENA_OPPONENT": return "No one is in the Arena right now.";
+                case "BAD_NAME": return "Names are 3 to 16 letters, digits, spaces, - or _.";
+                case "NAME_TAKEN": return "A guild already has that name.";
+                case "ALREADY_IN_GUILD": return "Leave your guild first.";
+                case "NOT_IN_GUILD": return "You are not in a guild.";
+                case "GUILD_FULL": return "That guild is full.";
+                case "GUILD_NOT_FOUND": return "That guild no longer exists.";
+                case "BAD_MESSAGE": return "Write something first (up to 200 characters).";
+                case "CHAT_TOO_FAST": return "Slow down a little before sending more.";
                 default: return "Could not reach the server. Your request is safe to retry.";
             }
         }

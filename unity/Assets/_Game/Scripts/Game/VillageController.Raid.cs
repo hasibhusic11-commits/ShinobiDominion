@@ -136,7 +136,7 @@ namespace ShinobiDominion.Game
             if (!_raidListWanted || _busy) return;
             _raidListWanted = false;
             if (!IsOnline || UiState.Screen != VillageScreen.AttackFlow || _raid != null) return;
-            Run(async () =>
+            Fetch(async () =>
             {
                 var list = await _server.RaidListAsync();
                 _defenseLog = await _server.DefenseLogAsync();

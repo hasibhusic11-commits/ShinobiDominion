@@ -163,6 +163,12 @@ func (s *Server) register(initializer runtime.Initializer, logger runtime.Logger
 		"sd_village_finish": s.rpcFinish,
 		"sd_research_start": s.rpcResearchStart,
 		"sd_research_finish": s.rpcResearchFinish,
+		"sd_set_name":     s.rpcSetName,
+		"sd_guild_view":   s.rpcGuildView,
+		"sd_guild_create": s.rpcGuildCreate,
+		"sd_guild_join":   s.rpcGuildJoin,
+		"sd_guild_leave":  s.rpcGuildLeave,
+		"sd_guild_chat":   s.rpcGuildChat,
 		"sd_troop_train":  s.rpcTroopTrain,
 		"sd_hero_train":   s.rpcHeroTrain,
 		"sd_raid_list":    s.rpcRaidList,
@@ -385,6 +391,8 @@ type playerState struct {
 	Village       *villageState    `json:"village"`
 	Troops        map[string]int   `json:"troops"`
 	Research      map[string]researchView `json:"research"`
+	// Name is the player's chosen name, or their "Shinobi" tag (ADR-042).
+	Name          string `json:"name"`
 }
 
 func loadState(ctx context.Context, tx *sql.Tx, userID string, crystals int64) (*playerState, error) {
@@ -437,6 +445,7 @@ func loadState(ctx context.Context, tx *sql.Tx, userID string, crystals int64) (
 	}
 	research, err := loadResearch(ctx, tx, userID)
 	state.Research = researchViews(research)
+	state.Name = playerName(ctx, tx, userID)
 	return state, err
 }
 

@@ -88,6 +88,36 @@ Follows the owner's ADR-021. Up to four Troop Camps, gated by Dojo level, and a 
 - A raid still needs at least one hero. At most 200 troops can land in one raid, to bound the server's work.
 - Troop names and all numbers are test values. Offline practice troops aren't saved.
 
+## ADR-042: Player names and guilds, added on 2026-11-09 while the owner slept
+Castle Clash has guilds, and the home screen already had a "friends" shortcut, so that shortcut now opens Guilds. Claude's choices:
+
+**Names**
+- Players can set a name in the Menu: 3 to 16 letters, digits, spaces, - or _.
+- Until then they show as "Shinobi" plus four letters of their id.
+- Names show on the HUD, in the Arena, in the rankings and in guilds.
+- Names are not unique. Guild names are.
+
+**Guilds**
+- Founding a guild costs 300 gems (a test value).
+- Guilds are open to join, up to 30 members, one guild per player.
+- If the leader leaves, the longest-serving member leads; a guild with nobody left closes.
+- The guild list ranks guilds by their members' total Arena points.
+
+**Chat**
+- One line per message, up to 200 characters, at most 12 a minute per player.
+- Control characters are removed and text is never shown as markup.
+- Each guild keeps its last 100 lines.
+- The open guild screen checks for new lines every 5 seconds, unless the player is typing.
+- **Not done, and needed before any public release:** a word filter, reporting, muting and moderation tools.
+
+**Integrity**
+- Every name, membership and chat line goes through the server, which checks it.
+- Joins lock the guild, so 35 players joining at once still stop at 30.
+
+**Taps during loading**
+- A tap made while a screen is still loading now waits its turn instead of being dropped.
+- A second tap during a change (a summon, a battle, a guild action) is still dropped, so a double tap never acts twice.
+
 ## ADR-041: Troop research at the Research Hut, added on 2026-11-09 while the owner slept
 The owner said Mana pays for research (ADR-038), and the Research Hut was already in the catalog. Numbers are test values in the `research` block of `troops.json`, read by both client and server.
 

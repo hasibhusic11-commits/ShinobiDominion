@@ -72,6 +72,7 @@ namespace ShinobiDominion.Game
         {
             Roster.ReplaceWithServerState(state.RosterJson);
             ServerCrystals = state.Crystals;
+            if (!string.IsNullOrEmpty(state.Name)) _playerName = state.Name;
             Army.Replace(state.Troops);
             Research.Replace(state.Research);
             if (state.Village != null) Village.Restore(state.Village);
@@ -126,14 +127,32 @@ namespace ShinobiDominion.Game
             if (_toolbar != null) _toolbar.SetStatus(LastMessage);
         }
 
-        private async void Run(Func<Task> work, Action onFailure = null)
+        /// <summary>A request that only reads: opening a screen, polling chat, refreshing a list.</summary>
+        private void Fetch(Func<Task> work, Action onFailure = null) => Run(work, onFailure, true);
+
+        private bool _busyReadOnly;
+        private Func<Task> _queuedWork;
+        private Action _queuedFailure;
+
+        /// <summary>
+        /// One request at a time. A tap that arrives while a read-only fetch is still finishing waits its turn
+        /// (the latest one wins); a second tap during a change is dropped, so a double tap never acts twice.
+        /// </summary>
+        private async void Run(Func<Task> work, Action onFailure = null, bool readOnly = false)
         {
             if (_busy)
             {
+                if (_busyReadOnly && !readOnly)
+                {
+                    _queuedWork = work;
+                    _queuedFailure = onFailure;
+                    return;
+                }
                 Debug.Log("A server request was ignored because another is still running.");
                 return;
             }
             _busy = true;
+            _busyReadOnly = readOnly;
             try
             {
                 await work();
@@ -162,6 +181,15 @@ namespace ShinobiDominion.Game
             finally
             {
                 _busy = false;
+                _busyReadOnly = false;
+                if (_queuedWork != null && this != null)
+                {
+                    var next = _queuedWork;
+                    var failure = _queuedFailure;
+                    _queuedWork = null;
+                    _queuedFailure = null;
+                    Run(next, failure);
+                }
             }
         }
 
@@ -198,7 +226,7 @@ namespace ShinobiDominion.Game
                 DrawOfflineGate();
                 return;
             }
-            Run(async () =>
+            Fetch(async () =>
             {
                 _odds = await _server.GetOddsAsync();
                 DrawSummoningGate(null);
