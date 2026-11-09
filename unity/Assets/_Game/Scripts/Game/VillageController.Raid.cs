@@ -135,36 +135,7 @@ namespace ShinobiDominion.Game
             });
         }
 
-        private void ShowRaidList()
-        {
-            var team = Village.Buildings.Count(b => b.AssignedHeroInstanceId != null);
-            _panel.Show("Attack", CloseAll, panel =>
-            {
-                if (!string.IsNullOrEmpty(LastMessage)) panel.Line(LastMessage, 20, Ui.AccentColor);
-                panel.Line(team == 0 ? "No hero is on your Hero Base. Put one there to raid." : "Your hero leads the raid. Only one hero is used at a time.");
-                if (!IsOnline) panel.Line(AllowOfflinePlay ? "Practice battle: not connected, so it pays nothing." : "Raids need the server.", 20, Ui.AccentColor);
-                if (IsOnline && _raidList == null)
-                {
-                    panel.Line("Checking your raids...");
-                    return;
-                }
-                if (IsOnline)
-                {
-                    panel.Line("Rival villages", 24);
-                    panel.Line("Raid another player's village as they left it. They lose nothing, and each rival pays once a day.", 19);
-                    panel.Action("FindRivalButton", "Find a rival", FindRival, team > 0, Ui.AccentColor);
-                    if (_defenseLog != null && _defenseLog.Count > 0)
-                    {
-                        panel.Line("Raids on your village", 22);
-                        foreach (var record in _defenseLog.Take(3))
-                            panel.Line($"{record.stars} of 3 stars, {record.damagePercent}% damage. {record.defendersAlive} of {record.defendersTotal} guards still standing.", 19);
-                    }
-                }
-                panel.Line("Dungeons", 24);
-                panel.Line("Fight through fortified camps for gold, gems, hero XP and evolution materials.", 19);
-                panel.Action("OpenDungeonsButton", "Open the dungeon map", OpenCampaign, IsOnline || AllowOfflinePlay, Ui.AccentColor);
-            });
-        }
+        private void ShowRaidList() => ShowBattleHub();
 
         public void ScoutRaid(string raidId)
         {
@@ -482,6 +453,11 @@ namespace ShinobiDominion.Game
             if (_raid.StatusBar != null) Destroy(_raid.StatusBar);
             if (_raid.Hud != null) Destroy(_raid.Hud);
             _battleHud = null;
+            if (_modeFight != null)
+            {
+                ShowModeResult();
+                return;
+            }
             var outcome = _raid.Outcome;
             var result = outcome.Result;
             if (outcome.State != null) ApplyServerState(outcome.State);
@@ -520,6 +496,7 @@ namespace ShinobiDominion.Game
             if (_raid.Hud != null) Destroy(_raid.Hud);
             _battleHud = null;
             _raid.Stage.Finished -= ShowRaidResult;
+            _modeFight = null;
             Destroy(_raid.Stage.gameObject);
             _raid = null;
             _raidCells?.Clear();

@@ -88,6 +88,18 @@ Follows the owner's ADR-021. Up to four Troop Camps, gated by Dojo level, and a 
 - A raid still needs at least one hero. At most 200 troops can land in one raid, to bound the server's work.
 - Troop names and all numbers are test values. Offline practice troops aren't saved.
 
+## ADR-039: Game modes, quests and the daily gift, added on 2026-11-08 while the owner slept
+The owner asked for "game modes available" and smoothness, and said to decide open questions by asking "would Castle Clash have this?". Claude made these choices, and the owner can overrule any of them. All numbers are test values in `Resources/Config/modes.json`, which the client and server both read.
+- **ATTACK now opens a Battle menu** with four modes: Raid (rivals), Dungeons, **Village Siege** and **Arena**. The home screen is unchanged.
+- **Village Siege** (the genre's "monsters attack your base" mode): 10 levels of rogue ninja bands attack the player's own village as it stands. The server fights it in one call and the client plays the log back. The player's hero leaves its base and stands by the Dojo, because a guard at the base never met attackers who went straight for the Dojo. Stars are for defending: none if the attackers take a star, one if they don't, two under 30% damage, three under 10%. Only new stars pay gold and Mana, and the first hold of a level pays gems. Level N opens after level N-1 is held. Nothing in the village is lost. Tests check that any level 1 Common hero holds level 1 in a brand-new village, and that the last level beats one.
+- **Arena**: a duel. The player's hero charges a shrine (drawn as a Dojo, 1,200 HP) that the opponent's hero guards. Toppling the shrine wins. Opponents are real players with a hero on guard and points close to the player's. When there are none, a "wandering" hero is used, whose level rises with the player's points. Wins earn 8 to 35 points, depending on the opponent's points, and losses cost 10. Being attacked never costs points. There is **no energy**: duels are unlimited, but only the first 8 wins each UTC day pay gold and Mana.
+- **Rankings** (the trophy shortcut) show the Arena's top 30 and the player's rank.
+- **Daily quests** (the quests shortcut): 7 quests that reset at midnight UTC and pay 20 to 50 gems each. Progress is counted on the server inside the actions themselves: collecting, training, upgrading, raid wins, Arena duels, Siege holds and summons.
+- **Daily gift** (the gift shortcut): once per UTC day, 1,000 gold, 300 Mana and 50 gems. Gold is capped by the vault.
+- **Mail** (the mail shortcut) lists raids on the village. As before, it never says who attacked.
+- Friends and the two chests still say "coming in a later update".
+- New tables are in `009_modes.sql`. Every Siege and Arena battle is logged in `sd_mode_fight` for limits and audits. Every call uses an idempotency key.
+
 ## ADR-038: Mana, the third currency, and the Mana Mill, decided by the owner on 2026-11-08
 The owner named the currencies Gold, Gems and Mana, and chose that Mana pays for hero upgrades, troop training and research. **Every number below is an unapproved test value.**
 - **Wallet:** `mana` is a column on `sd_player` (migration `008_mana.sql`, `CHECK (mana >= 0)`), next to gold and crystals, so the one player lock covers all three. Every change writes a `currency = 'mana'` ledger row, and the dev audit checks the balance against the ledger. The state RPC returns it as `village.mana`; the HUD's purple counter shows it (the picture is still `icon_chakra`).

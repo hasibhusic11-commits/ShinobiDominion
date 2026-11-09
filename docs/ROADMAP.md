@@ -53,7 +53,39 @@ All 30 heroes have an original design and a generated model, and only Legendarie
 ## Visual overhaul — done as temporary art, awaiting your review
 Curved-roof ninja architecture for every building, modular walls with level tiers, Hero Bases with figures and emblems, textured ground, forest, mountains, waterfall, toon lighting, smoother camera and a quality setting. See `ART_STATUS.md` for what still needs an artist, and `VISUAL_BASELINE.md` for the before state and asset evaluation.
 
-## Latest test results (2026-11-07, branch `feature/campaign`)
+## Game modes, quests and smoothness: built 2026-11-08 while you slept, awaiting your playtest
+ATTACK now opens a Battle menu with four modes (ADR-039):
+- **Raid:** rival villages.
+- **Dungeons.**
+- **Village Siege:** 10 levels of waves against your own village.
+- **Arena:** hero duels for points, with rankings.
+
+The home screen's round shortcuts now work:
+- **Daily Quests:** 7 quests that pay gems.
+- **Daily Gift:** gold, Mana and gems once a day.
+- **Rankings.**
+- **Mail:** raids on your village.
+
+Friends and the chests still say "coming in a later update".
+
+Summoning now has a reveal: a burst of light in the rarity's colour, then the card. A ten-pull reveals its rarest hero.
+
+Smoothness:
+- 60 fps instead of Unity's mobile default of 30.
+- Counters that roll without fighting each other.
+- A camera that springs back at the edges.
+- Faster texture building at startup.
+
+| Check | Result |
+|---|---|
+| .NET harness (`tools/core-tests`) | 174 of 174 passed |
+| Go unit tests, including Siege balance and Arena duels | passed; part of the server build |
+| Backend suite, including gift, quest, Siege and Arena tests | passed |
+| Unity PlayMode against the live server, including the new `ModeTests` | 114 of 114 passed |
+
+**Not verified:** how any of it feels in your hands, on a phone, or with two real people in the Arena. Siege and Arena numbers are test values.
+
+## Earlier test results (2026-11-07, branch `feature/campaign`)
 Dungeon campaign and battle feel, awaiting your playtest (ADR-029).
 | Check | Result |
 |---|---|

@@ -205,6 +205,12 @@ func (s *Server) runVillageOp(ctx context.Context, db *sql.DB, userID, key, kind
 		if refusal := apply(v, nowMillis()); refusal != vOK {
 			return gameError(string(refusal), codePrecondition)
 		}
+		// Collecting and upgrading count towards today's quests.
+		if kind == "collect" || kind == "upgrade" {
+			if err := s.bumpQuest(ctx, tx, userID, kind, 1); err != nil {
+				return err
+			}
+		}
 		if err := persistVillage(ctx, tx, userID, v, beforeGold, crystals, kind, key); err != nil {
 			return err
 		}

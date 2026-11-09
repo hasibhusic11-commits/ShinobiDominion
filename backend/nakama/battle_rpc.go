@@ -769,6 +769,11 @@ func (s *Server) rpcRaidDeploy(ctx context.Context, logger runtime.Logger, db *s
 				return err
 			}
 		}
+		if result.Stars > 0 {
+			if err := s.bumpQuest(ctx, tx, userID, "raid_win", 1); err != nil {
+				return err
+			}
+		}
 		if err := persistVillage(ctx, tx, userID, v, beforeGold, crystals, "raid_reward", request.AttackID); err != nil {
 			return err
 		}

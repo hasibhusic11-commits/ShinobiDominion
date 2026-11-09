@@ -219,6 +219,7 @@ namespace ShinobiDominion.Game
                 ClearKey();
                 ApplyServerState(result.State);
                 DrawSummonResults(result);
+                ShowSummonReveal(result);
             }, () => DrawSummoningGate(LastMessage));
         }
 

@@ -388,6 +388,7 @@ namespace ShinobiDominion.Game
 
         public void CloseAll()
         {
+            CloseReveal();
             EndRaid();
             HideActionBar();
             _panel.Hide();

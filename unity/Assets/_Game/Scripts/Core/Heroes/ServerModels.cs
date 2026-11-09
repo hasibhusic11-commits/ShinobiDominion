@@ -120,7 +120,7 @@ namespace ShinobiDominion.Core
                 return VillageErrorText.Describe(villageError);
             switch (code)
             {
-                case "INSUFFICIENT_FUNDS": return "Not enough crystals";
+                case "INSUFFICIENT_FUNDS": return "Not enough gems";
                 case "POOL_VERSION_MISMATCH": return "The rates have changed. Please check them again.";
                 case "POOL_NOT_ACTIVE": return "This gate is closed right now";
                 case "RATE_LIMITED": return "Too many requests. Please wait a moment.";
@@ -154,6 +154,13 @@ namespace ShinobiDominion.Core
                 case "DEPLOY_TOO_CLOSE": return "Too close to the enemy";
                 case "DUPLICATE_HERO": return "That hero is already placed";
                 case "DEPLOY_CELL_TAKEN": return "Another hero is standing there";
+                case "SIEGE_LOCKED": return "Hold the level before this one first.";
+                case "SIEGE_NOT_FOUND": return "That siege level does not exist";
+                case "QUEST_NOT_FOUND": return "That quest does not exist";
+                case "QUEST_NOT_DONE": return "Finish the quest first.";
+                case "QUEST_ALREADY_CLAIMED": return "Already claimed today.";
+                case "GIFT_ALREADY_OPENED": return "Today's gift is already opened. Come back tomorrow.";
+                case "NO_ARENA_OPPONENT": return "No one is in the Arena right now.";
                 default: return "Could not reach the server. Your request is safe to retry.";
             }
         }

@@ -148,6 +148,7 @@ namespace ShinobiDominion.Game
             public Image[] Stars;
             public Text Damage;
             public int Lit;
+            public int Shown = -1;
         }
 
         private BattleHud _battleHud;
@@ -165,7 +166,7 @@ namespace ShinobiDominion.Game
 
             var session = _raid.Session;
             var payable = session.raid.id == "rival" ? 3 : Mathf.Max(0, 3 - BestStarsOn(session.raid.id));
-            var loot = Ui.Strong(Ui.Label(panel.transform, $"Available: {payable * session.raid.goldPerStar:N0} gold", 20, TextAnchor.MiddleCenter, new Color(1f, 0.86f, 0.45f)));
+            var loot = Ui.Strong(Ui.Label(panel.transform, _modeFight != null ? (_modeFight.IsSiege ? "Their progress" : $"vs {_modeFight.OpponentName}") : $"Available: {payable * session.raid.goldPerStar:N0} gold", 20, TextAnchor.MiddleCenter, new Color(1f, 0.86f, 0.45f)));
             Ui.Anchor(loot.rectTransform, new Vector2(0.5f, 1f), new Vector2(280f, 36f), new Vector2(0f, -6f));
 
             _battleHud = new BattleHud { Stars = new Image[3] };
@@ -184,7 +185,12 @@ namespace ShinobiDominion.Game
         {
             if (_battleHud == null || _raid == null) return;
             var stage = _raid.Stage;
-            _battleHud.Damage.text = $"{stage.DamagePercent}% destroyed";
+            if (stage.DamagePercent != _battleHud.Shown)
+            {
+                // Only when it changes, so the label is not rebuilt every frame.
+                _battleHud.Shown = stage.DamagePercent;
+                _battleHud.Damage.text = $"{stage.DamagePercent}% destroyed";
+            }
             var lit = (stage.DamagePercent >= 50 ? 1 : 0) + (stage.DojoDown ? 1 : 0) + (stage.DamagePercent >= 100 ? 1 : 0);
             if (lit <= _battleHud.Lit) return;
             for (var i = _battleHud.Lit; i < lit && i < 3; i++)
@@ -258,6 +264,8 @@ namespace ShinobiDominion.Game
             const int height = 200;
             var texture = new Texture2D(width, height, TextureFormat.RGB24, false) { wrapMode = TextureWrapMode.Clamp };
             var seed = chapter * 37.3f;
+            // Filled into one array and uploaded at once; a call per pixel caused a hitch when the map first opened.
+            var pixels = new Color32[width * height];
             for (var y = 0; y < height; y++)
             for (var x = 0; x < width; x++)
             {
@@ -268,8 +276,9 @@ namespace ShinobiDominion.Game
                 var band = Mathf.Floor(land * 7f) / 7f;
                 var color = band < 0.45f ? Color.Lerp(palette[0], palette[1], band / 0.45f) : Color.Lerp(palette[1], palette[2], (band - 0.45f) / 0.55f);
                 var edge = Mathf.Min(Mathf.Min(x, width - x), Mathf.Min(y, height - y)) / 26f;
-                texture.SetPixel(x, y, color * Mathf.Lerp(0.55f, 1f, Mathf.Clamp01(edge)));
+                pixels[y * width + x] = color * Mathf.Lerp(0.55f, 1f, Mathf.Clamp01(edge));
             }
+            texture.SetPixels32(pixels);
             texture.Apply();
             return Sprite.Create(texture, new Rect(0f, 0f, width, height), new Vector2(0.5f, 0.5f));
         }

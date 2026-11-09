@@ -83,6 +83,7 @@ type Server struct {
 	buildings *BuildingCatalog
 	raids   *raidCatalog
 	troops  *troopCatalog
+	modes   *modesConfig
 	pool    *SummonPool
 	dev     bool
 	limiter *rateLimiter
@@ -112,6 +113,10 @@ func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runti
 	if err != nil {
 		return fmt.Errorf("troop catalog: %w", err)
 	}
+	modes, err := loadModes(modesJSON, troops, buildings)
+	if err != nil {
+		return fmt.Errorf("modes: %w", err)
+	}
 	if err := migrate(ctx, db); err != nil {
 		return fmt.Errorf("migrations: %w", err)
 	}
@@ -121,6 +126,7 @@ func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runti
 		buildings: buildings,
 		raids:   raids,
 		troops:  troops,
+		modes:   modes,
 		pool:    pool,
 		dev:     devModeEnabled(env),
 		limiter: newRateLimiter(envFloat(env, "SD_RATE_PER_SEC", 5), envFloat(env, "SD_RATE_BURST", 20)),
@@ -161,6 +167,13 @@ func (s *Server) register(initializer runtime.Initializer, logger runtime.Logger
 		"sd_raid_deploy":  s.rpcRaidDeploy,
 		"sd_rival_start":  s.rpcRivalStart,
 		"sd_defense_log":  s.rpcDefenseLog,
+		"sd_siege_list":   s.rpcSiegeList,
+		"sd_siege_fight":  s.rpcSiegeFight,
+		"sd_arena_fight":  s.rpcArenaFight,
+		"sd_arena_board":  s.rpcArenaBoard,
+		"sd_quest_board":  s.rpcQuestBoard,
+		"sd_quest_claim":  s.rpcQuestClaim,
+		"sd_gift_open":    s.rpcGiftOpen,
 	}
 	if s.dev {
 		logger.Warn("DEVELOPMENT MODE: dev grant and audit calls are enabled. Never use this in production.")
@@ -579,6 +592,9 @@ func (s *Server) rpcSummon(ctx context.Context, logger runtime.Logger, db *sql.D
 			})
 		}
 
+		if err := s.bumpQuest(ctx, tx, userID, "summon", request.Count); err != nil {
+			return err
+		}
 		response.State, err = loadState(ctx, tx, userID, balance)
 		if err != nil {
 			return err

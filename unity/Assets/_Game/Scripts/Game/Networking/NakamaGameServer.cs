@@ -35,6 +35,18 @@ namespace ShinobiDominion.Game
         Task<ServerState> TrainHeroAsync(string key, string instanceId);
     }
 
+    /// <summary>The game modes beyond raids (ADR-039). Kept apart so test servers need not implement them.</summary>
+    public interface IModeServer
+    {
+        Task<List<SiegeSummary>> SiegeListAsync();
+        Task<ModeFight> SiegeFightAsync(string key, int level);
+        Task<ModeFight> ArenaFightAsync(string key);
+        Task<ArenaBoard> ArenaBoardAsync();
+        Task<QuestBoard> QuestBoardAsync();
+        Task<QuestBoard> QuestClaimAsync(string key, string questId);
+        Task<QuestBoard> GiftOpenAsync(string key);
+    }
+
     public sealed class GameServerException : Exception
     {
         public readonly string Code;
@@ -62,7 +74,7 @@ namespace ShinobiDominion.Game
         }
     }
 
-    public sealed class NakamaGameServer : IGameServer
+    public sealed class NakamaGameServer : IGameServer, IModeServer
     {
         private const string DeviceIdKey = "sd_device_id";
 
@@ -140,6 +152,20 @@ namespace ShinobiDominion.Game
 
         public async Task<RaidOutcome> RaidDeployAsync(string key, string attackId, IList<RaidPlacement> placements, IList<RaidTroopStack> troops) =>
             RaidOutcome.Parse(await CallAsync("sd_raid_deploy", new { key, attackId, placements, troops }));
+
+        public async Task<List<SiegeSummary>> SiegeListAsync() => SiegeSummary.ParseList(await CallAsync("sd_siege_list", null));
+
+        public async Task<ModeFight> SiegeFightAsync(string key, int level) => ModeFight.Parse(await CallAsync("sd_siege_fight", new { key, level }));
+
+        public async Task<ModeFight> ArenaFightAsync(string key) => ModeFight.Parse(await CallAsync("sd_arena_fight", new { key }));
+
+        public async Task<ArenaBoard> ArenaBoardAsync() => ArenaBoard.Parse(await CallAsync("sd_arena_board", null));
+
+        public async Task<QuestBoard> QuestBoardAsync() => QuestBoard.Parse(await CallAsync("sd_quest_board", null));
+
+        public async Task<QuestBoard> QuestClaimAsync(string key, string questId) => QuestBoard.Parse(await CallAsync("sd_quest_claim", new { key, questId }));
+
+        public async Task<QuestBoard> GiftOpenAsync(string key) => QuestBoard.Parse(await CallAsync("sd_gift_open", new { key }));
 
         public async Task<ServerState> TrainTroopsAsync(string key, string troopId, int count) =>
             ServerState.Parse(await CallAsync("sd_troop_train", new { key, troopId, count }));

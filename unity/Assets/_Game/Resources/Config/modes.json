@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "balanceStatus": "PROPOSED TEST VALUES AND PROVISIONAL NAMES - NOT APPROVED",
+  "siege": {
+    "displayName": "Village Siege",
+    "description": "Rogue ninja bands storm your own village in waves. Your towers, walls and the hero on your Hero Base hold them off.",
+    "spawnSpots": [[25, 10], [10, 25], [40, 25], [25, 40], [13, 13], [37, 13], [13, 37], [37, 37]],
+    "levels": [
+      { "level": 1, "name": "Scouts at the Gate", "statPercent": 60, "goldPerStar": 300, "manaPerStar": 100, "firstClearCrystals": 30,
+        "waves": [ { "troopId": "militia", "count": 4, "spot": 0 } ] },
+      { "level": 2, "name": "Two Paths", "statPercent": 70, "goldPerStar": 400, "manaPerStar": 140, "firstClearCrystals": 30,
+        "waves": [ { "troopId": "militia", "count": 4, "spot": 0 }, { "troopId": "militia", "count": 3, "spot": 1 } ] },
+      { "level": 3, "name": "Kunai Rain", "statPercent": 75, "goldPerStar": 500, "manaPerStar": 180, "firstClearCrystals": 40,
+        "waves": [ { "troopId": "militia", "count": 5, "spot": 0 }, { "troopId": "kunai_thrower", "count": 3, "spot": 2 } ] },
+      { "level": 4, "name": "Shadows at Dusk", "statPercent": 80, "goldPerStar": 650, "manaPerStar": 220, "firstClearCrystals": 40,
+        "waves": [ { "troopId": "militia", "count": 6, "spot": 1 }, { "troopId": "shadow_runner", "count": 2, "spot": 2 }, { "troopId": "kunai_thrower", "count": 3, "spot": 0 } ] },
+      { "level": 5, "name": "The Shield Wall", "statPercent": 85, "goldPerStar": 800, "manaPerStar": 280, "firstClearCrystals": 60,
+        "waves": [ { "troopId": "shield_bearer", "count": 2, "spot": 0 }, { "troopId": "militia", "count": 8, "spot": 0 }, { "troopId": "kunai_thrower", "count": 4, "spot": 3 } ] },
+      { "level": 6, "name": "Four Winds", "statPercent": 90, "goldPerStar": 1000, "manaPerStar": 340, "firstClearCrystals": 60,
+        "waves": [ { "troopId": "militia", "count": 5, "spot": 0 }, { "troopId": "militia", "count": 5, "spot": 1 }, { "troopId": "shadow_runner", "count": 3, "spot": 2 }, { "troopId": "kunai_thrower", "count": 4, "spot": 3 } ] },
+      { "level": 7, "name": "Iron Hooves", "statPercent": 95, "goldPerStar": 1250, "manaPerStar": 420, "firstClearCrystals": 80,
+        "waves": [ { "troopId": "iron_ox_rider", "count": 1, "spot": 4 }, { "troopId": "shield_bearer", "count": 2, "spot": 5 }, { "troopId": "militia", "count": 8, "spot": 0 }, { "troopId": "kunai_thrower", "count": 5, "spot": 1 } ] },
+      { "level": 8, "name": "Night Raid", "statPercent": 100, "goldPerStar": 1500, "manaPerStar": 500, "firstClearCrystals": 80,
+        "waves": [ { "troopId": "shadow_runner", "count": 5, "spot": 6 }, { "troopId": "shadow_runner", "count": 5, "spot": 7 }, { "troopId": "kunai_thrower", "count": 6, "spot": 0 }, { "troopId": "shield_bearer", "count": 3, "spot": 2 } ] },
+      { "level": 9, "name": "The Warband", "statPercent": 110, "goldPerStar": 1800, "manaPerStar": 600, "firstClearCrystals": 100,
+        "waves": [ { "troopId": "iron_ox_rider", "count": 2, "spot": 0 }, { "troopId": "shield_bearer", "count": 3, "spot": 1 }, { "troopId": "militia", "count": 10, "spot": 2 }, { "troopId": "kunai_thrower", "count": 6, "spot": 3 }, { "troopId": "shadow_runner", "count": 4, "spot": 4 } ] },
+      { "level": 10, "name": "Siege of the Rogue Clan", "statPercent": 125, "goldPerStar": 2200, "manaPerStar": 750, "firstClearCrystals": 150,
+        "waves": [ { "troopId": "iron_ox_rider", "count": 3, "spot": 0 }, { "troopId": "iron_ox_rider", "count": 2, "spot": 3 }, { "troopId": "shield_bearer", "count": 4, "spot": 1 }, { "troopId": "militia", "count": 10, "spot": 2 }, { "troopId": "kunai_thrower", "count": 8, "spot": 5 }, { "troopId": "shadow_runner", "count": 6, "spot": 6 } ] }
+    ]
+  },
+  "arena": {
+    "displayName": "Arena",
+    "description": "Your hero duels another hero to topple their shrine. Wins raise your Arena points and your place in the rankings.",
+    "paidWinsPerDay": 8,
+    "winPointsBase": 20,
+    "winPointsMin": 8,
+    "winPointsMax": 35,
+    "lossPoints": 10,
+    "winGold": 300,
+    "winMana": 120,
+    "shrineHp": 1200,
+    "shrineX": 23,
+    "shrineZ": 27,
+    "guardX": 25,
+    "guardZ": 25,
+    "heroX": 25,
+    "heroZ": 12,
+    "matchWindow": 250
+  },
+  "quests": [
+    { "id": "collect", "title": "Collect from your mines and mills", "target": 5, "crystals": 30 },
+    { "id": "train", "title": "Train troops", "target": 10, "crystals": 30 },
+    { "id": "upgrade", "title": "Upgrade a building", "target": 1, "crystals": 30 },
+    { "id": "raid_win", "title": "Win raids or dungeon stages", "target": 3, "crystals": 50 },
+    { "id": "arena", "title": "Fight Arena duels", "target": 3, "crystals": 40 },
+    { "id": "siege", "title": "Hold off a Village Siege", "target": 1, "crystals": 40 },
+    { "id": "summon", "title": "Summon a hero", "target": 1, "crystals": 20 }
+  ],
+  "dailyGift": { "crystals": 50, "gold": 1000, "mana": 300 }
+}

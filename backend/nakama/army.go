@@ -206,6 +206,9 @@ func (s *Server) rpcTroopTrain(ctx context.Context, logger runtime.Logger, db *s
 		if err := storeTroopCount(ctx, tx, userID, request.TroopID, counts[request.TroopID]); err != nil {
 			return err
 		}
+		if err := s.bumpQuest(ctx, tx, userID, "train", request.Count); err != nil {
+			return err
+		}
 		if err := persistVillage(ctx, tx, userID, v, beforeGold, crystals, "troop_train", request.Key); err != nil {
 			return err
 		}

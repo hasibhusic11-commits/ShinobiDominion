@@ -32,17 +32,24 @@ namespace ShinobiDominion.Game
                 case "trophy": return "Rankings";
                 case "friends": return "Friends";
                 case "quests": return "Quests";
-                case "gift": return "Gifts";
+                case "gift": return "Daily Gift";
                 case "chest": return "Treasure Chest";
                 case "crystal_chest": return "Gem Chest";
                 default: return shortcut;
             }
         }
 
-        /// <summary>Mail, rankings, friends and quests do not exist yet; their buttons say so plainly.</summary>
+        /// <summary>Mail, rankings, quests and the gift open their screens (ADR-039). Friends and the chests do not exist yet, and say so plainly.</summary>
         public void OpenShortcut(string shortcut)
         {
             CloseAll();
+            switch (shortcut)
+            {
+                case "mail": OpenMail(); return;
+                case "trophy": OpenRankings(); return;
+                case "quests": OpenQuests(); return;
+                case "gift": OpenGift(); return;
+            }
             _panel.ShowWindow(ShortcutTitle(shortcut), new Vector2(640f, 300f), CloseAll, content =>
             {
                 var text = HudArt.Label(content, $"{ShortcutTitle(shortcut)} is coming in a later update.", HudArt.Numbers, 24, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.LacquerDeep);

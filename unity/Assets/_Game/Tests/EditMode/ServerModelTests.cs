@@ -90,7 +90,7 @@ namespace ShinobiDominion.Tests
         public void UnknownServerErrors_TellThePlayerARetryIsSafe()
         {
             StringAssert.Contains("retry", ServerErrorText.Describe("SOMETHING_NEW"));
-            Assert.AreEqual("Not enough crystals", ServerErrorText.Describe("INSUFFICIENT_FUNDS"));
+            Assert.AreEqual("Not enough gems", ServerErrorText.Describe("INSUFFICIENT_FUNDS"));
         }
     }
 }
