@@ -7,8 +7,10 @@ using UnityEngine.Rendering;
 namespace ShinobiDominion.Game
 {
     /// <summary>
-    /// Shows a raid: the defender's base, placed heroes, then a playback of the battle log. It decides
-    /// nothing. Every hit, death and result comes from the log, so what happens here can't change them.
+    /// Shows a raid: the defender's base, then the battle from its log. A live raid (ADR-050) steps this device's own
+    /// copy of the battle in real time while cards are dropped; a fought one (Siege, Arena, Trials) plays the server's
+    /// log back. Either way it decides nothing: every hit, death and result comes from the log, and for a live raid the
+    /// server fights the same drops again and its result is the one that counts.
     /// </summary>
     public sealed class BattleStage : MonoBehaviour
     {
@@ -93,6 +95,10 @@ namespace ShinobiDominion.Game
         private BattleResult _result;
         private int _nextEvent;
         private float _ticks;
+        /// <summary>A live raid's battle, stepped here as time passes; null when playing a finished log back.</summary>
+        private BattleSim _live;
+        /// <summary>Troops landed so far on each cell, so a group spreads out instead of stacking.</summary>
+        private readonly Dictionary<long, int> _troopsOnCell = new Dictionary<long, int>();
 
         /// <summary>How fast the log plays: 1, 2 or 3 times. The result is already decided, so this changes nothing in it.</summary>
         public float PlaybackSpeed = 1f;
@@ -123,7 +129,9 @@ namespace ShinobiDominion.Game
 
         public bool DojoDown { get; private set; }
         public int DamagePercent => _totalHp == 0 ? 100 : (int)(_dealtHp * 100 / _totalHp);
-        public int SecondsLeft => Mathf.Max(0, Mathf.CeilToInt((BattleSim.TickLimit - _ticks) / BattleSim.TicksPerSecond));
+        public int SecondsLeft => Mathf.Max(0, Mathf.CeilToInt((BattleSim.TickLimit - (_live != null ? _live.Tick : _ticks)) / BattleSim.TicksPerSecond));
+        /// <summary>True while a live battle is running here (ADR-050).</summary>
+        public bool IsLive => _live != null;
         public event Action Finished;
 
         public void Initialize(RaidSession session, BuildingCatalog catalog, TroopCatalog troops, Camera worldCamera, Func<string, HeroLook> lookFor, Func<RaidDefender, HeroLook> defenderLook)
@@ -305,10 +313,84 @@ namespace ShinobiDominion.Game
             }
         }
 
+        /// <summary>
+        /// Starts a live battle (ADR-050) on an empty field. Time runs at the battle's own pace, never faster, so the
+        /// server can tell the fight took as long as it says. Units appear as the battle lands them.
+        /// </summary>
+        public void BeginLive(BattleSim sim)
+        {
+            _live = sim;
+            _ticks = sim.Tick;
+        }
+
+        private void UpdateLive()
+        {
+            if (_finished) return;
+            var delta = Time.deltaTime * BattleSim.TicksPerSecond;
+            _ticks += delta;
+            while (!_live.Done && _live.Tick + 1 <= _ticks) _live.Step();
+            if (_live.Done) _ticks = _live.Tick;
+            var events = _live.Events;
+            while (_nextEvent < events.Count) Apply(events[_nextEvent++], true);
+            foreach (var unit in _units) MoveUnit(unit, delta);
+            foreach (var unit in _defenders) MoveUnit(unit, delta);
+            if (_live.Done) Finish();
+        }
+
+        /// <summary>Shows at once whatever the live battle logged and this has not shown yet, so the field matches its result.</summary>
+        public void CatchUp()
+        {
+            if (_live == null) return;
+            var events = _live.Events;
+            while (_nextEvent < events.Count) Apply(events[_nextEvent++], false);
+        }
+
+        /// <summary>A unit the live battle just landed: a hero figure with its bars, or a troop beside its group.</summary>
+        private void AddLanded(int index, int x, int z)
+        {
+            if (index != _units.Count) throw new InvalidOperationException($"Unit {index} landed out of order.");
+            var input = _live.LandedInput(index);
+            var px = x * BattleSim.CellUnits + BattleSim.CellUnits / 2f;
+            var pz = z * BattleSim.CellUnits + BattleSim.CellUnits / 2f;
+            Figure figure;
+            if (!input.isTroop)
+            {
+                figure = CreateFigure(input.id, x, z);
+                figure.Speed = BattleSim.SpeedOf(input.role);
+                figure.MaxHp = input.hp;
+                figure.Bar = CreateBar(figure.Go.transform.position + Vector3.up * (figure.Actor != null ? 3.5f : 3.1f), 1.4f, new Color(0.35f, 0.85f, 0.35f));
+                figure.Bar.Root.transform.SetParent(figure.Go.transform, true);
+                figure.Charge = CreateChargeBar(figure);
+            }
+            else
+            {
+                var key = (long)z * VillageGrid.Size + x;
+                _troopsOnCell.TryGetValue(key, out var i);
+                _troopsOnCell[key] = i + 1;
+                var angle = i * 2.4f;
+                var offset = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * (0.12f + 0.09f * (i % 8));
+                figure = new Figure
+                {
+                    Go = CreateTroop(input.id, new Vector3(px / BattleSim.CellUnits, 0f, pz / BattleSim.CellUnits) + offset),
+                    Px = px,
+                    Pz = pz,
+                    Tx = px,
+                    Tz = pz,
+                    Speed = BattleSim.SpeedOf(input.role),
+                    MaxHp = input.hp,
+                    Offset = offset
+                };
+            }
+            _units.Add(figure);
+            var at = figure.Go.transform.position;
+            AddFlash(at + Vector3.up * 0.2f, at + Vector3.up * 0.6f, 0.3f, 0.2f, input.isTroop ? 0.6f : 1.1f, new Color(0.85f, 0.95f, 1f));
+            GameSounds.Play(GameSound.Click, input.isTroop ? 0.3f : 0.6f);
+        }
+
         /// <summary>Jumps straight to the result. It changes nothing, as the result is already decided.</summary>
         public void Skip()
         {
-            if (_result == null) return;
+            if (_result == null || _live != null) return;
             while (_nextEvent < _result.events.Count) Apply(_result.events[_nextEvent++], false);
             _ticks = _result.endTick;
             Finish();
@@ -331,6 +413,11 @@ namespace ShinobiDominion.Game
             }
             UpdateFlashes();
 
+            if (_live != null)
+            {
+                UpdateLive();
+                return;
+            }
             if (_result == null || _finished) return;
             var delta = Time.deltaTime * BattleSim.TicksPerSecond * PlaybackSpeed;
             _ticks += delta;
@@ -381,6 +468,9 @@ namespace ShinobiDominion.Game
             var kind = (BattleEventKind)entry[1];
             switch (kind)
             {
+                case BattleEventKind.Deploy:
+                    AddLanded((int)entry[2], (int)entry[3], (int)entry[4]);
+                    break;
                 case BattleEventKind.Move:
                 {
                     var unit = _units[(int)entry[2]];

@@ -133,9 +133,8 @@ namespace ShinobiDominion.Tests
             controller.OpenAttack();
             yield return shot("20_raid_choose");
             controller.ScoutRaid("ridge_outpost");
-            controller.AutoPlaceHeroes();
             yield return shot("21_raid_prepare");
-            controller.StartBattle();
+            controller.AutoPlaceHeroes();
             yield return new WaitForSeconds(6f);
             yield return shot("22_raid_battle");
             yield return new WaitForSeconds(8f);

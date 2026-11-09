@@ -79,6 +79,8 @@ namespace ShinobiDominion.Core
         public string instanceId;
         public int x;
         public int z;
+        /// <summary>When the card was dropped in a live battle (ADR-050); 0 is before the first tick.</summary>
+        public int tick;
     }
 
     /// <summary>A raid being prepared: the defender and team are fixed at this moment.</summary>
@@ -94,8 +96,8 @@ namespace ShinobiDominion.Core
             defenders.Select(d => new BattleDefenderInput { id = d.id, role = d.role, hp = d.hp, attack = d.attack, defense = d.defense, x = d.x, z = d.z, special = d.special, evolution = d.evolutionIndex, power = d.power }).ToList();
 
         /// <summary>
-        /// Everything that lands, in battle order: heroes, then each stack of troops. The server builds
-        /// its list the same way, so the log's unit numbers mean the same thing on both sides.
+        /// Everything that lands, as sent: heroes, then each stack of troops, each with its drop tick. The server
+        /// builds its list the same way; a timed battle then numbers units by BattleSim.LandingOrder.
         /// </summary>
         public List<BattleHeroInput> ToUnits(IEnumerable<RaidPlacement> placements, IEnumerable<RaidTroopStack> stacks, TroopCatalog troops, TroopResearch research = null)
         {
@@ -106,7 +108,7 @@ namespace ShinobiDominion.Core
                 // Research makes landed troops stronger (ADR-041), the same way the server builds them.
                 var (hp, attack, defense) = TroopResearch.Boosted(troops, troop, research?.LevelOf(troop.id) ?? 0);
                 for (var i = 0; i < stack.count; i++)
-                    units.Add(new BattleHeroInput { id = troop.id, role = troop.role, hp = hp, attack = attack, defense = defense, x = stack.x, z = stack.z, isTroop = true });
+                    units.Add(new BattleHeroInput { id = troop.id, role = troop.role, hp = hp, attack = attack, defense = defense, x = stack.x, z = stack.z, isTroop = true, deployTick = stack.tick });
             }
             return units;
         }
@@ -117,7 +119,7 @@ namespace ShinobiDominion.Core
             placements.Select(placement =>
             {
                 var member = team.First(m => m.instanceId == placement.instanceId);
-                return new BattleHeroInput { id = member.instanceId, role = member.role, hp = member.hp, attack = member.attack, defense = member.defense, x = placement.x, z = placement.z, special = member.special, evolution = member.evolutionIndex, power = member.power };
+                return new BattleHeroInput { id = member.instanceId, role = member.role, hp = member.hp, attack = member.attack, defense = member.defense, x = placement.x, z = placement.z, special = member.special, evolution = member.evolutionIndex, power = member.power, deployTick = placement.tick };
             }).ToList();
     }
 

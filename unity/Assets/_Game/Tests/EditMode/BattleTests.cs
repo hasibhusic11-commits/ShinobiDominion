@@ -461,7 +461,8 @@ namespace ShinobiDominion.Tests
                 var team = scenario["team"].Select(h => h.ToObject<BattleHeroInput>()).ToList();
                 var defenders = scenario["defenders"]?.Select(d => d.ToObject<BattleDefenderInput>()).ToList();
                 var extra = scenario["extraBuildings"]?.Select(b => b.ToObject<BattleBuildingInput>()) ?? Enumerable.Empty<BattleBuildingInput>();
-                var result = BattleSim.Run(buildings.Concat(extra).ToList(), team, defenders);
+                // battleEnd marks a timed battle (ADR-050): the end tick the attacker chose; absent for the all-at-once kind.
+                var result = BattleSim.Run(buildings.Concat(extra).ToList(), team, defenders, scenario.Value<int?>("battleEnd") ?? 0);
                 var name = scenario.Value<string>("name");
                 var actual = $"stars={result.stars} damage={result.damagePercent} endTick={result.endTick} alive={result.heroesAlive} guards={result.defendersAlive} checksum={result.checksum}";
                 var expected = $"stars={scenario.Value<int>("stars")} damage={scenario.Value<int>("damagePercent")} endTick={scenario.Value<int>("endTick")} alive={scenario.Value<int>("heroesAlive")} guards={scenario.Value<int?>("defendersAlive") ?? 0} checksum={scenario.Value<string>("checksum")}";
@@ -482,6 +483,117 @@ namespace ShinobiDominion.Tests
                 return;
             }
             Assert.IsEmpty(problems, string.Join("\n", problems));
+        }
+
+        // ---------- Live battles (ADR-050) ----------
+
+        private static BattleHeroInput Troop(string id, string role, long hp, long attack, int x, int z) =>
+            new BattleHeroInput { id = id, role = role, hp = hp, attack = attack, defense = 10, x = x, z = z, isTroop = true };
+
+        private static BattleHeroInput Copy(BattleHeroInput h) =>
+            new BattleHeroInput { id = h.id, role = h.role, hp = h.hp, attack = h.attack, defense = h.defense, x = h.x, z = h.z, isTroop = h.isTroop, special = h.special, evolution = h.evolution, power = h.power, deployTick = h.deployTick };
+
+        /// <summary>
+        /// The heart of ADR-050: a battle fought live, card by card, gives exactly the log the server gets from the
+        /// drop list and the end tick, even when a troop and a hero fall on the same tick in the "wrong" order.
+        /// </summary>
+        [Test]
+        public void LiveBattle_MatchesRunWithTheSameDrops()
+        {
+            var team = MixedTeam(1);
+            var live = BattleSim.Start(Outpost());
+            for (var i = 0; i < 20; i++) Assert.IsTrue(live.Step(), "An empty field keeps the clock running");
+            Assert.AreEqual(20, live.Tick);
+            Assert.AreEqual(0, live.Events.Count, "Nothing happens before the first card");
+
+            var dropped = new List<BattleHeroInput>();
+            void Drop(BattleHeroInput unit)
+            {
+                live.Deploy(unit);
+                dropped.Add(unit);
+            }
+            // A troop first, then a hero, on the same tick: the hero still lands first, as the server will number it.
+            Drop(Troop("t", "Fighter", 600, 40, 10, 10));
+            Drop(Troop("t", "Fighter", 600, 40, 10, 10));
+            Drop(team[0]);
+            Assert.AreEqual(3, live.UnitsPending);
+            live.Step();
+            var landed = live.Events.Where(e => e[1] == (long)BattleEventKind.Deploy).ToList();
+            Assert.AreEqual(3, landed.Count);
+            Assert.AreEqual(21, landed[0][0], "Cards dropped after tick 20 land on tick 21");
+            Assert.AreEqual("a", live.LandedInput(0).id, "Heroes before troops on the same tick");
+            for (var i = 0; i < 100; i++) live.Step();
+            Drop(team[1]);
+            Drop(team[2]);
+            for (var i = 0; i < 80; i++) live.Step();
+            Drop(Troop("t", "Fighter", 600, 40, 40, 25));
+            // A hero may land where an earlier one landed, once the ticks differ.
+            Drop(Hero("g", "Mage", 800, 100, 25, 10, 10));
+            while (live.Tick < 450 && live.Step()) { }
+            var fought = live.Finish();
+            Assert.AreEqual(fought.endTick, live.Tick);
+            Assert.IsTrue(live.Done);
+
+            // What the client sends: heroes in the order dropped, then troops, each with its tick.
+            var sent = dropped.Where(u => !u.isTroop).Concat(dropped.Where(u => u.isTroop)).Select(Copy).ToList();
+            Assert.AreEqual("", BattleSim.DeployError(Outpost(), sent, fought.endTick));
+            var server = BattleSim.Run(Outpost(), sent, null, fought.endTick);
+            Assert.AreEqual(fought.checksum, server.checksum);
+            Assert.AreEqual(fought.events.Count, server.events.Count);
+            Assert.AreEqual(fought.stars, server.stars);
+            Assert.AreEqual(fought.damagePercent, server.damagePercent);
+            Assert.AreEqual(fought.heroesAlive, server.heroesAlive);
+        }
+
+        [Test]
+        public void LiveBattle_StopsWhenEveryBuildingIsDown_AndRefusesLateCards()
+        {
+            var live = BattleSim.Start(Outpost());
+            foreach (var hero in MixedTeam(20)) live.Deploy(hero);
+            while (live.Step()) { }
+            var result = live.Finish();
+            Assert.AreEqual(100, result.damagePercent);
+            Assert.Less(result.endTick, BattleSim.TickLimit);
+            Assert.Throws<InvalidOperationException>(() => live.Deploy(Hero("late", "Tank", 1, 1, 0, 2, 2)));
+        }
+
+        [Test]
+        public void AllAtOnceBattle_LogsNoLandings()
+        {
+            var result = BattleSim.Run(Outpost(), MixedTeam(1));
+            Assert.IsFalse(result.events.Any(e => e[1] == (long)BattleEventKind.Deploy), "The old kind keeps its old log");
+        }
+
+        [Test]
+        public void DeployError_ChecksDeployTicks()
+        {
+            var buildings = Outpost();
+            BattleHeroInput At(string id, int x, int z, int tick, bool troop = false) =>
+                new BattleHeroInput { id = id, role = "Tank", hp = 1, attack = 1, x = x, z = z, isTroop = troop, deployTick = tick };
+            string Check(int end, params BattleHeroInput[] heroes) => BattleSim.DeployError(buildings, heroes, end);
+            Assert.AreEqual("", Check(300, At("a", 2, 2, 0), At("b", 3, 3, 120), At("t", 2, 2, 5, true), At("t", 2, 2, 299, true)));
+            Assert.AreEqual("BAD_DEPLOY_TICK", Check(0, At("a", 2, 2, 5)), "Only a timed battle has drop times");
+            Assert.AreEqual("BAD_DEPLOY_TICK", Check(300, At("a", 2, 2, -1)));
+            Assert.AreEqual("BAD_DEPLOY_TICK", Check(300, At("a", 2, 2, 300)), "Nothing lands once the battle is over");
+            Assert.AreEqual("BAD_DEPLOY_TICK", Check(BattleSim.TickLimit + 1, At("a", 2, 2, 0)));
+            Assert.AreEqual("BAD_DEPLOY_TICK", Check(-5, At("a", 2, 2, 0)));
+            Assert.AreEqual("DEPLOY_TICK_ORDER", Check(300, At("a", 2, 2, 50), At("b", 3, 3, 40)));
+            Assert.AreEqual("DEPLOY_TICK_ORDER", Check(300, At("t", 2, 2, 50, true), At("t", 3, 3, 40, true)));
+            Assert.AreEqual("", Check(300, At("a", 2, 2, 10), At("b", 2, 2, 11)));
+            Assert.AreEqual("DEPLOY_CELL_TAKEN", Check(300, At("a", 2, 2, 10), At("b", 2, 2, 10)));
+        }
+
+        [Test]
+        public void LandingOrder_SortsByTickThenHeroesFirst()
+        {
+            var list = new List<BattleHeroInput>
+            {
+                new BattleHeroInput { id = "h1", deployTick = 30 },
+                new BattleHeroInput { id = "h2", deployTick = 30 },
+                new BattleHeroInput { id = "t1", isTroop = true },
+                new BattleHeroInput { id = "t2", isTroop = true, deployTick = 30 }
+            };
+            Assert.AreEqual("t1 h1 h2 t2", string.Join(" ", BattleSim.LandingOrder(list).Select(h => h.id)));
         }
 
         // ---------- Special power by rarity (owner's rule, 2026-11-08) ----------

@@ -41,6 +41,9 @@ namespace ShinobiDominion.Tests
             Controller = _root.AddComponent<VillageBootstrap>().Controller;
             yield return WaitFor(() => Controller.ConnectTask.IsCompleted);
             Assert.IsTrue(Controller.IsOnline, "Could not connect to the local server");
+            // A live battle's clock runs on game time, and the server refuses one that ran ahead of real time (ADR-050).
+            // A hit-stop still running when an earlier test sped time up can put that speed back afterwards, so start at 1.
+            Time.timeScale = 1f;
         }
 
         [UnityTearDown]
@@ -313,27 +316,12 @@ namespace ShinobiDominion.Tests
             Controller.OpenAttack();
             yield return ClickWhenReady("OpenDungeonsButton");
             yield return ClickWhenReady("ScoutButton");
-            yield return WaitFor(() => Controller.CurrentRaidPhase == RaidPhase.Prepare);
+            yield return WaitFor(() => Controller.CurrentRaidPhase == RaidPhase.Battle);
             var session = Controller.CurrentRaidSession;
             Assert.AreEqual(1, session.team.Count, "The team comes from the server, from the bases");
             Assert.AreEqual(hero.InstanceId, session.team[0].instanceId);
 
-            Controller.AutoPlaceHeroes();
-            var placements = Controller.RaidPlacements.ToList();
-            Controller.StartBattle();
-            yield return WaitFor(() => Controller.CurrentRaidPhase == RaidPhase.Battle);
-
-            var server = Controller.LastRaidOutcome.Result;
-            var local = BattleSim.Run(session.buildings, session.ToHeroes(placements));
-            Assert.AreEqual(local.checksum, server.checksum, "Server and client battles must be identical");
-            Assert.AreEqual(local.stars, server.stars);
-
-            Controller.SkipBattle();
-            Assert.AreEqual(RaidPhase.Resolved, Controller.CurrentRaidPhase);
-            var gold = Controller.Village.Gold;
-            yield return ServerState(state => Assert.AreEqual(gold, state.Village.gold, "Gold must match the server after a raid"));
-            Controller.FinishRaid();
-            yield return null;
+            yield return FightAndCompare();
             Assert.AreEqual(VillageScreen.Home, Controller.UiState.Screen);
         }
 
@@ -345,23 +333,32 @@ namespace ShinobiDominion.Tests
             yield return WaitFor(() => Controller.Village.Find(heroBase).AssignedHeroInstanceId == hero.InstanceId);
         }
 
-        /// <summary>Fights the raid in progress and checks the client's own rules reach the server's exact result.</summary>
+        /// <summary>
+        /// Fights the raid in progress live (ADR-050): the clock runs on an empty field, the cards drop mid-battle, the
+        /// player ends it, and the server's own fight of those drops must be exactly the one shown here.
+        /// </summary>
         private IEnumerator FightAndCompare()
         {
-            yield return WaitFor(() => Controller.CurrentRaidPhase == RaidPhase.Prepare);
+            yield return WaitFor(() => Controller.CurrentRaidPhase == RaidPhase.Battle);
             var session = Controller.CurrentRaidSession;
+            yield return new WaitForSeconds(0.8f);
             Controller.AutoPlaceHeroes();
             var placements = Controller.RaidPlacements.ToList();
-            Controller.StartBattle();
-            yield return WaitFor(() => Controller.CurrentRaidPhase == RaidPhase.Battle);
+            Assert.Greater(placements[0].tick, 0, "The cards fall mid-battle, not before it");
+            yield return new WaitForSeconds(3f);
+            Controller.SkipBattle();
+            yield return WaitFor(() => Controller.CurrentRaidPhase == RaidPhase.Resolved || Controller.LastMessage != null);
+            Assert.IsNull(Controller.LastMessage, $"The server refused the battle (clock at tick {Controller.LiveTick}, time scale {Time.timeScale})");
 
             var server = Controller.LastRaidOutcome.Result;
-            var local = BattleSim.Run(session.buildings, session.ToHeroes(placements), session.ToDefenderInputs());
-            Assert.AreEqual(local.checksum, server.checksum, "Server and client battles must be identical");
+            var local = Controller.LastLiveResult;
+            Assert.AreEqual(local.checksum, server.checksum, "The server must reach exactly the battle fought here");
+            Assert.AreEqual(local.endTick, server.endTick);
+            Assert.AreEqual(local.stars, server.stars);
             Assert.AreEqual(local.defendersAlive, server.defendersAlive);
-
-            Controller.SkipBattle();
-            Assert.AreEqual(RaidPhase.Resolved, Controller.CurrentRaidPhase);
+            Assert.IsTrue(server.events.Any(e => e[1] == (long)BattleEventKind.Deploy && e[0] == placements[0].tick + 1), "The server lands the hero when it was dropped");
+            var replay = BattleSim.Run(session.buildings, session.ToHeroes(placements), session.ToDefenderInputs(), server.endTick);
+            Assert.AreEqual(server.checksum, replay.checksum, "The drops and the end tick are all it takes");
             var gold = Controller.Village.Gold;
             yield return ServerState(state => Assert.AreEqual(gold, state.Village.gold, "Gold must match the server"));
             Controller.FinishRaid();
@@ -390,7 +387,7 @@ namespace ShinobiDominion.Tests
         {
             yield return PutFirstHeroOnBase();
             Controller.ScoutRaid("cinder_garrison");
-            yield return WaitFor(() => Controller.CurrentRaidPhase == RaidPhase.Prepare);
+            yield return WaitFor(() => Controller.CurrentRaidPhase == RaidPhase.Battle);
             Assert.AreEqual(1, Controller.CurrentRaidSession.defenders.Count, "The guards come from the server");
             yield return FightAndCompare();
         }
@@ -407,7 +404,7 @@ namespace ShinobiDominion.Tests
             yield return PutFirstHeroOnBase();
             Controller.OpenAttack();
             yield return ClickWhenReady("FindRivalButton");
-            yield return WaitFor(() => Controller.CurrentRaidPhase == RaidPhase.Prepare);
+            yield return WaitFor(() => Controller.CurrentRaidPhase == RaidPhase.Battle);
             var session = Controller.CurrentRaidSession;
             Assert.AreEqual("rival", session.raid.id);
             Assert.Greater(session.buildings.Count, 0, "A rival's village should come back");

@@ -64,18 +64,21 @@ namespace ShinobiDominion.Tests
             Controller.OpenAttack();
             Assert.AreEqual(VillageScreen.AttackFlow, Controller.UiState.Screen);
             Controller.ScoutRaid("ridge_outpost");
-            Assert.AreEqual(RaidPhase.Prepare, Controller.CurrentRaidPhase);
+            Assert.AreEqual(RaidPhase.Battle, Controller.CurrentRaidPhase, "The clock runs from the start (ADR-050)");
             Assert.IsFalse(Controller.Hud.AttackButton.gameObject.activeSelf, "ATTACK stays hidden during a raid");
 
+            yield return new WaitForSeconds(0.5f);
+            Assert.Greater(Controller.LiveTick, 0, "The clock runs on an empty field");
+            Assert.AreEqual(RaidPhase.Battle, Controller.CurrentRaidPhase, "An empty field does not end the battle");
             Controller.AutoPlaceHeroes();
             Assert.AreEqual(1, Controller.RaidPlacements.Count);
-            Controller.StartBattle();
-            Assert.AreEqual(RaidPhase.Battle, Controller.CurrentRaidPhase);
+            Assert.Greater(Controller.RaidPlacements[0].tick, 0, "The hero lands at the moment it was dropped");
 
-            yield return new WaitForSeconds(0.5f);
-            Assert.AreEqual(RaidPhase.Battle, Controller.CurrentRaidPhase, "Playback should still be running");
-
-            Controller.SkipBattle();
+            var scale = Time.timeScale;
+            Time.timeScale = 20f;
+            var limit = Time.realtimeSinceStartup + 60f;
+            while (Controller.CurrentRaidPhase == RaidPhase.Battle && Time.realtimeSinceStartup < limit) yield return null;
+            Time.timeScale = scale;
             Assert.AreEqual(RaidPhase.Resolved, Controller.CurrentRaidPhase);
             Assert.AreEqual(3, Controller.LastRaidOutcome.Result.stars, "One level 200 legend should clear this base");
             Assert.AreEqual(gold, Controller.Village.Gold, "A practice battle pays nothing");
@@ -96,7 +99,6 @@ namespace ShinobiDominion.Tests
             Controller.OpenAttack();
             Controller.ScoutRaid("ridge_outpost");
             Controller.AutoPlaceHeroes();
-            Controller.StartBattle();
             var limit = Time.realtimeSinceStartup + 60f;
             Time.timeScale = 20f;
             while (Controller.CurrentRaidPhase == RaidPhase.Battle && Time.realtimeSinceStartup < limit) yield return null;
@@ -131,19 +133,18 @@ namespace ShinobiDominion.Tests
             Controller.TapDeployCell(new GridCoord(3, 3));
             Controller.CycleTroop();
             Controller.AutoPlaceHeroes();
-            Controller.StartBattle();
             Assert.AreEqual(RaidPhase.Battle, Controller.CurrentRaidPhase);
-            Assert.AreEqual(0, Controller.Army.CountOf("militia"), "Troops that land are used up");
             yield return new WaitForSeconds(0.3f);
             Assert.AreEqual(9, Object.FindObjectsByType<Transform>(FindObjectsSortMode.None).Count(r => r.name == "BattleTroop" || r.name == "BattleHero"));
             Controller.SkipBattle();
             Assert.AreEqual(RaidPhase.Resolved, Controller.CurrentRaidPhase);
+            Assert.AreEqual(0, Controller.Army.CountOf("militia"), "Troops that land are used up");
             Controller.FinishRaid();
             yield return null;
         }
 
         [UnityTest]
-        public IEnumerator Troops_PickedBackUp_AreNotUsed()
+        public IEnumerator Troops_NotDropped_AreNotUsed_ButDroppedOnesAre()
         {
             ReadyArmy();
             AssignTeam(1);
@@ -151,11 +152,20 @@ namespace ShinobiDominion.Tests
             Controller.OpenAttack();
             Controller.ScoutRaid("ridge_outpost");
             Controller.CycleTroop();
-            Controller.TapDeployCell(new GridCoord(3, 3));
-            Controller.TapDeployCell(new GridCoord(3, 3));
             Controller.RetreatRaid();
             yield return null;
+            Assert.IsNull(Controller.CurrentRaidPhase, "Leaving before any drop costs nothing");
             Assert.AreEqual(3, Controller.Army.CountOf("militia"));
+
+            Controller.OpenAttack();
+            Controller.ScoutRaid("ridge_outpost");
+            Controller.CycleTroop();
+            Controller.TapDeployCell(new GridCoord(3, 3));
+            Controller.RetreatRaid();
+            Assert.AreEqual(RaidPhase.Resolved, Controller.CurrentRaidPhase, "Once a card has fallen, leaving ends the battle");
+            Assert.AreEqual(0, Controller.Army.CountOf("militia"), "Dropped troops are spent: there is no picking back up");
+            Controller.FinishRaid();
+            yield return null;
         }
 
         [Test]
@@ -170,7 +180,7 @@ namespace ShinobiDominion.Tests
         }
 
         [UnityTest]
-        public IEnumerator Placement_RefusesCellsNearTheEnemy_AndPicksHeroesBackUp()
+        public IEnumerator Drops_RefuseCellsNearTheEnemy_AndLandWhenDropped()
         {
             AssignTeam(1);
             Controller.OpenAttack();
@@ -179,11 +189,20 @@ namespace ShinobiDominion.Tests
             Assert.AreEqual(0, Controller.RaidPlacements.Count, "Inside the enemy base");
             Controller.TapDeployCell(new GridCoord(15, 20));
             Assert.AreEqual(0, Controller.RaidPlacements.Count, "Right beside the wall");
+            Assert.IsNotNull(Controller.LastMessage, "A refused drop says why");
+            yield return new WaitForSeconds(0.35f);
+            var tick = Controller.LiveTick;
             Controller.TapDeployCell(new GridCoord(3, 3));
             Assert.AreEqual(1, Controller.RaidPlacements.Count);
+            Assert.AreEqual(tick, Controller.RaidPlacements[0].tick, "A card lands at the tick it was dropped");
             Controller.TapDeployCell(new GridCoord(3, 3));
-            Assert.AreEqual(0, Controller.RaidPlacements.Count, "Tapping a placed hero picks it up");
-            Controller.RetreatRaid();
+            Assert.AreEqual(1, Controller.RaidPlacements.Count, "A dropped hero stays: there is no picking back up");
+            yield return new WaitForSeconds(0.3f);
+            Assert.AreEqual(1, Object.FindObjectsByType<Transform>(FindObjectsSortMode.None).Count(r => r.name == "BattleHero"), "The hero is on the field");
+            Controller.SkipBattle();
+            Assert.AreEqual(RaidPhase.Resolved, Controller.CurrentRaidPhase);
+            Assert.AreEqual(tick + 1, Controller.LastLiveResult.events.First(e => e[1] == (long)BattleEventKind.Deploy)[0], "It acts from the next tick");
+            Controller.FinishRaid();
             yield return null;
             Assert.IsNull(Controller.CurrentRaidPhase);
             Assert.IsTrue(Controller.Hud.AttackButton.gameObject.activeSelf);
@@ -196,7 +215,7 @@ namespace ShinobiDominion.Tests
             Controller.OpenAttack();
             Controller.ScoutRaid("ridge_outpost");
             Controller.AutoPlaceHeroes();
-            Controller.StartBattle();
+            yield return new WaitForSeconds(1f);
             Controller.SkipBattle();
             var stage = Object.FindAnyObjectByType<BattleStage>();
             Assert.AreEqual(Controller.LastRaidOutcome.Result.damagePercent, stage.DamagePercent);

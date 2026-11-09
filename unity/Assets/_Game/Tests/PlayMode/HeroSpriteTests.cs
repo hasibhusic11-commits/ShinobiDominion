@@ -176,9 +176,8 @@ namespace ShinobiDominion.Tests
             yield return null;
             Controller.ScoutRaid("ridge_outpost");
             Controller.AutoPlaceHeroes();
-            yield return null;
+            yield return new WaitUntil(() => Controller.LiveTick > 1);
             Assert.IsTrue(Object.FindObjectsByType<HeroSpriteActor>(FindObjectsSortMode.None).Any(a => a.Solid && a.GetComponentInParent<BattleStage>() != null), "Sage should be a 3D model in the raid");
-            Controller.StartBattle();
             var stageActor = Object.FindObjectsByType<HeroSpriteActor>(FindObjectsSortMode.None).First(a => a.GetComponentInParent<BattleStage>() != null);
             var ran = false;
             var attacked = false;
@@ -291,8 +290,7 @@ namespace ShinobiDominion.Tests
             yield return null;
             Controller.ScoutRaid("ridge_outpost");
             Controller.AutoPlaceHeroes();
-            yield return null;
-            Controller.StartBattle();
+            yield return new WaitUntil(() => Controller.LiveTick > 1);
             var stageActor = Object.FindObjectsByType<HeroSpriteActor>(FindObjectsSortMode.None).First(a => a.GetComponentInParent<BattleStage>() != null);
             iso.enabled = false;
             canvas.gameObject.SetActive(false);

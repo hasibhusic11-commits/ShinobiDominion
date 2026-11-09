@@ -50,7 +50,7 @@ Status: **Have** (built), **Partial** (built, but differs in a way that matters)
 ## 4. Raids and battles
 | Castle Clash system | Shinobi Dominion | Status | Proposed |
 |---|---|---|---|
-| Deploy heroes and troops **during** the battle, by tapping cards | Everything is placed **before** the battle; the server fights it, then it plays back | **Decide** | Real-time deployment needs the server to run the battle live or check the timing of every tap. It is a large, risky change to the anti-cheat design (the server decides every result). Keep the current model unless the owner wants this badly |
+| Deploy heroes and troops **during** the battle, by tapping cards | Cards drop live at the current tick; the server fights the same drops again and its result counts (ADR-050) | Have | — |
 | Attack screen: card row, End Battle, time, loot, damage % | Same layout (done today) | Have | — |
 | Available loot is gold and Mana | Same (done today) | Have | — |
 | Raiding another player takes part of their stored resources; the victim gets a shield | 20% of their gold and Mana by damage, 12-hour shield (ADR-049) | Have | — |

@@ -80,7 +80,7 @@ func TestSiege_EveryWaveLandsOnAStarterVillage(t *testing.T) {
 		if len(stacks) != len(level.Waves) {
 			t.Fatalf("level %d: %d of %d waves found somewhere to land", level.Level, len(stacks), len(level.Waves))
 		}
-		if refusal := deployError(buildings, units); refusal != "" {
+		if refusal := deployError(buildings, units, 0); refusal != "" {
 			t.Fatalf("level %d: %s", level.Level, refusal)
 		}
 	}
@@ -152,8 +152,8 @@ func arenaDuel(t *testing.T, s *Server, attacker string, attackerLevel int, guar
 	buildings := []battleBuildingInput{{ID: 1, DefinitionID: shrine.ID, X: a.ShrineX, Z: a.ShrineZ, Width: shrine.Width, Depth: shrine.Depth, Level: 1, Hp: a.ShrineHp}}
 	archetype := s.catalog.byID[attacker]
 	hp, attack, defense := heroBattleStats(archetype, 0, attackerLevel)
-	units := []battleHeroInput{{"me", archetype.Role, hp, attack, defense, a.HeroX, a.HeroZ, false, archetype.Special, 0, powerFor(archetype.Rarity)}}
-	if refusal := deployError(buildings, units); refusal != "" {
+	units := []battleHeroInput{{"me", archetype.Role, hp, attack, defense, a.HeroX, a.HeroZ, false, archetype.Special, 0, powerFor(archetype.Rarity), 0}}
+	if refusal := deployError(buildings, units, 0); refusal != "" {
 		t.Fatal(refusal)
 	}
 	d, err := s.makeDefender("d1", guard, 0, guardLevel, a.GuardX, a.GuardZ)
@@ -225,7 +225,7 @@ func trialDuel(t *testing.T, s *Server, attacker string, attackerLevel int, floo
 	buildings := []battleBuildingInput{{ID: 1, DefinitionID: shrine.ID, X: a.ShrineX, Z: a.ShrineZ, Width: shrine.Width, Depth: shrine.Depth, Level: 1, Hp: g.ShrineHp}}
 	archetype := s.catalog.byID[attacker]
 	hp, attack, defense := heroBattleStats(archetype, 0, attackerLevel)
-	units := []battleHeroInput{{"me", archetype.Role, hp, attack, defense, a.HeroX, a.HeroZ, false, archetype.Special, 0, powerFor(archetype.Rarity)}}
+	units := []battleHeroInput{{"me", archetype.Role, hp, attack, defense, a.HeroX, a.HeroZ, false, archetype.Special, 0, powerFor(archetype.Rarity), 0}}
 	d, err := s.makeDefender("d1", g.ArchetypeID, g.Evolution, g.Level, a.GuardX, a.GuardZ)
 	if err != nil {
 		t.Fatal(err)

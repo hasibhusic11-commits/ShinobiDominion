@@ -8,10 +8,10 @@ namespace ShinobiDominion.Game
 {
     /// <summary>
     /// The attack screen, laid out like the owner's reference (2026-11-09, the genre's usual battle screen): a row of
-    /// cards along the bottom, one per hero and one per kind of troop; Start Battle, then End Battle and the time left,
-    /// at the top centre; the target, its loot and the stars at the top right; the damage at the bottom right.
-    /// Battles are decided by the server before they play, so every card is landed before the battle starts; during
-    /// the battle the cards stay on screen, used.
+    /// cards along the bottom, one per hero and one per kind of troop; End Battle and the time left at the top centre;
+    /// the target, its loot and the stars at the top right; the damage at the bottom right. A raid is fought live
+    /// (ADR-050): the clock runs from the start and a card is dropped by tapping it, then the map. A fight the server
+    /// already fought (Siege, Arena, Trials) shows the cards used.
     /// </summary>
     public sealed partial class VillageController
     {
@@ -21,32 +21,37 @@ namespace ShinobiDominion.Game
 
         private static readonly Color CardSelected = new Color(1f, 0.82f, 0.35f);
 
-        /// <summary>The landing screen: cards, Start Battle, the target's details and the Auto and Retreat buttons.</summary>
+        /// <summary>
+        /// What a live battle shows over the bar and HUD: the hint or the last refusal under the clock, the Auto button,
+        /// and the card row. Rebuilt after each drop; the bar, stars and damage stay.
+        /// </summary>
         private void ShowDeployScreen()
         {
             if (_raid == null) return;
-            _panel.Hide();
             ClearDeployScreen();
+            if (!LiveRunning)
+            {
+                ClearCardRow();
+                return;
+            }
 
             var screen = Ui.Rect("DeployScreen", _uiRoot);
             Ui.Stretch(screen);
             _raid.DeployScreen = screen.gameObject;
 
-            // Top centre: Start Battle, with the hint or the last refusal under it.
-            var start = Ui.Button(screen, "StartBattleButton", "Start Battle", StartBattle, _raid.Placements.Count + _raid.Stacks.Count > 0, Ui.AttackColor, 28);
-            Ui.Anchor((RectTransform)start.transform, new Vector2(0.5f, 1f), new Vector2(300f, 66f), new Vector2(0f, -104f));
-            var hint = string.IsNullOrEmpty(LastMessage) ? "Pick a card, then tap the map to land. Red ground is too close." : LastMessage;
+            var hint = string.IsNullOrEmpty(LastMessage)
+                ? (AnythingDropped ? "Drop more cards any time, or End Battle." : "The clock is running: pick a card, then tap open ground. Red ground is too close.")
+                : LastMessage;
             var hintLabel = HudArt.Label(screen, hint, HudArt.Numbers, 20, TextAnchor.MiddleCenter, string.IsNullOrEmpty(LastMessage) ? HudArt.Ivory : Ui.AccentColor, HudArt.LacquerDeep);
-            Ui.Anchor(hintLabel.rectTransform, new Vector2(0.5f, 1f), new Vector2(760f, 30f), new Vector2(0f, -174f));
+            hintLabel.raycastTarget = false;
+            Ui.Anchor(hintLabel.rectTransform, new Vector2(0.5f, 1f), new Vector2(760f, 30f), new Vector2(0f, -226f));
 
-            TargetPanel(screen, false);
-
-            // Above the cards, at the left: let the game land the rest, or leave.
-            var everything = _raid.Placements.Count == _raid.Session.team.Count && TroopData.All.All(t => TroopsLeft(t.id) <= 0);
-            var auto = Ui.Button(screen, "AutoPlaceButton", "Auto", AutoPlaceHeroes, !everything, null, 22);
-            Ui.Anchor((RectTransform)auto.transform, new Vector2(0f, 0f), new Vector2(130f, 52f), new Vector2(16f, CardHeight + 28f));
-            var retreat = Ui.Button(screen, "RetreatButton", "Retreat", RetreatRaid, true, null, 22);
-            Ui.Anchor((RectTransform)retreat.transform, new Vector2(0f, 0f), new Vector2(130f, 52f), new Vector2(156f, CardHeight + 28f));
+            // Above the cards, at the left: drop everything left at once.
+            if (!NothingLeftToDrop)
+            {
+                var auto = Ui.Button(screen, "AutoPlaceButton", "Auto", AutoPlaceHeroes, true, null, 22);
+                Ui.Anchor((RectTransform)auto.transform, new Vector2(0f, 0f), new Vector2(130f, 52f), new Vector2(16f, CardHeight + 28f));
+            }
 
             BuildCardRow(true);
         }
@@ -65,7 +70,7 @@ namespace ShinobiDominion.Game
 
         /// <summary>
         /// The bottom row: a card per hero (picture, number, level) and per kind of troop the player has (count left).
-        /// While landing, a card is chosen by tapping it; during the battle the cards are only shown.
+        /// In a live battle a card is chosen by tapping it; in a fought one the cards are only shown.
         /// </summary>
         private void BuildCardRow(bool landing)
         {
@@ -160,7 +165,7 @@ namespace ShinobiDominion.Game
 
         private void SelectHero(string instanceId)
         {
-            if (_raid == null || _raid.Phase != RaidPhase.Prepare) return;
+            if (!LiveRunning) return;
             _raid.SelectedTroop = null;
             _raid.SelectedHero = instanceId;
             ShowDeployScreen();
@@ -168,7 +173,7 @@ namespace ShinobiDominion.Game
 
         private void SelectTroop(string troopId)
         {
-            if (_raid == null || _raid.Phase != RaidPhase.Prepare) return;
+            if (!LiveRunning) return;
             _raid.SelectedTroop = troopId;
             _raid.SelectedHero = null;
             ShowDeployScreen();
@@ -216,8 +221,11 @@ namespace ShinobiDominion.Game
             Ui.Anchor(label.rectTransform, new Vector2(0.5f, 1f), new Vector2(150f, 30f), new Vector2(26f, y));
         }
 
-        /// <summary>Top centre during the battle: End Battle (which jumps to the result), the time left and the speed.</summary>
-        private void CreateBattleBar()
+        /// <summary>
+        /// Top centre during the battle: End Battle and the time left. A fought log also gets a speed button; a live
+        /// battle runs at its own pace, as the server checks it took as long as it says (ADR-050).
+        /// </summary>
+        private void CreateBattleBar(bool live)
         {
             ClearDeployScreen();
             var bar = new GameObject("BattleBar", typeof(RectTransform));
@@ -226,20 +234,23 @@ namespace ShinobiDominion.Game
             Ui.Anchor(rect, new Vector2(0.5f, 1f), new Vector2(420f, 116f), new Vector2(0f, -100f));
             var end = Ui.Button(bar.transform, "SkipBattleButton", "End Battle", SkipBattle, true, Ui.AttackColor, 26);
             Ui.Anchor((RectTransform)end.transform, new Vector2(0.5f, 1f), new Vector2(260f, 60f), new Vector2(0f, 0f));
-            Button speed = null;
-            speed = Ui.Button(bar.transform, "BattleSpeedButton", SpeedCaption(), () =>
+            if (!live)
             {
-                _battleSpeed = _battleSpeed >= 3f ? 1f : _battleSpeed + 1f;
-                if (_raid?.Stage != null) _raid.Stage.PlaybackSpeed = _battleSpeed;
-                speed.GetComponentInChildren<Text>().text = SpeedCaption();
-            }, true, null, 22);
-            Ui.Anchor((RectTransform)speed.transform, new Vector2(1f, 1f), new Vector2(76f, 52f), new Vector2(0f, -4f));
+                Button speed = null;
+                speed = Ui.Button(bar.transform, "BattleSpeedButton", SpeedCaption(), () =>
+                {
+                    _battleSpeed = _battleSpeed >= 3f ? 1f : _battleSpeed + 1f;
+                    if (_raid?.Stage != null) _raid.Stage.PlaybackSpeed = _battleSpeed;
+                    speed.GetComponentInChildren<Text>().text = SpeedCaption();
+                }, true, null, 22);
+                Ui.Anchor((RectTransform)speed.transform, new Vector2(1f, 1f), new Vector2(76f, 52f), new Vector2(0f, -4f));
+                _raid.Stage.PlaybackSpeed = _battleSpeed;
+            }
             var time = HudArt.Label(bar.transform, "", HudArt.Numbers, 30, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.LacquerDeep);
             Ui.Anchor(time.rectTransform, new Vector2(0.5f, 0f), new Vector2(300f, 48f), new Vector2(0f, 0f));
-            _raid.Stage.PlaybackSpeed = _battleSpeed;
             _raid.StatusBar = bar;
             _raid.StatusText = time;
-            BuildCardRow(false);
+            BuildCardRow(live);
         }
 
         private void CreateBattleHud()

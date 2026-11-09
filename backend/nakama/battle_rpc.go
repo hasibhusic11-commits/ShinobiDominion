@@ -15,6 +15,10 @@ import (
 // A raid has to be fought soon after it starts, from the team it started with.
 const raidPrepareLimit = 15 * time.Minute
 
+// battleClockMargin is how far a live battle's clock may run ahead of the real time since the raid started (ADR-050):
+// frame timing on the device, never enough to replay a fight with hindsight.
+const battleClockMargin = 3 * time.Second
+
 const (
 	rivalRaidID = "rival"
 	// Test value. Replays are free, so XP stops after this many paying wins in 24 hours.
@@ -34,6 +38,8 @@ var (
 	errNoRivals       = gameError("NO_RIVALS", codePrecondition)
 	errRivalChoice    = gameError("RIVAL_NOT_ALLOWED", codeInvalid)
 	errRaidLocked     = gameError("RAID_LOCKED", codePrecondition)
+	// The battle claims to have lasted longer than the time since the raid began (ADR-050).
+	errBattleClockAhead = gameError("BATTLE_CLOCK_AHEAD", codePrecondition)
 )
 
 type raidTeamMember struct {
@@ -90,6 +96,8 @@ type deployPlacement struct {
 	InstanceID string `json:"instanceId"`
 	X          int    `json:"x"`
 	Z          int    `json:"z"`
+	// Tick is when the card was dropped in a live battle (ADR-050); 0 is before the first tick.
+	Tick int `json:"tick,omitempty"`
 }
 
 type troopStack struct {
@@ -97,6 +105,8 @@ type troopStack struct {
 	X       int    `json:"x"`
 	Z       int    `json:"z"`
 	Count   int    `json:"count"`
+	// Tick is when the card was dropped in a live battle (ADR-050); 0 is before the first tick.
+	Tick int `json:"tick,omitempty"`
 }
 
 type raidDeployResponse struct {
@@ -521,13 +531,16 @@ func (s *Server) rpcRaidDeploy(ctx context.Context, logger runtime.Logger, db *s
 	if err != nil {
 		return "", err
 	}
-	// The request can only say where heroes stand. Strict decoding refuses anything else,
-	// such as a claimed result or reward.
+	// The request can only say where and when cards fell, and when the attacker ended the battle. Strict decoding
+	// refuses anything else, such as a claimed result or reward. The server fights the battle again from these.
 	var request struct {
 		Key        string            `json:"key"`
 		AttackID   string            `json:"attackId"`
 		Placements []deployPlacement `json:"placements"`
 		Troops     []troopStack      `json:"troops"`
+		// EndTick is when a live battle ended (ADR-050). 0 is the old way: everything lands at once and the battle
+		// runs until one side is gone, which a live player can always do too.
+		EndTick int `json:"endTick,omitempty"`
 	}
 	if err := decodeStrict(payload, &request); err != nil {
 		return "", err
@@ -541,7 +554,7 @@ func (s *Server) rpcRaidDeploy(ctx context.Context, logger runtime.Logger, db *s
 	if !s.limiter.Allow(userID, time.Now()) {
 		return "", errRateLimited
 	}
-	requestHash := hashRequest(placementHash(request.AttackID, request.Placements, request.Troops))
+	requestHash := hashRequest(placementHash(request.AttackID, request.Placements, request.Troops, request.EndTick))
 
 	var output string
 	err = withTx(ctx, db, func(tx *sql.Tx) error {
@@ -574,6 +587,11 @@ func (s *Server) rpcRaidDeploy(ctx context.Context, logger runtime.Logger, db *s
 		if time.Since(created) > raidPrepareLimit {
 			return errAttackExpired
 		}
+		// A live battle can't have lasted longer than the time since the raid began, so nobody can fight it, see how
+		// it goes and send a better list (ADR-050). Every card fell before the end tick, so this bounds them all.
+		if request.EndTick > 0 && time.Duration(request.EndTick)*time.Second/battleTicksPerSecond > time.Since(created)+battleClockMargin {
+			return errBattleClockAhead
+		}
 
 		var buildings []battleBuildingInput
 		if err := json.Unmarshal([]byte(snapshotText), &buildings); err != nil {
@@ -602,7 +620,7 @@ func (s *Server) rpcRaidDeploy(ctx context.Context, logger runtime.Logger, db *s
 			if member == nil {
 				return errHeroNotInTeam
 			}
-			heroes = append(heroes, battleHeroInput{member.InstanceID, member.Role, member.Hp, member.Attack, member.Defense, placement.X, placement.Z, false, member.Special, member.EvolutionIndex, member.Power})
+			heroes = append(heroes, battleHeroInput{member.InstanceID, member.Role, member.Hp, member.Attack, member.Defense, placement.X, placement.Z, false, member.Special, member.EvolutionIndex, member.Power, placement.Tick})
 		}
 		// Troops come from the camps and are used up by landing, win or lose.
 		counts, err := loadTroopCounts(ctx, tx, userID)
@@ -635,14 +653,15 @@ func (s *Server) rpcRaidDeploy(ctx context.Context, logger runtime.Logger, db *s
 					level = entry.Level
 				}
 				hp, attack, defense := s.troops.boosted(troop, level)
-				heroes = append(heroes, battleHeroInput{troop.ID, troop.Role, hp, attack, defense, stack.X, stack.Z, true, "", 0, 0})
+				heroes = append(heroes, battleHeroInput{troop.ID, troop.Role, hp, attack, defense, stack.X, stack.Z, true, "", 0, 0, stack.Tick})
 			}
 		}
-		if refusal := deployError(buildings, heroes); refusal != "" {
+		if refusal := deployError(buildings, heroes, request.EndTick); refusal != "" {
 			return gameError(refusal, codePrecondition)
 		}
 
-		result, err := runDefendedBattle(buildings, heroes, defenders)
+		// The server's own fight decides the result; the client's live copy only showed it (ADR-050).
+		result, err := runTimedBattle(buildings, heroes, defenders, request.EndTick)
 		if err != nil {
 			return err
 		}

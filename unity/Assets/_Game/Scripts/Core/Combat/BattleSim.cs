@@ -20,6 +20,11 @@ namespace ShinobiDominion.Core
         public int evolution;
         /// <summary>How strong the special is, in percent of a Legendary's: by rarity, set by the server. 0 means 100.</summary>
         public int power;
+        /// <summary>
+        /// When the card was dropped (ADR-050): the unit lands after this tick and acts from the next one. 0 lands it
+        /// before the first tick. Only a timed battle (one with an end tick) uses it; elsewhere it must be 0.
+        /// </summary>
+        public int deployTick;
     }
 
     /// <summary>A hero guarding the village, standing at a cell on or by its Hero Base.</summary>
@@ -96,7 +101,12 @@ namespace ShinobiDominion.Core
         /// <summary>a = trap building id, b = 0 for a Bomb Trap or 1 for a Hero Trap. The trap is spent.</summary>
         TrapFired = 17,
         /// <summary>a = trap building id, b = unit hit, c = damage, d = unit HP left.</summary>
-        TrapHit = 18
+        TrapHit = 18,
+        /// <summary>
+        /// Timed battles only (ADR-050): a = unit, b = cell x, c = cell z. The unit lands there; it acts from this tick.
+        /// Units are numbered in landing order.
+        /// </summary>
+        Deploy = 19
     }
 
     public sealed class BattleResult
@@ -257,7 +267,16 @@ namespace ShinobiDominion.Core
             public int StunTimer;
         }
 
-        private readonly Unit[] _units;
+        private readonly List<Unit> _units = new List<Unit>();
+        /// <summary>Each landed unit's input, by unit number.</summary>
+        private readonly List<BattleHeroInput> _landed = new List<BattleHeroInput>();
+        /// <summary>Cards dropped but not landed yet, in landing order.</summary>
+        private readonly List<BattleHeroInput> _pending = new List<BattleHeroInput>();
+        /// <summary>A timed battle (ADR-050) ends at its end tick or when every building is down, never because the field is empty.</summary>
+        private readonly bool _timed;
+        private readonly int _endTick;
+        private bool _done;
+        private bool _resolved;
         private readonly Defender[] _defenders;
         private readonly Structure[] _structures;
         private readonly Structure[] _traps;
@@ -273,8 +292,10 @@ namespace ShinobiDominion.Core
         private long _dealtHp;
         private int _tick;
 
-        private BattleSim(IEnumerable<BattleBuildingInput> buildings, IEnumerable<BattleHeroInput> heroes, IEnumerable<BattleDefenderInput> defenders)
+        private BattleSim(IEnumerable<BattleBuildingInput> buildings, IEnumerable<BattleDefenderInput> defenders, int endTick)
         {
+            _timed = endTick > 0;
+            _endTick = Math.Min(endTick, TickLimit);
             var all = buildings.ToList();
             _structures = all.Where(b => !b.isTrap).Select(b => new Structure { Input = b, Hp = b.hp }).ToArray();
             _traps = all.Where(b => b.isTrap).Select(b => new Structure { Input = b, Hp = b.hp }).ToArray();
@@ -286,25 +307,6 @@ namespace ShinobiDominion.Core
                 for (var x = b.x; x < b.x + b.width; x++)
                     _grid[z * GridSize + x] = i + 1;
             }
-            _units = heroes.Select((h, i) =>
-            {
-                var role = RoleNumber(h.role);
-                return new Unit
-                {
-                    Index = i,
-                    Role = role,
-                    Hp = h.hp,
-                    MaxHp = h.hp,
-                    Attack = h.attack,
-                    Defense = h.defense,
-                    Px = h.x * CellUnits + CellUnits / 2,
-                    Pz = h.z * CellUnits + CellUnits / 2,
-                    IsTroop = h.isTroop,
-                    Rally = !h.isTroop && h.special == SpecialRally,
-                    Evolution = h.evolution,
-                    Power = PowerOf(h.power)
-                };
-            }).ToArray();
             _defenders = (defenders ?? Enumerable.Empty<BattleDefenderInput>()).Select((d, i) =>
             {
                 var role = RoleNumber(d.role);
@@ -331,29 +333,100 @@ namespace ShinobiDominion.Core
             }).ToArray();
         }
 
-        public static BattleResult Run(IEnumerable<BattleBuildingInput> buildings, IEnumerable<BattleHeroInput> heroes, IEnumerable<BattleDefenderInput> defenders = null)
+        /// <summary>The whole battle at once, everyone landed before the first tick, until one side is gone or time is up.</summary>
+        public static BattleResult Run(IEnumerable<BattleBuildingInput> buildings, IEnumerable<BattleHeroInput> heroes, IEnumerable<BattleDefenderInput> defenders = null) =>
+            Run(buildings, heroes, defenders, 0);
+
+        /// <summary>
+        /// The whole battle at once. With an end tick above 0 it is a timed battle (ADR-050): each unit lands at its
+        /// deployTick, in LandingOrder, and the battle stops at the end tick (when the attacker ended it) or when
+        /// every building is down. This is how the server re-fights a battle the player fought live.
+        /// </summary>
+        public static BattleResult Run(IEnumerable<BattleBuildingInput> buildings, IEnumerable<BattleHeroInput> heroes, IEnumerable<BattleDefenderInput> defenders, int endTick)
         {
-            var sim = new BattleSim(buildings, heroes, defenders);
-            sim.Play();
-            return sim._result;
+            var sim = new BattleSim(buildings, defenders, endTick);
+            if (sim._timed) sim._pending.AddRange(LandingOrder(heroes));
+            else
+                foreach (var hero in heroes) sim.Land(hero);
+            while (sim.Step()) { }
+            return sim.Finish();
         }
 
-        /// <summary>Empty when the placement is legal, otherwise the reason. The server uses the same names.</summary>
-        public static string DeployError(IList<BattleBuildingInput> buildings, IList<BattleHeroInput> heroes)
+        /// <summary>
+        /// A live timed battle (ADR-050): the field starts empty and the clock is at tick 0. Drop cards with Deploy,
+        /// advance with Step, and read Events as they come. Finish ends it at the current tick. Run with the same
+        /// drops and that end tick gives the same result, which is how the server checks it.
+        /// </summary>
+        public static BattleSim Start(IEnumerable<BattleBuildingInput> buildings, IEnumerable<BattleDefenderInput> defenders = null) =>
+            new BattleSim(buildings, defenders, TickLimit);
+
+        /// <summary>The last tick played; 0 before the first.</summary>
+        public int Tick => _tick;
+        /// <summary>True once every building is down, time is up, or Finish was called.</summary>
+        public bool Done => _done;
+        public IReadOnlyList<long[]> Events => _result.events;
+        /// <summary>Landed units still standing.</summary>
+        public int UnitsStanding => _units.Count(u => u.Hp > 0);
+        /// <summary>Dropped cards that land on the next Step.</summary>
+        public int UnitsPending => _pending.Count;
+        public int DamagePercent => _totalHp == 0 ? 100 : (int)(_dealtHp * 100 / _totalHp);
+        /// <summary>The input of a landed unit, by the number the log uses for it.</summary>
+        public BattleHeroInput LandedInput(int index) => _landed[index];
+
+        /// <summary>
+        /// Drops a card now: it lands after the current tick, so it acts from the next one. Sets its deployTick.
+        /// Check DeployError first; this does not.
+        /// </summary>
+        public void Deploy(BattleHeroInput unit)
+        {
+            if (!_timed || _done) throw new InvalidOperationException("Cards can only be dropped into a running live battle.");
+            unit.deployTick = _tick;
+            // The same order LandingOrder gives a whole list: by tick, heroes before troops, then as dropped.
+            var at = _pending.Count;
+            while (at > 0 && LandsAfter(_pending[at - 1], unit)) at--;
+            _pending.Insert(at, unit);
+        }
+
+        private static bool LandsAfter(BattleHeroInput a, BattleHeroInput b) =>
+            a.deployTick > b.deployTick || (a.deployTick == b.deployTick && a.isTroop && !b.isTroop);
+
+        /// <summary>
+        /// The order a timed battle numbers its units: by deployTick, heroes before troops on the same tick, otherwise
+        /// as listed. The server lists heroes then troops, so this is the same on both sides however the cards fell.
+        /// </summary>
+        public static List<BattleHeroInput> LandingOrder(IEnumerable<BattleHeroInput> heroes) =>
+            heroes.Select((h, i) => (h, i)).OrderBy(p => p.h.deployTick).ThenBy(p => p.h.isTroop ? 1 : 0).ThenBy(p => p.i).Select(p => p.h).ToList();
+
+        /// <summary>
+        /// Empty when the placement is legal, otherwise the reason. The server uses the same names. With an end tick
+        /// (a timed battle, ADR-050) every deployTick must be from 0 to before the end tick, rising among heroes and
+        /// among troops; two heroes may share a cell only on different ticks. Without one, every deployTick is 0.
+        /// </summary>
+        public static string DeployError(IList<BattleBuildingInput> buildings, IList<BattleHeroInput> heroes, int endTick = 0)
         {
             if (heroes.Count < 1) return "NO_TEAM";
             if (heroes.Count(h => !h.isTroop) > 6) return "TOO_MANY_HEROES";
+            if (endTick < 0 || endTick > TickLimit) return "BAD_DEPLOY_TICK";
+            var lastHero = 0;
+            var lastTroop = 0;
             for (var i = 0; i < heroes.Count; i++)
             {
                 var h = heroes[i];
                 if (h.x < 0 || h.x >= GridSize || h.z < 0 || h.z >= GridSize) return "BAD_DEPLOY_CELL";
                 if (!CanDeployAt(buildings, h.x, h.z)) return "DEPLOY_TOO_CLOSE";
-                if (h.isTroop) continue;
+                if (endTick == 0 ? h.deployTick != 0 : h.deployTick < 0 || h.deployTick >= endTick) return "BAD_DEPLOY_TICK";
+                if (h.deployTick < (h.isTroop ? lastTroop : lastHero)) return "DEPLOY_TICK_ORDER";
+                if (h.isTroop)
+                {
+                    lastTroop = h.deployTick;
+                    continue;
+                }
+                lastHero = h.deployTick;
                 for (var j = 0; j < i; j++)
                 {
                     if (heroes[j].isTroop) continue;
                     if (heroes[j].id == h.id) return "DUPLICATE_HERO";
-                    if (heroes[j].x == h.x && heroes[j].z == h.z) return "DEPLOY_CELL_TAKEN";
+                    if (heroes[j].x == h.x && heroes[j].z == h.z && heroes[j].deployTick == h.deployTick) return "DEPLOY_CELL_TAKEN";
                 }
             }
             return "";
@@ -371,23 +444,58 @@ namespace ShinobiDominion.Core
             return true;
         }
 
-        private void Play()
+        private void Land(BattleHeroInput h)
         {
-            for (_tick = 1; _tick <= TickLimit; _tick++)
+            _units.Add(new Unit
             {
-                foreach (var unit in _units)
-                    if (unit.Hp > 0) StepUnit(unit);
-                foreach (var trap in _traps)
-                    if (trap.Alive) CheckTrap(trap);
-                foreach (var defender in _defenders)
-                    if (defender.Hp > 0) StepDefender(defender);
-                foreach (var structure in _structures)
-                    if (structure.Alive && structure.Input.isDefense) StepTower(structure);
-                if (Finished()) break;
-            }
-            var endTick = Math.Min(_tick, TickLimit);
+                Index = _units.Count,
+                Role = RoleNumber(h.role),
+                Hp = h.hp,
+                MaxHp = h.hp,
+                Attack = h.attack,
+                Defense = h.defense,
+                Px = h.x * CellUnits + CellUnits / 2,
+                Pz = h.z * CellUnits + CellUnits / 2,
+                IsTroop = h.isTroop,
+                Rally = !h.isTroop && h.special == SpecialRally,
+                Evolution = h.evolution,
+                Power = PowerOf(h.power)
+            });
+            _landed.Add(h);
+        }
 
-            _result.endTick = endTick;
+        /// <summary>Plays one tick. False once the battle is over (then Finish gives the result).</summary>
+        public bool Step()
+        {
+            if (_done) return false;
+            _tick++;
+            // Cards dropped after the last tick land now, before anyone moves.
+            while (_pending.Count > 0 && _pending[0].deployTick < _tick)
+            {
+                var input = _pending[0];
+                _pending.RemoveAt(0);
+                Land(input);
+                Log(BattleEventKind.Deploy, _units.Count - 1, input.x, input.z);
+            }
+            foreach (var unit in _units)
+                if (unit.Hp > 0) StepUnit(unit);
+            foreach (var trap in _traps)
+                if (trap.Alive) CheckTrap(trap);
+            foreach (var defender in _defenders)
+                if (defender.Hp > 0) StepDefender(defender);
+            foreach (var structure in _structures)
+                if (structure.Alive && structure.Input.isDefense) StepTower(structure);
+            if (Finished() || _tick >= (_timed ? _endTick : TickLimit)) _done = true;
+            return !_done;
+        }
+
+        /// <summary>Ends the battle at the current tick, if it has not ended already, and scores it.</summary>
+        public BattleResult Finish()
+        {
+            if (_resolved) return _result;
+            _resolved = true;
+            _done = true;
+            _result.endTick = _tick;
             _result.damagePercent = _totalHp == 0 ? 100 : (int)(_dealtHp * 100 / _totalHp);
             _result.heroesAlive = _units.Count(u => u.Hp > 0);
             _result.defendersAlive = _defenders.Count(d => d.Hp > 0);
@@ -397,13 +505,18 @@ namespace ShinobiDominion.Core
             if (_result.dojoDestroyed) _result.stars++;
             if (_result.damagePercent >= 100) _result.stars++;
             _result.checksum = Checksum(_result.events);
+            return _result;
         }
 
         private bool Finished()
         {
-            var anyHero = false;
-            foreach (var unit in _units) if (unit.Hp > 0) anyHero = true;
-            if (!anyHero) return true;
+            // A timed battle goes on with an empty field: more cards may still fall until the attacker ends it.
+            if (!_timed)
+            {
+                var anyHero = false;
+                foreach (var unit in _units) if (unit.Hp > 0) anyHero = true;
+                if (!anyHero) return true;
+            }
             foreach (var structure in _structures) if (structure.Alive && !structure.Input.isWall) return false;
             return true;
         }

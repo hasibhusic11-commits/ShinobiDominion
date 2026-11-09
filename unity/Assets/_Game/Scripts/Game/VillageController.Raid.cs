@@ -15,9 +15,9 @@ namespace ShinobiDominion.Game
     }
 
     /// <summary>
-    /// The attack flow: choose a target, place heroes, watch the battle, see the result. Online, the
-    /// server fights the battle and this only plays back its log. Offline, in development only, the
-    /// same rules run here as a practice battle that pays nothing.
+    /// The attack flow: choose a target, fight it live by dropping cards (ADR-050), see the result. Online, the server
+    /// fights the same drops again and its result is the one paid. Offline, in development only, the same rules run
+    /// here as a practice battle that pays nothing.
     /// </summary>
     public sealed partial class VillageController
     {
@@ -37,6 +37,10 @@ namespace ShinobiDominion.Game
             public GameObject StatusBar;
             public GameObject Hud;
             public Text StatusText;
+            /// <summary>A live raid's own battle (ADR-050); null for a fight the server already fought.</summary>
+            public BattleSim Live;
+            /// <summary>The live battle is over: it can no longer change and is being sent or shown.</summary>
+            public bool Ended;
         }
 
         private static readonly Vector3 MapCenter = new Vector3(25f, 0f, 25f);
@@ -219,16 +223,24 @@ namespace ShinobiDominion.Game
             return session;
         }
 
-        // ---------- Placing heroes ----------
+        // ---------- The live battle (ADR-050) ----------
 
+        /// <summary>
+        /// The raid starts as a battle at once, like the genre's: the enemy base, an empty field and the clock running.
+        /// Cards are dropped while it runs. This device steps its own copy so every drop shows straight away; the server
+        /// fights the same drops again when it ends, and its result is the one that counts.
+        /// </summary>
         private void EnterPrepare(RaidSession session)
         {
             var stageObject = new GameObject("BattleStage");
             stageObject.transform.SetParent(_worldRoot, false);
             var stage = stageObject.AddComponent<BattleStage>();
             stage.Initialize(session, Village.Catalog, TroopData, _camera.Camera, HeroLookFor, DefenderLook);
-            stage.Finished += ShowRaidResult;
-            _raid = new RaidRun { Session = session, Stage = stage };
+            stage.Finished += LiveBattleOver;
+            _raid = new RaidRun { Session = session, Stage = stage, Phase = RaidPhase.Battle, Live = BattleSim.Start(session.buildings, session.ToDefenderInputs()) };
+            LastRaidOutcome = null;
+            LastLiveResult = null;
+            _panel.Hide();
             _view.SetVisible(false);
             if (_life != null) _life.gameObject.SetActive(false);
             _camera.StopMotion();
@@ -244,7 +256,11 @@ namespace ShinobiDominion.Game
             }
             _raidCells = _raidCells ?? new CellHighlight(_worldRoot, "RaidBlockedCells", new Color(0f, 0f, 0f, 0f), new Color(0.85f, 0.2f, 0.15f, 0.2f), 0.03f);
             _raidCells.Show(blocked, false);
-            ShowPreparePanel();
+
+            stage.BeginLive(_raid.Live);
+            CreateBattleBar(true);
+            CreateBattleHud();
+            ShowDeployScreen();
         }
 
         private HeroLook DefenderLook(RaidDefender defender) =>
@@ -252,13 +268,27 @@ namespace ShinobiDominion.Game
 
         private void ShowPreparePanel() => ShowDeployScreen();
 
+        /// <summary>A live raid whose clock is still running, so cards can still drop.</summary>
+        private bool LiveRunning => _raid != null && _raid.Live != null && !_raid.Ended && !_raid.Live.Done && _raid.Phase == RaidPhase.Battle;
+
+        /// <summary>The battle as this device fought it, kept so the server's result can be checked against it.</summary>
+        public BattleResult LastLiveResult { get; private set; }
+
+        /// <summary>The live battle's clock, in ticks; -1 when no live battle is running.</summary>
+        public int LiveTick => _raid?.Live?.Tick ?? -1;
+
         private int TroopsLeft(string troopId) =>
             Army.CountOf(troopId) - _raid.Stacks.Where(s => s.troopId == troopId).Sum(s => s.count);
+
+        private bool AnythingDropped => _raid.Placements.Count + _raid.Stacks.Count > 0;
+
+        private bool NothingLeftToDrop =>
+            _raid.Session.team.All(m => _raid.Placements.Any(p => p.instanceId == m.instanceId)) && TroopData.All.All(t => TroopsLeft(t.id) <= 0);
 
         /// <summary>Steps through heroes and then each troop the player still has.</summary>
         public void CycleTroop()
         {
-            if (_raid == null) return;
+            if (!LiveRunning) return;
             var choices = new List<string> { null };
             choices.AddRange(TroopData.All.Where(t => TroopsLeft(t.id) > 0).Select(t => t.id));
             var at = choices.IndexOf(_raid.SelectedTroop);
@@ -266,61 +296,53 @@ namespace ShinobiDominion.Game
             ShowPreparePanel();
         }
 
-        private void AddStack(string troopId, int x, int z, int count)
+        /// <summary>Lands a group of troops now. They are the player's to lose once dropped: there is no picking back up.</summary>
+        private void DropStack(string troopId, int x, int z, int count)
         {
-            var stack = new RaidTroopStack { troopId = troopId, x = x, z = z, count = count };
+            var stack = new RaidTroopStack { troopId = troopId, x = x, z = z, count = count, tick = _raid.Live.Tick };
             _raid.Stacks.Add(stack);
-            _raid.Stage.ShowStack(stack);
+            foreach (var unit in _raid.Session.ToUnits(new RaidPlacement[0], new[] { stack }, TroopData, Research)) _raid.Live.Deploy(unit);
         }
 
-        /// <summary>Tapping a placed hero or troop picks it back up. Tapping open ground lands the next one.</summary>
+        private void DropHero(RaidTeamMember member, int x, int z)
+        {
+            var placement = new RaidPlacement { instanceId = member.instanceId, x = x, z = z, tick = _raid.Live.Tick };
+            _raid.Placements.Add(placement);
+            _raid.Live.Deploy(_raid.Session.ToHeroes(new[] { placement })[0]);
+        }
+
+        /// <summary>Tapping open ground drops the chosen card there, now: a hero, or up to five of the chosen troop.</summary>
         public void TapDeployCell(GridCoord cell)
         {
-            if (_raid == null || _raid.Phase != RaidPhase.Prepare) return;
-            var stacked = _raid.Stacks.FirstOrDefault(s => s.x == cell.X && s.z == cell.Z);
-            if (stacked != null)
+            if (!LiveRunning) return;
+            if (!VillageGrid.InBounds(cell.X, cell.Z) || !BattleSim.CanDeployAt(_raid.Session.buildings, cell.X, cell.Z))
             {
-                _raid.Stacks.Remove(stacked);
-                _raid.Stage.HideStack(stacked);
+                LastMessage = "Too close to the enemy: drop on open ground.";
                 ShowPreparePanel();
                 return;
             }
+            LastMessage = null;
             if (_raid.SelectedTroop != null)
             {
                 var ready = TroopsLeft(_raid.SelectedTroop);
-                if (ready > 0 && VillageGrid.InBounds(cell.X, cell.Z) && BattleSim.CanDeployAt(_raid.Session.buildings, cell.X, cell.Z))
-                    AddStack(_raid.SelectedTroop, cell.X, cell.Z, Mathf.Min(ready, TroopsPerTap));
-                if (_raid.SelectedTroop != null && TroopsLeft(_raid.SelectedTroop) <= 0) _raid.SelectedTroop = null;
+                if (ready > 0) DropStack(_raid.SelectedTroop, cell.X, cell.Z, Mathf.Min(ready, TroopsPerTap));
+                if (TroopsLeft(_raid.SelectedTroop) <= 0) _raid.SelectedTroop = null;
                 ShowPreparePanel();
                 return;
             }
-            var existing = _raid.Placements.FirstOrDefault(p => p.x == cell.X && p.z == cell.Z);
-            if (existing != null)
-            {
-                _raid.Placements.Remove(existing);
-                _raid.Stage.HidePlacement(existing.instanceId);
-                ShowPreparePanel();
-                return;
-            }
-            // The chosen hero card, or the next hero in order.
+            // The chosen hero card, or the next hero in order. Two heroes never land on one cell at the same moment.
             var next = _raid.Session.team.FirstOrDefault(m => m.instanceId == _raid.SelectedHero && _raid.Placements.All(p => p.instanceId != m.instanceId)) ?? NextHeroToLand();
-            if (next == null || !VillageGrid.InBounds(cell.X, cell.Z) || !BattleSim.CanDeployAt(_raid.Session.buildings, cell.X, cell.Z)) return;
-            AddPlacement(next, cell.X, cell.Z);
+            if (next == null || _raid.Placements.Any(p => p.x == cell.X && p.z == cell.Z && p.tick == _raid.Live.Tick)) return;
+            DropHero(next, cell.X, cell.Z);
             _raid.SelectedHero = null;
             ShowPreparePanel();
         }
 
-        private void AddPlacement(RaidTeamMember member, int x, int z)
-        {
-            var placement = new RaidPlacement { instanceId = member.instanceId, x = x, z = z };
-            _raid.Placements.Add(placement);
-            _raid.Stage.ShowPlacement(placement);
-        }
-
+        /// <summary>Auto: drops every card still in hand, now, along the near edges of the map.</summary>
         public void AutoPlaceHeroes()
         {
-            if (_raid == null || _raid.Phase != RaidPhase.Prepare) return;
-            // Line up along the side nearest the camera, spreading out from the middle.
+            if (!LiveRunning) return;
+            // Heroes line up along the side nearest the camera, spreading out from the middle.
             var line = 8;
             foreach (var member in _raid.Session.team)
             {
@@ -332,7 +354,7 @@ namespace ShinobiDominion.Game
                     var x = 25 + (offset % 2 == 0 ? offset / 2 : -(offset + 1) / 2);
                     if (!VillageGrid.InBounds(x, z) || !BattleSim.CanDeployAt(_raid.Session.buildings, x, z)) continue;
                     if (_raid.Placements.Any(p => p.x == x && p.z == z)) continue;
-                    AddPlacement(member, x, z);
+                    DropHero(member, x, z);
                     placed = true;
                 }
             }
@@ -350,53 +372,28 @@ namespace ShinobiDominion.Game
                     spot++;
                     if (!BattleSim.CanDeployAt(_raid.Session.buildings, x, z)) { x = side ? along : 4; z = side ? 4 : along; }
                     if (!BattleSim.CanDeployAt(_raid.Session.buildings, x, z)) continue;
-                    AddStack(troop.id, x, z, Mathf.Min(TroopsLeft(troop.id), TroopsPerTap));
+                    DropStack(troop.id, x, z, Mathf.Min(TroopsLeft(troop.id), TroopsPerTap));
                 }
             }
             _raid.SelectedTroop = null;
             ShowPreparePanel();
         }
 
+        /// <summary>Leaves before anything is dropped, at no cost. Once a card has fallen, leaving ends the battle instead.</summary>
         public void RetreatRaid()
         {
+            if (_raid != null && _raid.Live != null && !_raid.Ended && AnythingDropped)
+            {
+                EndLiveBattle();
+                return;
+            }
             EndRaid();
             CloseAll();
         }
 
         // ---------- The battle ----------
 
-        public void StartBattle()
-        {
-            if (_raid == null || _raid.Phase != RaidPhase.Prepare || _raid.Placements.Count + _raid.Stacks.Count == 0) return;
-            if (IsOnline)
-            {
-                var raid = _raid;
-                var placements = raid.Placements.ToList();
-                var stacks = raid.Stacks.ToList();
-                var signature = string.Join(",", placements.Select(p => $"{p.instanceId}:{p.x}:{p.z}")) + "|" + string.Join(",", stacks.Select(s => $"{s.troopId}:{s.x}:{s.z}:{s.count}"));
-                var key = KeyFor($"raid-deploy|{raid.Session.attackId}|{signature}");
-                Run(async () =>
-                {
-                    var outcome = await _server.RaidDeployAsync(key, raid.Session.attackId, placements, stacks);
-                    ClearKey();
-                    LastMessage = null;
-                    if (_raid == raid) BeginPlayback(outcome);
-                }, ShowPreparePanel);
-                return;
-            }
-
-            var heroes = _raid.Session.ToUnits(_raid.Placements, _raid.Stacks, TroopData, Research);
-            var refusal = BattleSim.DeployError(_raid.Session.buildings, heroes);
-            if (refusal.Length > 0)
-            {
-                LastMessage = ServerErrorText.Describe(refusal);
-                ShowPreparePanel();
-                return;
-            }
-            foreach (var stack in _raid.Stacks) Army.Remove(stack.troopId, stack.count);
-            BeginPlayback(new RaidOutcome { Result = BattleSim.Run(_raid.Session.buildings, heroes, _raid.Session.ToDefenderInputs()) });
-        }
-
+        /// <summary>A Siege, Arena or Trial fight, already fought by the server: its log plays back.</summary>
         private void BeginPlayback(RaidOutcome outcome)
         {
             _raid.Outcome = outcome;
@@ -407,18 +404,116 @@ namespace ShinobiDominion.Game
             _camera.StopMotion();
             _camera.Initialize(MapCenter, BattleCameraSize);
             _raid.Stage.Play(outcome.Result, _raid.Placements, _raid.Stacks);
-            CreateBattleBar();
+            CreateBattleBar(false);
             CreateBattleHud();
         }
 
-        /// <summary>Battle playback speed, kept between battles. It only changes how fast the log plays.</summary>
+        /// <summary>Battle playback speed, kept between battles. It only changes how fast a fought log plays.</summary>
         private static float _battleSpeed = 1f;
 
         private static string SpeedCaption() => $"x{_battleSpeed:0}";
 
+        /// <summary>End Battle: a live raid stops now and is sent (or left, if nothing was dropped); a fought one skips to its result.</summary>
         public void SkipBattle()
         {
-            if (_raid != null && _raid.Phase == RaidPhase.Battle) _raid.Stage.Skip();
+            if (_raid == null || _raid.Phase != RaidPhase.Battle) return;
+            if (_raid.Live == null)
+            {
+                _raid.Stage.Skip();
+                return;
+            }
+            EndLiveBattle();
+        }
+
+        private void EndLiveBattle()
+        {
+            if (_raid == null || _raid.Live == null || _raid.Ended) return;
+            if (!AnythingDropped)
+            {
+                EndRaid();
+                CloseAll();
+                return;
+            }
+            var live = _raid.Live;
+            // Cards dropped this tick land before the end, so every drop is inside the battle.
+            if (!live.Done && (live.UnitsPending > 0 || live.Tick == 0)) live.Step();
+            live.Finish();
+            LiveBattleOver();
+        }
+
+        /// <summary>
+        /// The live battle is over: every building down, time up, or ended by the player. Practice battles are scored
+        /// here; online, the drops and the end tick go to the server, which fights them again and pays its result.
+        /// </summary>
+        private void LiveBattleOver()
+        {
+            var raid = _raid;
+            if (raid == null || raid.Live == null || raid.Ended) return;
+            raid.Ended = true;
+            var local = raid.Live.Finish();
+            LastLiveResult = local;
+            raid.Stage.CatchUp();
+            if (raid.Placements.Count + raid.Stacks.Count == 0)
+            {
+                // Time ran out with nothing dropped: nothing was fought.
+                EndRaid();
+                CloseAll();
+                return;
+            }
+            _raidCells?.Clear();
+            ClearDeployScreen();
+            if (!IsOnline || raid.Session.attackId == "practice")
+            {
+                foreach (var stack in raid.Stacks) Army.Remove(stack.troopId, stack.count);
+                ShowOutcome(new RaidOutcome { Result = local });
+                return;
+            }
+            SendLiveBattle(raid);
+        }
+
+        private void SendLiveBattle(RaidRun raid)
+        {
+            var placements = raid.Placements.ToList();
+            var stacks = raid.Stacks.ToList();
+            var endTick = raid.Live.Tick;
+            var signature = string.Join(",", placements.Select(p => $"{p.instanceId}:{p.x}:{p.z}:{p.tick}")) + "|" + string.Join(",", stacks.Select(s => $"{s.troopId}:{s.x}:{s.z}:{s.count}:{s.tick}")) + "|" + endTick;
+            var key = KeyFor($"raid-deploy|{raid.Session.attackId}|{signature}");
+            Run(async () =>
+            {
+                var outcome = await _server.RaidDeployAsync(key, raid.Session.attackId, placements, stacks, endTick);
+                ClearKey();
+                LastMessage = null;
+                // The server's fight is the one that counts. The two can only differ if this device was tampered with.
+                if (outcome.Result.checksum != LastLiveResult?.checksum)
+                    Debug.LogWarning($"The server's battle ({outcome.Result.checksum}) differs from this device's ({LastLiveResult?.checksum}); showing the server's.");
+                if (_raid == raid) ShowOutcome(outcome);
+            }, () =>
+            {
+                if (_raid == raid) ShowSendFailed(raid);
+            });
+        }
+
+        /// <summary>The battle is over but the server has not confirmed it: try again with the same key, or leave.</summary>
+        private void ShowSendFailed(RaidRun raid)
+        {
+            _panel.Show("Battle not confirmed", FinishRaid, panel =>
+            {
+                panel.Line(LastMessage ?? "The server could not be reached.", 22, Ui.AccentColor);
+                panel.Line("Your battle is kept. Try again to get its result.");
+                panel.Action("RetrySendButton", "Try again", () =>
+                {
+                    _panel.Hide();
+                    SendLiveBattle(raid);
+                }, true, Ui.AccentColor);
+                panel.Action("ReturnHomeButton", "Return to village", FinishRaid, true);
+            });
+        }
+
+        private void ShowOutcome(RaidOutcome outcome)
+        {
+            _raid.Outcome = outcome;
+            LastRaidOutcome = outcome;
+            ShowRaidResult();
         }
 
         private void UpdateRaid()
@@ -430,6 +525,9 @@ namespace ShinobiDominion.Game
             var center = _raid.Stage.ActionCenter;
             if (center.HasValue) _camera.Drift(center.Value);
             UpdateBattleHud();
+            // Everyone dropped has fallen and no card is left: nothing more can happen, so the battle ends.
+            if (LiveRunning && _raid.Live.Tick > 0 && AnythingDropped && _raid.Live.UnitsPending == 0 && _raid.Live.UnitsStanding == 0 && NothingLeftToDrop)
+                EndLiveBattle();
         }
 
         // ---------- The result ----------
@@ -480,6 +578,7 @@ namespace ShinobiDominion.Game
             if (_raid == null) return;
             ClearAttackScreen();
             _raid.Stage.Finished -= ShowRaidResult;
+            _raid.Stage.Finished -= LiveBattleOver;
             _modeFight = null;
             Destroy(_raid.Stage.gameObject);
             _raid = null;

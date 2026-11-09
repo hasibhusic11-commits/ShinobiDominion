@@ -121,5 +121,7 @@ namespace ShinobiDominion.Core
         public int x;
         public int z;
         public int count;
+        /// <summary>When the card was dropped in a live battle (ADR-050); 0 is before the first tick.</summary>
+        public int tick;
     }
 }

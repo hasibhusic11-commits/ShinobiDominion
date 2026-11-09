@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"sort"
 	"strconv"
 )
 
@@ -13,7 +14,8 @@ import (
 // the exact same log in both, so a rule changed in only one language fails a test.
 
 const (
-	battleTickLimit = 180 * 10
+	battleTicksPerSecond = 10
+	battleTickLimit = 180 * battleTicksPerSecond
 	cellUnits       = 100
 	deployClearance = 2
 	battleGridSize  = 50
@@ -53,6 +55,9 @@ const (
 	eventTrapFired = 17
 	// a = trap building id, b = unit hit, c = damage, d = unit HP left.
 	eventTrapHit = 18
+	// Timed battles only (ADR-050): a = unit, b = cell x, c = cell z. The unit lands there; it acts from this tick.
+	// Units are numbered in landing order.
+	eventDeploy = 19
 
 	// Traps (ADR-046): a trap fires when an attacker it can catch comes within trapTrigger of its middle. A Bomb
 	// Trap then hits every troop within its range in cells; a Hero Trap hurts that hero and holds it in place.
@@ -124,6 +129,9 @@ type battleHeroInput struct {
 	Evolution int `json:"evolution,omitempty"`
 	// Power is how strong the special is, in percent of a Legendary's: by rarity, set by the server. 0 means 100.
 	Power int `json:"power,omitempty"`
+	// DeployTick is when the card was dropped (ADR-050): the unit lands after this tick and acts from the next one.
+	// Only a timed battle (one with an end tick) uses it; elsewhere it must be 0.
+	DeployTick int `json:"deployTick,omitempty"`
 }
 
 // battleDefenderInput is a hero guarding the village, standing at a cell on or by its Hero Base.
@@ -229,6 +237,12 @@ type battleStructure struct {
 
 type battleSim struct {
 	units      []*battleUnit
+	// pending holds cards dropped but not landed yet, in landing order.
+	pending []battleHeroInput
+	// timed (ADR-050): the battle ends at endTick or when every building is down, never because the field is empty.
+	timed   bool
+	endTick int
+	done    bool
 	defenders  []*battleDefender
 	structures []*battleStructure
 	traps      []*battleStructure
@@ -251,13 +265,22 @@ func runBattle(buildings []battleBuildingInput, heroes []battleHeroInput) (*batt
 	return runDefendedBattle(buildings, heroes, nil)
 }
 
+// runDefendedBattle fights with everyone landed before the first tick, until one side is gone or time is up.
 func runDefendedBattle(buildings []battleBuildingInput, heroes []battleHeroInput, defenders []battleDefenderInput) (*battleResult, error) {
+	return runTimedBattle(buildings, heroes, defenders, 0)
+}
+
+// runTimedBattle mirrors BattleSim.Run with an end tick. Above 0 it is a timed battle (ADR-050): each unit lands at its
+// DeployTick, in landingOrder, and the battle stops at endTick (when the attacker ended it) or when every building is down.
+func runTimedBattle(buildings []battleBuildingInput, heroes []battleHeroInput, defenders []battleDefenderInput, endTick int) (*battleResult, error) {
 	cells := battleGridSize * battleGridSize
 	sim := &battleSim{
-		grid:   make([]int, cells),
-		cost:   make([]int, cells),
-		from:   make([]int, cells),
-		result: &battleResult{Events: [][]int64{}},
+		grid:    make([]int, cells),
+		cost:    make([]int, cells),
+		from:    make([]int, cells),
+		result:  &battleResult{Events: [][]int64{}},
+		timed:   endTick > 0,
+		endTick: minInt(endTick, battleTickLimit),
 	}
 	for _, b := range buildings {
 		if b.IsTrap {
@@ -275,17 +298,10 @@ func runDefendedBattle(buildings []battleBuildingInput, heroes []battleHeroInput
 			}
 		}
 	}
-	for i, h := range heroes {
-		role, err := roleNumber(h.Role)
-		if err != nil {
+	for _, h := range heroes {
+		if _, err := roleNumber(h.Role); err != nil {
 			return nil, err
 		}
-		sim.units = append(sim.units, &battleUnit{
-			index: i, role: role, hp: h.Hp, maxHp: h.Hp, attack: h.Attack, defense: h.Defense,
-			px: h.X*cellUnits + cellUnits/2, pz: h.Z*cellUnits + cellUnits/2,
-			target: -1, blocker: -1, needsPlan: true, isTroop: h.IsTroop,
-			rally: !h.IsTroop && h.Special == specialRally, evolution: h.Evolution, power: powerOf(h.Power),
-		})
 	}
 	for i, d := range defenders {
 		role, err := roleNumber(d.Role)
@@ -299,8 +315,41 @@ func runDefendedBattle(buildings []battleBuildingInput, heroes []battleHeroInput
 			rally: d.Special == specialRally, evolution: d.Evolution, power: powerOf(d.Power),
 		})
 	}
-	sim.play()
+	if sim.timed {
+		sim.pending = landingOrder(heroes)
+	} else {
+		for _, h := range heroes {
+			sim.land(h)
+		}
+	}
+	for sim.step() {
+	}
+	sim.finish()
 	return sim.result, nil
+}
+
+// landingOrder mirrors BattleSim.LandingOrder: by DeployTick, heroes before troops on the same tick, otherwise as listed.
+func landingOrder(heroes []battleHeroInput) []battleHeroInput {
+	ordered := append([]battleHeroInput{}, heroes...)
+	sort.SliceStable(ordered, func(i, j int) bool {
+		a, b := ordered[i], ordered[j]
+		if a.DeployTick != b.DeployTick {
+			return a.DeployTick < b.DeployTick
+		}
+		return !a.IsTroop && b.IsTroop
+	})
+	return ordered
+}
+
+// land puts a unit on the field with the next unit number. Its role was checked before the battle began.
+func (s *battleSim) land(h battleHeroInput) {
+	role, _ := roleNumber(h.Role)
+	s.units = append(s.units, &battleUnit{
+		index: len(s.units), role: role, hp: h.Hp, maxHp: h.Hp, attack: h.Attack, defense: h.Defense,
+		px: h.X*cellUnits + cellUnits/2, pz: h.Z*cellUnits + cellUnits/2,
+		target: -1, blocker: -1, needsPlan: true, isTroop: h.IsTroop,
+		rally: !h.IsTroop && h.Special == specialRally, evolution: h.Evolution, power: powerOf(h.Power),
+	})
 }
 
 func canDeployAt(buildings []battleBuildingInput, x, z int) bool {
@@ -316,8 +365,10 @@ func canDeployAt(buildings []battleBuildingInput, x, z int) bool {
 	return true
 }
 
-// deployError is empty when the placement is legal. The client's rules use the same names.
-func deployError(buildings []battleBuildingInput, heroes []battleHeroInput) string {
+// deployError is empty when the placement is legal. The client's rules use the same names. With an end tick (a timed
+// battle, ADR-050) every DeployTick must be from 0 to before the end tick, rising among heroes and among troops; two
+// heroes may share a cell only on different ticks. Without one, every DeployTick is 0. Mirrors BattleSim.DeployError.
+func deployError(buildings []battleBuildingInput, heroes []battleHeroInput, endTick int) string {
 	if len(heroes) < 1 {
 		return "NO_TEAM"
 	}
@@ -330,6 +381,10 @@ func deployError(buildings []battleBuildingInput, heroes []battleHeroInput) stri
 	if heroCount > 6 {
 		return "TOO_MANY_HEROES"
 	}
+	if endTick < 0 || endTick > battleTickLimit {
+		return "BAD_DEPLOY_TICK"
+	}
+	lastHero, lastTroop := 0, 0
 	for i, h := range heroes {
 		if h.X < 0 || h.X >= battleGridSize || h.Z < 0 || h.Z >= battleGridSize {
 			return "BAD_DEPLOY_CELL"
@@ -337,9 +392,21 @@ func deployError(buildings []battleBuildingInput, heroes []battleHeroInput) stri
 		if !canDeployAt(buildings, h.X, h.Z) {
 			return "DEPLOY_TOO_CLOSE"
 		}
+		if (endTick == 0 && h.DeployTick != 0) || (endTick > 0 && (h.DeployTick < 0 || h.DeployTick >= endTick)) {
+			return "BAD_DEPLOY_TICK"
+		}
+		last := lastHero
 		if h.IsTroop {
+			last = lastTroop
+		}
+		if h.DeployTick < last {
+			return "DEPLOY_TICK_ORDER"
+		}
+		if h.IsTroop {
+			lastTroop = h.DeployTick
 			continue
 		}
+		lastHero = h.DeployTick
 		for j := 0; j < i; j++ {
 			if heroes[j].IsTroop {
 				continue
@@ -347,7 +414,7 @@ func deployError(buildings []battleBuildingInput, heroes []battleHeroInput) stri
 			if heroes[j].ID == h.ID {
 				return "DUPLICATE_HERO"
 			}
-			if heroes[j].X == h.X && heroes[j].Z == h.Z {
+			if heroes[j].X == h.X && heroes[j].Z == h.Z && heroes[j].DeployTick == h.DeployTick {
 				return "DEPLOY_CELL_TAKEN"
 			}
 		}
@@ -355,39 +422,54 @@ func deployError(buildings []battleBuildingInput, heroes []battleHeroInput) stri
 	return ""
 }
 
-func (s *battleSim) play() {
-	for s.tick = 1; s.tick <= battleTickLimit; s.tick++ {
-		for _, unit := range s.units {
-			if unit.hp > 0 {
-				s.stepUnit(unit)
-			}
-		}
-		for _, trap := range s.traps {
-			if trap.alive {
-				s.checkTrap(trap)
-			}
-		}
-		for _, defender := range s.defenders {
-			if defender.hp > 0 {
-				s.stepDefender(defender)
-			}
-		}
-		for _, structure := range s.structures {
-			if structure.alive && structure.input.IsDefense {
-				s.stepTower(structure)
-			}
-		}
-		if s.finished() {
-			break
+// step plays one tick, like BattleSim.Step. False once the battle is over.
+func (s *battleSim) step() bool {
+	if s.done {
+		return false
+	}
+	s.tick++
+	// Cards dropped after the last tick land now, before anyone moves.
+	for len(s.pending) > 0 && s.pending[0].DeployTick < s.tick {
+		input := s.pending[0]
+		s.pending = s.pending[1:]
+		s.land(input)
+		s.log(eventDeploy, int64(len(s.units)-1), int64(input.X), int64(input.Z), 0)
+	}
+	for _, unit := range s.units {
+		if unit.hp > 0 {
+			s.stepUnit(unit)
 		}
 	}
-	endTick := s.tick
-	if endTick > battleTickLimit {
-		endTick = battleTickLimit
+	for _, trap := range s.traps {
+		if trap.alive {
+			s.checkTrap(trap)
+		}
 	}
+	for _, defender := range s.defenders {
+		if defender.hp > 0 {
+			s.stepDefender(defender)
+		}
+	}
+	for _, structure := range s.structures {
+		if structure.alive && structure.input.IsDefense {
+			s.stepTower(structure)
+		}
+	}
+	limit := battleTickLimit
+	if s.timed {
+		limit = s.endTick
+	}
+	if s.finished() || s.tick >= limit {
+		s.done = true
+	}
+	return !s.done
+}
 
+// finish scores the battle at the tick it stopped, like BattleSim.Finish.
+func (s *battleSim) finish() {
+	s.done = true
 	r := s.result
-	r.EndTick = endTick
+	r.EndTick = s.tick
 	if s.totalHp == 0 {
 		r.DamagePercent = 100
 	} else {
@@ -421,14 +503,17 @@ func (s *battleSim) play() {
 }
 
 func (s *battleSim) finished() bool {
-	anyHero := false
-	for _, unit := range s.units {
-		if unit.hp > 0 {
-			anyHero = true
+	// A timed battle goes on with an empty field: more cards may still fall until the attacker ends it.
+	if !s.timed {
+		anyHero := false
+		for _, unit := range s.units {
+			if unit.hp > 0 {
+				anyHero = true
+			}
 		}
-	}
-	if !anyHero {
-		return true
+		if !anyHero {
+			return true
+		}
 	}
 	for _, structure := range s.structures {
 		if structure.alive && !structure.input.IsWall {
@@ -1532,13 +1617,13 @@ func heroBattleStats(a Archetype, evolution, level int) (hp, attack, defense int
 	return a.BaseHp + a.GrowthHp*steps, a.BaseAttack + a.GrowthAttack*steps, a.BaseDefense + a.GrowthDefense*steps
 }
 
-func placementHash(attackID string, parts []deployPlacement, stacks []troopStack) string {
-	joined := attackID + "|"
+func placementHash(attackID string, parts []deployPlacement, stacks []troopStack, endTick int) string {
+	joined := attackID + "|" + strconv.Itoa(endTick) + "|"
 	for _, stack := range stacks {
-		joined += stack.TroopID + ":" + strconv.Itoa(stack.X) + ":" + strconv.Itoa(stack.Z) + ":" + strconv.Itoa(stack.Count) + "|"
+		joined += stack.TroopID + ":" + strconv.Itoa(stack.X) + ":" + strconv.Itoa(stack.Z) + ":" + strconv.Itoa(stack.Count) + ":" + strconv.Itoa(stack.Tick) + "|"
 	}
 	for _, part := range parts {
-		joined += part.InstanceID + ":" + strconv.Itoa(part.X) + ":" + strconv.Itoa(part.Z) + "|"
+		joined += part.InstanceID + ":" + strconv.Itoa(part.X) + ":" + strconv.Itoa(part.Z) + ":" + strconv.Itoa(part.Tick) + "|"
 	}
 	return joined
 }

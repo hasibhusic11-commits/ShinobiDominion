@@ -242,7 +242,7 @@ func (s *Server) siegeStacks(buildings []battleBuildingInput, level siegeLevel) 
 	for _, stack := range stacks {
 		troop := s.troops.byID[stack.TroopID]
 		for i := 0; i < stack.Count; i++ {
-			units = append(units, battleHeroInput{troop.ID, troop.Role, scaled(troop.Hp, level.StatPercent), scaled(troop.Attack, level.StatPercent), scaled(troop.Defense, level.StatPercent), stack.X, stack.Z, true, "", 0, 0})
+			units = append(units, battleHeroInput{troop.ID, troop.Role, scaled(troop.Hp, level.StatPercent), scaled(troop.Attack, level.StatPercent), scaled(troop.Defense, level.StatPercent), stack.X, stack.Z, true, "", 0, 0, 0})
 		}
 	}
 	return stacks, units
@@ -635,7 +635,7 @@ func (s *Server) rpcArenaFight(ctx context.Context, logger runtime.Logger, db *s
 		shrine := s.buildings.byID["dojo_hq"]
 		buildings := []battleBuildingInput{{ID: 1, DefinitionID: shrine.ID, X: a.ShrineX, Z: a.ShrineZ, Width: shrine.Width, Depth: shrine.Depth, Level: 1, Hp: a.ShrineHp}}
 		placement := deployPlacement{InstanceID: hero.InstanceID, X: a.HeroX, Z: a.HeroZ}
-		units := []battleHeroInput{{hero.InstanceID, hero.Role, hero.Hp, hero.Attack, hero.Defense, placement.X, placement.Z, false, hero.Special, hero.EvolutionIndex, hero.Power}}
+		units := []battleHeroInput{{hero.InstanceID, hero.Role, hero.Hp, hero.Attack, hero.Defense, placement.X, placement.Z, false, hero.Special, hero.EvolutionIndex, hero.Power, 0}}
 		result, err := runDefendedBattle(buildings, units, []battleDefenderInput{{defender.ID, defender.Role, defender.Hp, defender.Attack, defender.Defense, defender.X, defender.Z, defender.Special, defender.EvolutionIndex, defender.Power}})
 		if err != nil {
 			return err

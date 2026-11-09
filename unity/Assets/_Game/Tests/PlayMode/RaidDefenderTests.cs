@@ -69,7 +69,7 @@ namespace ShinobiDominion.Tests
             yield return null;
             _controller.ScoutRaid(Garrison);
             yield return null;
-            Assert.AreEqual(RaidPhase.Prepare, _controller.CurrentRaidPhase);
+            Assert.AreEqual(RaidPhase.Battle, _controller.CurrentRaidPhase, "A raid is a live battle from the start (ADR-050)");
             Assert.AreEqual(1, _controller.CurrentRaidSession.defenders.Count);
             Assert.AreEqual(1, Guards().Length);
             Assert.IsTrue(Guards().Any(g => g.GetComponentInChildren<HeroSpriteActor>() != null), "The Sage guard should be a sprite");
@@ -85,13 +85,16 @@ namespace ShinobiDominion.Tests
             yield return null;
             _controller.ScoutRaid(Garrison);
             _controller.AutoPlaceHeroes();
-            _controller.StartBattle();
             Assert.AreEqual(RaidPhase.Battle, _controller.CurrentRaidPhase);
-            var result = _controller.LastRaidOutcome.Result;
-            Assert.IsTrue(result.events.Any(e => e[1] == (long)BattleEventKind.DefenderDamaged), "The team should hit a guard");
-            yield return new WaitForSeconds(0.5f);
+            var scale = Time.timeScale;
+            Time.timeScale = 20f;
+            var limit = Time.realtimeSinceStartup + 30f;
+            while (_controller.CurrentRaidPhase == RaidPhase.Battle && _controller.LiveTick < 500 && Time.realtimeSinceStartup < limit) yield return null;
+            Time.timeScale = scale;
             _controller.SkipBattle();
             Assert.AreEqual(RaidPhase.Resolved, _controller.CurrentRaidPhase);
+            var result = _controller.LastRaidOutcome.Result;
+            Assert.IsTrue(result.events.Any(e => e[1] == (long)BattleEventKind.DefenderDamaged), "The team should hit a guard");
             yield return null;
             Assert.AreEqual(result.defendersAlive, Guards().Count(g => g.activeSelf), "Skipping should leave only the living guards");
             _controller.FinishRaid();
@@ -106,7 +109,6 @@ namespace ShinobiDominion.Tests
             yield return null;
             _controller.ScoutRaid(Garrison);
             _controller.AutoPlaceHeroes();
-            _controller.StartBattle();
             var scale = Time.timeScale;
             Time.timeScale = 20f;
             var limit = Time.realtimeSinceStartup + 60f;
@@ -156,7 +158,7 @@ namespace ShinobiDominion.Tests
             yield return null;
             Find("ScoutButton").onClick.Invoke();
             yield return null;
-            Assert.AreEqual(RaidPhase.Prepare, _controller.CurrentRaidPhase);
+            Assert.AreEqual(RaidPhase.Battle, _controller.CurrentRaidPhase);
             Assert.AreEqual("stage_07", _controller.CurrentRaidSession.raid.id);
             _controller.RetreatRaid();
             yield return null;
@@ -169,7 +171,6 @@ namespace ShinobiDominion.Tests
             yield return null;
             _controller.ScoutRaid("stage_05");
             _controller.AutoPlaceHeroes();
-            _controller.StartBattle();
             yield return null;
             Assert.IsNotNull(GameObject.Find("BattleHud"), "The battle screen should show its panel");
             var scale = Time.timeScale;
@@ -260,8 +261,7 @@ namespace ShinobiDominion.Tests
             yield return ScreenCaptureTests.Capture(camera, texture, Path.Combine(dir, "defenders_prepare.png"));
 
             _controller.AutoPlaceHeroes();
-            _controller.StartBattle();
-            yield return null;
+            yield return new WaitUntil(() => _controller.LiveTick > 1);
             canvas.gameObject.SetActive(false);
             iso.enabled = false;
 

@@ -1076,6 +1076,309 @@
           "isDefense": true
         }
       ]
+    },
+    {
+      "name": "timed: troops in waves, ended early",
+      "checksum": "2ada218b0b44361a",
+      "stars": 0,
+      "damagePercent": 47,
+      "endTick": 600,
+      "heroesAlive": 2,
+      "team": [
+        {
+          "id": "a",
+          "role": "Control",
+          "hp": 2000,
+          "attack": 200,
+          "defense": 60,
+          "x": 25,
+          "z": 5
+        },
+        {
+          "id": "militia",
+          "role": "Fighter",
+          "hp": 110,
+          "attack": 14,
+          "defense": 5,
+          "x": 10,
+          "z": 10,
+          "isTroop": true,
+          "deployTick": 40
+        },
+        {
+          "id": "militia",
+          "role": "Fighter",
+          "hp": 110,
+          "attack": 14,
+          "defense": 5,
+          "x": 10,
+          "z": 10,
+          "isTroop": true,
+          "deployTick": 40
+        },
+        {
+          "id": "militia",
+          "role": "Fighter",
+          "hp": 110,
+          "attack": 14,
+          "defense": 5,
+          "x": 10,
+          "z": 10,
+          "isTroop": true,
+          "deployTick": 40
+        },
+        {
+          "id": "kunai_thrower",
+          "role": "Mage",
+          "hp": 90,
+          "attack": 26,
+          "defense": 3,
+          "x": 40,
+          "z": 25,
+          "isTroop": true,
+          "deployTick": 90
+        },
+        {
+          "id": "kunai_thrower",
+          "role": "Mage",
+          "hp": 90,
+          "attack": 26,
+          "defense": 3,
+          "x": 40,
+          "z": 25,
+          "isTroop": true,
+          "deployTick": 90
+        },
+        {
+          "id": "shield_bearer",
+          "role": "Tank",
+          "hp": 680,
+          "attack": 24,
+          "defense": 28,
+          "x": 25,
+          "z": 8,
+          "isTroop": true,
+          "deployTick": 90
+        },
+        {
+          "id": "shadow_runner",
+          "role": "Assassin",
+          "hp": 190,
+          "attack": 36,
+          "defense": 8,
+          "x": 8,
+          "z": 25,
+          "isTroop": true,
+          "deployTick": 200
+        }
+      ],
+      "battleEnd": 600
+    },
+    {
+      "name": "timed: a second wave lands beside the first",
+      "checksum": "2e32fdc8442c86f8",
+      "stars": 0,
+      "damagePercent": 0,
+      "endTick": 1800,
+      "heroesAlive": 0,
+      "defendersAlive": 5,
+      "team": [
+        {
+          "id": "a",
+          "role": "Tank",
+          "hp": 6000,
+          "attack": 240,
+          "defense": 240,
+          "x": 10,
+          "z": 10
+        },
+        {
+          "id": "b",
+          "role": "Fighter",
+          "hp": 4800,
+          "attack": 360,
+          "defense": 160,
+          "x": 11,
+          "z": 10
+        },
+        {
+          "id": "c",
+          "role": "Assassin",
+          "hp": 3200,
+          "attack": 440,
+          "defense": 100,
+          "x": 12,
+          "z": 10
+        },
+        {
+          "id": "d",
+          "role": "Mage",
+          "hp": 3200,
+          "attack": 400,
+          "defense": 100,
+          "x": 13,
+          "z": 10,
+          "deployTick": 150
+        },
+        {
+          "id": "e",
+          "role": "Control",
+          "hp": 3600,
+          "attack": 320,
+          "defense": 120,
+          "x": 14,
+          "z": 10,
+          "deployTick": 160
+        },
+        {
+          "id": "f",
+          "role": "Support",
+          "hp": 3600,
+          "attack": 240,
+          "defense": 120,
+          "x": 15,
+          "z": 10,
+          "deployTick": 160
+        },
+        {
+          "id": "scout",
+          "role": "Assassin",
+          "hp": 900,
+          "attack": 120,
+          "defense": 40,
+          "x": 12,
+          "z": 10,
+          "isTroop": true,
+          "deployTick": 160
+        },
+        {
+          "id": "scout",
+          "role": "Assassin",
+          "hp": 900,
+          "attack": 120,
+          "defense": 40,
+          "x": 12,
+          "z": 10,
+          "isTroop": true,
+          "deployTick": 170
+        }
+      ],
+      "defenders": [
+        {
+          "id": "g1",
+          "role": "Tank",
+          "hp": 8000,
+          "attack": 640,
+          "defense": 240,
+          "x": 14,
+          "z": 14
+        },
+        {
+          "id": "g2",
+          "role": "Mage",
+          "hp": 8000,
+          "attack": 640,
+          "defense": 240,
+          "x": 17,
+          "z": 17
+        },
+        {
+          "id": "g3",
+          "role": "Support",
+          "hp": 8000,
+          "attack": 640,
+          "defense": 240,
+          "x": 20,
+          "z": 17
+        },
+        {
+          "id": "g4",
+          "role": "Assassin",
+          "hp": 8000,
+          "attack": 640,
+          "defense": 240,
+          "x": 12,
+          "z": 20
+        },
+        {
+          "id": "g5",
+          "role": "Fighter",
+          "hp": 8000,
+          "attack": 640,
+          "defense": 240,
+          "x": 20,
+          "z": 12
+        }
+      ],
+      "battleEnd": 1800
+    },
+    {
+      "name": "timed: a hero lands where another already left",
+      "checksum": "3b1683863f6f50b3",
+      "stars": 2,
+      "damagePercent": 99,
+      "endTick": 1500,
+      "heroesAlive": 4,
+      "team": [
+        {
+          "id": "a",
+          "role": "Tank",
+          "hp": 1500,
+          "attack": 60,
+          "defense": 60,
+          "x": 40,
+          "z": 40
+        },
+        {
+          "id": "b",
+          "role": "Fighter",
+          "hp": 1200,
+          "attack": 90,
+          "defense": 40,
+          "x": 41,
+          "z": 41,
+          "special": "rally"
+        },
+        {
+          "id": "c",
+          "role": "Assassin",
+          "hp": 800,
+          "attack": 110,
+          "defense": 25,
+          "x": 42,
+          "z": 42
+        },
+        {
+          "id": "d",
+          "role": "Mage",
+          "hp": 800,
+          "attack": 100,
+          "defense": 25,
+          "x": 3,
+          "z": 3
+        },
+        {
+          "id": "e",
+          "role": "Control",
+          "hp": 900,
+          "attack": 80,
+          "defense": 30,
+          "x": 4,
+          "z": 3,
+          "deployTick": 300
+        },
+        {
+          "id": "f",
+          "role": "Support",
+          "hp": 900,
+          "attack": 60,
+          "defense": 30,
+          "x": 3,
+          "z": 3,
+          "deployTick": 300
+        }
+      ],
+      "battleEnd": 1500
     }
   ]
 }
