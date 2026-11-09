@@ -92,6 +92,8 @@ Verified:
 - Builders send up sparks and dust over upgrading buildings.
 - New players get a five-step guide with an arrow (collect, summon, assign, first battle, first upgrade). It never blocks a tap, can be skipped, and is remembered.
 
+**Chest and shop (ADR-043):** a free Treasure Chest every 4 hours, and a gem shop that swaps gems for gold or Mana at fixed rates. No real money anywhere. Every home-screen button now works.
+
 **Guilds and names (ADR-042):**
 - Set your name in the Menu.
 - The friends shortcut opens Guilds: found one for 300 gems, or join one (up to 30 members), with a member list and guild chat.
@@ -108,8 +110,8 @@ Verified:
 |---|---|
 | .NET harness (`tools/core-tests`) | 174 of 174 passed |
 | Go unit tests, including Siege balance and Arena duels | passed; part of the server build |
-| Backend suite, including gift, quest, Siege, Arena, timer, research and guild tests | passed |
-| Unity PlayMode against the live server, including `ModeTests`, `UpgradeTimerTests` and `GuideTests` | 125 of 125 passed |
+| Backend suite, including gift, quest, Siege, Arena, timer, research, guild, chest and shop tests | passed |
+| Unity PlayMode against the live server, including `ModeTests`, `UpgradeTimerTests` and `GuideTests` | 126 of 126 passed |
 
 **Not verified:** how any of it feels in your hands, on a phone, or with two real people in the Arena. Siege and Arena numbers are test values.
 

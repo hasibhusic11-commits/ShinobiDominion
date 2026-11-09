@@ -141,6 +141,39 @@ namespace ShinobiDominion.Core
         public static ArenaBoard Parse(string json) => ServerState.ParseObject(json).ToObject<ArenaBoard>() ?? new ArenaBoard();
     }
 
+    /// <summary>A fixed swap of gems for gold or Mana (ADR-043). Nothing random.</summary>
+    public sealed class ShopOffer
+    {
+        public string id;
+        public string name;
+        public long crystals;
+        public long gold;
+        public long mana;
+    }
+
+    /// <summary>The free Treasure Chest and the shop, as the server sends them.</summary>
+    public sealed class ChestView
+    {
+        public long readyAtMs;
+        public long nowMs;
+        public long gold;
+        public long mana;
+        public List<ShopOffer> offers = new List<ShopOffer>();
+        public ServerState State;
+
+        public bool Ready => readyAtMs <= nowMs;
+
+        public static ChestView Parse(string json)
+        {
+            var token = ServerState.ParseObject(json);
+            var view = token.ToObject<ChestView>() ?? new ChestView();
+            if (view.gold < 0 || view.mana < 0) throw new FormatException("Server sent a negative chest.");
+            view.offers = view.offers ?? new List<ShopOffer>();
+            if (token["state"] is JObject state) view.State = ServerState.FromToken(state);
+            return view;
+        }
+    }
+
     public sealed class QuestStatus
     {
         public string id;

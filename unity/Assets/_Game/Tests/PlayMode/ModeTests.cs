@@ -382,5 +382,25 @@ namespace ShinobiDominion.Tests
             yield return WaitFor(() => Find("FoundGuildButton") != null);
             camera.targetTexture = null;
         }
+        [UnityTest]
+        public IEnumerator TreasureChest_AndShop_ThroughTheirButtons()
+        {
+            long gold = 0, mana = 0, gems = 0;
+            yield return Await(_direct.GetStateAsync(), s => { gold = s.Village.gold; mana = s.Village.mana; gems = s.Crystals; });
+            Controller.OpenShortcut("chest");
+            yield return ClickWhenReady("OpenChestButton");
+            yield return WaitFor(() => Controller.CurrentChest != null && !Controller.CurrentChest.Ready);
+            yield return Await(_direct.GetStateAsync(), s =>
+            {
+                Assert.AreEqual(gold + 500, s.Village.gold, "A level 1 Dojo's chest holds 500 gold");
+                Assert.AreEqual(mana + 150, s.Village.mana);
+                mana = s.Village.mana;
+            });
+
+            Controller.OpenShop("mana");
+            yield return ClickWhenReady("Shop_mana_flask");
+            yield return WaitFor(() => Controller.Village.Mana == mana + 1200);
+            Assert.AreEqual(gems - 50, Controller.ServerCrystals);
+        }
     }
 }

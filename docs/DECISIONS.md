@@ -88,6 +88,23 @@ Follows the owner's ADR-021. Up to four Troop Camps, gated by Dojo level, and a 
 - A raid still needs at least one hero. At most 200 troops can land in one raid, to bound the server's work.
 - Troop names and all numbers are test values. Offline practice troops aren't saved.
 
+## ADR-043: Treasure Chest and gem shop, added on 2026-11-09 while the owner slept
+These fill the last placeholder buttons on the home screen. Numbers are test values in `modes.json`.
+
+**Treasure Chest** (the chest shortcut)
+- Free gold and Mana every 4 hours: 500 gold and 150 Mana per Dojo level.
+- It opens once per wait, on the server's clock.
+
+**Gem shop** (the gem-chest shortcut and the "+" buttons)
+- Four fixed swaps of gems for gold or Mana:
+  - 50 gems for 5,000 gold.
+  - 200 gems for 22,000 gold.
+  - 50 gems for 1,200 Mana.
+  - 200 gems for 5,200 Mana.
+- Nothing is random.
+- A gold swap that would not fit in the vault is refused rather than wasted.
+- There is no way to buy gems with money, and no real-money purchase anywhere.
+
 ## ADR-042: Player names and guilds, added on 2026-11-09 while the owner slept
 Castle Clash has guilds, and the home screen already had a "friends" shortcut, so that shortcut now opens Guilds. Claude's choices:
 

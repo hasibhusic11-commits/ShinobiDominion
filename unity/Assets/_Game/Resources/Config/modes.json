@@ -56,5 +56,12 @@
     { "id": "siege", "title": "Hold off a Village Siege", "target": 1, "crystals": 40 },
     { "id": "summon", "title": "Summon a hero", "target": 1, "crystals": 20 }
   ],
-  "dailyGift": { "crystals": 50, "gold": 1000, "mana": 300 }
+  "dailyGift": { "crystals": 50, "gold": 1000, "mana": 300 },
+  "treasureChest": { "hours": 4, "goldPerDojoLevel": 500, "manaPerDojoLevel": 150 },
+  "shop": [
+    { "id": "gold_pouch", "name": "Pouch of gold", "crystals": 50, "gold": 5000 },
+    { "id": "gold_chest", "name": "Chest of gold", "crystals": 200, "gold": 22000 },
+    { "id": "mana_flask", "name": "Flask of Mana", "crystals": 50, "mana": 1200 },
+    { "id": "mana_barrel", "name": "Barrel of Mana", "crystals": 200, "mana": 5200 }
+  ]
 }

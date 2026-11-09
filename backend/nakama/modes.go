@@ -96,6 +96,8 @@ type modesConfig struct {
 		Gold     int64 `json:"gold"`
 		Mana     int64 `json:"mana"`
 	} `json:"dailyGift"`
+	TreasureChest chestConfig `json:"treasureChest"`
+	Shop          []shopOffer `json:"shop"`
 	questByID map[string]questDef
 }
 
@@ -136,6 +138,9 @@ func loadModes(data []byte, troops *troopCatalog, buildings *BuildingCatalog) (*
 	}
 	if _, ok := buildings.byID["dojo_hq"]; !ok {
 		return nil, errors.New("arena needs the dojo_hq building for its shrine")
+	}
+	if err := modes.checkShop(); err != nil {
+		return nil, err
 	}
 	modes.questByID = map[string]questDef{}
 	for _, quest := range modes.Quests {
