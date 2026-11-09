@@ -88,6 +88,22 @@ Follows the owner's ADR-021. Up to four Troop Camps, gated by Dojo level, and a 
 - A raid still needs at least one hero. At most 200 troops can land in one raid, to bound the server's work.
 - Troop names and all numbers are test values. Offline practice troops aren't saved.
 
+## ADR-047: Dungeons are not villages, and Common and Elite heroes can farm them, 2026-11-09
+The balance report (`BALANCE_REPORT.md`) showed a Common hero could not clear the campaign from stage 4, and Elites mostly lost at the expected level. Legendaries are rare and summoning has no pity, so most players would be stuck. The owner's direction: Common and Elite heroes must clear enough to farm, and, as in Castle Clash, dungeons are not held to a village's limits.
+
+**Dungeons may be crowded.** This supersedes ADR-030's one-guard rule for dungeons only; player villages keep one guard.
+- Guards: 1, rising to 5 from stage 13. Commons guard the early stages, Commons and Elites the middle, Elites the late ones. A Legendary leads each chapter's last stage (5, 10 and 15). Stage 2's Legendary guard is now a Common.
+- Towers: Arrow Towers from the start, Magic Towers from stage 3, Cannon Towers from stage 4. Stage 15 has 18 towers.
+
+**Each dungeon has a strength.** `strength` in `raids.json` is a percent that scales the HP and attack of every building, wall, tower and guard in it. The client (`RaidDefinition.Scaled`) and the server (`raidDefinition.scaled`) apply it the same way.
+
+**The strengths are tuned, not guessed.** `BalanceReportTests.TuneCampaign` (run with `SD_CAMPAIGN_TUNE=tools/balance/campaign_strength.json`) finds, for each stage, the strongest setting up to 100% at which at least 70% of Common heroes win a star at the level expected there. `tools/balance/generate_campaign.js` reads that file. It replaces the old Python generator, which no longer matched the building roster. The result, at the expected level:
+- Commons: every stage won, usually 1 to 2 stars; 30% over-levelled, 1 to 3 stars.
+- Elites: about 2 to 3 stars.
+- Legendaries: 2 to 3 stars.
+- Under-levelled Commons often lose, so levelling still matters.
+- The expected levels are the campaign tests' anchors (1 at stage 1, 10, 25, 50 at stage 5, 110 at stage 10, 200 at stage 15). If the owner wants a different pace, change the anchors and rerun the tuner.
+
 ## ADR-046: The owner's building roster, new art, switchable towers, traps and the painted map, 2026-11-09
 The owner set the official building list, sent new art for every building and a painted village map, and gave count rules. Numbers not named below are Claude's test values.
 

@@ -140,7 +140,7 @@ All the new numbers are test values. Guild chat needs a word filter and reportin
 - Unity: all 178 EditMode tests and all 136 PlayMode tests pass against the rebuilt local server, including the Switch button and the painted-map camera tests.
 - Not run: the .NET core test runner, which Windows Application Control blocks on this PC. The same tests ran inside Unity instead.
 
-**Balance report** (`BALANCE_REPORT.md`, Phase 5): every hero against every campaign stage, the three towers side by side, and the economy in hours of mine income. Regenerate it with `SD_BALANCE_REPORT=<path>` on the EditMode test `BalanceReportTests`. It found the Magic Tower beat the Arrow Tower at everything, now fixed, and that a Common hero cannot clear the campaign from stage 4 (open, needs your call).
+**Balance report** (`BALANCE_REPORT.md`, Phase 5): every hero against every campaign stage, the three towers side by side, and the economy in hours of mine income. Regenerate it with `SD_BALANCE_REPORT=<path>` on the EditMode test `BalanceReportTests`. It found the Magic Tower beat the Arrow Tower at everything, now fixed, and that a Common hero could not clear the campaign from stage 4. Fixed by ADR-047: dungeons now hold more guards and towers, each scaled by a tuned strength, so Common and Elite heroes can farm every stage.
 
 **Still to do:**
 - Art for the Builder Hall and Summoning Gate (still old).

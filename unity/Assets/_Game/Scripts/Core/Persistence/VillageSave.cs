@@ -24,6 +24,12 @@ namespace ShinobiDominion.Core
         public long mana;
         public List<BuildingSave> buildings = new List<BuildingSave>();
 
+        /// <summary>
+        /// A battle layout being shown, not a player's village: dungeons may hold more towers and guards than any
+        /// Town Hall allows (ADR-047), so the count limits are not checked. Never set for a player's own save.
+        /// </summary>
+        public bool battleLayout;
+
         public string ToJson() => JsonConvert.SerializeObject(this, Formatting.Indented);
 
         public static VillageSave FromJson(string json)

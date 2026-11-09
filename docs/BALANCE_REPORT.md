@@ -9,32 +9,22 @@ Each of the 24 summonable heroes leads the army a player would have by that stag
 | Stage | Expected level | Common 70% | Common expected | Common 130% | Elite 70% | Elite expected | Elite 130% | Legendary 70% | Legendary expected | Legendary 130% | Flag |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | 1. Ridge Outpost | 1 | 1.4 (100%) | 1.4 (100%) | 1.4 (100%) | 2.0 (100%) | 2.0 (100%) | 2.0 (100%) | 2.3 (100%) | 2.3 (100%) | 2.3 (100%) |  |
-| 2. Cinder Garrison | 10 | 0.4 (20%) | 0.4 (20%) | 0.6 (40%) | 1.8 (100%) | 1.9 (100%) | 2.4 (100%) | 3.0 (100%) | 3.0 (100%) | 3.0 (100%) |  |
-| 3. Charcoal Pass | 25 | 2.0 (100%) | 2.0 (100%) | 2.0 (100%) | 2.0 (100%) | 2.0 (100%) | 2.0 (100%) | 2.0 (100%) | 2.0 (100%) | 2.5 (100%) |  |
-| 4. Kiln Yard | 37 | 0.0 (0%) | 0.0 (0%) | 0.2 (20%) | 0.6 (50%) | 1.5 (90%) | 1.5 (90%) | 1.5 (100%) | 1.5 (100%) | 2.0 (100%) |  |
-| 5. Ember Keep | 50 | 0.0 (0%) | 0.0 (0%) | 0.0 (0%) | 0.2 (10%) | 0.6 (50%) | 1.3 (90%) | 0.8 (75%) | 1.5 (100%) | 1.8 (100%) | hard: Elites lose at the expected level |
-| 6. Reed Marsh Camp | 62 | 0.0 (0%) | 0.0 (0%) | 0.0 (0%) | 0.2 (10%) | 0.6 (30%) | 1.9 (90%) | 1.0 (50%) | 2.0 (100%) | 2.3 (100%) | hard: Elites lose at the expected level |
-| 7. Lantern Ford | 74 | 0.0 (0%) | 0.0 (0%) | 0.0 (0%) | 0.2 (10%) | 0.6 (40%) | 1.8 (100%) | 1.0 (75%) | 1.5 (100%) | 2.0 (100%) | hard: Elites lose at the expected level |
-| 8. Fogbound Shrine | 86 | 0.0 (0%) | 0.0 (0%) | 0.0 (0%) | 0.0 (0%) | 0.2 (20%) | 1.1 (80%) | 0.3 (25%) | 1.3 (100%) | 1.8 (100%) | hard: Elites lose at the expected level |
-| 9. Willow Stockade | 98 | 0.0 (0%) | 0.0 (0%) | 0.0 (0%) | 0.0 (0%) | 0.0 (0%) | 0.5 (30%) | 0.0 (0%) | 1.0 (50%) | 2.0 (100%) | hard: Elites lose at the expected level |
-| 10. Hollow Citadel | 110 | 0.0 (0%) | 0.0 (0%) | 0.0 (0%) | 0.0 (0%) | 0.4 (30%) | 1.6 (80%) | 0.5 (50%) | 2.0 (100%) | 2.0 (100%) | hard: Elites lose at the expected level |
-| 11. Slate Stair | 128 | 0.0 (0%) | 0.0 (0%) | 0.0 (0%) | 0.0 (0%) | 0.5 (30%) | 1.7 (100%) | 0.3 (25%) | 2.0 (100%) | 2.0 (100%) | hard: Elites lose at the expected level |
-| 12. Cold Forge | 146 | 0.0 (0%) | 0.0 (0%) | 0.0 (0%) | 0.0 (0%) | 0.1 (10%) | 1.1 (70%) | 0.0 (0%) | 1.0 (75%) | 2.0 (100%) | hard: Elites lose at the expected level |
-| 13. Whitecrag Bastion | 164 | 0.0 (0%) | 0.0 (0%) | 0.0 (0%) | 0.0 (0%) | 0.3 (30%) | 1.3 (90%) | 0.5 (50%) | 2.0 (100%) | 2.0 (100%) | hard: Elites lose at the expected level |
-| 14. Sky Gate | 182 | 0.0 (0%) | 0.0 (0%) | 0.0 (0%) | 0.0 (0%) | 0.9 (80%) | 1.3 (100%) | 1.0 (75%) | 2.0 (100%) | 2.3 (100%) | hard: Elites lose at the expected level |
-| 15. Summit Sanctum | 200 | 0.0 (0%) | 0.0 (0%) | 0.0 (0%) | 0.4 (30%) | 1.2 (100%) | 1.2 (100%) | 1.0 (100%) | 2.0 (100%) | 2.3 (100%) |  |
+| 2. Cinder Garrison | 10 | 2.0 (100%) | 2.0 (100%) | 2.0 (100%) | 2.5 (100%) | 2.9 (100%) | 3.0 (100%) | 3.0 (100%) | 3.0 (100%) | 3.0 (100%) |  |
+| 3. Charcoal Pass | 25 | 1.0 (80%) | 1.2 (80%) | 2.0 (100%) | 2.9 (100%) | 2.9 (100%) | 3.0 (100%) | 3.0 (100%) | 3.0 (100%) | 3.0 (100%) |  |
+| 4. Kiln Yard | 37 | 1.2 (80%) | 1.6 (80%) | 2.0 (100%) | 2.1 (100%) | 2.4 (100%) | 2.8 (100%) | 2.8 (100%) | 3.0 (100%) | 3.0 (100%) |  |
+| 5. Ember Keep | 50 | 1.6 (80%) | 2.2 (100%) | 2.5 (100%) | 2.9 (100%) | 3.0 (100%) | 3.0 (100%) | 3.0 (100%) | 3.0 (100%) | 3.0 (100%) |  |
+| 6. Reed Marsh Camp | 62 | 0.4 (30%) | 1.3 (100%) | 1.8 (100%) | 2.2 (100%) | 2.9 (100%) | 3.0 (100%) | 2.8 (100%) | 3.0 (100%) | 3.0 (100%) |  |
+| 7. Lantern Ford | 74 | 1.0 (50%) | 2.0 (90%) | 2.6 (90%) | 2.3 (80%) | 2.4 (80%) | 2.4 (80%) | 3.0 (100%) | 3.0 (100%) | 3.0 (100%) |  |
+| 8. Fogbound Shrine | 86 | 1.3 (80%) | 2.6 (100%) | 2.9 (100%) | 2.8 (100%) | 2.8 (100%) | 2.8 (100%) | 3.0 (100%) | 3.0 (100%) | 3.0 (100%) |  |
+| 9. Willow Stockade | 98 | 0.2 (10%) | 0.9 (80%) | 1.7 (100%) | 2.1 (100%) | 2.9 (100%) | 3.0 (100%) | 3.0 (100%) | 3.0 (100%) | 3.0 (100%) |  |
+| 10. Hollow Citadel | 110 | 0.3 (20%) | 1.1 (100%) | 1.9 (100%) | 1.6 (100%) | 1.9 (100%) | 2.2 (100%) | 1.5 (100%) | 2.0 (100%) | 2.0 (100%) |  |
+| 11. Slate Stair | 128 | 0.0 (0%) | 1.0 (80%) | 2.0 (100%) | 2.1 (100%) | 2.9 (100%) | 2.8 (100%) | 2.5 (100%) | 3.0 (100%) | 3.0 (100%) |  |
+| 12. Cold Forge | 146 | 0.4 (40%) | 1.0 (100%) | 2.2 (100%) | 2.1 (100%) | 2.8 (100%) | 2.8 (100%) | 2.8 (100%) | 2.8 (100%) | 2.8 (100%) |  |
+| 13. Whitecrag Bastion | 164 | 0.0 (0%) | 0.8 (80%) | 1.2 (100%) | 1.3 (90%) | 2.3 (100%) | 2.6 (100%) | 2.0 (100%) | 2.8 (100%) | 2.8 (100%) |  |
+| 14. Sky Gate | 182 | 0.0 (0%) | 0.7 (70%) | 1.0 (100%) | 1.3 (100%) | 1.6 (100%) | 1.6 (100%) | 1.3 (100%) | 1.8 (100%) | 1.8 (100%) |  |
+| 15. Summit Sanctum | 200 | 0.2 (20%) | 1.2 (100%) | 1.2 (100%) | 1.8 (100%) | 2.4 (100%) | 2.4 (100%) | 2.3 (100%) | 2.3 (100%) | 2.3 (100%) |  |
 
-**Flagged stages:**
-- Stage 5, Ember Keep: hard: Elites lose at the expected level.
-- Stage 6, Reed Marsh Camp: hard: Elites lose at the expected level.
-- Stage 7, Lantern Ford: hard: Elites lose at the expected level.
-- Stage 8, Fogbound Shrine: hard: Elites lose at the expected level.
-- Stage 9, Willow Stockade: hard: Elites lose at the expected level.
-- Stage 10, Hollow Citadel: hard: Elites lose at the expected level.
-- Stage 11, Slate Stair: hard: Elites lose at the expected level.
-- Stage 12, Cold Forge: hard: Elites lose at the expected level.
-- Stage 13, Whitecrag Bastion: hard: Elites lose at the expected level.
-- Stage 14, Sky Gate: hard: Elites lose at the expected level.
+No stage is flagged as too hard or too easy.
 
 ## 2. Arrow, Cannon and Magic Tower
 

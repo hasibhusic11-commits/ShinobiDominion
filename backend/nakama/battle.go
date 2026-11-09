@@ -1409,6 +1409,9 @@ type raidDefinition struct {
 	XpPerWin    int64  `json:"xpPerWin"`
 	FirstClearCrystals int64 `json:"firstClearCrystals"`
 	FirstClearItem string `json:"firstClearItem"`
+	// Strength scales the HP and attack of every building, wall, tower and guard in this dungeon, in percent
+	// (0 or 100 means as listed), like the client's RaidDefinition.Scaled.
+	Strength    int    `json:"strength"`
 	expanded    []battleBuildingInput
 }
 
@@ -1458,7 +1461,7 @@ func expandRaid(raid *raidDefinition, buildings *BuildingCatalog) ([]battleBuild
 		row := def.at(level)
 		result = append(result, battleBuildingInput{
 			ID: len(result) + 1, DefinitionID: definitionID, X: x, Z: z, Width: def.Width, Depth: def.Depth,
-			Level: level, Hp: row.Hp, Attack: row.Attack, Range: row.Range,
+			Level: level, Hp: raid.scaled(row.Hp), Attack: raid.scaled(row.Attack), Range: row.Range,
 			IsWall: def.isWall(), IsDefense: def.Function == "Defense", IsTrap: def.Function == "Trap",
 		})
 		return nil
@@ -1544,4 +1547,16 @@ func maxInt(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// scaled applies the dungeon's strength to a stat; anything above zero stays at least 1.
+func (r *raidDefinition) scaled(value int64) int64 {
+	if value <= 0 || r.Strength <= 0 || r.Strength == 100 {
+		return value
+	}
+	scaled := value * int64(r.Strength) / 100
+	if scaled < 1 {
+		return 1
+	}
+	return scaled
 }

@@ -61,13 +61,17 @@ namespace ShinobiDominion.Tests
         [Test]
         public void EveryStage_HasGuardsOnRealHeroBases_AndAReward()
         {
+            var all = Raids().All;
+            Assert.Greater(all.Last().defenders.Count, all.First(r => r.stage == 3).defenders.Count, "Later dungeons hold more guards");
+            Assert.Greater(all.Last().buildings.Count(b => b.def == "defense_tower" || b.def == "cannon_tower" || b.def == "spirit_turret"), 8, "Dungeons are not held to a village's tower limit");
             var catalog = TestCatalog.Load();
             var heroes = Heroes();
             foreach (var raid in Raids().All.Where(r => r.stage >= 2))
             {
                 var buildings = raid.Expand(catalog);
                 var guards = raid.ExpandDefenders(catalog, heroes);
-                Assert.AreEqual(1, guards.Count, raid.id + " should have exactly one guard, like any village");
+                // Dungeons are not villages (owner, 2026-11-09): they may hold several guards, never none.
+                Assert.GreaterOrEqual(guards.Count, 1, raid.id + " has a guard");
                 Assert.Greater(raid.xpPerWin, 0, raid.id);
                 Assert.Greater(raid.goldPerStar, 0, raid.id);
                 foreach (var guard in guards)

@@ -5,7 +5,7 @@
     {
       "id": "ridge_outpost",
       "displayName": "Ridge Outpost",
-      "description": "A walled bandit camp high on the ridge, guarded by two towers and a spirit turret.",
+      "description": "A walled bandit camp high on the ridge, guarded by two arrow towers.",
       "version": 1,
       "goldPerStar": 800,
       "buildings": [
@@ -94,12 +94,13 @@
       "xpPerWin": 55,
       "firstClearCrystals": 60,
       "firstClearItem": "",
-      "requires": ""
+      "requires": "",
+      "strength": 100
     },
     {
       "id": "cinder_garrison",
       "displayName": "Cinder Garrison",
-      "description": "A fortified camp with three hired heroes on guard. Expect them to come out and fight.",
+      "description": "A fortified camp with a hired hero on guard. Expect it to come out and fight.",
       "version": 1,
       "goldPerStar": 1200,
       "buildings": [
@@ -178,7 +179,7 @@
       ],
       "defenders": [
         {
-          "heroId": "solar_beast_sage",
+          "heroId": "ember_recruit",
           "evolution": 0,
           "level": 10,
           "x": 14,
@@ -191,13 +192,14 @@
       "xpPerWin": 80,
       "firstClearCrystals": 70,
       "firstClearItem": "",
-      "requires": ""
+      "requires": "",
+      "strength": 100
     },
     {
       "id": "stage_03",
       "displayName": "Charcoal Pass",
       "description": "A narrow camp that guards the road through the ridge.",
-      "version": 1,
+      "version": 2,
       "goldPerStar": 750,
       "chapter": 1,
       "chapterName": "Cinder Ridge",
@@ -206,6 +208,7 @@
       "firstClearCrystals": 80,
       "firstClearItem": "",
       "requires": "cinder_garrison",
+      "strength": 40,
       "buildings": [
         {
           "def": "dojo_hq",
@@ -216,77 +219,89 @@
         {
           "def": "defense_tower",
           "level": 2,
-          "x": 18,
-          "z": 31
+          "x": 26,
+          "z": 18
         },
         {
-          "def": "defense_tower",
-          "level": 2,
-          "x": 18,
-          "z": 17
-        },
-        {
-          "def": "defense_tower",
+          "def": "spirit_turret",
           "level": 2,
           "x": 30,
-          "z": 31
+          "z": 26
         },
         {
-          "def": "gold_vault",
+          "def": "defense_tower",
+          "level": 2,
+          "x": 22,
+          "z": 30
+        },
+        {
+          "def": "defense_tower",
           "level": 2,
           "x": 18,
-          "z": 20
-        },
-        {
-          "def": "gold_mine",
-          "level": 2,
-          "x": 29,
-          "z": 19
+          "z": 22
         },
         {
           "def": "hero_base",
           "level": 2,
-          "x": 24,
+          "x": 28,
+          "z": 22
+        },
+        {
+          "def": "gold_vault",
+          "level": 2,
+          "x": 26,
           "z": 28
+        },
+        {
+          "def": "gold_mine",
+          "level": 2,
+          "x": 19,
+          "z": 26
+        },
+        {
+          "def": "builder_hall",
+          "level": 2,
+          "x": 22,
+          "z": 19
         }
       ],
       "walls": [
         {
           "level": 1,
-          "x1": 16,
+          "x1": 15,
           "z1": 15,
-          "x2": 34,
+          "x2": 35,
           "z2": 15
         },
         {
           "level": 1,
-          "x1": 34,
+          "x1": 35,
           "z1": 15,
-          "x2": 34,
+          "x2": 35,
           "z2": 35
         },
         {
           "level": 1,
-          "x1": 34,
+          "x1": 35,
           "z1": 35,
-          "x2": 16,
+          "x2": 15,
           "z2": 35
         },
         {
           "level": 1,
-          "x1": 16,
+          "x1": 15,
           "z1": 35,
-          "x2": 16,
+          "x2": 15,
           "z2": 15
         }
       ],
       "defenders": [
         {
-          "heroId": "lantern_warden",
+          "heroId": "moth_herbalist",
           "evolution": 0,
           "level": 35,
-          "x": 24,
-          "z": 28
+          "x": 28,
+          "z": 22
         }
       ]
     },
@@ -294,7 +309,7 @@
       "id": "stage_04",
       "displayName": "Kiln Yard",
       "description": "Smoke hides the towers here until you are close.",
-      "version": 1,
+      "version": 2,
       "goldPerStar": 900,
       "chapter": 1,
       "chapterName": "Cinder Ridge",
@@ -303,6 +318,7 @@
       "firstClearCrystals": 90,
       "firstClearItem": "",
       "requires": "stage_03",
+      "strength": 30,
       "buildings": [
         {
           "def": "dojo_hq",
@@ -312,96 +328,121 @@
         },
         {
           "def": "defense_tower",
-          "level": 2,
-          "x": 17,
-          "z": 16
+          "level": 3,
+          "x": 27,
+          "z": 17
         },
         {
-          "def": "defense_tower",
-          "level": 2,
-          "x": 31,
-          "z": 32
-        },
-        {
-          "def": "defense_tower",
-          "level": 2,
-          "x": 31,
-          "z": 16
+          "def": "cannon_tower",
+          "level": 3,
+          "x": 32,
+          "z": 23
         },
         {
           "def": "spirit_turret",
+          "level": 3,
+          "x": 29,
+          "z": 31
+        },
+        {
+          "def": "defense_tower",
+          "level": 3,
+          "x": 21,
+          "z": 31
+        },
+        {
+          "def": "defense_tower",
+          "level": 3,
+          "x": 16,
+          "z": 25
+        },
+        {
+          "def": "defense_tower",
+          "level": 3,
+          "x": 19,
+          "z": 17
+        },
+        {
+          "def": "hero_base",
           "level": 2,
-          "x": 17,
-          "z": 32
+          "x": 23,
+          "z": 20
+        },
+        {
+          "def": "hero_base",
+          "level": 2,
+          "x": 28,
+          "z": 25
         },
         {
           "def": "gold_vault",
           "level": 2,
-          "x": 19,
-          "z": 19
+          "x": 25,
+          "z": 28
         },
         {
           "def": "gold_mine",
           "level": 2,
-          "x": 29,
-          "z": 19
+          "x": 28,
+          "z": 21
         },
         {
           "def": "builder_hall",
           "level": 2,
           "x": 19,
-          "z": 29
+          "z": 21
         },
         {
           "def": "mana_mill",
           "level": 2,
-          "x": 29,
-          "z": 29
-        },
-        {
-          "def": "hero_base",
-          "level": 2,
-          "x": 24,
-          "z": 28
+          "x": 31,
+          "z": 27
         }
       ],
       "walls": [
         {
           "level": 2,
-          "x1": 15,
+          "x1": 14,
           "z1": 14,
-          "x2": 35,
+          "x2": 36,
           "z2": 14
         },
         {
           "level": 2,
-          "x1": 35,
+          "x1": 36,
           "z1": 14,
-          "x2": 35,
+          "x2": 36,
           "z2": 36
         },
         {
           "level": 2,
-          "x1": 35,
+          "x1": 36,
           "z1": 36,
-          "x2": 15,
+          "x2": 14,
           "z2": 36
         },
         {
           "level": 2,
-          "x1": 15,
+          "x1": 14,
           "z1": 36,
-          "x2": 15,
+          "x2": 14,
           "z2": 14
         }
       ],
       "defenders": [
         {
-          "heroId": "lantern_warden",
+          "heroId": "stone_apprentice",
           "evolution": 0,
           "level": 44,
-          "x": 24,
-          "z": 28
+          "x": 23,
+          "z": 20
+        },
+        {
+          "heroId": "talisman_novice",
+          "evolution": 0,
+          "level": 44,
+          "x": 28,
+          "z": 25
         }
       ]
     },
@@ -409,7 +450,7 @@
       "id": "stage_05",
       "displayName": "Ember Keep",
       "description": "The first true fortress. Its keeper holds an Awakening Scroll.",
-      "version": 1,
+      "version": 2,
       "goldPerStar": 1050,
       "chapter": 1,
       "chapterName": "Cinder Ridge",
@@ -418,6 +459,7 @@
       "firstClearCrystals": 250,
       "firstClearItem": "awakening_scroll",
       "requires": "stage_04",
+      "strength": 25,
       "buildings": [
         {
           "def": "dojo_hq",
@@ -428,95 +470,120 @@
         {
           "def": "defense_tower",
           "level": 3,
-          "x": 33,
-          "z": 31
-        },
-        {
-          "def": "defense_tower",
-          "level": 3,
-          "x": 33,
+          "x": 31,
           "z": 17
         },
         {
-          "def": "defense_tower",
+          "def": "cannon_tower",
           "level": 3,
-          "x": 15,
-          "z": 31
+          "x": 31,
+          "z": 26
         },
         {
           "def": "spirit_turret",
           "level": 3,
-          "x": 15,
-          "z": 17
+          "x": 26,
+          "z": 32
+        },
+        {
+          "def": "defense_tower",
+          "level": 3,
+          "x": 16,
+          "z": 32
+        },
+        {
+          "def": "defense_tower",
+          "level": 3,
+          "x": 17,
+          "z": 22
+        },
+        {
+          "def": "defense_tower",
+          "level": 3,
+          "x": 22,
+          "z": 16
+        },
+        {
+          "def": "hero_base",
+          "level": 2,
+          "x": 23,
+          "z": 28
+        },
+        {
+          "def": "hero_base",
+          "level": 2,
+          "x": 25,
+          "z": 20
         },
         {
           "def": "gold_vault",
           "level": 2,
-          "x": 19,
-          "z": 19
+          "x": 26,
+          "z": 28
         },
         {
           "def": "gold_mine",
           "level": 2,
-          "x": 29,
-          "z": 19
+          "x": 28,
+          "z": 22
         },
         {
           "def": "builder_hall",
           "level": 2,
           "x": 19,
-          "z": 29
+          "z": 26
         },
         {
           "def": "mana_mill",
           "level": 2,
-          "x": 29,
-          "z": 29
-        },
-        {
-          "def": "hero_base",
-          "level": 2,
-          "x": 24,
-          "z": 28
+          "x": 22,
+          "z": 31
         }
       ],
       "walls": [
         {
           "level": 2,
-          "x1": 13,
-          "z1": 15,
-          "x2": 37,
-          "z2": 15
+          "x1": 14,
+          "z1": 14,
+          "x2": 36,
+          "z2": 14
         },
         {
           "level": 2,
-          "x1": 37,
-          "z1": 15,
-          "x2": 37,
-          "z2": 35
+          "x1": 36,
+          "z1": 14,
+          "x2": 36,
+          "z2": 36
         },
         {
           "level": 2,
-          "x1": 37,
-          "z1": 35,
-          "x2": 13,
-          "z2": 35
+          "x1": 36,
+          "z1": 36,
+          "x2": 14,
+          "z2": 36
         },
         {
           "level": 2,
-          "x1": 13,
-          "z1": 35,
-          "x2": 13,
-          "z2": 15
+          "x1": 14,
+          "z1": 36,
+          "x2": 14,
+          "z2": 14
         }
       ],
       "defenders": [
         {
-          "heroId": "lantern_warden",
+          "heroId": "solar_beast_sage",
           "evolution": 0,
           "level": 53,
-          "x": 24,
+          "x": 23,
           "z": 28
+        },
+        {
+          "heroId": "spark_tinkerer",
+          "evolution": 0,
+          "level": 53,
+          "x": 25,
+          "z": 20
         }
       ]
     },
@@ -524,7 +591,7 @@
       "id": "stage_06",
       "displayName": "Reed Marsh Camp",
       "description": "Raiders hide among the reeds at the edge of the hollow.",
-      "version": 1,
+      "version": 2,
       "goldPerStar": 1200,
       "chapter": 2,
       "chapterName": "Mist Hollow",
@@ -533,6 +600,7 @@
       "firstClearCrystals": 110,
       "firstClearItem": "",
       "requires": "stage_05",
+      "strength": 30,
       "buildings": [
         {
           "def": "dojo_hq",
@@ -542,101 +610,132 @@
         },
         {
           "def": "defense_tower",
-          "level": 3,
-          "x": 31,
-          "z": 16
+          "level": 4,
+          "x": 33,
+          "z": 19
+        },
+        {
+          "def": "cannon_tower",
+          "level": 4,
+          "x": 32,
+          "z": 26
+        },
+        {
+          "def": "spirit_turret",
+          "level": 4,
+          "x": 29,
+          "z": 33
         },
         {
           "def": "defense_tower",
-          "level": 3,
-          "x": 17,
-          "z": 32
-        },
-        {
-          "def": "defense_tower",
-          "level": 3,
-          "x": 17,
-          "z": 16
-        },
-        {
-          "def": "defense_tower",
-          "level": 3,
-          "x": 31,
+          "level": 4,
+          "x": 22,
           "z": 32
         },
         {
           "def": "spirit_turret",
-          "level": 3,
-          "x": 24,
+          "level": 4,
+          "x": 15,
+          "z": 29
+        },
+        {
+          "def": "defense_tower",
+          "level": 4,
+          "x": 16,
+          "z": 22
+        },
+        {
+          "def": "defense_tower",
+          "level": 4,
+          "x": 19,
+          "z": 15
+        },
+        {
+          "def": "defense_tower",
+          "level": 4,
+          "x": 26,
           "z": 16
-        },
-        {
-          "def": "gold_vault",
-          "level": 3,
-          "x": 19,
-          "z": 19
-        },
-        {
-          "def": "gold_mine",
-          "level": 3,
-          "x": 29,
-          "z": 19
-        },
-        {
-          "def": "builder_hall",
-          "level": 3,
-          "x": 19,
-          "z": 29
-        },
-        {
-          "def": "mana_mill",
-          "level": 3,
-          "x": 29,
-          "z": 29
         },
         {
           "def": "hero_base",
           "level": 3,
-          "x": 24,
+          "x": 20,
+          "z": 23
+        },
+        {
+          "def": "hero_base",
+          "level": 3,
+          "x": 25,
           "z": 28
+        },
+        {
+          "def": "gold_vault",
+          "level": 3,
+          "x": 28,
+          "z": 23
+        },
+        {
+          "def": "gold_mine",
+          "level": 3,
+          "x": 21,
+          "z": 28
+        },
+        {
+          "def": "builder_hall",
+          "level": 3,
+          "x": 28,
+          "z": 27
+        },
+        {
+          "def": "mana_mill",
+          "level": 3,
+          "x": 22,
+          "z": 19
         }
       ],
       "walls": [
         {
           "level": 2,
-          "x1": 15,
-          "z1": 14,
-          "x2": 35,
-          "z2": 14
+          "x1": 13,
+          "z1": 13,
+          "x2": 37,
+          "z2": 13
         },
         {
           "level": 2,
-          "x1": 35,
-          "z1": 14,
-          "x2": 35,
-          "z2": 36
+          "x1": 37,
+          "z1": 13,
+          "x2": 37,
+          "z2": 37
         },
         {
           "level": 2,
-          "x1": 35,
-          "z1": 36,
-          "x2": 15,
-          "z2": 36
+          "x1": 37,
+          "z1": 37,
+          "x2": 13,
+          "z2": 37
         },
         {
           "level": 2,
-          "x1": 15,
-          "z1": 36,
-          "x2": 15,
-          "z2": 14
+          "x1": 13,
+          "z1": 37,
+          "x2": 13,
+          "z2": 13
         }
       ],
       "defenders": [
         {
-          "heroId": "lantern_warden",
+          "heroId": "gale_runner",
           "evolution": 0,
           "level": 62,
-          "x": 24,
+          "x": 20,
+          "z": 23
+        },
+        {
+          "heroId": "moth_herbalist",
+          "evolution": 0,
+          "level": 62,
+          "x": 25,
           "z": 28
         }
       ]
@@ -644,8 +743,8 @@
     {
       "id": "stage_07",
       "displayName": "Lantern Ford",
-      "description": "Spirit turrets light the only crossing.",
-      "version": 1,
+      "description": "Magic towers light the only crossing.",
+      "version": 2,
       "goldPerStar": 1350,
       "chapter": 2,
       "chapterName": "Mist Hollow",
@@ -654,6 +753,7 @@
       "firstClearCrystals": 120,
       "firstClearItem": "",
       "requires": "stage_06",
+      "strength": 20,
       "buildings": [
         {
           "def": "dojo_hq",
@@ -664,101 +764,151 @@
         {
           "def": "defense_tower",
           "level": 4,
-          "x": 16,
-          "z": 33
+          "x": 33,
+          "z": 22
         },
         {
-          "def": "defense_tower",
+          "def": "cannon_tower",
           "level": 4,
-          "x": 16,
-          "z": 15
-        },
-        {
-          "def": "defense_tower",
-          "level": 4,
-          "x": 32,
-          "z": 33
-        },
-        {
-          "def": "defense_tower",
-          "level": 4,
-          "x": 32,
-          "z": 15
+          "x": 33,
+          "z": 29
         },
         {
           "def": "spirit_turret",
+          "level": 4,
+          "x": 27,
+          "z": 32
+        },
+        {
+          "def": "defense_tower",
+          "level": 4,
+          "x": 21,
+          "z": 33
+        },
+        {
+          "def": "cannon_tower",
+          "level": 4,
+          "x": 16,
+          "z": 29
+        },
+        {
+          "def": "spirit_turret",
+          "level": 4,
+          "x": 16,
+          "z": 23
+        },
+        {
+          "def": "defense_tower",
+          "level": 4,
+          "x": 16,
+          "z": 15
+        },
+        {
+          "def": "defense_tower",
           "level": 4,
           "x": 24,
           "z": 15
         },
         {
-          "def": "gold_vault",
-          "level": 3,
-          "x": 19,
-          "z": 19
-        },
-        {
-          "def": "gold_mine",
-          "level": 3,
-          "x": 29,
-          "z": 19
-        },
-        {
-          "def": "builder_hall",
-          "level": 3,
-          "x": 19,
-          "z": 29
-        },
-        {
-          "def": "mana_mill",
-          "level": 3,
-          "x": 29,
-          "z": 29
+          "def": "defense_tower",
+          "level": 4,
+          "x": 31,
+          "z": 15
         },
         {
           "def": "hero_base",
           "level": 3,
           "x": 24,
+          "z": 20
+        },
+        {
+          "def": "hero_base",
+          "level": 3,
+          "x": 28,
+          "z": 24
+        },
+        {
+          "def": "hero_base",
+          "level": 3,
+          "x": 20,
+          "z": 23
+        },
+        {
+          "def": "gold_vault",
+          "level": 3,
+          "x": 25,
           "z": 28
+        },
+        {
+          "def": "gold_mine",
+          "level": 3,
+          "x": 21,
+          "z": 28
+        },
+        {
+          "def": "builder_hall",
+          "level": 3,
+          "x": 29,
+          "z": 27
+        },
+        {
+          "def": "mana_mill",
+          "level": 3,
+          "x": 28,
+          "z": 20
         }
       ],
       "walls": [
         {
           "level": 2,
-          "x1": 14,
+          "x1": 13,
           "z1": 13,
-          "x2": 36,
+          "x2": 37,
           "z2": 13
         },
         {
           "level": 2,
-          "x1": 36,
+          "x1": 37,
           "z1": 13,
-          "x2": 36,
+          "x2": 37,
           "z2": 37
         },
         {
           "level": 2,
-          "x1": 36,
+          "x1": 37,
           "z1": 37,
-          "x2": 14,
+          "x2": 13,
           "z2": 37
         },
         {
           "level": 2,
-          "x1": 14,
+          "x1": 13,
           "z1": 37,
-          "x2": 14,
+          "x2": 13,
           "z2": 13
         }
       ],
       "defenders": [
         {
-          "heroId": "lantern_warden",
+          "heroId": "scarlet_fan_dancer",
           "evolution": 0,
           "level": 71,
           "x": 24,
-          "z": 28
+          "z": 20
+        },
+        {
+          "heroId": "stone_apprentice",
+          "evolution": 0,
+          "level": 71,
+          "x": 28,
+          "z": 24
+        },
+        {
+          "heroId": "frost_lake_monk",
+          "evolution": 0,
+          "level": 71,
+          "x": 20,
+          "z": 23
         }
       ]
     },
@@ -766,7 +916,7 @@
       "id": "stage_08",
       "displayName": "Fogbound Shrine",
       "description": "Its guards know every path through the mist.",
-      "version": 1,
+      "version": 2,
       "goldPerStar": 1500,
       "chapter": 2,
       "chapterName": "Mist Hollow",
@@ -775,6 +925,7 @@
       "firstClearCrystals": 130,
       "firstClearItem": "",
       "requires": "stage_07",
+      "strength": 15,
       "buildings": [
         {
           "def": "dojo_hq",
@@ -784,68 +935,68 @@
         },
         {
           "def": "defense_tower",
-          "level": 4,
-          "x": 15,
-          "z": 17
-        },
-        {
-          "def": "defense_tower",
-          "level": 4,
+          "level": 5,
           "x": 33,
-          "z": 31
+          "z": 25
         },
         {
-          "def": "defense_tower",
-          "level": 4,
+          "def": "cannon_tower",
+          "level": 5,
           "x": 33,
-          "z": 17
-        },
-        {
-          "def": "defense_tower",
-          "level": 4,
-          "x": 15,
-          "z": 31
+          "z": 33
         },
         {
           "def": "spirit_turret",
-          "level": 4,
-          "x": 24,
-          "z": 17
+          "level": 5,
+          "x": 26,
+          "z": 34
+        },
+        {
+          "def": "defense_tower",
+          "level": 5,
+          "x": 19,
+          "z": 34
+        },
+        {
+          "def": "cannon_tower",
+          "level": 5,
+          "x": 15,
+          "z": 29
         },
         {
           "def": "spirit_turret",
-          "level": 4,
-          "x": 24,
-          "z": 31
+          "level": 5,
+          "x": 15,
+          "z": 23
         },
         {
-          "def": "gold_vault",
-          "level": 3,
-          "x": 19,
+          "def": "defense_tower",
+          "level": 5,
+          "x": 14,
+          "z": 14
+        },
+        {
+          "def": "defense_tower",
+          "level": 5,
+          "x": 22,
+          "z": 14
+        },
+        {
+          "def": "defense_tower",
+          "level": 5,
+          "x": 29,
+          "z": 14
+        },
+        {
+          "def": "defense_tower",
+          "level": 5,
+          "x": 33,
           "z": 19
         },
         {
-          "def": "gold_mine",
+          "def": "hero_base",
           "level": 3,
-          "x": 29,
-          "z": 19
-        },
-        {
-          "def": "builder_hall",
-          "level": 3,
-          "x": 19,
-          "z": 29
-        },
-        {
-          "def": "mana_mill",
-          "level": 3,
-          "x": 29,
-          "z": 29
-        },
-        {
-          "def": "gold_mine",
-          "level": 3,
-          "x": 18,
+          "x": 20,
           "z": 24
         },
         {
@@ -853,45 +1004,95 @@
           "level": 3,
           "x": 24,
           "z": 28
+        },
+        {
+          "def": "hero_base",
+          "level": 3,
+          "x": 24,
+          "z": 20
+        },
+        {
+          "def": "gold_vault",
+          "level": 3,
+          "x": 28,
+          "z": 24
+        },
+        {
+          "def": "gold_mine",
+          "level": 3,
+          "x": 27,
+          "z": 28
+        },
+        {
+          "def": "builder_hall",
+          "level": 3,
+          "x": 20,
+          "z": 28
+        },
+        {
+          "def": "mana_mill",
+          "level": 3,
+          "x": 28,
+          "z": 20
+        },
+        {
+          "def": "mana_vault",
+          "level": 3,
+          "x": 20,
+          "z": 19
         }
       ],
       "walls": [
         {
           "level": 3,
-          "x1": 13,
-          "z1": 15,
-          "x2": 37,
-          "z2": 15
+          "x1": 12,
+          "z1": 12,
+          "x2": 38,
+          "z2": 12
         },
         {
           "level": 3,
-          "x1": 37,
-          "z1": 15,
-          "x2": 37,
-          "z2": 35
+          "x1": 38,
+          "z1": 12,
+          "x2": 38,
+          "z2": 38
         },
         {
           "level": 3,
-          "x1": 37,
-          "z1": 35,
-          "x2": 13,
-          "z2": 35
+          "x1": 38,
+          "z1": 38,
+          "x2": 12,
+          "z2": 38
         },
         {
           "level": 3,
-          "x1": 13,
-          "z1": 35,
-          "x2": 13,
-          "z2": 15
+          "x1": 12,
+          "z1": 38,
+          "x2": 12,
+          "z2": 12
         }
       ],
       "defenders": [
         {
-          "heroId": "lantern_warden",
+          "heroId": "boulder_fist_elder",
+          "evolution": 0,
+          "level": 80,
+          "x": 20,
+          "z": 24
+        },
+        {
+          "heroId": "mist_courier",
           "evolution": 0,
           "level": 80,
           "x": 24,
           "z": 28
+        },
+        {
+          "heroId": "thunder_drum_monk",
+          "evolution": 0,
+          "level": 80,
+          "x": 24,
+          "z": 20
         }
       ]
     },
@@ -899,7 +1100,7 @@
       "id": "stage_09",
       "displayName": "Willow Stockade",
       "description": "Thick walls, and a garrison that does not retreat.",
-      "version": 1,
+      "version": 2,
       "goldPerStar": 1650,
       "chapter": 2,
       "chapterName": "Mist Hollow",
@@ -908,6 +1109,7 @@
       "firstClearCrystals": 140,
       "firstClearItem": "",
       "requires": "stage_08",
+      "strength": 20,
       "buildings": [
         {
           "def": "dojo_hq",
@@ -918,113 +1120,169 @@
         {
           "def": "defense_tower",
           "level": 5,
-          "x": 31,
-          "z": 32
+          "x": 34,
+          "z": 29
         },
         {
-          "def": "defense_tower",
+          "def": "cannon_tower",
           "level": 5,
-          "x": 31,
-          "z": 16
-        },
-        {
-          "def": "defense_tower",
-          "level": 5,
-          "x": 17,
-          "z": 32
-        },
-        {
-          "def": "defense_tower",
-          "level": 5,
-          "x": 17,
-          "z": 16
-        },
-        {
-          "def": "defense_tower",
-          "level": 5,
-          "x": 24,
-          "z": 16
+          "x": 30,
+          "z": 34
         },
         {
           "def": "spirit_turret",
           "level": 5,
           "x": 24,
-          "z": 32
+          "z": 33
+        },
+        {
+          "def": "defense_tower",
+          "level": 5,
+          "x": 17,
+          "z": 34
+        },
+        {
+          "def": "cannon_tower",
+          "level": 5,
+          "x": 14,
+          "z": 28
         },
         {
           "def": "spirit_turret",
           "level": 5,
-          "x": 17,
+          "x": 14,
+          "z": 22
+        },
+        {
+          "def": "defense_tower",
+          "level": 5,
+          "x": 14,
+          "z": 14
+        },
+        {
+          "def": "spirit_turret",
+          "level": 5,
+          "x": 22,
+          "z": 15
+        },
+        {
+          "def": "defense_tower",
+          "level": 5,
+          "x": 27,
+          "z": 15
+        },
+        {
+          "def": "defense_tower",
+          "level": 5,
+          "x": 34,
+          "z": 16
+        },
+        {
+          "def": "defense_tower",
+          "level": 5,
+          "x": 34,
+          "z": 23
+        },
+        {
+          "def": "hero_base",
+          "level": 4,
+          "x": 23,
+          "z": 20
+        },
+        {
+          "def": "hero_base",
+          "level": 4,
+          "x": 28,
+          "z": 25
+        },
+        {
+          "def": "hero_base",
+          "level": 4,
+          "x": 20,
           "z": 24
         },
         {
           "def": "gold_vault",
           "level": 4,
-          "x": 19,
-          "z": 19
+          "x": 24,
+          "z": 28
         },
         {
           "def": "gold_mine",
           "level": 4,
-          "x": 29,
-          "z": 19
+          "x": 28,
+          "z": 21
         },
         {
           "def": "builder_hall",
           "level": 4,
-          "x": 19,
-          "z": 29
+          "x": 20,
+          "z": 28
         },
         {
           "def": "mana_mill",
           "level": 4,
-          "x": 29,
-          "z": 29
+          "x": 28,
+          "z": 28
         },
         {
-          "def": "hero_base",
+          "def": "mana_vault",
           "level": 4,
-          "x": 24,
-          "z": 28
+          "x": 19,
+          "z": 20
         }
       ],
       "walls": [
         {
           "level": 3,
-          "x1": 15,
-          "z1": 14,
-          "x2": 35,
-          "z2": 14
+          "x1": 12,
+          "z1": 12,
+          "x2": 38,
+          "z2": 12
         },
         {
           "level": 3,
-          "x1": 35,
-          "z1": 14,
-          "x2": 35,
-          "z2": 36
+          "x1": 38,
+          "z1": 12,
+          "x2": 38,
+          "z2": 38
         },
         {
           "level": 3,
-          "x1": 35,
-          "z1": 36,
-          "x2": 15,
-          "z2": 36
+          "x1": 38,
+          "z1": 38,
+          "x2": 12,
+          "z2": 38
         },
         {
           "level": 3,
-          "x1": 15,
-          "z1": 36,
-          "x2": 15,
-          "z2": 14
+          "x1": 12,
+          "z1": 38,
+          "x2": 12,
+          "z2": 12
         }
       ],
       "defenders": [
         {
-          "heroId": "lantern_warden",
+          "heroId": "salt_wind_nomad",
           "evolution": 0,
           "level": 89,
-          "x": 24,
-          "z": 28
+          "x": 23,
+          "z": 20
+        },
+        {
+          "heroId": "gale_runner",
+          "evolution": 0,
+          "level": 89,
+          "x": 28,
+          "z": 25
+        },
+        {
+          "heroId": "cinder_shield_captain",
+          "evolution": 0,
+          "level": 89,
+          "x": 20,
+          "z": 24
         }
       ]
     },
@@ -1032,7 +1290,7 @@
       "id": "stage_10",
       "displayName": "Hollow Citadel",
       "description": "The heart of the hollow. Its lord holds an Ascension Stone.",
-      "version": 1,
+      "version": 2,
       "goldPerStar": 1800,
       "chapter": 2,
       "chapterName": "Mist Hollow",
@@ -1041,6 +1299,7 @@
       "firstClearCrystals": 300,
       "firstClearItem": "ascension_stone",
       "requires": "stage_09",
+      "strength": 15,
       "buildings": [
         {
           "def": "dojo_hq",
@@ -1050,120 +1309,195 @@
         },
         {
           "def": "defense_tower",
-          "level": 5,
-          "x": 33,
-          "z": 14
-        },
-        {
-          "def": "defense_tower",
-          "level": 5,
-          "x": 15,
+          "level": 6,
+          "x": 34,
           "z": 34
         },
         {
-          "def": "defense_tower",
-          "level": 5,
-          "x": 15,
-          "z": 14
-        },
-        {
-          "def": "defense_tower",
-          "level": 5,
-          "x": 33,
-          "z": 34
-        },
-        {
-          "def": "defense_tower",
-          "level": 5,
-          "x": 24,
-          "z": 14
-        },
-        {
-          "def": "spirit_turret",
-          "level": 5,
-          "x": 24,
+          "def": "cannon_tower",
+          "level": 6,
+          "x": 27,
           "z": 34
         },
         {
           "def": "spirit_turret",
-          "level": 5,
-          "x": 15,
-          "z": 24
+          "level": 6,
+          "x": 22,
+          "z": 34
+        },
+        {
+          "def": "defense_tower",
+          "level": 6,
+          "x": 16,
+          "z": 34
+        },
+        {
+          "def": "cannon_tower",
+          "level": 6,
+          "x": 13,
+          "z": 29
+        },
+        {
+          "def": "spirit_turret",
+          "level": 6,
+          "x": 13,
+          "z": 23
+        },
+        {
+          "def": "defense_tower",
+          "level": 6,
+          "x": 13,
+          "z": 17
+        },
+        {
+          "def": "cannon_tower",
+          "level": 6,
+          "x": 18,
+          "z": 14
+        },
+        {
+          "def": "spirit_turret",
+          "level": 6,
+          "x": 23,
+          "z": 13
+        },
+        {
+          "def": "defense_tower",
+          "level": 6,
+          "x": 29,
+          "z": 13
+        },
+        {
+          "def": "defense_tower",
+          "level": 6,
+          "x": 35,
+          "z": 16
+        },
+        {
+          "def": "defense_tower",
+          "level": 6,
+          "x": 35,
+          "z": 22
+        },
+        {
+          "def": "defense_tower",
+          "level": 6,
+          "x": 34,
+          "z": 27
+        },
+        {
+          "def": "hero_base",
+          "level": 4,
+          "x": 20,
+          "z": 25
+        },
+        {
+          "def": "hero_base",
+          "level": 4,
+          "x": 23,
+          "z": 28
+        },
+        {
+          "def": "hero_base",
+          "level": 4,
+          "x": 25,
+          "z": 20
+        },
+        {
+          "def": "hero_base",
+          "level": 4,
+          "x": 28,
+          "z": 23
         },
         {
           "def": "gold_vault",
           "level": 4,
-          "x": 19,
-          "z": 19
+          "x": 26,
+          "z": 28
         },
         {
           "def": "gold_mine",
           "level": 4,
-          "x": 29,
-          "z": 19
+          "x": 19,
+          "z": 21
         },
         {
           "def": "builder_hall",
           "level": 4,
           "x": 19,
-          "z": 29
+          "z": 28
         },
         {
           "def": "mana_mill",
           "level": 4,
-          "x": 29,
-          "z": 29
+          "x": 30,
+          "z": 26
         },
         {
-          "def": "gold_mine",
+          "def": "mana_vault",
           "level": 4,
-          "x": 18,
-          "z": 24
-        },
-        {
-          "def": "hero_base",
-          "level": 4,
-          "x": 24,
-          "z": 28
+          "x": 28,
+          "z": 19
         }
       ],
       "walls": [
         {
           "level": 3,
-          "x1": 13,
-          "z1": 12,
-          "x2": 37,
-          "z2": 12
+          "x1": 11,
+          "z1": 11,
+          "x2": 39,
+          "z2": 11
         },
         {
           "level": 3,
-          "x1": 37,
-          "z1": 12,
-          "x2": 37,
-          "z2": 38
+          "x1": 39,
+          "z1": 11,
+          "x2": 39,
+          "z2": 39
         },
         {
           "level": 3,
-          "x1": 37,
-          "z1": 38,
-          "x2": 13,
-          "z2": 38
+          "x1": 39,
+          "z1": 39,
+          "x2": 11,
+          "z2": 39
         },
         {
           "level": 3,
-          "x1": 13,
-          "z1": 38,
-          "x2": 13,
-          "z2": 12
+          "x1": 11,
+          "z1": 39,
+          "x2": 11,
+          "z2": 11
         }
       ],
       "defenders": [
         {
-          "heroId": "lantern_warden",
+          "heroId": "thunder_empress",
           "evolution": 0,
           "level": 98,
-          "x": 24,
+          "x": 20,
+          "z": 25
+        },
+        {
+          "heroId": "reed_archer",
+          "evolution": 0,
+          "level": 98,
+          "x": 23,
           "z": 28
+        },
+        {
+          "heroId": "twin_chain_reaper",
+          "evolution": 0,
+          "level": 98,
+          "x": 25,
+          "z": 20
+        },
+        {
+          "heroId": "talisman_novice",
+          "evolution": 0,
+          "level": 98,
+          "x": 28,
+          "z": 23
         }
       ]
     },
@@ -1171,7 +1505,7 @@
       "id": "stage_11",
       "displayName": "Slate Stair",
       "description": "The climb begins, under fire the whole way.",
-      "version": 1,
+      "version": 2,
       "goldPerStar": 1950,
       "chapter": 3,
       "chapterName": "Ashen Peak",
@@ -1180,6 +1514,7 @@
       "firstClearCrystals": 160,
       "firstClearItem": "",
       "requires": "stage_10",
+      "strength": 20,
       "buildings": [
         {
           "def": "dojo_hq",
@@ -1190,119 +1525,194 @@
         {
           "def": "defense_tower",
           "level": 6,
-          "x": 14,
-          "z": 32
+          "x": 28,
+          "z": 34
+        },
+        {
+          "def": "cannon_tower",
+          "level": 6,
+          "x": 23,
+          "z": 35
+        },
+        {
+          "def": "spirit_turret",
+          "level": 6,
+          "x": 17,
+          "z": 35
         },
         {
           "def": "defense_tower",
           "level": 6,
           "x": 14,
-          "z": 16
+          "z": 30
+        },
+        {
+          "def": "cannon_tower",
+          "level": 6,
+          "x": 13,
+          "z": 24
+        },
+        {
+          "def": "spirit_turret",
+          "level": 6,
+          "x": 13,
+          "z": 19
+        },
+        {
+          "def": "defense_tower",
+          "level": 6,
+          "x": 16,
+          "z": 13
+        },
+        {
+          "def": "cannon_tower",
+          "level": 6,
+          "x": 22,
+          "z": 13
+        },
+        {
+          "def": "spirit_turret",
+          "level": 6,
+          "x": 28,
+          "z": 13
         },
         {
           "def": "defense_tower",
           "level": 6,
           "x": 34,
-          "z": 32
+          "z": 14
         },
         {
           "def": "defense_tower",
           "level": 6,
           "x": 34,
-          "z": 16
+          "z": 21
         },
         {
           "def": "defense_tower",
           "level": 6,
-          "x": 24,
-          "z": 16
+          "x": 34,
+          "z": 26
         },
         {
-          "def": "spirit_turret",
+          "def": "defense_tower",
           "level": 6,
-          "x": 24,
-          "z": 32
-        },
-        {
-          "def": "spirit_turret",
-          "level": 6,
-          "x": 14,
-          "z": 24
-        },
-        {
-          "def": "gold_vault",
-          "level": 4,
-          "x": 19,
-          "z": 19
-        },
-        {
-          "def": "gold_mine",
-          "level": 4,
-          "x": 29,
-          "z": 19
-        },
-        {
-          "def": "builder_hall",
-          "level": 4,
-          "x": 19,
-          "z": 29
-        },
-        {
-          "def": "mana_mill",
-          "level": 4,
-          "x": 29,
-          "z": 29
-        },
-        {
-          "def": "gold_mine",
-          "level": 4,
-          "x": 18,
-          "z": 24
+          "x": 35,
+          "z": 33
         },
         {
           "def": "hero_base",
           "level": 4,
-          "x": 24,
+          "x": 20,
+          "z": 23
+        },
+        {
+          "def": "hero_base",
+          "level": 4,
+          "x": 25,
           "z": 28
+        },
+        {
+          "def": "hero_base",
+          "level": 4,
+          "x": 25,
+          "z": 20
+        },
+        {
+          "def": "hero_base",
+          "level": 4,
+          "x": 28,
+          "z": 23
+        },
+        {
+          "def": "gold_vault",
+          "level": 4,
+          "x": 28,
+          "z": 26
+        },
+        {
+          "def": "gold_mine",
+          "level": 4,
+          "x": 21,
+          "z": 28
+        },
+        {
+          "def": "builder_hall",
+          "level": 4,
+          "x": 21,
+          "z": 19
+        },
+        {
+          "def": "mana_mill",
+          "level": 4,
+          "x": 28,
+          "z": 19
+        },
+        {
+          "def": "mana_vault",
+          "level": 4,
+          "x": 28,
+          "z": 30
         }
       ],
       "walls": [
         {
           "level": 3,
-          "x1": 12,
-          "z1": 14,
-          "x2": 38,
-          "z2": 14
+          "x1": 11,
+          "z1": 11,
+          "x2": 39,
+          "z2": 11
         },
         {
           "level": 3,
-          "x1": 38,
-          "z1": 14,
-          "x2": 38,
-          "z2": 36
+          "x1": 39,
+          "z1": 11,
+          "x2": 39,
+          "z2": 39
         },
         {
           "level": 3,
-          "x1": 38,
-          "z1": 36,
-          "x2": 12,
-          "z2": 36
+          "x1": 39,
+          "z1": 39,
+          "x2": 11,
+          "z2": 39
         },
         {
           "level": 3,
-          "x1": 12,
-          "z1": 36,
-          "x2": 12,
-          "z2": 14
+          "x1": 11,
+          "z1": 39,
+          "x2": 11,
+          "z2": 11
         }
       ],
       "defenders": [
         {
-          "heroId": "lantern_warden",
+          "heroId": "frost_lake_monk",
           "evolution": 0,
           "level": 107,
-          "x": 24,
+          "x": 20,
+          "z": 23
+        },
+        {
+          "heroId": "bell_guard",
+          "evolution": 0,
+          "level": 107,
+          "x": 25,
           "z": 28
+        },
+        {
+          "heroId": "mask_carver",
+          "evolution": 0,
+          "level": 107,
+          "x": 25,
+          "z": 20
+        },
+        {
+          "heroId": "spark_tinkerer",
+          "evolution": 0,
+          "level": 107,
+          "x": 28,
+          "z": 23
         }
       ]
     },
@@ -1310,7 +1720,7 @@
       "id": "stage_12",
       "displayName": "Cold Forge",
       "description": "Weapons for the peak are made here, and tested on visitors.",
-      "version": 1,
+      "version": 2,
       "goldPerStar": 2100,
       "chapter": 3,
       "chapterName": "Ashen Peak",
@@ -1319,6 +1729,7 @@
       "firstClearCrystals": 170,
       "firstClearItem": "",
       "requires": "stage_11",
+      "strength": 15,
       "buildings": [
         {
           "def": "dojo_hq",
@@ -1328,125 +1739,212 @@
         },
         {
           "def": "defense_tower",
-          "level": 6,
-          "x": 16,
-          "z": 15
+          "level": 7,
+          "x": 25,
+          "z": 36
         },
         {
-          "def": "defense_tower",
-          "level": 6,
-          "x": 32,
-          "z": 33
-        },
-        {
-          "def": "defense_tower",
-          "level": 6,
-          "x": 32,
-          "z": 15
-        },
-        {
-          "def": "defense_tower",
-          "level": 6,
-          "x": 16,
-          "z": 33
-        },
-        {
-          "def": "defense_tower",
-          "level": 6,
-          "x": 24,
-          "z": 15
-        },
-        {
-          "def": "defense_tower",
-          "level": 6,
-          "x": 24,
-          "z": 33
+          "def": "cannon_tower",
+          "level": 7,
+          "x": 20,
+          "z": 35
         },
         {
           "def": "spirit_turret",
-          "level": 6,
-          "x": 16,
-          "z": 24
+          "level": 7,
+          "x": 12,
+          "z": 36
         },
         {
-          "def": "spirit_turret",
-          "level": 6,
-          "x": 32,
-          "z": 24
-        },
-        {
-          "def": "gold_vault",
-          "level": 5,
-          "x": 19,
-          "z": 19
-        },
-        {
-          "def": "gold_mine",
-          "level": 5,
-          "x": 29,
-          "z": 19
-        },
-        {
-          "def": "builder_hall",
-          "level": 5,
-          "x": 19,
+          "def": "defense_tower",
+          "level": 7,
+          "x": 12,
           "z": 29
         },
         {
-          "def": "mana_mill",
-          "level": 5,
-          "x": 29,
-          "z": 29
-        },
-        {
-          "def": "gold_mine",
-          "level": 5,
-          "x": 19,
+          "def": "cannon_tower",
+          "level": 7,
+          "x": 12,
           "z": 23
+        },
+        {
+          "def": "spirit_turret",
+          "level": 7,
+          "x": 12,
+          "z": 18
+        },
+        {
+          "def": "defense_tower",
+          "level": 7,
+          "x": 14,
+          "z": 12
+        },
+        {
+          "def": "cannon_tower",
+          "level": 7,
+          "x": 21,
+          "z": 13
+        },
+        {
+          "def": "spirit_turret",
+          "level": 7,
+          "x": 26,
+          "z": 12
+        },
+        {
+          "def": "defense_tower",
+          "level": 7,
+          "x": 31,
+          "z": 13
+        },
+        {
+          "def": "spirit_turret",
+          "level": 7,
+          "x": 36,
+          "z": 16
+        },
+        {
+          "def": "defense_tower",
+          "level": 7,
+          "x": 36,
+          "z": 22
+        },
+        {
+          "def": "defense_tower",
+          "level": 7,
+          "x": 36,
+          "z": 27
+        },
+        {
+          "def": "defense_tower",
+          "level": 7,
+          "x": 35,
+          "z": 33
+        },
+        {
+          "def": "defense_tower",
+          "level": 7,
+          "x": 30,
+          "z": 35
         },
         {
           "def": "hero_base",
           "level": 5,
           "x": 24,
+          "z": 20
+        },
+        {
+          "def": "hero_base",
+          "level": 5,
+          "x": 28,
+          "z": 24
+        },
+        {
+          "def": "hero_base",
+          "level": 5,
+          "x": 20,
+          "z": 23
+        },
+        {
+          "def": "hero_base",
+          "level": 5,
+          "x": 25,
           "z": 28
+        },
+        {
+          "def": "gold_vault",
+          "level": 5,
+          "x": 21,
+          "z": 28
+        },
+        {
+          "def": "gold_mine",
+          "level": 5,
+          "x": 28,
+          "z": 27
+        },
+        {
+          "def": "builder_hall",
+          "level": 5,
+          "x": 28,
+          "z": 20
+        },
+        {
+          "def": "mana_mill",
+          "level": 5,
+          "x": 20,
+          "z": 19
+        },
+        {
+          "def": "mana_vault",
+          "level": 5,
+          "x": 25,
+          "z": 31
+        },
+        {
+          "def": "troop_camp",
+          "level": 5,
+          "x": 17,
+          "z": 26
         }
       ],
       "walls": [
         {
           "level": 4,
-          "x1": 14,
-          "z1": 13,
-          "x2": 36,
-          "z2": 13
+          "x1": 10,
+          "z1": 10,
+          "x2": 40,
+          "z2": 10
         },
         {
           "level": 4,
-          "x1": 36,
-          "z1": 13,
-          "x2": 36,
-          "z2": 37
+          "x1": 40,
+          "z1": 10,
+          "x2": 40,
+          "z2": 40
         },
         {
           "level": 4,
-          "x1": 36,
-          "z1": 37,
-          "x2": 14,
-          "z2": 37
+          "x1": 40,
+          "z1": 40,
+          "x2": 10,
+          "z2": 40
         },
         {
           "level": 4,
-          "x1": 14,
-          "z1": 37,
-          "x2": 14,
-          "z2": 13
+          "x1": 10,
+          "z1": 40,
+          "x2": 10,
+          "z2": 10
         }
       ],
       "defenders": [
         {
-          "heroId": "lantern_warden",
+          "heroId": "thunder_drum_monk",
           "evolution": 0,
           "level": 116,
           "x": 24,
+          "z": 20
+        },
+        {
+          "heroId": "salt_wind_nomad",
+          "evolution": 0,
+          "level": 116,
+          "x": 28,
+          "z": 24
+        },
+        {
+          "heroId": "silver_moon_archer",
+          "evolution": 0,
+          "level": 116,
+          "x": 20,
+          "z": 23
+        },
+        {
+          "heroId": "cinder_shield_captain",
+          "evolution": 0,
+          "level": 116,
+          "x": 25,
           "z": 28
         }
       ]
@@ -1455,7 +1953,7 @@
       "id": "stage_13",
       "displayName": "Whitecrag Bastion",
       "description": "Veteran heroes hold the last wall before the summit.",
-      "version": 1,
+      "version": 2,
       "goldPerStar": 2250,
       "chapter": 3,
       "chapterName": "Ashen Peak",
@@ -1464,6 +1962,7 @@
       "firstClearCrystals": 180,
       "firstClearItem": "",
       "requires": "stage_12",
+      "strength": 20,
       "buildings": [
         {
           "def": "dojo_hq",
@@ -1474,85 +1973,103 @@
         {
           "def": "defense_tower",
           "level": 7,
-          "x": 33,
-          "z": 34
+          "x": 21,
+          "z": 35
         },
         {
-          "def": "defense_tower",
-          "level": 7,
-          "x": 33,
-          "z": 14
-        },
-        {
-          "def": "defense_tower",
+          "def": "cannon_tower",
           "level": 7,
           "x": 15,
-          "z": 34
-        },
-        {
-          "def": "defense_tower",
-          "level": 7,
-          "x": 15,
-          "z": 14
-        },
-        {
-          "def": "defense_tower",
-          "level": 7,
-          "x": 24,
-          "z": 14
-        },
-        {
-          "def": "defense_tower",
-          "level": 7,
-          "x": 24,
-          "z": 34
+          "z": 35
         },
         {
           "def": "spirit_turret",
           "level": 7,
-          "x": 15,
-          "z": 24
+          "x": 13,
+          "z": 30
+        },
+        {
+          "def": "defense_tower",
+          "level": 7,
+          "x": 13,
+          "z": 25
+        },
+        {
+          "def": "cannon_tower",
+          "level": 7,
+          "x": 13,
+          "z": 21
         },
         {
           "def": "spirit_turret",
           "level": 7,
-          "x": 33,
-          "z": 24
+          "x": 13,
+          "z": 15
         },
         {
-          "def": "gold_vault",
-          "level": 5,
-          "x": 19,
-          "z": 19
-        },
-        {
-          "def": "gold_mine",
-          "level": 5,
-          "x": 29,
-          "z": 19
-        },
-        {
-          "def": "builder_hall",
-          "level": 5,
-          "x": 19,
-          "z": 29
-        },
-        {
-          "def": "mana_mill",
-          "level": 5,
-          "x": 29,
-          "z": 29
-        },
-        {
-          "def": "gold_mine",
-          "level": 5,
+          "def": "defense_tower",
+          "level": 7,
           "x": 18,
-          "z": 24
+          "z": 13
         },
         {
-          "def": "troop_camp",
-          "level": 5,
+          "def": "cannon_tower",
+          "level": 7,
+          "x": 23,
+          "z": 13
+        },
+        {
+          "def": "spirit_turret",
+          "level": 7,
+          "x": 27,
+          "z": 13
+        },
+        {
+          "def": "defense_tower",
+          "level": 7,
+          "x": 33,
+          "z": 13
+        },
+        {
+          "def": "cannon_tower",
+          "level": 7,
+          "x": 35,
+          "z": 18
+        },
+        {
+          "def": "spirit_turret",
+          "level": 7,
+          "x": 35,
+          "z": 23
+        },
+        {
+          "def": "defense_tower",
+          "level": 7,
+          "x": 35,
+          "z": 27
+        },
+        {
+          "def": "defense_tower",
+          "level": 7,
+          "x": 35,
+          "z": 33
+        },
+        {
+          "def": "defense_tower",
+          "level": 7,
           "x": 30,
+          "z": 35
+        },
+        {
+          "def": "defense_tower",
+          "level": 7,
+          "x": 25,
+          "z": 35
+        },
+        {
+          "def": "hero_base",
+          "level": 5,
+          "x": 20,
           "z": 24
         },
         {
@@ -1560,45 +2077,127 @@
           "level": 5,
           "x": 24,
           "z": 28
+        },
+        {
+          "def": "hero_base",
+          "level": 5,
+          "x": 24,
+          "z": 20
+        },
+        {
+          "def": "hero_base",
+          "level": 5,
+          "x": 28,
+          "z": 24
+        },
+        {
+          "def": "hero_base",
+          "level": 5,
+          "x": 21,
+          "z": 20
+        },
+        {
+          "def": "gold_vault",
+          "level": 5,
+          "x": 28,
+          "z": 27
+        },
+        {
+          "def": "gold_mine",
+          "level": 5,
+          "x": 20,
+          "z": 28
+        },
+        {
+          "def": "builder_hall",
+          "level": 5,
+          "x": 28,
+          "z": 20
+        },
+        {
+          "def": "mana_mill",
+          "level": 5,
+          "x": 25,
+          "z": 31
+        },
+        {
+          "def": "mana_vault",
+          "level": 5,
+          "x": 17,
+          "z": 20
+        },
+        {
+          "def": "troop_camp",
+          "level": 5,
+          "x": 29,
+          "z": 31
         }
       ],
       "walls": [
         {
           "level": 4,
-          "x1": 13,
-          "z1": 12,
-          "x2": 37,
-          "z2": 12
+          "x1": 10,
+          "z1": 10,
+          "x2": 40,
+          "z2": 10
         },
         {
           "level": 4,
-          "x1": 37,
-          "z1": 12,
-          "x2": 37,
-          "z2": 38
+          "x1": 40,
+          "z1": 10,
+          "x2": 40,
+          "z2": 40
         },
         {
           "level": 4,
-          "x1": 37,
-          "z1": 38,
-          "x2": 13,
-          "z2": 38
+          "x1": 40,
+          "z1": 40,
+          "x2": 10,
+          "z2": 40
         },
         {
           "level": 4,
-          "x1": 13,
-          "z1": 38,
-          "x2": 13,
-          "z2": 12
+          "x1": 10,
+          "z1": 40,
+          "x2": 10,
+          "z2": 10
         }
       ],
       "defenders": [
+        {
+          "heroId": "cinder_shield_captain",
+          "evolution": 0,
+          "level": 125,
+          "x": 20,
+          "z": 24
+        },
         {
           "heroId": "lantern_warden",
           "evolution": 0,
           "level": 125,
           "x": 24,
           "z": 28
+        },
+        {
+          "heroId": "scarlet_fan_dancer",
+          "evolution": 0,
+          "level": 125,
+          "x": 24,
+          "z": 20
+        },
+        {
+          "heroId": "twin_chain_reaper",
+          "evolution": 0,
+          "level": 125,
+          "x": 28,
+          "z": 24
+        },
+        {
+          "heroId": "frost_lake_monk",
+          "evolution": 0,
+          "level": 125,
+          "x": 21,
+          "z": 20
         }
       ]
     },
@@ -1606,7 +2205,7 @@
       "id": "stage_14",
       "displayName": "Sky Gate",
       "description": "Nothing passes the gate without a fight.",
-      "version": 1,
+      "version": 2,
       "goldPerStar": 2400,
       "chapter": 3,
       "chapterName": "Ashen Peak",
@@ -1615,6 +2214,7 @@
       "firstClearCrystals": 190,
       "firstClearItem": "",
       "requires": "stage_13",
+      "strength": 20,
       "buildings": [
         {
           "def": "dojo_hq",
@@ -1624,86 +2224,122 @@
         },
         {
           "def": "defense_tower",
-          "level": 7,
-          "x": 34,
-          "z": 16
-        },
-        {
-          "def": "defense_tower",
-          "level": 7,
+          "level": 8,
           "x": 14,
-          "z": 32
+          "z": 37
         },
         {
-          "def": "defense_tower",
-          "level": 7,
-          "x": 14,
-          "z": 16
-        },
-        {
-          "def": "defense_tower",
-          "level": 7,
-          "x": 34,
-          "z": 32
-        },
-        {
-          "def": "defense_tower",
-          "level": 7,
-          "x": 24,
-          "z": 16
-        },
-        {
-          "def": "defense_tower",
-          "level": 7,
-          "x": 24,
+          "def": "cannon_tower",
+          "level": 8,
+          "x": 11,
           "z": 32
         },
         {
           "def": "spirit_turret",
-          "level": 7,
-          "x": 14,
-          "z": 24
+          "level": 8,
+          "x": 12,
+          "z": 26
+        },
+        {
+          "def": "defense_tower",
+          "level": 8,
+          "x": 12,
+          "z": 22
+        },
+        {
+          "def": "cannon_tower",
+          "level": 8,
+          "x": 11,
+          "z": 16
         },
         {
           "def": "spirit_turret",
-          "level": 7,
-          "x": 34,
-          "z": 24
+          "level": 8,
+          "x": 15,
+          "z": 12
         },
         {
-          "def": "gold_vault",
-          "level": 5,
-          "x": 19,
-          "z": 19
+          "def": "defense_tower",
+          "level": 8,
+          "x": 21,
+          "z": 12
         },
         {
-          "def": "gold_mine",
-          "level": 5,
-          "x": 29,
-          "z": 19
+          "def": "cannon_tower",
+          "level": 8,
+          "x": 25,
+          "z": 12
         },
         {
-          "def": "builder_hall",
-          "level": 5,
-          "x": 19,
-          "z": 29
-        },
-        {
-          "def": "mana_mill",
-          "level": 5,
-          "x": 29,
-          "z": 29
-        },
-        {
-          "def": "gold_mine",
-          "level": 5,
-          "x": 18,
-          "z": 24
-        },
-        {
-          "def": "troop_camp",
-          "level": 5,
+          "def": "spirit_turret",
+          "level": 8,
           "x": 30,
+          "z": 12
+        },
+        {
+          "def": "defense_tower",
+          "level": 8,
+          "x": 36,
+          "z": 13
+        },
+        {
+          "def": "cannon_tower",
+          "level": 8,
+          "x": 37,
+          "z": 19
+        },
+        {
+          "def": "spirit_turret",
+          "level": 8,
+          "x": 36,
+          "z": 24
+        },
+        {
+          "def": "defense_tower",
+          "level": 8,
+          "x": 37,
+          "z": 29
+        },
+        {
+          "def": "defense_tower",
+          "level": 8,
+          "x": 37,
+          "z": 36
+        },
+        {
+          "def": "defense_tower",
+          "level": 8,
+          "x": 30,
+          "z": 36
+        },
+        {
+          "def": "defense_tower",
+          "level": 8,
+          "x": 25,
+          "z": 36
+        },
+        {
+          "def": "defense_tower",
+          "level": 8,
+          "x": 20,
+          "z": 37
+        },
+        {
+          "def": "hero_base",
+          "level": 5,
+          "x": 23,
+          "z": 20
+        },
+        {
+          "def": "hero_base",
+          "level": 5,
+          "x": 28,
+          "z": 25
+        },
+        {
+          "def": "hero_base",
+          "level": 5,
+          "x": 20,
           "z": 24
         },
         {
@@ -1711,45 +2347,115 @@
           "level": 5,
           "x": 24,
           "z": 28
+        },
+        {
+          "def": "hero_base",
+          "level": 5,
+          "x": 26,
+          "z": 20
+        },
+        {
+          "def": "gold_vault",
+          "level": 5,
+          "x": 27,
+          "z": 28
+        },
+        {
+          "def": "gold_mine",
+          "level": 5,
+          "x": 29,
+          "z": 21
+        },
+        {
+          "def": "builder_hall",
+          "level": 5,
+          "x": 20,
+          "z": 28
+        },
+        {
+          "def": "mana_mill",
+          "level": 5,
+          "x": 19,
+          "z": 20
+        },
+        {
+          "def": "mana_vault",
+          "level": 5,
+          "x": 31,
+          "z": 25
+        },
+        {
+          "def": "troop_camp",
+          "level": 5,
+          "x": 24,
+          "z": 16
         }
       ],
       "walls": [
         {
           "level": 4,
-          "x1": 12,
-          "z1": 14,
-          "x2": 38,
-          "z2": 14
+          "x1": 9,
+          "z1": 9,
+          "x2": 41,
+          "z2": 9
         },
         {
           "level": 4,
-          "x1": 38,
-          "z1": 14,
-          "x2": 38,
-          "z2": 36
+          "x1": 41,
+          "z1": 9,
+          "x2": 41,
+          "z2": 41
         },
         {
           "level": 4,
-          "x1": 38,
-          "z1": 36,
-          "x2": 12,
-          "z2": 36
+          "x1": 41,
+          "z1": 41,
+          "x2": 9,
+          "z2": 41
         },
         {
           "level": 4,
-          "x1": 12,
-          "z1": 36,
-          "x2": 12,
-          "z2": 14
+          "x1": 9,
+          "z1": 41,
+          "x2": 9,
+          "z2": 9
         }
       ],
       "defenders": [
         {
-          "heroId": "lantern_warden",
+          "heroId": "twin_chain_reaper",
+          "evolution": 0,
+          "level": 134,
+          "x": 23,
+          "z": 20
+        },
+        {
+          "heroId": "frost_lake_monk",
+          "evolution": 0,
+          "level": 134,
+          "x": 28,
+          "z": 25
+        },
+        {
+          "heroId": "boulder_fist_elder",
+          "evolution": 0,
+          "level": 134,
+          "x": 20,
+          "z": 24
+        },
+        {
+          "heroId": "mask_carver",
           "evolution": 0,
           "level": 134,
           "x": 24,
           "z": 28
+        },
+        {
+          "heroId": "thunder_drum_monk",
+          "evolution": 0,
+          "level": 134,
+          "x": 26,
+          "z": 20
         }
       ]
     },
@@ -1757,7 +2463,7 @@
       "id": "stage_15",
       "displayName": "Summit Sanctum",
       "description": "The final stronghold. Its master holds a Sovereign Scroll.",
-      "version": 1,
+      "version": 2,
       "goldPerStar": 2550,
       "chapter": 3,
       "chapterName": "Ashen Peak",
@@ -1766,6 +2472,7 @@
       "firstClearCrystals": 350,
       "firstClearItem": "sovereign_scroll",
       "requires": "stage_14",
+      "strength": 15,
       "buildings": [
         {
           "def": "dojo_hq",
@@ -1776,131 +2483,243 @@
         {
           "def": "defense_tower",
           "level": 8,
-          "x": 15,
-          "z": 34
+          "x": 11,
+          "z": 32
         },
         {
-          "def": "defense_tower",
+          "def": "cannon_tower",
           "level": 8,
-          "x": 15,
-          "z": 14
-        },
-        {
-          "def": "defense_tower",
-          "level": 8,
-          "x": 33,
-          "z": 34
-        },
-        {
-          "def": "defense_tower",
-          "level": 8,
-          "x": 33,
-          "z": 14
-        },
-        {
-          "def": "defense_tower",
-          "level": 8,
-          "x": 24,
-          "z": 14
-        },
-        {
-          "def": "defense_tower",
-          "level": 8,
-          "x": 24,
-          "z": 34
-        },
-        {
-          "def": "defense_tower",
-          "level": 8,
-          "x": 15,
-          "z": 24
+          "x": 11,
+          "z": 27
         },
         {
           "def": "spirit_turret",
           "level": 8,
-          "x": 33,
-          "z": 24
+          "x": 11,
+          "z": 22
         },
         {
-          "def": "gold_vault",
-          "level": 6,
+          "def": "defense_tower",
+          "level": 8,
+          "x": 11,
+          "z": 17
+        },
+        {
+          "def": "cannon_tower",
+          "level": 8,
+          "x": 13,
+          "z": 12
+        },
+        {
+          "def": "spirit_turret",
+          "level": 8,
           "x": 19,
-          "z": 19
+          "z": 12
         },
         {
-          "def": "gold_mine",
-          "level": 6,
+          "def": "defense_tower",
+          "level": 8,
+          "x": 24,
+          "z": 11
+        },
+        {
+          "def": "cannon_tower",
+          "level": 8,
+          "x": 28,
+          "z": 12
+        },
+        {
+          "def": "spirit_turret",
+          "level": 8,
+          "x": 34,
+          "z": 11
+        },
+        {
+          "def": "defense_tower",
+          "level": 8,
+          "x": 37,
+          "z": 16
+        },
+        {
+          "def": "cannon_tower",
+          "level": 8,
+          "x": 37,
+          "z": 21
+        },
+        {
+          "def": "spirit_turret",
+          "level": 8,
+          "x": 37,
+          "z": 26
+        },
+        {
+          "def": "defense_tower",
+          "level": 8,
+          "x": 37,
+          "z": 31
+        },
+        {
+          "def": "spirit_turret",
+          "level": 8,
+          "x": 35,
+          "z": 36
+        },
+        {
+          "def": "defense_tower",
+          "level": 8,
           "x": 29,
-          "z": 19
+          "z": 36
         },
         {
-          "def": "builder_hall",
-          "level": 6,
-          "x": 19,
-          "z": 29
+          "def": "defense_tower",
+          "level": 8,
+          "x": 24,
+          "z": 36
         },
         {
-          "def": "mana_mill",
-          "level": 6,
-          "x": 29,
-          "z": 29
+          "def": "defense_tower",
+          "level": 8,
+          "x": 20,
+          "z": 36
         },
         {
-          "def": "gold_mine",
-          "level": 6,
-          "x": 18,
-          "z": 24
-        },
-        {
-          "def": "troop_camp",
-          "level": 6,
-          "x": 30,
-          "z": 24
+          "def": "defense_tower",
+          "level": 8,
+          "x": 14,
+          "z": 37
         },
         {
           "def": "hero_base",
           "level": 6,
-          "x": 24,
+          "x": 20,
+          "z": 25
+        },
+        {
+          "def": "hero_base",
+          "level": 6,
+          "x": 23,
           "z": 28
+        },
+        {
+          "def": "hero_base",
+          "level": 6,
+          "x": 25,
+          "z": 20
+        },
+        {
+          "def": "hero_base",
+          "level": 6,
+          "x": 28,
+          "z": 23
+        },
+        {
+          "def": "hero_base",
+          "level": 6,
+          "x": 20,
+          "z": 22
+        },
+        {
+          "def": "gold_vault",
+          "level": 6,
+          "x": 26,
+          "z": 28
+        },
+        {
+          "def": "gold_mine",
+          "level": 6,
+          "x": 19,
+          "z": 28
+        },
+        {
+          "def": "builder_hall",
+          "level": 6,
+          "x": 30,
+          "z": 26
+        },
+        {
+          "def": "mana_mill",
+          "level": 6,
+          "x": 28,
+          "z": 19
+        },
+        {
+          "def": "mana_vault",
+          "level": 6,
+          "x": 21,
+          "z": 18
+        },
+        {
+          "def": "troop_camp",
+          "level": 6,
+          "x": 16,
+          "z": 23
         }
       ],
       "walls": [
         {
           "level": 4,
-          "x1": 13,
-          "z1": 12,
-          "x2": 37,
-          "z2": 12
+          "x1": 9,
+          "z1": 9,
+          "x2": 41,
+          "z2": 9
         },
         {
           "level": 4,
-          "x1": 37,
-          "z1": 12,
-          "x2": 37,
-          "z2": 38
+          "x1": 41,
+          "z1": 9,
+          "x2": 41,
+          "z2": 41
         },
         {
           "level": 4,
-          "x1": 37,
-          "z1": 38,
-          "x2": 13,
-          "z2": 38
+          "x1": 41,
+          "z1": 41,
+          "x2": 9,
+          "z2": 41
         },
         {
           "level": 4,
-          "x1": 13,
-          "z1": 38,
-          "x2": 13,
-          "z2": 12
+          "x1": 9,
+          "z1": 41,
+          "x2": 9,
+          "z2": 9
         }
       ],
       "defenders": [
         {
-          "heroId": "lantern_warden",
+          "heroId": "stone_titan",
           "evolution": 0,
           "level": 143,
-          "x": 24,
+          "x": 20,
+          "z": 25
+        },
+        {
+          "heroId": "thunder_drum_monk",
+          "evolution": 0,
+          "level": 143,
+          "x": 23,
           "z": 28
+        },
+        {
+          "heroId": "salt_wind_nomad",
+          "evolution": 0,
+          "level": 143,
+          "x": 25,
+          "z": 20
+        },
+        {
+          "heroId": "silver_moon_archer",
+          "evolution": 0,
+          "level": 143,
+          "x": 28,
+          "z": 23
+        },
+        {
+          "heroId": "cinder_shield_captain",
+          "evolution": 0,
+          "level": 143,
+          "x": 20,
+          "z": 22
         }
       ]
     }

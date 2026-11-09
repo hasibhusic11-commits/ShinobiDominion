@@ -186,7 +186,10 @@ namespace ShinobiDominion.Tests
         public void Walls_MakeTheRaidSlower()
         {
             // The first outpost has only thin walls, so test with a fortress.
-            var walled = RaidCatalog.FromJson(FindFile("raids.json", "Resources/Config"), TestCatalog.Load()).Find("stage_05").Expand(TestCatalog.Load());
+            // At full strength: the campaign's own strength (ADR-047) makes its walls thin on purpose.
+            var fortress = RaidCatalog.FromJson(FindFile("raids.json", "Resources/Config"), TestCatalog.Load()).Find("stage_05");
+            fortress.strength = 100;
+            var walled = fortress.Expand(TestCatalog.Load());
             var open = walled.Where(b => !b.isWall).ToList();
             Assert.Greater(BattleSim.Run(walled, MixedTeam(4)).endTick, BattleSim.Run(open, MixedTeam(4)).endTick);
         }

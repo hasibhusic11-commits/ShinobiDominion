@@ -264,6 +264,7 @@ func (s *Server) scriptedDefenders(raid *raidDefinition) ([]raidDefender, error)
 		if err != nil {
 			return nil, err
 		}
+		defender.Hp, defender.Attack, defender.Defense = raid.scaled(defender.Hp), raid.scaled(defender.Attack), raid.scaled(defender.Defense)
 		result = append(result, defender)
 	}
 	return result, nil

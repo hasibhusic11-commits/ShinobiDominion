@@ -121,7 +121,10 @@ namespace ShinobiDominion.Game
             var best = BestStarsOn(stage.id);
             panel.Line($"Stage {stage.stage}: {stage.displayName}", 25, new Color(1f, 0.9f, 0.66f));
             panel.Line(stage.description, 19);
-            panel.Line($"Best: {best} of 3 stars.   One enemy hero on guard.", 19);
+            var guards = stage.defenders.Count;
+            var towers = stage.buildings.Count(b => b.def == "defense_tower" || b.def == "cannon_tower" || b.def == "spirit_turret");
+            var guardText = guards == 0 ? "No hero on guard" : guards == 1 ? "1 enemy hero on guard" : $"{guards} enemy heroes on guard";
+            panel.Line($"Best: {best} of 3 stars.   {guardText}, {towers} tower{(towers == 1 ? "" : "s")}.", 19);
             panel.Line(RewardText(stage, best), 19, Ui.AccentColor);
             var open = StageOpen(stage);
             if (!open) panel.Line("Clear the stage before this one first.", 19, Ui.MutedText);

@@ -48,6 +48,15 @@ namespace ShinobiDominion.Core
         public long xpPerWin;
         public long firstClearCrystals;
         public string firstClearItem = "";
+        /// <summary>
+        /// How strong this dungeon is, in percent: it scales the HP and attack of every building, wall, tower and guard
+        /// (owner, 2026-11-09: dungeons may hold many towers and guards, but Common and Elite heroes must be able to farm
+        /// them). Set per stage by tools/balance/generate_campaign.js from the balance tuner. 100 when absent.
+        /// </summary>
+        public int strength = 100;
+
+        /// <summary>A stat scaled by <see cref="strength"/>; anything above zero stays at least 1.</summary>
+        public long Scaled(long value) => value <= 0 || strength <= 0 || strength == 100 ? value : Math.Max(1, value * strength / 100);
 
         /// <summary>Stands each listed hero in the middle of the Hero Base at its cell, as the server does.</summary>
         public List<RaidDefender> ExpandDefenders(BuildingCatalog buildings, HeroCatalog heroes)
@@ -65,9 +74,9 @@ namespace ShinobiDominion.Core
                     evolutionIndex = entry.evolution,
                     level = entry.level,
                     role = hero.role.ToString(),
-                    hp = stats.Hp,
-                    attack = stats.Attack,
-                    defense = stats.Defense,
+                    hp = Scaled(stats.Hp),
+                    attack = Scaled(stats.Attack),
+                    defense = Scaled(stats.Defense),
                     x = entry.x + heroBase.width / 2,
                     z = entry.z + heroBase.depth / 2
                 });
@@ -92,8 +101,8 @@ namespace ShinobiDominion.Core
                     width = definition.width,
                     depth = definition.depth,
                     level = level,
-                    hp = row.hp,
-                    attack = row.attack,
+                    hp = Scaled(row.hp),
+                    attack = Scaled(row.attack),
                     range = row.range,
                     isWall = definition.IsWall,
                     isDefense = definition.function == BuildingFunction.Defense,
@@ -135,7 +144,7 @@ namespace ShinobiDominion.Core
         /// <summary>The same layout in the shape the village renderer already understands.</summary>
         public static VillageSave ToSave(IEnumerable<BattleBuildingInput> buildings)
         {
-            var save = new VillageSave { schemaVersion = VillageSave.CurrentSchemaVersion, mapVersion = VillageSave.CurrentMapVersion, buildings = new List<BuildingSave>() };
+            var save = new VillageSave { schemaVersion = VillageSave.CurrentSchemaVersion, mapVersion = VillageSave.CurrentMapVersion, buildings = new List<BuildingSave>(), battleLayout = true };
             var highest = 0;
             foreach (var b in buildings)
             {

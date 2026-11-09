@@ -253,7 +253,7 @@ namespace ShinobiDominion.Game
             {
                 if (!string.IsNullOrEmpty(LastMessage)) panel.Line(LastMessage, 20, Ui.AccentColor);
                 panel.Line("Tap the map to land. Shaded cells are too close to the enemy. Troops that land are used up.", 19);
-                if (_raid.Session.defenders.Count > 0) panel.Line("An enemy hero is on guard.", 19, Ui.AccentColor);
+                if (_raid.Session.defenders.Count > 0) panel.Line(_raid.Session.defenders.Count == 1 ? "An enemy hero is on guard." : $"{_raid.Session.defenders.Count} enemy heroes are on guard.", 19, Ui.AccentColor);
                 panel.Line($"Heroes placed: {_raid.Placements.Count} of {_raid.Session.team.Count}");
                 var left = TroopData.All.Where(t => TroopsLeft(t.id) > 0).ToList();
                 if (Army.Counts.Count > 0)

@@ -700,7 +700,7 @@ namespace ShinobiDominion.Core
                 maxId = Math.Max(maxId, entry.id);
             }
 
-            foreach (var definition in Catalog.All)
+            foreach (var definition in save.battleLayout ? Enumerable.Empty<BuildingDefinition>() : Catalog.All)
             {
                 // Villages from before the one-hero rule may keep their extra bases, empty.
                 if (definition.function == BuildingFunction.HeroBase) continue;

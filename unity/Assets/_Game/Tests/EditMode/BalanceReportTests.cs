@@ -90,6 +90,66 @@ namespace ShinobiDominion.Tests
             TestContext.WriteLine("Balance report written to " + path);
         }
 
+        // ---------- Campaign tuning ----------
+
+        /// <summary>
+        /// Owner's rule (2026-11-09): Legendaries are rare, so Common and Elite heroes must be able to clear the
+        /// campaign well enough to farm it. Dungeons may hold many towers and guards, so each stage has one strength
+        /// percent that scales everything in it. For each stage this finds the strongest setting (100% at most) at which
+        /// at least 70% of Common heroes win a star at the expected level, and writes the strengths as JSON for
+        /// tools/balance/generate_campaign.js. Runs only with SD_CAMPAIGN_TUNE=&lt;path to campaign_strength.json&gt;.
+        /// </summary>
+        [Test, Timeout(1800000)]
+        public void TuneCampaign()
+        {
+            var path = Environment.GetEnvironmentVariable("SD_CAMPAIGN_TUNE");
+            if (string.IsNullOrEmpty(path)) Assert.Ignore("Set SD_CAMPAIGN_TUNE to a file path to tune the campaign.");
+
+            var catalog = TestCatalog.Load();
+            var heroes = HeroCatalog.FromJson(FindFile("heroes.json"));
+            var raids = RaidCatalog.FromJson(FindFile("raids.json"), catalog);
+            var commons = heroes.All.Where(h => h.contentComplete && !h.retired && h.rarity == HeroRarity.Common).ToList();
+            var lines = new List<string>();
+            foreach (var raid in raids.All)
+            {
+                var expected = ExpectedLevel(raid.stage);
+                var army = ArmyFor(raid.stage);
+                bool CommonsWin(int strength)
+                {
+                    raid.strength = strength;
+                    var buildings = raid.Expand(catalog);
+                    var guards = Guards(raid, catalog, heroes);
+                    var wins = commons.Count(h => BattleSim.Run(buildings, Team(h, expected, army), guards).stars >= 1);
+                    return wins * 10 >= commons.Count * 7;
+                }
+                // Strength in steps of 5, from 5 to 100: the highest step the Commons still beat.
+                int low = 1, high = 20;
+                if (CommonsWin(100)) low = 20;
+                else
+                {
+                    while (low < high)
+                    {
+                        var middle = (low + high + 1) / 2;
+                        if (CommonsWin(middle * 5)) low = middle;
+                        else high = middle - 1;
+                    }
+                }
+                lines.Add($"  \"{raid.id}\": {low * 5}");
+            }
+            File.WriteAllText(path, "{\n" + string.Join(",\n", lines) + "\n}\n");
+            TestContext.WriteLine("Campaign strengths written to " + path);
+        }
+
+        /// <summary>A dungeon's guards as battle input, with its strength applied (RaidDefinition.ExpandDefenders).</summary>
+        private static List<BattleDefenderInput> Guards(RaidDefinition raid, BuildingCatalog catalog, HeroCatalog heroes) =>
+            raid.ExpandDefenders(catalog, heroes)
+                .Select(d =>
+                {
+                    var hero = heroes.Get(d.archetypeId);
+                    return new BattleDefenderInput { id = d.id, role = d.role, hp = d.hp, attack = d.attack, defense = d.defense, x = d.x, z = d.z, special = hero.special, evolution = d.evolutionIndex, power = BattleSim.PowerFor(hero.rarity.ToString()) };
+                })
+                .ToList();
+
         // ---------- Campaign ----------
 
         private static void Campaign(StringBuilder report, BuildingCatalog catalog, HeroCatalog heroes, RaidCatalog raids)
@@ -111,9 +171,7 @@ namespace ShinobiDominion.Tests
             {
                 var expected = ExpectedLevel(raid.stage);
                 var buildings = raid.Expand(catalog);
-                var guards = raid.ExpandDefenders(catalog, heroes)
-                    .Select(d => new BattleDefenderInput { id = d.id, role = d.role, hp = d.hp, attack = d.attack, defense = d.defense, x = d.x, z = d.z, special = d.special, evolution = d.evolutionIndex, power = d.power })
-                    .ToList();
+                var guards = Guards(raid, catalog, heroes);
                 var cells = new List<string>();
                 var averages = new Dictionary<string, double>();
                 foreach (var group in byRarity)
