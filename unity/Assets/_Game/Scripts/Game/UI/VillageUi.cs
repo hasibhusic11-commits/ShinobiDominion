@@ -505,8 +505,10 @@ namespace ShinobiDominion.Game
             // ATTACK: the pack's painted crimson medallion, alone at the bottom left.
             AttackButton = Medal.Create(Root, "AttackButton", MedalKind.Attack, "attack", "Attack", onAttack, true, AttackSize);
             var attackRect = (RectTransform)AttackButton.transform;
-            Ui.Anchor(attackRect, new Vector2(0f, 0f), new Vector2(AttackSize, AttackSize), new Vector2(10f, 8f));
-            var glow = HudArt.Picture(attackRect, "Glow", "glow", new Vector2(0.5f, 0.5f), new Vector2(AttackSize * 1.2f, AttackSize * 1.2f), Vector2.zero);
+            // The kit's Attack button is a wide banner (about 3:2); the older medallion was round.
+            var attackSize = Medal.WholeFor(MedalKind.Attack, "attack") != null ? new Vector2(AttackSize * 1.3f, AttackSize * 1.3f / 1.49f) : new Vector2(AttackSize, AttackSize);
+            Ui.Anchor(attackRect, new Vector2(0f, 0f), attackSize, new Vector2(10f, 8f));
+            var glow = HudArt.Picture(attackRect, "Glow", "glow", new Vector2(0.5f, 0.5f), attackSize * 1.2f, Vector2.zero);
             glow.color = new Color(1f, 0.8f, 0.45f, 0f);
             glow.transform.SetAsFirstSibling();
             UiMotion.Breathe(glow, 0.5f, 2.4f);

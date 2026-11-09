@@ -134,7 +134,7 @@ namespace ShinobiDominion.Game
 
         private static string RewardText(RaidDefinition stage, int best)
         {
-            var parts = new List<string> { $"{stage.goldPerStar:N0} gold per new star", $"{stage.xpPerWin:N0} XP per hero on each win" };
+            var parts = new List<string> { $"{stage.goldPerStar:N0} gold and {stage.manaPerStar:N0} Mana per new star", $"{stage.xpPerWin:N0} XP per hero on each win" };
             if (best == 0)
             {
                 if (stage.firstClearCrystals > 0) parts.Add($"{stage.firstClearCrystals:N0} gems first time");
@@ -156,34 +156,6 @@ namespace ShinobiDominion.Game
 
         private BattleHud _battleHud;
 
-        private void CreateBattleHud()
-        {
-            GameSounds.Play(GameSound.Horn);
-            var panel = new GameObject("BattleHud", typeof(RectTransform));
-            var rect = (RectTransform)panel.transform;
-            rect.SetParent(_raid.StatusBar.transform.parent, false);
-            Ui.Anchor(rect, new Vector2(1f, 1f), new Vector2(300f, 150f), new Vector2(-16f, -104f));
-            Ui.Framed(rect, Ui.PillSprite);
-            UiMotion.SlideIn(rect, new Vector2(340f, 0f), 0.3f);
-            _raid.Hud = panel;
-
-            var session = _raid.Session;
-            var payable = session.raid.id == "rival" ? 3 : Mathf.Max(0, 3 - BestStarsOn(session.raid.id));
-            var loot = Ui.Strong(Ui.Label(panel.transform, _modeFight != null ? (_modeFight.IsSiege ? "Their progress" : $"vs {_modeFight.OpponentName}") : $"Available: {payable * session.raid.goldPerStar:N0} gold", 20, TextAnchor.MiddleCenter, new Color(1f, 0.86f, 0.45f)));
-            Ui.Anchor(loot.rectTransform, new Vector2(0.5f, 1f), new Vector2(280f, 36f), new Vector2(0f, -6f));
-
-            _battleHud = new BattleHud { Stars = new Image[3] };
-            for (var i = 0; i < 3; i++)
-                _battleHud.Stars[i] = Ui.Icon(panel.transform, UiSkin.Diamond(new Color(0.35f, 0.35f, 0.38f), new Color(0.2f, 0.2f, 0.23f)), new Vector2(0.5f, 0.5f), new Vector2(46f, 46f), new Vector2((i - 1) * 62f, 4f));
-            _battleHud.Damage = Ui.Strong(Ui.Label(panel.transform, "0% destroyed", 21, TextAnchor.MiddleCenter));
-            Ui.Anchor(_battleHud.Damage.rectTransform, new Vector2(0.5f, 0f), new Vector2(280f, 36f), new Vector2(0f, 8f));
-
-            var banner = Ui.Strong(Ui.Label(_raid.StatusBar.transform.parent, "BATTLE!", 72, TextAnchor.MiddleCenter, new Color(1f, 0.82f, 0.35f)));
-            Ui.Anchor(banner.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(620f, 120f), new Vector2(0f, 110f));
-            UiMotion.PopIn(banner.transform, 0f, 2.2f, 0.4f);
-            Destroy(banner.gameObject, 1.1f);
-        }
-
         private void UpdateBattleHud()
         {
             if (_battleHud == null || _raid == null) return;
@@ -192,7 +164,7 @@ namespace ShinobiDominion.Game
             {
                 // Only when it changes, so the label is not rebuilt every frame.
                 _battleHud.Shown = stage.DamagePercent;
-                _battleHud.Damage.text = $"{stage.DamagePercent}% destroyed";
+                _battleHud.Damage.text = $"{stage.DamagePercent}%";
             }
             var lit = (stage.DamagePercent >= 50 ? 1 : 0) + (stage.DojoDown ? 1 : 0) + (stage.DamagePercent >= 100 ? 1 : 0);
             if (lit <= _battleHud.Lit) return;

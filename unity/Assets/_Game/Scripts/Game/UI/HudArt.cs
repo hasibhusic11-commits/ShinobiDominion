@@ -137,10 +137,54 @@ namespace ShinobiDominion.Game
         /// </summary>
         public static Button Create(Transform parent, string name, MedalKind kind, string icon, string caption, Action onClick, bool interactable, float size, bool selected = false)
         {
+            // The owner's newer button kit (2026-11-09) paints each button whole, frame and picture together.
+            var whole = WholeFor(kind, icon);
+            if (whole != null) return Whole(parent, name, kind, whole, kind == MedalKind.Attack ? null : caption, onClick, interactable, size);
             var family = FamilyFor(icon);
             return family != null
                 ? Painted(parent, name, kind, family, caption, onClick, interactable, size, selected)
                 : Framed(parent, name, kind, icon, caption, onClick, interactable, size, selected);
+        }
+
+        /// <summary>
+        /// The kit's whole button for this kind and icon: the Attack button, or hud_btn_&lt;icon&gt; for round and close
+        /// buttons. Null when the kit has none, so older art is used.
+        /// </summary>
+        public static string WholeFor(MedalKind kind, string icon)
+        {
+            string name;
+            if (kind == MedalKind.Attack) name = "hud_attack_button";
+            else if (string.IsNullOrEmpty(icon) || (kind != MedalKind.IconOnly && kind != MedalKind.Destructive)) return null;
+            else name = "hud_btn_" + icon;
+            return Resources.Load<Sprite>("UI/" + name) != null ? name : null;
+        }
+
+        /// <summary>A button painted whole by the kit. It darkens when pressed and greys out when disabled.</summary>
+        private static Button Whole(Transform parent, string name, MedalKind kind, string sprite, string caption, Action onClick, bool interactable, float size)
+        {
+            var rect = Ui.Rect(name, parent);
+            rect.sizeDelta = new Vector2(size, size);
+            HudArt.Picture(rect, "Shadow", "shadow", new Vector2(0.5f, 0f), new Vector2(size * 0.95f, size * 0.28f), new Vector2(0f, -size * 0.08f));
+            var faceRect = Ui.Rect("Face", rect);
+            Ui.Stretch(faceRect);
+            var face = faceRect.gameObject.AddComponent<Image>();
+            face.sprite = HudArt.Sprite(sprite);
+            face.preserveAspect = true;
+            if (!interactable) face.color = new Color(0.5f, 0.5f, 0.53f, 1f);
+            if (!string.IsNullOrEmpty(caption)) Caption(rect, caption, size, interactable);
+            var button = rect.gameObject.AddComponent<Button>();
+            button.targetGraphic = face;
+            button.interactable = interactable;
+            var colors = button.colors;
+            colors.normalColor = Color.white;
+            colors.highlightedColor = new Color(1.08f, 1.08f, 1.08f, 1f);
+            colors.selectedColor = Color.white;
+            colors.pressedColor = new Color(0.78f, 0.78f, 0.78f, 1f);
+            colors.disabledColor = Color.white;
+            colors.fadeDuration = 0.06f;
+            button.colors = colors;
+            Finish(button, onClick);
+            return button;
         }
 
         private static Button Painted(Transform parent, string name, MedalKind kind, string family, string caption, Action onClick, bool interactable, float size, bool selected)

@@ -19,6 +19,8 @@ const (
 	rivalRaidID = "rival"
 	// Test values. A rival pays once a day, and only so many rival raids pay each day.
 	rivalGoldPerDojoLevel = 150
+	// A rival also pays Mana per star, by its Town Hall level (owner, 2026-11-09: loot is gold and Mana).
+	rivalManaPerDojoLevel = 60
 	rivalPaidRaidsPerDay  = 10
 	rivalPayCooldown      = "24 hours"
 	// Test value. Replays are free, so XP stops after this many paying wins in 24 hours.
@@ -76,6 +78,7 @@ type raidSummary struct {
 	Description string `json:"description"`
 	GoldPerStar int64  `json:"goldPerStar"`
 	BestStars   int    `json:"bestStars"`
+	ManaPerStar int64  `json:"manaPerStar"`
 }
 
 type raidStartResponse struct {
@@ -103,6 +106,7 @@ type raidDeployResponse struct {
 	AttackID   string        `json:"attackId"`
 	Result     *battleResult `json:"result"`
 	GoldEarned int64         `json:"goldEarned"`
+	ManaEarned int64         `json:"manaEarned"`
 	BestStars  int           `json:"bestStars"`
 	State      *playerState  `json:"state"`
 	XpEarned       int64     `json:"xpEarned"`
@@ -136,7 +140,7 @@ func (s *Server) rpcRaidList(ctx context.Context, logger runtime.Logger, db *sql
 			if err != nil {
 				return err
 			}
-			list = append(list, raidSummary{raid.ID, raid.DisplayName, raid.Description, raid.GoldPerStar, best})
+			list = append(list, raidSummary{raid.ID, raid.DisplayName, raid.Description, raid.GoldPerStar, best, raid.ManaPerStar})
 		}
 		output, err = marshal(map[string]interface{}{"raids": list})
 		return err
@@ -205,13 +209,13 @@ func (s *Server) rpcRaidStart(ctx context.Context, logger runtime.Logger, db *sq
 		if err != nil {
 			return err
 		}
-		attackID, err := insertRaid(ctx, tx, userID, raid.ID, raid.Version, raid.GoldPerStar, nil, raid.expanded, team, defenders)
+		attackID, err := insertRaid(ctx, tx, userID, raid.ID, raid.Version, raid.GoldPerStar, raid.ManaPerStar, nil, raid.expanded, team, defenders)
 		if err != nil {
 			return err
 		}
 		output, err = marshal(raidStartResponse{
 			AttackID:  attackID,
-			Raid:      raidSummary{raid.ID, raid.DisplayName, raid.Description, raid.GoldPerStar, best},
+			Raid:      raidSummary{raid.ID, raid.DisplayName, raid.Description, raid.GoldPerStar, best, raid.ManaPerStar},
 			Buildings: raid.expanded,
 			Team:      team,
 			Defenders: defenders,
@@ -228,7 +232,7 @@ func (s *Server) rpcRaidStart(ctx context.Context, logger runtime.Logger, db *sq
 }
 
 // insertRaid stores the exact defender layout, team and guards, so nothing can change once a raid starts.
-func insertRaid(ctx context.Context, tx *sql.Tx, userID, raidID string, version int, goldPerStar int64, opponent *string, buildings []battleBuildingInput, team []raidTeamMember, defenders []raidDefender) (string, error) {
+func insertRaid(ctx context.Context, tx *sql.Tx, userID, raidID string, version int, goldPerStar, manaPerStar int64, opponent *string, buildings []battleBuildingInput, team []raidTeamMember, defenders []raidDefender) (string, error) {
 	// Only one raid at a time. Starting a new one walks away from any unfinished one.
 	if _, err := tx.ExecContext(ctx, `UPDATE sd_raid SET status = 'abandoned' WHERE user_id = $1 AND status = 'prepare'`, userID); err != nil {
 		return "", err
@@ -246,9 +250,9 @@ func insertRaid(ctx context.Context, tx *sql.Tx, userID, raidID string, version 
 		return "", err
 	}
 	var attackID string
-	err = tx.QueryRowContext(ctx, `INSERT INTO sd_raid (attack_id, user_id, raid_id, raid_version, gold_per_star, snapshot, team, status, opponent_id, defenders)
-		VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, 'prepare', $7, $8) RETURNING attack_id::text`,
-		userID, raidID, version, goldPerStar, string(snapshot), string(teamJSON), opponent, string(defendersJSON)).Scan(&attackID)
+	err = tx.QueryRowContext(ctx, `INSERT INTO sd_raid (attack_id, user_id, raid_id, raid_version, gold_per_star, snapshot, team, status, opponent_id, defenders, mana_per_star)
+		VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, 'prepare', $7, $8, $9) RETURNING attack_id::text`,
+		userID, raidID, version, goldPerStar, string(snapshot), string(teamJSON), opponent, string(defendersJSON), manaPerStar).Scan(&attackID)
 	return attackID, err
 }
 
@@ -418,13 +422,14 @@ func (s *Server) rpcRivalStart(ctx context.Context, logger runtime.Logger, db *s
 			return err
 		}
 		goldPerStar := int64(dojoLevel) * rivalGoldPerDojoLevel
-		attackID, err := insertRaid(ctx, tx, userID, rivalRaidID, 1, goldPerStar, &rivalID, buildings, team, defenders)
+		manaPerStar := int64(dojoLevel) * rivalManaPerDojoLevel
+		attackID, err := insertRaid(ctx, tx, userID, rivalRaidID, 1, goldPerStar, manaPerStar, &rivalID, buildings, team, defenders)
 		if err != nil {
 			return err
 		}
 		output, err = marshal(raidStartResponse{
 			AttackID:  attackID,
-			Raid:      raidSummary{rivalRaidID, "Rival village", fmt.Sprintf("A real player's village, with a level %d Dojo and %d heroes on guard.", dojoLevel, len(defenders)), goldPerStar, 0},
+			Raid:      raidSummary{rivalRaidID, "Rival village", fmt.Sprintf("A real player's village, with a level %d Town Hall and %d heroes on guard.", dojoLevel, len(defenders)), goldPerStar, 0, manaPerStar},
 			Buildings: buildings,
 			Team:      team,
 			Defenders: defenders,
@@ -622,10 +627,10 @@ func (s *Server) rpcRaidDeploy(ctx context.Context, logger runtime.Logger, db *s
 
 		var raidID, status, snapshotText, teamText, defendersText string
 		var opponent sql.NullString
-		var goldPerStar int64
+		var goldPerStar, manaPerStar int64
 		var created time.Time
-		err = tx.QueryRowContext(ctx, `SELECT raid_id, status, snapshot, team, defenders, opponent_id::text, gold_per_star, created_at FROM sd_raid WHERE attack_id = $1 AND user_id = $2 FOR UPDATE`,
-			request.AttackID, userID).Scan(&raidID, &status, &snapshotText, &teamText, &defendersText, &opponent, &goldPerStar, &created)
+		err = tx.QueryRowContext(ctx, `SELECT raid_id, status, snapshot, team, defenders, opponent_id::text, gold_per_star, mana_per_star, created_at FROM sd_raid WHERE attack_id = $1 AND user_id = $2 FOR UPDATE`,
+			request.AttackID, userID).Scan(&raidID, &status, &snapshotText, &teamText, &defendersText, &opponent, &goldPerStar, &manaPerStar, &created)
 		if errors.Is(err, sql.ErrNoRows) {
 			return errAttackNotFound
 		}
@@ -721,7 +726,7 @@ func (s *Server) rpcRaidDeploy(ctx context.Context, logger runtime.Logger, db *s
 			return err
 		}
 		beforeGold := v.gold
-		var earned, xpEarned, crystalsEarned int64
+		var earned, manaEarned, xpEarned, crystalsEarned int64
 		var levelsGained int
 		var itemEarned string
 		best := result.Stars
@@ -740,6 +745,7 @@ func (s *Server) rpcRaidDeploy(ctx context.Context, logger runtime.Logger, db *s
 					earned = 0
 				}
 				v.gold += earned
+				manaEarned = payMana(v, int64(result.Stars)*manaPerStar)
 			}
 		} else if best, err = bestStarsFor(ctx, tx, userID, raidID); err != nil {
 			return err
@@ -784,6 +790,7 @@ func (s *Server) rpcRaidDeploy(ctx context.Context, logger runtime.Logger, db *s
 				earned = 0
 			}
 			v.gold += earned
+			manaEarned = payMana(v, int64(result.Stars-best)*manaPerStar)
 			best = result.Stars
 			if _, err := tx.ExecContext(ctx, `INSERT INTO sd_raid_progress (user_id, raid_id, best_stars) VALUES ($1, $2, $3)
 				ON CONFLICT (user_id, raid_id) DO UPDATE SET best_stars = EXCLUDED.best_stars`, userID, raidID, best); err != nil {
@@ -798,8 +805,8 @@ func (s *Server) rpcRaidDeploy(ctx context.Context, logger runtime.Logger, db *s
 		if err := persistVillage(ctx, tx, userID, v, beforeGold, crystals, "raid_reward", request.AttackID); err != nil {
 			return err
 		}
-		if _, err := tx.ExecContext(ctx, `UPDATE sd_raid SET status = 'resolved', stars = $1, damage_percent = $2, gold_earned = $3, checksum = $4, defenders_alive = $5, xp_earned = $6, crystals_earned = $7, item_earned = NULLIF($8, ''), resolved_at = now() WHERE attack_id = $9`,
-			result.Stars, result.DamagePercent, earned, result.Checksum, result.DefendersAlive, xpEarned, crystalsEarned, itemEarned, request.AttackID); err != nil {
+		if _, err := tx.ExecContext(ctx, `UPDATE sd_raid SET status = 'resolved', stars = $1, damage_percent = $2, gold_earned = $3, checksum = $4, defenders_alive = $5, xp_earned = $6, crystals_earned = $7, item_earned = NULLIF($8, ''), mana_earned = $9, resolved_at = now() WHERE attack_id = $10`,
+			result.Stars, result.DamagePercent, earned, result.Checksum, result.DefendersAlive, xpEarned, crystalsEarned, itemEarned, manaEarned, request.AttackID); err != nil {
 			return err
 		}
 
@@ -807,7 +814,7 @@ func (s *Server) rpcRaidDeploy(ctx context.Context, logger runtime.Logger, db *s
 		if err != nil {
 			return err
 		}
-		output, err = marshal(raidDeployResponse{request.AttackID, result, earned, best, state, xpEarned, levelsGained, crystalsEarned, itemEarned})
+		output, err = marshal(raidDeployResponse{request.AttackID, result, earned, manaEarned, best, state, xpEarned, levelsGained, crystalsEarned, itemEarned})
 		if err != nil {
 			return err
 		}

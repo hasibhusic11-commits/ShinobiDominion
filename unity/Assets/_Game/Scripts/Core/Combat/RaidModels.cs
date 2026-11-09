@@ -13,6 +13,8 @@ namespace ShinobiDominion.Core
         public string description;
         public long goldPerStar;
         public int bestStars;
+        /// <summary>Mana paid per star, like gold (owner, 2026-11-09: loot is gold and Mana).</summary>
+        public long manaPerStar;
     }
 
     public sealed class RaidTeamMember
@@ -115,6 +117,7 @@ namespace ShinobiDominion.Core
     {
         public BattleResult Result;
         public long GoldEarned;
+        public long ManaEarned;
         public int BestStars;
         public long XpEarned;
         public int LevelsGained;
@@ -130,6 +133,7 @@ namespace ShinobiDominion.Core
             {
                 Result = result.ToObject<BattleResult>(),
                 GoldEarned = token.Value<long>("goldEarned"),
+                ManaEarned = token.Value<long?>("manaEarned") ?? 0,
                 BestStars = token.Value<int>("bestStars"),
                 XpEarned = token.Value<long?>("xpEarned") ?? 0,
                 LevelsGained = token.Value<int?>("levelsGained") ?? 0,
@@ -137,7 +141,7 @@ namespace ShinobiDominion.Core
                 ItemEarned = token.Value<string>("itemEarned") ?? ""
             };
             if (outcome.XpEarned < 0 || outcome.CrystalsEarned < 0) throw new FormatException("Server sent a negative reward.");
-            if (outcome.GoldEarned < 0) throw new FormatException("Server sent a negative reward.");
+            if (outcome.GoldEarned < 0 || outcome.ManaEarned < 0) throw new FormatException("Server sent a negative reward.");
             if (token["state"] is JObject state) outcome.State = ServerState.FromToken(state);
             return outcome;
         }

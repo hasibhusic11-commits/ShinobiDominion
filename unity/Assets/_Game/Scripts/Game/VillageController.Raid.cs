@@ -29,6 +29,10 @@ namespace ShinobiDominion.Game
             public readonly List<RaidPlacement> Placements = new List<RaidPlacement>();
             public readonly List<RaidTroopStack> Stacks = new List<RaidTroopStack>();
             public string SelectedTroop;
+            /// <summary>The hero card chosen to land next; null lands them in order.</summary>
+            public string SelectedHero;
+            public GameObject DeployScreen;
+            public GameObject CardRow;
             public RaidOutcome Outcome;
             public GameObject StatusBar;
             public GameObject Hud;
@@ -246,30 +250,7 @@ namespace ShinobiDominion.Game
         private HeroLook DefenderLook(RaidDefender defender) =>
             Roster.Catalog.TryGet(defender.archetypeId, out var archetype) ? LookOf(archetype, defender.evolutionIndex) : null;
 
-        private void ShowPreparePanel()
-        {
-            if (_raid == null) return;
-            _panel.Show(_raid.Session.raid.displayName, RetreatRaid, panel =>
-            {
-                if (!string.IsNullOrEmpty(LastMessage)) panel.Line(LastMessage, 20, Ui.AccentColor);
-                panel.Line("Tap the map to land. Shaded cells are too close to the enemy. Troops that land are used up.", 19);
-                if (_raid.Session.defenders.Count > 0) panel.Line(_raid.Session.defenders.Count == 1 ? "An enemy hero is on guard." : $"{_raid.Session.defenders.Count} enemy heroes are on guard.", 19, Ui.AccentColor);
-                panel.Line($"Heroes placed: {_raid.Placements.Count} of {_raid.Session.team.Count}");
-                var left = TroopData.All.Where(t => TroopsLeft(t.id) > 0).ToList();
-                if (Army.Counts.Count > 0)
-                    panel.Line(left.Count > 0 ? "Left: " + string.Join(", ", left.Select(t => $"{t.displayName} {TroopsLeft(t.id)}")) : "All troops placed.", 19);
-                if (left.Count > 0)
-                {
-                    var selected = TroopData.Find(_raid.SelectedTroop);
-                    var caption = selected != null ? $"Landing: {selected.displayName}" : "Landing: heroes. Tap to choose troops";
-                    panel.Action("NextTroopButton", caption, CycleTroop, true, null, 19);
-                }
-                var everything = _raid.Placements.Count == _raid.Session.team.Count && left.Count == 0;
-                panel.Action("AutoPlaceButton", "Place the rest for me", AutoPlaceHeroes, !everything);
-                panel.Action("StartBattleButton", "Start battle", StartBattle, _raid.Placements.Count + _raid.Stacks.Count > 0, Ui.AttackColor);
-                panel.Action("RetreatButton", "Retreat", RetreatRaid);
-            });
-        }
+        private void ShowPreparePanel() => ShowDeployScreen();
 
         private int TroopsLeft(string troopId) =>
             Army.CountOf(troopId) - _raid.Stacks.Where(s => s.troopId == troopId).Sum(s => s.count);
@@ -321,9 +302,11 @@ namespace ShinobiDominion.Game
                 ShowPreparePanel();
                 return;
             }
-            var next = _raid.Session.team.FirstOrDefault(m => _raid.Placements.All(p => p.instanceId != m.instanceId));
+            // The chosen hero card, or the next hero in order.
+            var next = _raid.Session.team.FirstOrDefault(m => m.instanceId == _raid.SelectedHero && _raid.Placements.All(p => p.instanceId != m.instanceId)) ?? NextHeroToLand();
             if (next == null || !VillageGrid.InBounds(cell.X, cell.Z) || !BattleSim.CanDeployAt(_raid.Session.buildings, cell.X, cell.Z)) return;
             AddPlacement(next, cell.X, cell.Z);
+            _raid.SelectedHero = null;
             ShowPreparePanel();
         }
 
@@ -428,30 +411,6 @@ namespace ShinobiDominion.Game
             CreateBattleHud();
         }
 
-        private void CreateBattleBar()
-        {
-            var bar = new GameObject("BattleBar", typeof(RectTransform));
-            var rect = (RectTransform)bar.transform;
-            rect.SetParent(_uiRoot, false);
-            Ui.Anchor(rect, new Vector2(0.5f, 1f), new Vector2(560f, 64f), new Vector2(0f, -104f));
-            Ui.Framed(rect, Ui.PillSprite);
-            var text = Ui.Label(bar.transform, "", 24, TextAnchor.MiddleLeft);
-            Ui.Anchor((RectTransform)text.transform, new Vector2(0f, 0.5f), new Vector2(270f, 56f), new Vector2(14f, 0f));
-            var skip = Ui.Button(bar.transform, "SkipBattleButton", "Skip", SkipBattle, true, null, 22);
-            Ui.Anchor((RectTransform)skip.transform, new Vector2(1f, 0.5f), new Vector2(150f, 52f), new Vector2(-8f, 0f));
-            Button speed = null;
-            speed = Ui.Button(bar.transform, "BattleSpeedButton", SpeedCaption(), () =>
-            {
-                _battleSpeed = _battleSpeed >= 3f ? 1f : _battleSpeed + 1f;
-                if (_raid?.Stage != null) _raid.Stage.PlaybackSpeed = _battleSpeed;
-                speed.GetComponentInChildren<Text>().text = SpeedCaption();
-            }, true, null, 22);
-            Ui.Anchor((RectTransform)speed.transform, new Vector2(1f, 0.5f), new Vector2(110f, 52f), new Vector2(-166f, 0f));
-            _raid.Stage.PlaybackSpeed = _battleSpeed;
-            _raid.StatusBar = bar;
-            _raid.StatusText = text;
-        }
-
         /// <summary>Battle playback speed, kept between battles. It only changes how fast the log plays.</summary>
         private static float _battleSpeed = 1f;
 
@@ -479,9 +438,7 @@ namespace ShinobiDominion.Game
         {
             if (_raid == null) return;
             _raid.Phase = RaidPhase.Resolved;
-            if (_raid.StatusBar != null) Destroy(_raid.StatusBar);
-            if (_raid.Hud != null) Destroy(_raid.Hud);
-            _battleHud = null;
+            ClearAttackScreen();
             if (_modeFight != null)
             {
                 ShowModeResult();
@@ -504,7 +461,7 @@ namespace ShinobiDominion.Game
                 if (guards > 0) panel.Line($"Enemy heroes beaten: {guards - result.defendersAlive} of {guards}");
                 panel.Line($"Time: {result.endTick / BattleSim.TicksPerSecond} seconds");
                 if (_raid.Session.attackId == "practice") panel.Line("Practice battle: no reward.", 20, Ui.AccentColor);
-                else if (outcome.GoldEarned > 0) panel.Line($"Earned {outcome.GoldEarned:N0} gold");
+                else if (outcome.GoldEarned + outcome.ManaEarned > 0) panel.Line(outcome.ManaEarned > 0 ? $"Earned {outcome.GoldEarned:N0} gold and {outcome.ManaEarned:N0} Mana" : $"Earned {outcome.GoldEarned:N0} gold");
                 else if (_raid.Session.raid.id == "rival") panel.Line(result.stars == 0 ? "No gold: earn a star to get paid." : "No gold: this rival already paid today, you reached today's limit, or your vault is full.");
                 else panel.Line("No gold: only new stars pay, or your vault is full.");
                 DrawRewardLines(panel, outcome);
@@ -521,9 +478,7 @@ namespace ShinobiDominion.Game
         private void EndRaid()
         {
             if (_raid == null) return;
-            if (_raid.StatusBar != null) Destroy(_raid.StatusBar);
-            if (_raid.Hud != null) Destroy(_raid.Hud);
-            _battleHud = null;
+            ClearAttackScreen();
             _raid.Stage.Finished -= ShowRaidResult;
             _modeFight = null;
             Destroy(_raid.Stage.gameObject);

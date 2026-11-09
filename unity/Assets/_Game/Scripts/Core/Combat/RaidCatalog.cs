@@ -38,6 +38,8 @@ namespace ShinobiDominion.Core
         public string description;
         public int version = 1;
         public long goldPerStar;
+        /// <summary>Mana paid per star, alongside the gold.</summary>
+        public long manaPerStar;
         public List<RaidBuildingEntry> buildings = new List<RaidBuildingEntry>();
         public List<RaidWallRun> walls = new List<RaidWallRun>();
         public List<RaidDefenderEntry> defenders = new List<RaidDefenderEntry>();

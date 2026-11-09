@@ -68,7 +68,10 @@ namespace ShinobiDominion.Tests
             CollectionAssert.Contains(bottom, "AttackButton");
             CollectionAssert.IsSubsetOf(bottom, column.Concat(new[] { "AttackButton" }).ToArray());
             var attack = Buttons().First(b => b.name == "AttackButton");
-            StringAssert.AreEqualIgnoringCase("ATTACK", attack.GetComponentInChildren<Text>().text);
+            // The word is either written on the button or painted into the owner's kit picture (hud_attack_button).
+            var word = attack.GetComponentInChildren<Text>();
+            if (word != null) StringAssert.AreEqualIgnoringCase("ATTACK", word.text);
+            else Assert.AreEqual("hud_attack_button", attack.GetComponentsInChildren<Image>().First(i => i.name == "Face").sprite.name);
             Assert.IsFalse(Buttons().Any(b => ScreenRect((RectTransform)b.transform).xMin > Screen.width * 0.5f && ScreenRect((RectTransform)b.transform).yMin < Screen.height / 3f),
                 "Nothing sits at the bottom right of the idle screen");
         }

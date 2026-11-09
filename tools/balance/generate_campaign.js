@@ -41,6 +41,9 @@ const BOSSES = { 5: 'solar_beast_sage', 10: 'thunder_empress', 15: 'stone_titan'
 const COMMONS = ['ember_recruit', 'reed_archer', 'stone_apprentice', 'talisman_novice', 'bell_guard', 'mist_courier', 'spark_tinkerer', 'ash_monk', 'gale_runner', 'moth_herbalist'];
 const ELITES = ['lantern_warden', 'scarlet_fan_dancer', 'twin_chain_reaper', 'frost_lake_monk', 'boulder_fist_elder', 'mask_carver', 'thunder_drum_monk', 'salt_wind_nomad', 'silver_moon_archer', 'cinder_shield_captain'];
 
+// Raids pay Mana as well as gold (owner, 2026-11-09). Mills make Mana at about a third of the rate mines make gold.
+const manaFor = gold => Math.round(gold / 3 / 10) * 10;
+
 function rewards(stage) {
   const chapter = 1 + Math.floor((stage - 1) / 5);
   return {
@@ -147,7 +150,7 @@ function buildStage(stage) {
   const [name, description] = STAGES[stage];
   const id = 'stage_' + String(stage).padStart(2, '0');
   return Object.assign(
-    { id, displayName: name, description, version: 2, goldPerStar: 300 + 150 * stage },
+    { id, displayName: name, description, version: 2, goldPerStar: 300 + 150 * stage, manaPerStar: manaFor(300 + 150 * stage) },
     rewards(stage),
     {
       requires: stage === 3 ? 'cinder_garrison' : 'stage_' + String(stage - 1).padStart(2, '0'),
@@ -164,6 +167,7 @@ handMade.forEach((raid, i) => {
   Object.assign(raid, rewards(i + 1));
   raid.requires = '';
   raid.strength = STRENGTH[raid.id] || 100;
+  raid.manaPerStar = manaFor(raid.goldPerStar);
 });
 // Stage 2 was guarded by a Legendary, which only Legendary players could beat; a Common guards it now.
 const garrison = handMade.find(r => r.id === 'cinder_garrison');

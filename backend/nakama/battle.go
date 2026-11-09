@@ -1402,6 +1402,7 @@ type raidDefinition struct {
 	Description string      `json:"description"`
 	Version     int         `json:"version"`
 	GoldPerStar int64       `json:"goldPerStar"`
+	ManaPerStar int64       `json:"manaPerStar"`
 	Buildings   []raidEntry `json:"buildings"`
 	Walls       []raidWall  `json:"walls"`
 	Defenders   []raidDefenderEntry `json:"defenders"`
