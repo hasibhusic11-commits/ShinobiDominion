@@ -172,6 +172,7 @@ func (s *Server) register(initializer runtime.Initializer, logger runtime.Logger
 		"sd_chest_view":   s.rpcChestView,
 		"sd_chest_open":   s.rpcChestOpen,
 		"sd_shop_buy":     s.rpcShopBuy,
+		"sd_gear_upgrade": s.rpcGearUpgrade,
 		"sd_troop_train":  s.rpcTroopTrain,
 		"sd_hero_train":   s.rpcHeroTrain,
 		"sd_raid_list":    s.rpcRaidList,
@@ -384,6 +385,8 @@ type heroState struct {
 	Experience     int64  `json:"experience"`
 	Locked         bool   `json:"locked"`
 	BaseSlot       *int   `json:"baseSlot"`
+	// Gear is the hero's Weapon, Armor and Charm levels (ADR-044).
+	Gear           []int  `json:"gear"`
 }
 
 type playerState struct {
@@ -400,7 +403,7 @@ type playerState struct {
 
 func loadState(ctx context.Context, tx *sql.Tx, userID string, crystals int64) (*playerState, error) {
 	state := &playerState{SchemaVersion: 1, Crystals: crystals, Heroes: []heroState{}, Items: map[string]int64{}}
-	rows, err := tx.QueryContext(ctx, `SELECT instance_id::text, archetype_id, evolution, level, experience, locked, base_slot FROM sd_hero WHERE user_id = $1 ORDER BY created_at, instance_id`, userID)
+	rows, err := tx.QueryContext(ctx, `SELECT instance_id::text, archetype_id, evolution, level, experience, locked, base_slot, gear_weapon, gear_armor, gear_charm FROM sd_hero WHERE user_id = $1 ORDER BY created_at, instance_id`, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -408,7 +411,8 @@ func loadState(ctx context.Context, tx *sql.Tx, userID string, crystals int64) (
 	for rows.Next() {
 		var hero heroState
 		var slot sql.NullInt64
-		if err := rows.Scan(&hero.InstanceID, &hero.ArchetypeID, &hero.EvolutionIndex, &hero.Level, &hero.Experience, &hero.Locked, &slot); err != nil {
+		hero.Gear = make([]int, 3)
+		if err := rows.Scan(&hero.InstanceID, &hero.ArchetypeID, &hero.EvolutionIndex, &hero.Level, &hero.Experience, &hero.Locked, &slot, &hero.Gear[0], &hero.Gear[1], &hero.Gear[2]); err != nil {
 			return nil, err
 		}
 		if slot.Valid {

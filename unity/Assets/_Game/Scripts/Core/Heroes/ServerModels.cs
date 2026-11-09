@@ -181,6 +181,11 @@ namespace ShinobiDominion.Core
                 case "GUILD_NOT_FOUND": return "That guild no longer exists.";
                 case "BAD_MESSAGE": return "Write something first (up to 200 characters).";
                 case "CHAT_TOO_FAST": return "Slow down a little before sending more.";
+                case "BAD_GEAR_SLOT": return "That is not a gear slot.";
+                case "GEAR_AT_MAX": return "That gear is already at its best.";
+                case "HERO_LEVEL_TOO_LOW_FOR_GEAR": return "Level the hero up first.";
+                case "CHEST_NOT_READY": return "The chest is still refilling.";
+                case "OFFER_NOT_FOUND": return "That offer is gone.";
                 default: return "Could not reach the server. Your request is safe to retry.";
             }
         }

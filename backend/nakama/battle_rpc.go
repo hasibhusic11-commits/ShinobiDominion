@@ -308,7 +308,7 @@ func (s *Server) rivalSnapshot(ctx context.Context, tx *sql.Tx, rivalID string) 
 		}
 	}
 
-	rows, err := tx.QueryContext(ctx, `SELECT archetype_id, evolution, level, base_slot FROM sd_hero WHERE user_id = $1 AND base_slot IS NOT NULL ORDER BY base_slot`, rivalID)
+	rows, err := tx.QueryContext(ctx, `SELECT archetype_id, evolution, level, base_slot, gear_weapon, gear_armor, gear_charm FROM sd_hero WHERE user_id = $1 AND base_slot IS NOT NULL ORDER BY base_slot`, rivalID)
 	if err != nil {
 		return nil, nil, 0, err
 	}
@@ -317,7 +317,8 @@ func (s *Server) rivalSnapshot(ctx context.Context, tx *sql.Tx, rivalID string) 
 	for rows.Next() {
 		var archetypeID string
 		var evolution, level, slot int
-		if err := rows.Scan(&archetypeID, &evolution, &level, &slot); err != nil {
+		var gear [3]int
+		if err := rows.Scan(&archetypeID, &evolution, &level, &slot, &gear[0], &gear[1], &gear[2]); err != nil {
 			return nil, nil, 0, err
 		}
 		base, ok := v.byID[slot]
@@ -330,6 +331,7 @@ func (s *Server) rivalSnapshot(ctx context.Context, tx *sql.Tx, rivalID string) 
 		if err != nil {
 			return nil, nil, 0, err
 		}
+		defender.Hp, defender.Attack, defender.Defense = s.catalog.withGear(defender.Hp, defender.Attack, defender.Defense, gear)
 		defenders = append(defenders, defender)
 	}
 	return buildings, defenders, dojoLevel, rows.Err()
@@ -543,7 +545,7 @@ func (s *Server) rpcDefenseLog(ctx context.Context, logger runtime.Logger, db *s
 
 // loadRaidTeam reads who stands on the player's Hero Bases. Only the server decides their stats.
 func (s *Server) loadRaidTeam(ctx context.Context, tx *sql.Tx, userID string) ([]raidTeamMember, error) {
-	rows, err := tx.QueryContext(ctx, `SELECT instance_id::text, archetype_id, evolution, level FROM sd_hero WHERE user_id = $1 AND base_slot IS NOT NULL ORDER BY base_slot`, userID)
+	rows, err := tx.QueryContext(ctx, `SELECT instance_id::text, archetype_id, evolution, level, gear_weapon, gear_armor, gear_charm FROM sd_hero WHERE user_id = $1 AND base_slot IS NOT NULL ORDER BY base_slot`, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -551,7 +553,8 @@ func (s *Server) loadRaidTeam(ctx context.Context, tx *sql.Tx, userID string) ([
 	team := []raidTeamMember{}
 	for rows.Next() {
 		var member raidTeamMember
-		if err := rows.Scan(&member.InstanceID, &member.ArchetypeID, &member.EvolutionIndex, &member.Level); err != nil {
+		var gear [3]int
+		if err := rows.Scan(&member.InstanceID, &member.ArchetypeID, &member.EvolutionIndex, &member.Level, &gear[0], &gear[1], &gear[2]); err != nil {
 			return nil, err
 		}
 		archetype, ok := s.catalog.byID[member.ArchetypeID]
@@ -567,6 +570,7 @@ func (s *Server) loadRaidTeam(ctx context.Context, tx *sql.Tx, userID string) ([
 		member.Power = powerFor(archetype.Rarity)
 		member.Speed = roleSpeeds[role]
 		member.Hp, member.Attack, member.Defense = heroBattleStats(archetype, member.EvolutionIndex, member.Level)
+		member.Hp, member.Attack, member.Defense = s.catalog.withGear(member.Hp, member.Attack, member.Defense, gear)
 		team = append(team, member)
 	}
 	return team, rows.Err()

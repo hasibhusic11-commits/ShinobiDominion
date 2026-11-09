@@ -75,7 +75,24 @@ namespace ShinobiDominion.Core
         public long xpPerLevelStep;
         public long manaPerLevelBase;
         public long manaPerLevelStep;
+        public GearSettings gear;
         public List<HeroArchetype> heroes = new List<HeroArchetype>();
+    }
+
+    /// <summary>Hero gear settings (ADR-044): Weapon raises attack, Armor HP, Charm defense. Test values.</summary>
+    public sealed class GearSettings
+    {
+        public List<string> slots = new List<string>();
+        public int maxLevel;
+        public long percentPerLevel;
+        public long manaPerLevel;
+        public long goldPerLevel;
+        public int heroLevelsPerGearLevel;
+
+        public long Gold(int level) => goldPerLevel * level;
+        public long Mana(int level) => manaPerLevel * level * level;
+        /// <summary>The cumulative hero level a gear level needs, the same way the server counts it.</summary>
+        public int HeroLevel(int level) => (level - 1) * heroLevelsPerGearLevel + 1;
     }
 
     public sealed class HeroCatalog
@@ -89,6 +106,7 @@ namespace ShinobiDominion.Core
         public long XpPerLevelStep { get; }
         public long ManaPerLevelBase { get; }
         public long ManaPerLevelStep { get; }
+        public GearSettings Gear { get; }
         public string BalanceStatus { get; }
 
         private HeroCatalog(HeroCatalogFile file)
@@ -99,6 +117,9 @@ namespace ShinobiDominion.Core
             XpPerLevelStep = file.xpPerLevelStep;
             ManaPerLevelBase = file.manaPerLevelBase;
             ManaPerLevelStep = file.manaPerLevelStep;
+            Gear = file.gear ?? throw new FormatException("Hero gear settings are missing.");
+            if (Gear.slots.Count != 3 || Gear.maxLevel < 1 || Gear.maxLevel > 50 || Gear.percentPerLevel < 0)
+                throw new FormatException("Hero gear settings are invalid.");
             BalanceStatus = file.balanceStatus;
             _byId = file.heroes.ToDictionary(h => h.id);
         }
@@ -175,6 +196,20 @@ namespace ShinobiDominion.Core
             return MaxLevel * evolutionIndex + level;
         }
 
+        public const int Weapon = 0;
+        public const int Armor = 1;
+        public const int Charm = 2;
+
+        /// <summary>Gear on top of the base stats: Weapon to attack, Armor to HP, Charm to defense. Mirrors withGear on the server.</summary>
+        public static HeroStats WithGear(HeroStats stats, int[] gear, long percentPerLevel)
+        {
+            if (gear == null || gear.Length < 3) return stats;
+            return new HeroStats(
+                stats.Hp * (100 + percentPerLevel * gear[Armor]) / 100,
+                stats.Attack * (100 + percentPerLevel * gear[Weapon]) / 100,
+                stats.Defense * (100 + percentPerLevel * gear[Charm]) / 100);
+        }
+
         public static HeroStats Stats(HeroArchetype hero, int evolutionIndex, int level)
         {
             long steps = Cumulative(evolutionIndex, level) - 1;
@@ -197,6 +232,8 @@ namespace ShinobiDominion.Core
         public int Level = 1;
         public long Experience;
         public bool Locked;
+        /// <summary>Weapon, Armor and Charm levels (ADR-044). Set by the server.</summary>
+        public int[] Gear = new int[3];
     }
 
     public enum HeroError
@@ -284,7 +321,7 @@ namespace ShinobiDominion.Core
         public HeroArchetype ArchetypeOf(HeroInstance hero) => Catalog.Get(hero.ArchetypeId);
 
         public HeroStats StatsOf(HeroInstance hero) =>
-            HeroMath.Stats(ArchetypeOf(hero), hero.EvolutionIndex, hero.Level);
+            HeroMath.WithGear(HeroMath.Stats(ArchetypeOf(hero), hero.EvolutionIndex, hero.Level), hero.Gear, Catalog.Gear.percentPerLevel);
 
         /// <summary>Creates an owned instance. Phase 3 restricts minting to the server.</summary>
         public HeroInstance AddHero(string archetypeId, int evolutionIndex = 0, int level = 1)
@@ -469,7 +506,8 @@ namespace ShinobiDominion.Core
                     evolutionIndex = hero.EvolutionIndex,
                     level = hero.Level,
                     experience = hero.Experience,
-                    locked = hero.Locked
+                    locked = hero.Locked,
+                    gear = (int[])hero.Gear.Clone()
                 });
             }
             foreach (var pair in _items) save.items[pair.Key] = pair.Value;
@@ -507,6 +545,9 @@ namespace ShinobiDominion.Core
                     throw new VillageSaveException("Level out of range.");
                 if (entry.experience < 0)
                     throw new VillageSaveException("Negative experience.");
+                var gear = entry.gear ?? new int[3];
+                if (gear.Length != 3 || gear.Any(g => g < 0 || g > catalog.Gear.maxLevel))
+                    throw new VillageSaveException("Gear out of range.");
                 roster._heroes.Add(entry.instanceId, new HeroInstance
                 {
                     InstanceId = entry.instanceId,
@@ -514,7 +555,8 @@ namespace ShinobiDominion.Core
                     EvolutionIndex = entry.evolutionIndex,
                     Level = entry.level,
                     Experience = entry.experience,
-                    Locked = entry.locked
+                    Locked = entry.locked,
+                    Gear = (int[])gear.Clone()
                 });
             }
             foreach (var pair in save.items)
@@ -546,6 +588,7 @@ namespace ShinobiDominion.Core
         public int level;
         public long experience;
         public bool locked;
+        public int[] gear;
     }
 
     /// <summary>

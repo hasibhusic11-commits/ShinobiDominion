@@ -88,6 +88,22 @@ Follows the owner's ADR-021. Up to four Troop Camps, gated by Dojo level, and a 
 - A raid still needs at least one hero. At most 200 troops can land in one raid, to bound the server's work.
 - Troop names and all numbers are test values. Offline practice troops aren't saved.
 
+## ADR-044: Hero gear, added on 2026-11-09 while the owner slept
+The brief puts equipment in the Hero Altar, and Castle Clash heroes have gear. Claude chose the simplest version that fits one hero at a time. Numbers are test values in the `gear` block of `heroes.json`, read by both client and server.
+
+**How gear works**
+- Every hero has three slots: Weapon (+attack), Armor (+HP) and Charm (+defense), each from level 0 to 10, at +5% of its stat per level.
+- Gear level N costs 1,500 × N gold and 150 × N² Mana.
+- It needs a hero level of 20 × (N − 1) + 1, counted across evolutions.
+- Gear belongs to the hero. A hero spent as an evolution duplicate takes its gear with it. There are no gear items to collect, so nothing new is random.
+
+**Integrity**
+- Gear is upgraded only on the server.
+- The server applies it in every battle: raids, dungeons, guards, the Arena and Village Siege.
+- The client shows the same numbers using shared maths, checked by matching tests in C# and Go.
+
+**On screen:** the hero page has a Gear button.
+
 ## ADR-043: Treasure Chest and gem shop, added on 2026-11-09 while the owner slept
 These fill the last placeholder buttons on the home screen. Numbers are test values in `modes.json`.
 

@@ -586,6 +586,7 @@ func (s *Server) rpcArenaFight(ctx context.Context, logger runtime.Logger, db *s
 		var opponentID *string
 		var foeArchetype, foeName string
 		var foeEvolution, foeLevel int
+		var foeGear [3]int
 		foePoints := points
 		var found string
 		err = tx.QueryRowContext(ctx, `SELECT user_id::text, points FROM (
@@ -598,8 +599,8 @@ func (s *Server) rpcArenaFight(ctx context.Context, logger runtime.Logger, db *s
 			return err
 		}
 		if err == nil {
-			if err := tx.QueryRowContext(ctx, `SELECT archetype_id, evolution, level FROM sd_hero WHERE user_id = $1 AND base_slot IS NOT NULL ORDER BY base_slot LIMIT 1`, found).
-				Scan(&foeArchetype, &foeEvolution, &foeLevel); err != nil {
+			if err := tx.QueryRowContext(ctx, `SELECT archetype_id, evolution, level, gear_weapon, gear_armor, gear_charm FROM sd_hero WHERE user_id = $1 AND base_slot IS NOT NULL ORDER BY base_slot LIMIT 1`, found).
+				Scan(&foeArchetype, &foeEvolution, &foeLevel, &foeGear[0], &foeGear[1], &foeGear[2]); err != nil {
 				return err
 			}
 			opponentID = &found
@@ -614,6 +615,7 @@ func (s *Server) rpcArenaFight(ctx context.Context, logger runtime.Logger, db *s
 		if err != nil {
 			return err
 		}
+		defender.Hp, defender.Attack, defender.Defense = s.catalog.withGear(defender.Hp, defender.Attack, defender.Defense, foeGear)
 
 		shrine := s.buildings.byID["dojo_hq"]
 		buildings := []battleBuildingInput{{ID: 1, DefinitionID: shrine.ID, X: a.ShrineX, Z: a.ShrineZ, Width: shrine.Width, Depth: shrine.Depth, Level: 1, Hp: a.ShrineHp}}

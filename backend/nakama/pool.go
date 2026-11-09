@@ -61,6 +61,7 @@ type HeroCatalog struct {
 	// Mana to buy one hero level: base + step * (level - 1). Test values (ADR-038).
 	ManaBase      int64       `json:"manaPerLevelBase"`
 	ManaStep      int64       `json:"manaPerLevelStep"`
+	Gear          gearConfig  `json:"gear"`
 	Heroes        []Archetype `json:"heroes"`
 	byID          map[string]Archetype
 }
@@ -82,6 +83,9 @@ func loadCatalog(data []byte) (*HeroCatalog, error) {
 	}
 	if catalog.ManaBase < 0 || catalog.ManaStep < 0 {
 		return nil, errors.New("hero Mana costs cannot be negative")
+	}
+	if !catalog.Gear.valid() {
+		return nil, errors.New("hero gear settings are missing or invalid")
 	}
 	catalog.byID = map[string]Archetype{}
 	for _, h := range catalog.Heroes {

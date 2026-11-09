@@ -402,5 +402,19 @@ namespace ShinobiDominion.Tests
             yield return WaitFor(() => Controller.Village.Mana == mana + 1200);
             Assert.AreEqual(gems - 50, Controller.ServerCrystals);
         }
+        [UnityTest]
+        public IEnumerator Gear_FromTheHeroPage_RaisesTheStatOnTheServer()
+        {
+            var hero = Controller.Roster.Heroes.First();
+            var before = Controller.Roster.StatsOf(hero);
+            Controller.ShowHeroDetail(hero.InstanceId);
+            yield return ClickWhenReady("GearButton");
+            yield return ClickWhenReady("Gear_0");
+            yield return WaitFor(() => Controller.Roster.Find(hero.InstanceId).Gear[0] == 1);
+            var after = Controller.Roster.StatsOf(Controller.Roster.Find(hero.InstanceId));
+            Assert.AreEqual(before.Attack * 105 / 100, after.Attack, "A level 1 weapon adds 5% attack");
+            Assert.AreEqual(before.Hp, after.Hp);
+            yield return Await(_direct.GetStateAsync(), s => StringAssert.Contains("\"gear\":[1,0,0]", s.RosterJson.Replace(" ", "").Replace("\n", "").Replace("\r", "")));
+        }
     }
 }

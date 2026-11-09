@@ -231,6 +231,8 @@ namespace ShinobiDominion.Game
                 var manaCost = Roster.ManaToLevelUp(hero.Level);
                 Ui.Button(box, "TrainHeroButton", $"Train +1 level ({manaCost:N0} Mana)", () => TrainHero(instanceId), Village.Mana >= manaCost, Ui.AccentColor, 19);
             }
+            var gearTotal = hero.Gear.Sum();
+            Ui.Button(box, "GearButton", gearTotal == 0 ? "Gear" : $"Gear (W{hero.Gear[HeroMath.Weapon]} A{hero.Gear[HeroMath.Armor]} C{hero.Gear[HeroMath.Charm]})", () => ShowGear(instanceId), true, null, 19);
             Ui.Button(box, "LockButton", hero.Locked ? "Unlock" : "Lock", () =>
             {
                 if (IsOnline)

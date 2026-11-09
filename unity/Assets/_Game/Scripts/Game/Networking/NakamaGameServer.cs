@@ -57,6 +57,7 @@ namespace ShinobiDominion.Game
         Task<ChestView> ChestViewAsync();
         Task<ChestView> ChestOpenAsync(string key);
         Task<ChestView> ShopBuyAsync(string key, string offerId);
+        Task<ServerState> GearUpgradeAsync(string key, string instanceId, int slot);
     }
 
     public sealed class GameServerException : Exception
@@ -203,6 +204,8 @@ namespace ShinobiDominion.Game
         public async Task<ChestView> ChestOpenAsync(string key) => ChestView.Parse(await CallAsync("sd_chest_open", new { key }));
 
         public async Task<ChestView> ShopBuyAsync(string key, string offerId) => ChestView.Parse(await CallAsync("sd_shop_buy", new { key, offerId }));
+
+        public async Task<ServerState> GearUpgradeAsync(string key, string instanceId, int slot) => ServerState.Parse(await CallAsync("sd_gear_upgrade", new { key, instanceId, slot }));
 
         public async Task<ServerState> TrainTroopsAsync(string key, string troopId, int count) =>
             ServerState.Parse(await CallAsync("sd_troop_train", new { key, troopId, count }));

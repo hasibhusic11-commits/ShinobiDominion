@@ -6,6 +6,7 @@
   "xpPerLevelStep": 10,
   "manaPerLevelBase": 20,
   "manaPerLevelStep": 5,
+  "gear": { "slots": ["Weapon", "Armor", "Charm"], "maxLevel": 10, "percentPerLevel": 5, "manaPerLevel": 150, "goldPerLevel": 1500, "heroLevelsPerGearLevel": 20 },
   "heroes": [
     {
       "id": "river_scout", "displayName": "River Scout", "rarity": "Common", "role": "Assassin", "affinity": "Water", "contentComplete": true, "retired": true,

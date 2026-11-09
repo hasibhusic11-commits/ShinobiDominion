@@ -203,3 +203,16 @@ func (zeroReader) Read(p []byte) (int, error) {
 	}
 	return len(p), nil
 }
+
+// The same numbers are checked in C# by GearTests, so the client's displayed stats match the server's.
+func TestGear_RaisesTheRightStat(t *testing.T) {
+	s := modesServer(t)
+	hp, attack, defense := s.catalog.withGear(1000, 200, 50, [3]int{2, 4, 1})
+	if hp != 1200 || attack != 220 || defense != 52 {
+		t.Fatalf("got %d %d %d", hp, attack, defense)
+	}
+	gold, mana, heroLevel := s.catalog.gearCost(3)
+	if gold != 4500 || mana != 1350 || heroLevel != 41 {
+		t.Fatalf("gear level 3 costs %d gold, %d Mana and needs hero level %d", gold, mana, heroLevel)
+	}
+}

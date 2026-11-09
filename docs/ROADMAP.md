@@ -92,6 +92,8 @@ Verified:
 - Builders send up sparks and dust over upgrading buildings.
 - New players get a five-step guide with an arrow (collect, summon, assign, first battle, first upgrade). It never blocks a tap, can be skipped, and is remembered.
 
+**Hero gear (ADR-044):** Weapon, Armor and Charm on every hero, upgraded with gold and Mana from the hero page. The server applies gear in every battle.
+
 **Chest and shop (ADR-043):** a free Treasure Chest every 4 hours, and a gem shop that swaps gems for gold or Mana at fixed rates. No real money anywhere. Every home-screen button now works.
 
 **Guilds and names (ADR-042):**
@@ -108,10 +110,10 @@ Verified:
 
 | Check | Result |
 |---|---|
-| .NET harness (`tools/core-tests`) | 174 of 174 passed |
+| .NET harness (`tools/core-tests`) | 177 of 177 passed |
 | Go unit tests, including Siege balance and Arena duels | passed; part of the server build |
-| Backend suite, including gift, quest, Siege, Arena, timer, research, guild, chest and shop tests | passed |
-| Unity PlayMode against the live server, including `ModeTests`, `UpgradeTimerTests` and `GuideTests` | 126 of 126 passed |
+| Backend suite, including gift, quest, Siege, Arena, timer, research, guild, chest, shop and gear tests | passed |
+| Unity PlayMode against the live server, including `ModeTests`, `UpgradeTimerTests` and `GuideTests` | 127 of 127 passed |
 
 **Not verified:** how any of it feels in your hands, on a phone, or with two real people in the Arena. Siege and Arena numbers are test values.
 
