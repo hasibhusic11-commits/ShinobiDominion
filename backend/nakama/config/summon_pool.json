@@ -6,7 +6,6 @@
   "startsAt": "2026-01-01T00:00:00Z",
   "endsAt": "2099-01-01T00:00:00Z",
   "items": [
-    { "archetypeId": "river_scout", "weight": 700 },
     { "archetypeId": "ember_recruit", "weight": 700 },
     { "archetypeId": "reed_archer", "weight": 700 },
     { "archetypeId": "stone_apprentice", "weight": 700 },
@@ -14,8 +13,9 @@
     { "archetypeId": "bell_guard", "weight": 700 },
     { "archetypeId": "mist_courier", "weight": 700 },
     { "archetypeId": "spark_tinkerer", "weight": 700 },
+    { "archetypeId": "ash_monk", "weight": 700 },
+    { "archetypeId": "gale_runner", "weight": 700 },
     { "archetypeId": "moth_herbalist", "weight": 700 },
-    { "archetypeId": "dusk_lookout", "weight": 700 },
     { "archetypeId": "lantern_warden", "weight": 280 },
     { "archetypeId": "scarlet_fan_dancer", "weight": 280 },
     { "archetypeId": "twin_chain_reaper", "weight": 280 },

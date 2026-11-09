@@ -20,7 +20,9 @@ namespace ShinobiDominion.Tests
         public void Roster_HasTheTargetCountOfEachRarity()
         {
             var all = Catalog().All;
-            // Owner's roster, 2026-11-08 (ADR-036): 10 Common, 10 Elite, 8 Legendary.
+            // Owner's roster, 2026-11-08 (ADR-036): 10 Common, 10 Elite, 8 Legendary. Retired heroes stay in the
+            // catalog for players who own them but are not part of the roster.
+            all = all.Where(h => !h.retired).ToList();
             Assert.AreEqual(10, all.Count(h => h.rarity == HeroRarity.Common));
             Assert.AreEqual(10, all.Count(h => h.rarity == HeroRarity.Elite));
             Assert.AreEqual(8, all.Count(h => h.rarity == HeroRarity.Legendary));

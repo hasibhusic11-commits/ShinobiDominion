@@ -48,6 +48,8 @@ namespace ShinobiDominion.Core
         public HeroRole role;
         public HeroAffinity affinity;
         public bool contentComplete;
+        /// <summary>No longer summonable, but kept so players who own one still have it (ADR-036).</summary>
+        public bool retired;
         public long baseHp;
         public long baseAttack;
         public long baseDefense;

@@ -40,6 +40,8 @@ type Archetype struct {
 	DisplayName     string `json:"displayName"`
 	Rarity          string `json:"rarity"`
 	ContentComplete bool   `json:"contentComplete"`
+	// Retired heroes can no longer be summoned but stay in the catalog for players who own one.
+	Retired         bool   `json:"retired,omitempty"`
 	Role            string `json:"role"`
 	BaseHp          int64  `json:"baseHp"`
 	BaseAttack      int64  `json:"baseAttack"`
@@ -111,6 +113,9 @@ func loadPool(data []byte, catalog *HeroCatalog) (*SummonPool, error) {
 		}
 		if !hero.ContentComplete {
 			return nil, fmt.Errorf("%s is incomplete content and cannot be summoned", item.ArchetypeID)
+		}
+		if hero.Retired {
+			return nil, fmt.Errorf("%s is retired and cannot be summoned", item.ArchetypeID)
 		}
 		pool.total += item.Weight
 	}
