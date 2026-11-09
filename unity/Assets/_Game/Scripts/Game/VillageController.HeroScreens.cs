@@ -44,7 +44,7 @@ namespace ShinobiDominion.Game
             var odds = _odds;
             var one = odds.priceCrystalsPerRoll;
             var crystals = ServerCrystals ?? 0;
-            _panel.ShowScene(odds.bannerName, $"Crystals {crystals:N0}", CloseAll, scene =>
+            _panel.ShowScene(odds.bannerName, $"Gems {crystals:N0}", CloseAll, scene =>
             {
                 Ui.Framed(scene, HeroArt.GateScene, false).type = Image.Type.Simple;
 
@@ -83,9 +83,9 @@ namespace ShinobiDominion.Game
                 var fair = Ui.Strong(Ui.Label(scene, "Every roll is independent. Nothing is guaranteed, and past results do not change these rates.", 16, TextAnchor.MiddleCenter, Ui.MutedText));
                 Ui.Anchor(fair.rectTransform, new Vector2(0.5f, 0f), new Vector2(900f, 26f), new Vector2(0f, 100f));
 
-                var oneButton = Ui.Button(scene, "SummonOneButton", $"Summon x1\n{one:N0} crystals", () => Summon(1), crystals >= one, new Color(0.35f, 0.45f, 0.85f), 21);
+                var oneButton = Ui.Button(scene, "SummonOneButton", $"Summon x1\n{one:N0} gems", () => Summon(1), crystals >= one, new Color(0.35f, 0.45f, 0.85f), 21);
                 Ui.Anchor((RectTransform)oneButton.transform, new Vector2(0.5f, 0f), new Vector2(260f, 76f), new Vector2(-150f, 14f));
-                var tenButton = Ui.Button(scene, "SummonTenButton", $"Summon x10\n{one * 10:N0} crystals", () => Summon(10), crystals >= one * 10, new Color(0.95f, 0.5f, 0.16f), 21);
+                var tenButton = Ui.Button(scene, "SummonTenButton", $"Summon x10\n{one * 10:N0} gems", () => Summon(10), crystals >= one * 10, new Color(0.95f, 0.5f, 0.16f), 21);
                 Ui.Anchor((RectTransform)tenButton.transform, new Vector2(0.5f, 0f), new Vector2(260f, 76f), new Vector2(150f, 14f));
             });
         }

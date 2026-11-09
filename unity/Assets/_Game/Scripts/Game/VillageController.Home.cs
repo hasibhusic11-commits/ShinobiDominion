@@ -10,7 +10,7 @@ namespace ShinobiDominion.Game
     /// </summary>
     public sealed partial class VillageController
     {
-        /// <summary>Chakra, the third currency. It has no source yet, so it reads 0 until the Chakra Well exists.</summary>
+        /// <summary>Mana, the third currency (owner, 2026-11-08: Gold, Gems, Mana). It reads 0 until the Mana Mill exists.</summary>
         public long Chakra => 0;
 
         private Sprite GuardPortrait()
@@ -31,7 +31,7 @@ namespace ShinobiDominion.Game
                 case "quests": return "Quests";
                 case "gift": return "Gifts";
                 case "chest": return "Treasure Chest";
-                case "crystal_chest": return "Crystal Chest";
+                case "crystal_chest": return "Gem Chest";
                 default: return shortcut;
             }
         }

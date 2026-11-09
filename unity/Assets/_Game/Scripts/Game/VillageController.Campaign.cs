@@ -134,7 +134,7 @@ namespace ShinobiDominion.Game
             var parts = new List<string> { $"{stage.goldPerStar:N0} gold per new star", $"{stage.xpPerWin:N0} XP per hero on each win" };
             if (best == 0)
             {
-                if (stage.firstClearCrystals > 0) parts.Add($"{stage.firstClearCrystals:N0} crystals first time");
+                if (stage.firstClearCrystals > 0) parts.Add($"{stage.firstClearCrystals:N0} gems first time");
                 if (!string.IsNullOrEmpty(stage.firstClearItem)) parts.Add($"{ItemName(stage.firstClearItem)} first time");
             }
             return string.Join(", ", parts) + ".";
@@ -221,7 +221,7 @@ namespace ShinobiDominion.Game
                 delay += 0.25f;
             }
             if (outcome.XpEarned > 0) Reveal(panel.Line($"Your hero gained {outcome.XpEarned:N0} XP" + (outcome.LevelsGained > 0 ? $" and {outcome.LevelsGained} levels" : ""), 21, Ui.AccentColor));
-            if (outcome.CrystalsEarned > 0) Reveal(panel.Line($"Earned {outcome.CrystalsEarned:N0} crystals", 21, Ui.AccentColor));
+            if (outcome.CrystalsEarned > 0) Reveal(panel.Line($"Earned {outcome.CrystalsEarned:N0} gems", 21, Ui.AccentColor));
             if (!string.IsNullOrEmpty(outcome.ItemEarned))
             {
                 var found = panel.Line($"Found: {ItemName(outcome.ItemEarned)}", 24, new Color(1f, 0.87f, 0.4f));

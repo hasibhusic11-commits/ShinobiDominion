@@ -466,7 +466,7 @@ namespace ShinobiDominion.Game
             var banner = HudArt.Picture(Root, "ClanBanner", "banner_tomoe", new Vector2(1f, 1f), new Vector2(64f, 100f), new Vector2(-Margin - 78f, -2f));
             banner.preserveAspect = true;
 
-            // Currencies: gold, crystals and chakra, each on the pack's bar with its picture on the left and a "+".
+            // Currencies: gold, gems and mana, each on the pack's bar with its picture on the left and a "+".
             var barsRight = -(Margin + 78f + 64f + 22f);
             _chakra = Counter(Root, "Chakra", "chakra", barsRight, onShop, out _, out _);
             _crystals = Counter(Root, "Crystals", "crystals", barsRight - (BarWidth + BarGap), onShop, out _, out _);

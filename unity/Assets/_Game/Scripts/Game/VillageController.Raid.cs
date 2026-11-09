@@ -161,7 +161,7 @@ namespace ShinobiDominion.Game
                     }
                 }
                 panel.Line("Dungeons", 24);
-                panel.Line("Fight through fortified camps for gold, crystals, hero XP and evolution materials.", 19);
+                panel.Line("Fight through fortified camps for gold, gems, hero XP and evolution materials.", 19);
                 panel.Action("OpenDungeonsButton", "Open the dungeon map", OpenCampaign, IsOnline || AllowOfflinePlay, Ui.AccentColor);
             });
         }

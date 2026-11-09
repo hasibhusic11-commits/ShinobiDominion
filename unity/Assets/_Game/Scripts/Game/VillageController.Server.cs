@@ -224,7 +224,7 @@ namespace ShinobiDominion.Game
 
         private void DrawSummonResults(ServerSummonResult result)
         {
-            _panel.ShowScreen("Summon Results", $"Crystals {ServerCrystals ?? 0:N0}", ShowSummoningGate, panel =>
+            _panel.ShowScreen("Summon Results", $"Gems {ServerCrystals ?? 0:N0}", ShowSummoningGate, panel =>
             {
                 var grid = panel.Grid(HeroCardSize);
                 var shown = 0;

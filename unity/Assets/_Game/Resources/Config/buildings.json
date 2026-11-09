@@ -226,7 +226,7 @@
       ]
     },
     {
-      "id": "crystal_mine", "displayName": "Crystal Mine", "description": "Slowly produces crystals.", "category": "Resources", "function": "Collector", "width": 3, "depth": 3, "costGold": 1500, "maxCountByHqLevel": [0, 1, 1, 2, 2], "produces": "Crystals",
+      "id": "crystal_mine", "displayName": "Crystal Mine", "description": "Slowly produces gems.", "category": "Resources", "function": "Collector", "width": 3, "depth": 3, "costGold": 1500, "maxCountByHqLevel": [0, 1, 1, 2, 2], "produces": "Crystals",
       "levels": [
         {"hp":400,"upgradeCost":1200,"requiredHq":1,"production":4,"storedCap":16,"might":3},
         {"hp":460,"upgradeCost":2400,"requiredHq":1,"production":6,"storedCap":21,"might":6},
