@@ -20,6 +20,8 @@ namespace ShinobiDominion.Game
         private const float MinSize = 3.5f;
         private const float MaxSize = 30f;
         private const float PanMargin = 4f;
+        // How far a drag can pull the view past the edge, with growing resistance, before it springs back.
+        private const float Overscroll = 3f;
 
         private static readonly Plane Ground = new Plane(Vector3.up, Vector3.zero);
         private Vector3 _focus;
@@ -30,6 +32,10 @@ namespace ShinobiDominion.Game
         private Vector3 _focusTarget;
         private float _focusTime = -1f;
         private Vector3 _focusStart;
+        private int _lastPanFrame = -10;
+
+        private static float Extent => VillageGrid.Size * GridSpace.CellSize;
+        private bool Held => Time.frameCount - _lastPanFrame <= 1;
 
         public Camera Camera { get; private set; }
 
@@ -62,9 +68,23 @@ namespace ShinobiDominion.Game
         {
             _focusTime = -1f;
             _velocity = Vector3.zero;
-            _focus += grabbedWorld - GroundPoint(screen);
+            _lastPanFrame = Time.frameCount;
+            // Where the grabbed point would sit exactly under the finger; past the edge the view follows less and less.
+            var wanted = _focus + grabbedWorld - GroundPoint(screen);
+            _focus.x = Resist(wanted.x, -PanMargin, Extent + PanMargin);
+            _focus.z = Resist(wanted.z, -PanMargin, Extent + PanMargin);
             Apply();
         }
+
+        private static float Resist(float value, float min, float max)
+        {
+            if (value < min) return min - Overscroll * (min - value) / (min - value + Overscroll);
+            if (value > max) return max + Overscroll * (value - max) / (value - max + Overscroll);
+            return value;
+        }
+
+        private Vector3 Inside(Vector3 focus) =>
+            new Vector3(Mathf.Clamp(focus.x, -PanMargin, Extent + PanMargin), 0f, Mathf.Clamp(focus.z, -PanMargin, Extent + PanMargin));
 
         /// <summary>Factor below 1 zooms in. The ground under the screen point stays put.</summary>
         public void ZoomAt(float factor, Vector2 screen)
@@ -75,6 +95,8 @@ namespace ShinobiDominion.Game
             Apply();
             _focus += before - GroundPoint(screen);
             _targetSize = Camera.orthographicSize;
+            // Outside a drag this stays a hard edge, as before; during a pinch the pan that follows handles it.
+            if (!Held) _focus = Inside(_focus);
             Apply();
         }
 
@@ -106,7 +128,7 @@ namespace ShinobiDominion.Game
             var targetY = Mathf.Clamp(viewport.y, minScreenY, maxScreenY);
             if (Mathf.Approximately(targetX, viewport.x) && Mathf.Approximately(targetY, viewport.y)) return;
             var desired = Camera.ViewportToScreenPoint(new Vector3(targetX, targetY, 0f));
-            _focusTarget = _focus + GroundPoint(Camera.WorldToScreenPoint(world)) - GroundPoint(desired);
+            _focusTarget = Inside(_focus + GroundPoint(Camera.WorldToScreenPoint(world)) - GroundPoint(desired));
             _focusStart = _focus;
             _focusTime = 0f;
             _velocity = Vector3.zero;
@@ -140,13 +162,28 @@ namespace ShinobiDominion.Game
                 _velocity *= Mathf.Exp(-5f * dt);
                 Apply();
             }
+
+            // Once nothing holds the view past the edge, it springs back inside instead of stopping dead.
+            if (!Held)
+            {
+                var inside = Inside(_focus);
+                var outside = new Vector3(_focus.x - inside.x, 0f, _focus.z - inside.z);
+                if (outside.sqrMagnitude > 0f)
+                {
+                    // A fling that runs into the edge loses its outward speed quickly.
+                    if (outside.x * _velocity.x > 0f) _velocity.x *= Mathf.Exp(-25f * dt);
+                    if (outside.z * _velocity.z > 0f) _velocity.z *= Mathf.Exp(-25f * dt);
+                    _focus = outside.sqrMagnitude < 0.0001f ? inside : Vector3.Lerp(_focus, inside, 1f - Mathf.Exp(-12f * dt));
+                    Apply();
+                }
+            }
         }
 
         private void Apply()
         {
-            float size = VillageGrid.Size * GridSpace.CellSize;
-            _focus.x = Mathf.Clamp(_focus.x, -PanMargin, size + PanMargin);
-            _focus.z = Mathf.Clamp(_focus.z, -PanMargin, size + PanMargin);
+            // A drag may stretch past the edge only by the overscroll; the spring in Update brings it back.
+            _focus.x = Mathf.Clamp(_focus.x, -PanMargin - Overscroll, Extent + PanMargin + Overscroll);
+            _focus.z = Mathf.Clamp(_focus.z, -PanMargin - Overscroll, Extent + PanMargin + Overscroll);
             _focus.y = 0f;
             transform.position = _focus - transform.forward * Distance + _shakeOffset;
         }

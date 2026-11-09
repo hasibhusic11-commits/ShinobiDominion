@@ -47,6 +47,7 @@ namespace ShinobiDominion.Game
             var band = borderPixels * 1.6f;
             const float line = 2.5f;
             var texture = NewTexture(size);
+            var pixels = new Color[size * size];
             for (var y = 0; y < size; y++)
             for (var x = 0; x < size; x++)
             {
@@ -63,8 +64,9 @@ namespace ShinobiDominion.Game
                 color = Band(color, Ink, depth, outline + band);
                 color = Band(color, inner, depth, outline + band + line);
                 color.a *= Mathf.Clamp01(0.5f - distance);
-                texture.SetPixel(x, y, color);
+                pixels[y * size + x] = color;
             }
+            texture.SetPixels(pixels);
             texture.Apply();
             var slice = Mathf.Ceil(radius + outline + band + line + 4f);
             var sprite = Sprite.Create(texture, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), PixelsPerUnit, 0, SpriteMeshType.FullRect, new Vector4(slice, slice, slice, slice));
@@ -84,6 +86,7 @@ namespace ShinobiDominion.Game
                 const float outline = 3f;
                 const float lip = 7f;
                 var texture = NewTexture(size);
+                var pixels = new Color[size * size];
                 for (var y = 0; y < size; y++)
                 for (var x = 0; x < size; x++)
                 {
@@ -97,8 +100,9 @@ namespace ShinobiDominion.Game
                     if (y > size - outline - 5f) color = Band(color, new Color(1f, 1f, 1f), size - y, outline + 5f);
                     color = Band(Ink, color, depth, outline);
                     color.a = Mathf.Clamp01(0.5f - distance);
-                    texture.SetPixel(x, y, color);
+                    pixels[y * size + x] = color;
                 }
+                texture.SetPixels(pixels);
                 texture.Apply();
                 var slice = radius + outline + lip + 3f;
                 var sprite = Sprite.Create(texture, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), PixelsPerUnit, 0, SpriteMeshType.FullRect, new Vector4(slice, slice, slice, slice));
@@ -114,6 +118,7 @@ namespace ShinobiDominion.Game
             if (Cache.TryGetValue(key, out var cached) && cached != null) return cached;
             const int size = 256;
             var texture = NewTexture(size);
+            var pixels = new Color[size * size];
             var center = (size - 1) * 0.5f;
             var outer = size * 0.5f - 1f;
             var ringEdge = outer * (1f - ringFraction);
@@ -135,8 +140,9 @@ namespace ShinobiDominion.Game
                 color = Band(color, Ink, depth, outer - ringEdge);
                 color = Band(color, fill, depth, outer - ringEdge + 3f);
                 color.a *= Mathf.Clamp01(depth + 0.5f);
-                texture.SetPixel(x, y, color);
+                pixels[y * size + x] = color;
             }
+            texture.SetPixels(pixels);
             texture.Apply();
             var sprite = Sprite.Create(texture, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), PixelsPerUnit);
             Cache[key] = sprite;
@@ -150,6 +156,7 @@ namespace ShinobiDominion.Game
             if (Cache.TryGetValue(key, out var cached) && cached != null) return cached;
             const int size = 128;
             var texture = NewTexture(size);
+            var pixels = new Color[size * size];
             var center = (size - 1) * 0.5f;
             for (var y = 0; y < size; y++)
             for (var x = 0; x < size; x++)
@@ -161,8 +168,9 @@ namespace ShinobiDominion.Game
                 color = Shade(color, facet);
                 color = Band(Ink, color, depth, 5f);
                 color.a *= Mathf.Clamp01(depth + 0.5f);
-                texture.SetPixel(x, y, color);
+                pixels[y * size + x] = color;
             }
+            texture.SetPixels(pixels);
             texture.Apply();
             var sprite = Sprite.Create(texture, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), PixelsPerUnit);
             Cache[key] = sprite;
@@ -589,14 +597,29 @@ namespace ShinobiDominion.Game
             }
         }
 
-        private static void Roll(Text text, long from, long to)
+        private readonly Dictionary<Text, MotionHandle> _rolling = new Dictionary<Text, MotionHandle>();
+        private readonly Dictionary<Text, long> _onScreen = new Dictionary<Text, long>();
+
+        private void Roll(Text text, long from, long to)
         {
+            // A new change takes over from the one still rolling, starting at the number on screen, so two
+            // counts never fight over the same text and the number never jumps back.
+            if (_rolling.TryGetValue(text, out var running) && running.IsActive())
+            {
+                running.Cancel();
+                if (_onScreen.TryGetValue(text, out var current)) from = current;
+            }
             if (from < 0)
             {
                 text.text = to.ToString("N0");
+                _onScreen[text] = to;
                 return;
             }
-            UiMotion.Count(text.gameObject, from, to, 0.4f, value => text.text = value.ToString("N0"));
+            _rolling[text] = UiMotion.Count(text.gameObject, from, to, 0.4f, value =>
+            {
+                _onScreen[text] = value;
+                text.text = value.ToString("N0");
+            });
             if (to > from) UiMotion.Punch(text.transform.parent, 0.12f);
             else UiMotion.Flash(text, HudArt.CrimsonLight, HudArt.Ivory);
         }

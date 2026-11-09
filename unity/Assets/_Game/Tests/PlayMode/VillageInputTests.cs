@@ -169,6 +169,8 @@ namespace ShinobiDominion.Tests
             yield return Click(ScreenOf(Find("InfoButton")));
             Assert.IsTrue(Controller.Panel.IsOpen);
             Assert.IsFalse(Controller.ActionBarOpen);
+            // At 60 fps the panel is still sliding in a few frames later; a player taps it once it has landed.
+            yield return new WaitForSecondsRealtime(0.35f);
             yield return Click(ScreenOf(Find("CloseButton")));
             Assert.IsTrue(Controller.ActionBarOpen, "Closing the details goes back to the row");
             Assert.AreEqual(VillageScreen.BuildingPanel, Controller.UiState.Screen);
@@ -294,6 +296,7 @@ namespace ShinobiDominion.Tests
 
             yield return Click(ScreenOf(Find("BuildButton")));
             Assert.IsTrue(Controller.Panel.IsFullScreen);
+            yield return new WaitForSecondsRealtime(0.35f);
 
             yield return Click(ScreenOf(Find("CloseButton")));
             Assert.IsFalse(Controller.Panel.IsOpen);

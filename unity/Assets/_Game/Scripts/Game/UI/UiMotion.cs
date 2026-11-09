@@ -46,8 +46,12 @@ namespace ShinobiDominion.Game
         /// <summary>A quick bounce, for something that just changed.</summary>
         public static void Punch(Transform target, float strength = 0.2f, float duration = 0.35f)
         {
+            // Rapid repeats (coins landing one after another) restart the bounce instead of stacking two on one scale.
+            var state = target.GetComponent<UiPunchState>();
+            if (state == null) state = target.gameObject.AddComponent<UiPunchState>();
+            if (state.Motion.IsActive()) state.Motion.Cancel();
             target.localScale = Vector3.one;
-            LMotion.Punch.Create(1f, strength, duration).WithScheduler(Clock).BindToLocalScaleXYZ(target).AddTo(target.gameObject);
+            state.Motion = LMotion.Punch.Create(1f, strength, duration).WithScheduler(Clock).BindToLocalScaleXYZ(target).AddTo(target.gameObject);
         }
 
         /// <summary>A quick side-to-side shake, for a refused tap. Returns exactly to where it started.</summary>
@@ -74,9 +78,9 @@ namespace ShinobiDominion.Game
         }
 
         /// <summary>Counts a number from one value to another, calling back with each whole step.</summary>
-        public static void Count(GameObject owner, long from, long to, float duration, System.Action<long> show)
+        public static MotionHandle Count(GameObject owner, long from, long to, float duration, System.Action<long> show)
         {
-            LMotion.Create((double)from, (double)to, duration).WithEase(Ease.OutCubic).WithScheduler(Clock)
+            return LMotion.Create((double)from, (double)to, duration).WithEase(Ease.OutCubic).WithScheduler(Clock)
                 .Bind(v => show((long)System.Math.Round(v))).AddTo(owner);
         }
 
@@ -116,6 +120,12 @@ namespace ShinobiDominion.Game
         {
             if (button.GetComponent<UiPress>() == null) button.gameObject.AddComponent<UiPress>();
         }
+    }
+
+    /// <summary>Remembers the bounce running on an object, so a new one can replace it.</summary>
+    public sealed class UiPunchState : MonoBehaviour
+    {
+        public MotionHandle Motion;
     }
 
     /// <summary>Shrinks a button while it is held and springs it back on release.</summary>

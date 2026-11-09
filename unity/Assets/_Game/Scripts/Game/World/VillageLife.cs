@@ -107,7 +107,9 @@ namespace ShinobiDominion.Game
                 position.y = 0f;
                 var moved = Vector3.MoveTowards(position, walker.Next, WalkSpeed * Time.deltaTime);
                 var heading = walker.Next - position;
-                if (heading.sqrMagnitude > 0.0001f) walker.Body.localRotation = Quaternion.LookRotation(-heading.normalized);
+                // Turns at a corner over a few frames rather than snapping round.
+                if (heading.sqrMagnitude > 0.0001f)
+                    walker.Body.localRotation = Quaternion.RotateTowards(walker.Body.localRotation, Quaternion.LookRotation(-heading.normalized), 720f * Time.deltaTime);
                 walker.Phase += Time.deltaTime * 11f;
                 moved.y = Mathf.Abs(Mathf.Sin(walker.Phase)) * 0.05f;
                 walker.Body.localPosition = moved;

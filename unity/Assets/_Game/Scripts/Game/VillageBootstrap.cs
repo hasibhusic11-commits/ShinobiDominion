@@ -35,6 +35,10 @@ namespace ShinobiDominion.Game
 
         private void Awake()
         {
+            // Phones default to 30 frames a second, which makes panning and every animation look choppy.
+            QualitySettings.vSyncCount = 0;
+            Application.targetFrameRate = 60;
+
             var config = Resources.Load<TextAsset>("Config/buildings");
             if (config == null)
                 throw new InvalidOperationException("Resources/Config/buildings.json is missing.");
