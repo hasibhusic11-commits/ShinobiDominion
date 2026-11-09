@@ -76,6 +76,7 @@ namespace ShinobiDominion.Game
             Roster.ReplaceWithServerState(state.RosterJson);
             ServerCrystals = state.Crystals;
             if (!string.IsNullOrEmpty(state.Name)) _playerName = state.Name;
+            _shieldUntilMs = state.ShieldUntilMs;
             Army.Replace(state.Troops);
             Research.Replace(state.Research);
             if (state.Village != null) Village.Restore(state.Village);

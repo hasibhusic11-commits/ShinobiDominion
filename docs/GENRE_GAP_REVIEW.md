@@ -53,10 +53,10 @@ Status: **Have** (built), **Partial** (built, but differs in a way that matters)
 | Deploy heroes and troops **during** the battle, by tapping cards | Everything is placed **before** the battle; the server fights it, then it plays back | **Decide** | Real-time deployment needs the server to run the battle live or check the timing of every tap. It is a large, risky change to the anti-cheat design (the server decides every result). Keep the current model unless the owner wants this badly |
 | Attack screen: card row, End Battle, time, loot, damage % | Same layout (done today) | Have | — |
 | Available loot is gold and Mana | Same (done today) | Have | — |
-| Raiding another player takes part of their stored resources; the victim gets a shield | Raids never cost the rival anything; daily limits stop farming (ADR-028) | **Decide** | Taking real loot is the genre's tension, but it punishes players who log off. Needs the owner's call |
+| Raiding another player takes part of their stored resources; the victim gets a shield | 20% of their gold and Mana by damage, 12-hour shield (ADR-049) | Have | — |
 | Trophies / might ranking, matched by strength | Rivals matched by Town Hall level; rankings exist | Partial | Add a trophy score won and lost in raids, shown on the rankings |
 | Search for an opponent costs gold; skip to the next | One rival offered at a time | Partial | A "Next" button that costs a little gold |
-| Revenge on whoever raided you | None | Missing | Only meaningful if raids take loot |
+| Revenge on whoever raided you | Once per raid, from Mail, through the attacker's shield (ADR-049) | Have | — |
 | Replays of attacks on your village | None | Missing | Battles are already recorded on the server, so a defense log with replays is cheap to add |
 
 ## 5. Modes

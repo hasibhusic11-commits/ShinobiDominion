@@ -18,6 +18,8 @@ namespace ShinobiDominion.Core
         public Dictionary<string, ResearchEntry> Research = new Dictionary<string, ResearchEntry>();
         /// <summary>The name other players see (ADR-042).</summary>
         public string Name;
+        /// <summary>When the player's raid shield ends, in Unix milliseconds; 0 when unshielded (ADR-049).</summary>
+        public long ShieldUntilMs;
 
         public static ServerState Parse(string json) => FromToken(ParseObject(json));
 
@@ -27,7 +29,8 @@ namespace ShinobiDominion.Core
             {
                 Crystals = token.Value<long>("crystals"),
                 RosterJson = token.ToString(Formatting.None),
-                Name = token.Value<string>("name")
+                Name = token.Value<string>("name"),
+                ShieldUntilMs = token.Value<long?>("shieldUntilMs") ?? 0
             };
             if (state.Crystals < 0) throw new FormatException("Server returned negative crystals.");
             if (token["village"] is JObject village) state.Village = village.ToObject<VillageSave>();

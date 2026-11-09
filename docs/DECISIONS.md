@@ -88,6 +88,15 @@ Follows the owner's ADR-021. Up to four Troop Camps, gated by Dojo level, and a 
 - A raid still needs at least one hero. At most 200 troops can land in one raid, to bound the server's work.
 - Troop names and all numbers are test values. Offline practice troops aren't saved.
 
+## ADR-049: Raids on real players take real loot, with shields and revenge, 2026-11-09
+The owner chose the genre's rule (`GENRE_GAP_REVIEW.md`). This replaces ADR-028's "a raid never costs the rival anything" and its daily pay limits.
+
+- **Loot on offer.** When a raid begins, the server records 20% of the gold and 20% of the Mana the rival has. The attack screen shows those amounts as the available loot.
+- **Loot taken.** The attacker wins that share times the damage done (60% damage takes 12%). It is limited by what the rival still has when the battle resolves and by the attacker's storage. The rival loses exactly what the attacker gains, and nothing else of theirs changes.
+- **Shield.** A rival hit for 30% damage or more is shielded for 12 hours: matchmaking skips them. Starting a raid on another player ends your own shield.
+- **Defense log and revenge.** Mail lists raids on your village, with the attacker's game name (never their account id), the stars, the damage and what was lost. Each raid offers Revenge once: it starts a raid on that attacker, even through their shield.
+- Server: `loot.go` (`beginRivalRaid`, `takeLoot`, `rpcRevenge`, `rpcDefenseLog`), RPC `sd_raid_revenge`, migration 017 (`sd_player.shield_until`, `sd_raid.loot_gold`, `loot_mana`, `revenged`). The player state carries `shieldUntilMs`.
+
 ## ADR-048: Up to six heroes, 2026-11-09
 The owner asked for the game to play like Castle Clash (`GENRE_GAP_REVIEW.md`) and chose six heroes. This replaces ADR-030's one hero at a time.
 

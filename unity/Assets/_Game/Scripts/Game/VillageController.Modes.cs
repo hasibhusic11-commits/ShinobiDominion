@@ -440,7 +440,13 @@ namespace ShinobiDominion.Game
             }, ShowGift);
         }
 
-        /// <summary>Mail is the log of raids on the village, newest first. It never says who attacked.</summary>
+        /// <summary>When this player's raid shield ends (Unix ms), from the server; 0 when unshielded (ADR-049).</summary>
+        private long _shieldUntilMs;
+
+        /// <summary>
+        /// Mail is the log of raids on the village, newest first (ADR-049): who attacked, what they took, and a
+        /// Revenge button that works once per attack. The shield's time left is shown at the top.
+        /// </summary>
         public void OpenMail()
         {
             if (RefuseShortcutOffline("Mail")) return;
@@ -457,15 +463,40 @@ namespace ShinobiDominion.Game
             _panel.ShowScreen("Mail", log == null ? "" : $"{log.Count} reports", CloseAll, panel =>
             {
                 if (!string.IsNullOrEmpty(LastMessage)) panel.Line(LastMessage, 20, Ui.AccentColor);
+                var shieldLeft = System.DateTimeOffset.FromUnixTimeMilliseconds(_shieldUntilMs) - System.DateTimeOffset.UtcNow;
+                if (_shieldUntilMs > 0 && shieldLeft > System.TimeSpan.Zero)
+                    panel.Line($"Shield: no one can attack you for {(int)shieldLeft.TotalHours}h {shieldLeft.Minutes}m. Attacking someone ends it.", 20, Ui.AccentColor);
                 if (log == null) return;
                 if (log.Count == 0) panel.Line("No one has raided your village yet.", 21);
                 foreach (var record in log)
                 {
                     var when = System.DateTimeOffset.FromUnixTimeMilliseconds(record.atMs).LocalDateTime;
-                    var verdict = record.stars == 0 ? "Your village held!" : $"Raiders took {record.stars} of 3 stars.";
-                    panel.Line($"{when:MMM d, HH:mm}   {verdict}   {record.damagePercent}% damage, {record.defendersAlive} of {record.defendersTotal} guards standing. Nothing was lost.", 19, record.stars == 0 ? Ui.AccentColor : (Color?)null);
+                    var who = string.IsNullOrEmpty(record.attackerName) ? "A raider" : record.attackerName;
+                    var verdict = record.stars == 0 ? "Your village held!" : $"{who} took {record.stars} of 3 stars.";
+                    var lost = record.goldLost + record.manaLost > 0 ? $" You lost {record.goldLost:N0} gold and {record.manaLost:N0} Mana." : " Nothing was lost.";
+                    panel.Line($"{when:MMM d, HH:mm}   {verdict}   {record.damagePercent}% damage, {record.defendersAlive} of {record.defendersTotal} guards standing.{lost}", 19, record.stars == 0 ? Ui.AccentColor : (Color?)null);
+                    if (record.canRevenge)
+                    {
+                        var attackId = record.attackId;
+                        panel.Action("Revenge_" + attackId, $"Revenge on {who}", () => Revenge(attackId), true, Ui.AttackColor, 19);
+                    }
                 }
             });
+        }
+
+        /// <summary>Raids whoever raided this village, once per attack, even through their shield. The server checks it.</summary>
+        public void Revenge(string attackId)
+        {
+            if (_raid != null || !IsOnline) return;
+            var key = KeyFor($"revenge|{attackId}");
+            Run(async () =>
+            {
+                var session = await _server.RevengeAsync(key, attackId);
+                ClearKey();
+                LastMessage = null;
+                CloseAll();
+                EnterPrepare(session);
+            }, ShowMail);
         }
     }
 }

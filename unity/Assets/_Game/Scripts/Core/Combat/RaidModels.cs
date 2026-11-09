@@ -15,6 +15,9 @@ namespace ShinobiDominion.Core
         public int bestStars;
         /// <summary>Mana paid per star, like gold (owner, 2026-11-09: loot is gold and Mana).</summary>
         public long manaPerStar;
+        /// <summary>A rival raid offers a share of what the rival has (ADR-049): the most it can pay, at 100% damage.</summary>
+        public long availableGold;
+        public long availableMana;
     }
 
     public sealed class RaidTeamMember
@@ -52,6 +55,12 @@ namespace ShinobiDominion.Core
     /// <summary>One raid on this player's village. It never says who attacked.</summary>
     public sealed class DefenseRecord
     {
+        public string attackId;
+        /// <summary>The attacker's game name; never their account id.</summary>
+        public string attackerName;
+        public long goldLost;
+        public long manaLost;
+        public bool canRevenge;
         public int stars;
         public int damagePercent;
         public int defendersAlive;

@@ -142,6 +142,7 @@ type state struct {
 	Heroes   []heroView       `json:"heroes"`
 	Items    map[string]int64 `json:"items"`
 	Village  villageView      `json:"village"`
+	ShieldUntilMs int64      `json:"shieldUntilMs"`
 }
 
 func baseIDs(s state) []int {

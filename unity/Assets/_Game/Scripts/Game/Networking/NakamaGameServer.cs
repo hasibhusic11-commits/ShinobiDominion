@@ -30,6 +30,7 @@ namespace ShinobiDominion.Game
         Task<List<RaidSummary>> RaidListAsync();
         Task<RaidSession> RaidStartAsync(string key, string raidId);
         Task<RaidSession> RivalStartAsync(string key);
+        Task<RaidSession> RevengeAsync(string key, string attackId);
         Task<List<DefenseRecord>> DefenseLogAsync();
         Task<RaidOutcome> RaidDeployAsync(string key, string attackId, IList<RaidPlacement> placements, IList<RaidTroopStack> troops);
         Task<ServerState> TrainTroopsAsync(string key, string troopId, int count);
@@ -160,6 +161,9 @@ namespace ShinobiDominion.Game
 
         public async Task<RaidSession> RaidStartAsync(string key, string raidId) =>
             RaidSession.Parse(await CallAsync("sd_raid_start", new { key, raidId }));
+
+        public async Task<RaidSession> RevengeAsync(string key, string attackId) =>
+            RaidSession.Parse(await CallAsync("sd_raid_revenge", new { key, attackId }));
 
         public async Task<RaidSession> RivalStartAsync(string key) =>
             RaidSession.Parse(await CallAsync("sd_rival_start", new { key }));

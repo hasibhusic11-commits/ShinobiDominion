@@ -182,6 +182,7 @@ func (s *Server) register(initializer runtime.Initializer, logger runtime.Logger
 		"sd_raid_start":   s.rpcRaidStart,
 		"sd_raid_deploy":  s.rpcRaidDeploy,
 		"sd_rival_start":  s.rpcRivalStart,
+		"sd_raid_revenge": s.rpcRevenge,
 		"sd_defense_log":  s.rpcDefenseLog,
 		"sd_siege_list":   s.rpcSiegeList,
 		"sd_siege_fight":  s.rpcSiegeFight,
@@ -405,6 +406,8 @@ type playerState struct {
 	Research      map[string]researchView `json:"research"`
 	// Name is the player's chosen name, or their "Shinobi" tag (ADR-042).
 	Name          string `json:"name"`
+	// ShieldUntilMs is when the player's raid shield ends (ADR-049), or 0 when there is none.
+	ShieldUntilMs int64 `json:"shieldUntilMs"`
 }
 
 func loadState(ctx context.Context, tx *sql.Tx, userID string, crystals int64) (*playerState, error) {
@@ -459,6 +462,9 @@ func loadState(ctx context.Context, tx *sql.Tx, userID string, crystals int64) (
 	research, err := loadResearch(ctx, tx, userID)
 	state.Research = researchViews(research)
 	state.Name = playerName(ctx, tx, userID)
+	if err := tx.QueryRowContext(ctx, `SELECT COALESCE((EXTRACT(EPOCH FROM shield_until) * 1000)::bigint, 0) FROM sd_player WHERE user_id = $1 AND shield_until > now()`, userID).Scan(&state.ShieldUntilMs); err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, err
+	}
 	return state, err
 }
 

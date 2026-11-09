@@ -22,6 +22,8 @@ type raidStart struct {
 		ID          string `json:"id"`
 		GoldPerStar int64  `json:"goldPerStar"`
 		BestStars   int    `json:"bestStars"`
+		AvailableGold int64 `json:"availableGold"`
+		AvailableMana int64 `json:"availableMana"`
 	} `json:"raid"`
 	Buildings []raidBuilding `json:"buildings"`
 	Defenders []raidGuard    `json:"defenders"`
@@ -53,6 +55,7 @@ type raidDeploy struct {
 		Events        [][]int64 `json:"events"`
 	} `json:"result"`
 	GoldEarned int64 `json:"goldEarned"`
+	ManaEarned int64 `json:"manaEarned"`
 	BestStars  int   `json:"bestStars"`
 	State      state `json:"state"`
 }

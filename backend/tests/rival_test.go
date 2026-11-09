@@ -10,11 +10,16 @@ import (
 
 type defenseLog struct {
 	Defenses []struct {
-		Stars          int   `json:"stars"`
-		DamagePercent  int   `json:"damagePercent"`
-		DefendersAlive int   `json:"defendersAlive"`
-		DefendersTotal int   `json:"defendersTotal"`
-		AtMs           int64 `json:"atMs"`
+		AttackID       string `json:"attackId"`
+		AttackerName   string `json:"attackerName"`
+		Stars          int    `json:"stars"`
+		DamagePercent  int    `json:"damagePercent"`
+		DefendersAlive int    `json:"defendersAlive"`
+		DefendersTotal int    `json:"defendersTotal"`
+		GoldLost       int64  `json:"goldLost"`
+		ManaLost       int64  `json:"manaLost"`
+		CanRevenge     bool   `json:"canRevenge"`
+		AtMs           int64  `json:"atMs"`
 	} `json:"defenses"`
 }
 
@@ -88,17 +93,33 @@ func TestRival_CopiesVillageAndGuards_WithoutExposingHeroIds(t *testing.T) {
 	}
 }
 
-func TestRival_RaidChangesNothingForTheRival(t *testing.T) {
+// ADR-049: a raid takes real loot. The rival loses exactly what the attacker gains, nothing else of theirs changes,
+// and a hard enough hit shields them.
+func TestRival_RaidTakesLoot_AndShieldsTheRival(t *testing.T) {
 	rival := raidReady(t, "river_scout", 2, 0)
 	attacker := raidReady(t, "solar_beast_sage", 6, 6)
-	before := stateBody(t, rival)
+	before := mustState(t, rival)
 
 	start := raidRival(t, attacker, userIDOf(t, rival))
-	if _, err := deploy(attacker, "k-"+randomHex(8), start.AttackID, legalPlacements(start)); err != nil {
+	if start.Raid.AvailableGold != before.Village.Gold*20/100 || start.Raid.AvailableMana != before.Village.Mana*20/100 {
+		t.Fatalf("loot on offer %d gold %d Mana, want 20%% of %d and %d", start.Raid.AvailableGold, start.Raid.AvailableMana, before.Village.Gold, before.Village.Mana)
+	}
+	result, err := deploy(attacker, "k-"+randomHex(8), start.AttackID, legalPlacements(start))
+	if err != nil {
 		t.Fatal(err)
 	}
-	if after := stateBody(t, rival); after != before {
-		t.Fatalf("the rival's state changed:\nbefore %s\nafter  %s", before, after)
+	if result.GoldEarned <= 0 || result.GoldEarned > start.Raid.AvailableGold*int64(result.Result.DamagePercent)/100 {
+		t.Fatalf("gold earned %d of %d at %d%% damage", result.GoldEarned, start.Raid.AvailableGold, result.Result.DamagePercent)
+	}
+	after := mustState(t, rival)
+	if before.Village.Gold-after.Village.Gold != result.GoldEarned || before.Village.Mana-after.Village.Mana != result.ManaEarned {
+		t.Fatalf("rival lost %d gold %d Mana, attacker gained %d and %d", before.Village.Gold-after.Village.Gold, before.Village.Mana-after.Village.Mana, result.GoldEarned, result.ManaEarned)
+	}
+	if len(after.Village.Buildings) != len(before.Village.Buildings) || len(after.Heroes) != len(before.Heroes) || after.Crystals != before.Crystals {
+		t.Fatal("a raid takes only gold and Mana")
+	}
+	if result.Result.DamagePercent >= 30 && after.ShieldUntilMs == 0 {
+		t.Fatal("a rival hit for 30% or more should be shielded")
 	}
 }
 
@@ -129,49 +150,66 @@ func TestRival_GuardsFight_AndTheSnapshotOutlivesLaterChanges(t *testing.T) {
 	}
 }
 
-func TestRival_PaysOnceADayPerRival(t *testing.T) {
+// A second raid offers a share of what the rival has left, so one village cannot be drained.
+func TestRival_SecondRaid_OffersAShareOfWhatIsLeft(t *testing.T) {
 	rival := raidReady(t, "river_scout", 1, 0)
 	attacker := raidReady(t, "solar_beast_sage", 6, 6)
 	rivalID := userIDOf(t, rival)
 
 	start := raidRival(t, attacker, rivalID)
-	first, err := deploy(attacker, "k-"+randomHex(8), start.AttackID, legalPlacements(start))
-	if err != nil {
+	if _, err := deploy(attacker, "k-"+randomHex(8), start.AttackID, legalPlacements(start)); err != nil {
 		t.Fatal(err)
 	}
-	if first.Result.Stars == 0 || first.GoldEarned <= 0 {
-		t.Fatalf("first raid: stars %d gold %d", first.Result.Stars, first.GoldEarned)
-	}
-	start = raidRival(t, attacker, rivalID)
-	second, err := deploy(attacker, "k-"+randomHex(8), start.AttackID, legalPlacements(start))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if second.GoldEarned != 0 {
-		t.Fatalf("second raid on the same rival paid %d", second.GoldEarned)
+	left := mustState(t, rival)
+	again := raidRival(t, attacker, rivalID)
+	if again.Raid.AvailableGold != left.Village.Gold*20/100 || again.Raid.AvailableMana != left.Village.Mana*20/100 {
+		t.Fatalf("second raid offers %d gold, want 20%% of the %d left", again.Raid.AvailableGold, left.Village.Gold)
 	}
 }
 
-func TestRival_DefenseLog_RecordsRaids_AndHidesTheAttacker(t *testing.T) {
+// The defense log names the attacker by their game name (never their account id), shows what was lost, and offers
+// revenge, which works once.
+func TestRival_DefenseLog_NamesTheAttacker_AndRevengeWorksOnce(t *testing.T) {
 	rival := raidReady(t, "river_scout", 1, 0)
 	attacker := raidReady(t, "solar_beast_sage", 6, 6)
 	start := raidRival(t, attacker, userIDOf(t, rival))
-	if _, err := deploy(attacker, "k-"+randomHex(8), start.AttackID, legalPlacements(start)); err != nil {
+	result, err := deploy(attacker, "k-"+randomHex(8), start.AttackID, legalPlacements(start))
+	if err != nil {
 		t.Fatal(err)
 	}
 	body, err := rival.rpc("sd_defense_log", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(body, userIDOf(t, attacker)) || strings.Contains(body, start.AttackID) {
-		t.Fatalf("the log identifies the attacker: %s", body)
+	if strings.Contains(body, userIDOf(t, attacker)) {
+		t.Fatalf("the log exposes the attacker's account id: %s", body)
 	}
 	var log defenseLog
 	if err := json.Unmarshal([]byte(body), &log); err != nil {
 		t.Fatal(err)
 	}
-	if len(log.Defenses) != 1 || log.Defenses[0].DefendersTotal != 1 || log.Defenses[0].AtMs == 0 {
+	if len(log.Defenses) != 1 || log.Defenses[0].DefendersTotal != 1 || log.Defenses[0].AtMs == 0 || log.Defenses[0].AttackerName == "" ||
+		log.Defenses[0].GoldLost != result.GoldEarned || log.Defenses[0].ManaLost != result.ManaEarned || !log.Defenses[0].CanRevenge {
 		t.Fatalf("log %+v", log)
+	}
+
+	// Only the defender may take revenge, and only once.
+	if _, err := attacker.rpc("sd_raid_revenge", map[string]interface{}{"key": "k-" + randomHex(8), "attackId": start.AttackID}); err == nil {
+		t.Fatal("the attacker should not be able to take revenge on their own raid")
+	}
+	revengeBody, err := rival.rpc("sd_raid_revenge", map[string]interface{}{"key": "k-" + randomHex(8), "attackId": start.AttackID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var revenge raidStart
+	if err := json.Unmarshal([]byte(revengeBody), &revenge); err != nil {
+		t.Fatal(err)
+	}
+	if revenge.Raid.ID != "rival" || revenge.AttackID == "" || len(revenge.Defenders) == 0 {
+		t.Fatalf("revenge raid %+v", revenge)
+	}
+	if _, err := rival.rpc("sd_raid_revenge", map[string]interface{}{"key": "k-" + randomHex(8), "attackId": start.AttackID}); err == nil || !strings.Contains(err.Error(), "REVENGE_USED") {
+		t.Fatalf("a second revenge should be refused, got %v", err)
 	}
 
 	mine, err := attacker.rpc("sd_defense_log", nil)

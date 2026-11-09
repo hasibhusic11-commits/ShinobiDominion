@@ -190,12 +190,14 @@ namespace ShinobiDominion.Game
             Ui.Anchor(name.rectTransform, new Vector2(0.5f, 1f), new Vector2(284f, 32f), new Vector2(0f, -6f));
             if (_modeFight == null)
             {
-                var payable = session.raid.id == "rival" ? 3 : Mathf.Max(0, 3 - BestStarsOn(session.raid.id));
+                var payable = Mathf.Max(0, 3 - BestStarsOn(session.raid.id));
+                var rival = session.raid.id == "rival";
                 // Available loot is gold and Mana (owner, 2026-11-09), each on its own line with its icon.
                 var heading = Ui.Label(panel, "Available loot", 17, TextAnchor.MiddleCenter, HudArt.IvoryMuted);
                 Ui.Anchor(heading.rectTransform, new Vector2(0.5f, 1f), new Vector2(240f, 24f), new Vector2(0f, -36f));
-                LootLine(panel, "LootGold", "icon_gold", payable * session.raid.goldPerStar, -62f);
-                LootLine(panel, "LootMana", "icon_chakra", payable * session.raid.manaPerStar, -92f);
+                // A rival offers a share of what it has (ADR-049); a dungeon pays per new star.
+                LootLine(panel, "LootGold", "icon_gold", rival ? session.raid.availableGold : payable * session.raid.goldPerStar, -62f);
+                LootLine(panel, "LootMana", "icon_chakra", rival ? session.raid.availableMana : payable * session.raid.manaPerStar, -92f);
             }
             if (!battle && session.defenders.Count > 0)
             {

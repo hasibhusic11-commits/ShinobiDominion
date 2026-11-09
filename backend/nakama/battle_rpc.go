@@ -17,12 +17,6 @@ const raidPrepareLimit = 15 * time.Minute
 
 const (
 	rivalRaidID = "rival"
-	// Test values. A rival pays once a day, and only so many rival raids pay each day.
-	rivalGoldPerDojoLevel = 150
-	// A rival also pays Mana per star, by its Town Hall level (owner, 2026-11-09: loot is gold and Mana).
-	rivalManaPerDojoLevel = 60
-	rivalPaidRaidsPerDay  = 10
-	rivalPayCooldown      = "24 hours"
 	// Test value. Replays are free, so XP stops after this many paying wins in 24 hours.
 	dungeonXpWinsPerDay = 30
 )
@@ -79,6 +73,9 @@ type raidSummary struct {
 	GoldPerStar int64  `json:"goldPerStar"`
 	BestStars   int    `json:"bestStars"`
 	ManaPerStar int64  `json:"manaPerStar"`
+	// A rival raid offers a share of what the rival has (ADR-049), instead of a fixed amount per star.
+	AvailableGold int64 `json:"availableGold,omitempty"`
+	AvailableMana int64 `json:"availableMana,omitempty"`
 }
 
 type raidStartResponse struct {
@@ -140,7 +137,7 @@ func (s *Server) rpcRaidList(ctx context.Context, logger runtime.Logger, db *sql
 			if err != nil {
 				return err
 			}
-			list = append(list, raidSummary{raid.ID, raid.DisplayName, raid.Description, raid.GoldPerStar, best, raid.ManaPerStar})
+			list = append(list, raidSummary{raid.ID, raid.DisplayName, raid.Description, raid.GoldPerStar, best, raid.ManaPerStar, 0, 0})
 		}
 		output, err = marshal(map[string]interface{}{"raids": list})
 		return err
@@ -215,7 +212,7 @@ func (s *Server) rpcRaidStart(ctx context.Context, logger runtime.Logger, db *sq
 		}
 		output, err = marshal(raidStartResponse{
 			AttackID:  attackID,
-			Raid:      raidSummary{raid.ID, raid.DisplayName, raid.Description, raid.GoldPerStar, best, raid.ManaPerStar},
+			Raid:      raidSummary{raid.ID, raid.DisplayName, raid.Description, raid.GoldPerStar, best, raid.ManaPerStar, 0, 0},
 			Buildings: raid.expanded,
 			Team:      team,
 			Defenders: defenders,
@@ -406,6 +403,7 @@ func (s *Server) rpcRivalStart(ctx context.Context, logger runtime.Logger, db *s
 			err = tx.QueryRowContext(ctx, `SELECT p.user_id::text FROM sd_player p
 				JOIN sd_building b ON b.user_id = p.user_id AND b.definition_id = 'dojo_hq'
 				WHERE p.user_id <> $1 AND p.village_ready
+					AND (p.shield_until IS NULL OR p.shield_until < now())
 				ORDER BY ABS(b.level - $2),
 					EXISTS (SELECT 1 FROM sd_hero h WHERE h.user_id = p.user_id AND h.base_slot IS NOT NULL) DESC,
 					random()
@@ -417,24 +415,11 @@ func (s *Server) rpcRivalStart(ctx context.Context, logger runtime.Logger, db *s
 		if err != nil {
 			return err
 		}
-		buildings, defenders, dojoLevel, err := s.rivalSnapshot(ctx, tx, rivalID)
+		response, err := s.beginRivalRaid(ctx, tx, userID, rivalID, team)
 		if err != nil {
 			return err
 		}
-		goldPerStar := int64(dojoLevel) * rivalGoldPerDojoLevel
-		manaPerStar := int64(dojoLevel) * rivalManaPerDojoLevel
-		attackID, err := insertRaid(ctx, tx, userID, rivalRaidID, 1, goldPerStar, manaPerStar, &rivalID, buildings, team, defenders)
-		if err != nil {
-			return err
-		}
-		output, err = marshal(raidStartResponse{
-			AttackID:  attackID,
-			Raid:      raidSummary{rivalRaidID, "Rival village", fmt.Sprintf("A real player's village, with a level %d Town Hall and %d heroes on guard.", dojoLevel, len(defenders)), goldPerStar, 0, manaPerStar},
-			Buildings: buildings,
-			Team:      team,
-			Defenders: defenders,
-		})
-		if err != nil {
+		if output, err = marshal(response); err != nil {
 			return err
 		}
 		return storeResponse(ctx, tx, userID, request.Key, "rival_start", rivalRaidID, output)
@@ -496,60 +481,6 @@ func grantItem(ctx context.Context, tx *sql.Tx, userID, itemID, ref string) erro
 		return err
 	}
 	return addItemLedger(ctx, tx, userID, itemID, 1, "dungeon_first_clear", ref)
-}
-
-// rivalPays says whether a rival raid may pay gold: once a rival a day, and a daily limit overall.
-func rivalPays(ctx context.Context, tx *sql.Tx, userID, rivalID string) (bool, error) {
-	var sameRival, today int
-	err := tx.QueryRowContext(ctx, `SELECT
-		COUNT(*) FILTER (WHERE opponent_id = $2),
-		COUNT(*)
-		FROM sd_raid WHERE user_id = $1 AND status = 'resolved' AND opponent_id IS NOT NULL AND gold_earned > 0
-		AND resolved_at > now() - interval '`+rivalPayCooldown+`'`, userID, rivalID).Scan(&sameRival, &today)
-	if err != nil {
-		return false, err
-	}
-	return sameRival == 0 && today < rivalPaidRaidsPerDay, nil
-}
-
-type defenseRecord struct {
-	Stars          int   `json:"stars"`
-	DamagePercent  int   `json:"damagePercent"`
-	DefendersAlive int   `json:"defendersAlive"`
-	DefendersTotal int   `json:"defendersTotal"`
-	AtMs           int64 `json:"atMs"`
-}
-
-// rpcDefenseLog lists raids on this player's village. It never says who attacked.
-func (s *Server) rpcDefenseLog(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error) {
-	userID, err := userFrom(ctx)
-	if err != nil {
-		return "", err
-	}
-	rows, err := db.QueryContext(ctx, `SELECT stars, damage_percent, COALESCE(defenders_alive, 0), defenders, (EXTRACT(EPOCH FROM resolved_at) * 1000)::bigint
-		FROM sd_raid WHERE opponent_id = $1 AND status = 'resolved' ORDER BY resolved_at DESC LIMIT 20`, userID)
-	if err != nil {
-		return "", err
-	}
-	defer rows.Close()
-	records := []defenseRecord{}
-	for rows.Next() {
-		var record defenseRecord
-		var defendersText string
-		if err := rows.Scan(&record.Stars, &record.DamagePercent, &record.DefendersAlive, &defendersText, &record.AtMs); err != nil {
-			return "", err
-		}
-		var defenders []raidDefender
-		if err := json.Unmarshal([]byte(defendersText), &defenders); err != nil {
-			return "", err
-		}
-		record.DefendersTotal = len(defenders)
-		records = append(records, record)
-	}
-	if err := rows.Err(); err != nil {
-		return "", err
-	}
-	return marshal(map[string]interface{}{"defenses": records})
 }
 
 // loadRaidTeam reads who stands on the player's Hero Bases. Only the server decides their stats.
@@ -732,20 +663,9 @@ func (s *Server) rpcRaidDeploy(ctx context.Context, logger runtime.Logger, db *s
 		best := result.Stars
 		if opponent.Valid {
 			// A raid on a rival never costs the rival anything. Limits stop one village being farmed.
-			pays, err := rivalPays(ctx, tx, userID, opponent.String)
-			if err != nil {
+			// Real loot (ADR-049): a share of what the rival had when the raid began, by the damage done.
+			if earned, manaEarned, err = s.takeLoot(ctx, tx, v, opponent.String, request.AttackID, result.DamagePercent); err != nil {
 				return err
-			}
-			if pays && result.Stars > 0 {
-				earned = int64(result.Stars) * goldPerStar
-				if room := v.goldCapacity() - v.gold; earned > room {
-					earned = room
-				}
-				if earned < 0 {
-					earned = 0
-				}
-				v.gold += earned
-				manaEarned = payMana(v, int64(result.Stars)*manaPerStar)
 			}
 		} else if best, err = bestStarsFor(ctx, tx, userID, raidID); err != nil {
 			return err
