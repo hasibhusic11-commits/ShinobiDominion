@@ -53,20 +53,19 @@ All 30 heroes have an original design and a generated model, and only Legendarie
 ## Visual overhaul — done as temporary art, awaiting your review
 Curved-roof ninja architecture for every building, modular walls with level tiers, Hero Bases with figures and emblems, textured ground, forest, mountains, waterfall, toon lighting, smoother camera and a quality setting. See `ART_STATUS.md` for what still needs an artist, and `VISUAL_BASELINE.md` for the before state and asset evaluation.
 
-## Game modes, quests and smoothness: built 2026-11-08 while you slept, awaiting your playtest
-ATTACK now opens a Battle menu with five modes (the Trial Tower came later) (ADR-039):
+## Overnight build, 2026-11-08 to 09: game modes, guilds, timers, research, gear and smoothness. Awaiting your playtest. Screenshots in `docs/ui/v15/`
+ATTACK now opens a Battle menu with five modes (ADR-039, ADR-045):
 - **Raid:** rival villages.
 - **Dungeons.**
 - **Village Siege:** 10 levels of waves against your own village.
 - **Arena:** hero duels for points, with rankings.
+- **Trial Tower:** 30 floors of guardian heroes.
 
 The home screen's round shortcuts now work:
 - **Daily Quests:** 7 quests that pay gems.
 - **Daily Gift:** gold, Mana and gems once a day.
 - **Rankings.**
 - **Mail:** raids on your village.
-
-Friends and the chests still say "coming in a later update".
 
 Summoning now has a reveal: a burst of light in the rarity's colour, then the card. A ten-pull reveals its rarest hero.
 
@@ -119,9 +118,14 @@ Verified:
 | .NET harness (`tools/core-tests`) | 177 of 177 passed |
 | Go unit tests, including Siege balance and Arena duels | passed; part of the server build |
 | Backend suite, including gift, quest, Siege, Arena, timer, research, guild, chest, shop, gear and Trial Tower tests | passed |
-| Unity PlayMode against the live server, including `ModeTests`, `UpgradeTimerTests` and `GuideTests` | 131 of 131 passed |
+| Unity PlayMode against the live server, including `ModeTests`, `UpgradeTimerTests` and `GuideTests` | 132 of 132 passed |
 
-**Not verified:** how any of it feels in your hands, on a phone, or with two real people in the Arena. Siege and Arena numbers are test values.
+**Not verified:**
+- How any of it feels in your hands or on a phone.
+- Two real people in the Arena or in one guild.
+- The music: nobody has listened to it yet.
+
+All the new numbers are test values. Guild chat needs a word filter and reporting before any public release.
 
 ## Earlier test results (2026-11-07, branch `feature/campaign`)
 Dungeon campaign and battle feel, awaiting your playtest (ADR-029).
