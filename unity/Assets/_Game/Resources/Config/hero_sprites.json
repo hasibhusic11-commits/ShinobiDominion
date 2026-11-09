@@ -1,13 +1,21 @@
 {
   "schemaVersion": 1,
-  "status": "Heroes listed here appear as animated sprites. Everything else uses the procedural fallback.",
+  "status": "Heroes listed here appear as animated sprites or 3D models; form -1 covers every evolution form. Everything else uses the procedural fallback.",
   "sprites": [
     {
       "heroId": "solar_beast_sage",
       "form": 0,
       "path": "HeroSprites/solar_beast_sage/form0",
-      "enabled": true,
-      "note": "Prototype. Layers rebuilt from the concept by script, not hand painted, and not yet approved."
-    }
+      "enabled": false,
+      "note": "2D sprite prototype, replaced by the 3D model (ADR-037). Kept for comparison."
+    },
+    { "heroId": "solar_beast_sage", "form": -1, "path": "Heroes3D/solar_beast_sage", "enabled": true, "note": "3D, made with Meshy from the owner's painting (ADR-037)." },
+    { "heroId": "thunder_empress", "form": -1, "path": "Heroes3D/thunder_empress", "enabled": true, "note": "3D, made with Meshy from the owner's painting (ADR-037)." },
+    { "heroId": "stone_titan", "form": -1, "path": "Heroes3D/stone_titan", "enabled": true, "note": "3D, made with Meshy from the owner's painting (ADR-037)." },
+    { "heroId": "moonfang_oracle", "form": -1, "path": "Heroes3D/moonfang_oracle", "enabled": true, "note": "3D, made with Meshy from the owner's painting; staff reattached to her hand (ADR-037)." },
+    { "heroId": "crimson_eye_prodigy", "form": -1, "path": "Heroes3D/crimson_eye_prodigy", "enabled": true, "note": "3D, made with Meshy from the owner's painting (ADR-037)." },
+    { "heroId": "void_sovereign", "form": -1, "path": "Heroes3D/void_sovereign", "enabled": true, "note": "3D, made with Meshy from the owner's painting (ADR-037)." },
+    { "heroId": "ashen_flame_lord", "form": -1, "path": "Heroes3D/ashen_flame_lord", "enabled": true, "note": "3D, made with Meshy from the owner's painting (ADR-037)." },
+    { "heroId": "storm_crow_shinobi", "form": -1, "path": "Heroes3D/storm_crow_shinobi", "enabled": true, "note": "3D, made with Meshy from the owner's painting (ADR-037)." }
   ]
 }

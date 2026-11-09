@@ -12,7 +12,7 @@ using Object = UnityEngine.Object;
 
 namespace ShinobiDominion.Tests
 {
-    /// <summary>Checks the sprite hero in the real village and battle. Set SD_CAPTURE_DIR to also save images.</summary>
+    /// <summary>Checks the 3D heroes (ADR-037) in the real village and battle. Set SD_CAPTURE_DIR to also save images.</summary>
     public class HeroSpriteTests
     {
         private const string Hero = "solar_beast_sage";
@@ -59,62 +59,94 @@ namespace ShinobiDominion.Tests
 
         private HeroSpriteActor FindActor() => Object.FindObjectsByType<HeroSpriteActor>(FindObjectsSortMode.None).FirstOrDefault();
 
-        private static float BoneAngle(Transform actor, string bone)
+        private static Transform Bone(Component actor, string bone) =>
+            actor.GetComponentsInChildren<Transform>().First(t => t.name == bone);
+
+        private static readonly string[] AllHeroes =
         {
-            return actor.GetComponentsInChildren<Transform>().First(t => t.name == bone).localEulerAngles.z;
-        }
+            "solar_beast_sage", "thunder_empress", "stone_titan", "moonfang_oracle",
+            "crimson_eye_prodigy", "void_sovereign", "ashen_flame_lord", "storm_crow_shinobi"
+        };
 
         [UnityTest]
-        public IEnumerator SpriteHero_AppearsOnHeroBase_AndPlaysAllThreeAnimations()
+        public IEnumerator Hero3D_AppearsOnHeroBase_AndPlaysAllThreeAnimations()
         {
             AssignSage();
             yield return null;
             yield return null;
             var actor = FindActor();
-            Assert.IsNotNull(actor, "The Sage should be a sprite hero on the Hero Base");
-            Assert.IsTrue(actor.GetComponentsInChildren<SpriteRenderer>().Length >= 16, "All layers should render");
+            Assert.IsNotNull(actor, "The Sage should stand on the Hero Base");
+            Assert.IsTrue(actor.Solid, "The Sage is a 3D model now");
+            Assert.IsNotEmpty(actor.GetComponentsInChildren<SkinnedMeshRenderer>(), "A skinned 3D body renders");
             // The test's base may be off screen, where Unity stops animating to save time.
             actor.Animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
             Assert.IsTrue(actor.Animator.GetCurrentAnimatorStateInfo(0).IsName(HeroSpriteActor.IdleState), "Should start idle");
 
-            var before = BoneAngle(actor.transform, "upper_l");
+            var arm = Bone(actor, "LeftArm");
+            var before = arm.localRotation;
             yield return new WaitForSeconds(0.45f);
-            Assert.AreNotEqual(before, BoneAngle(actor.transform, "upper_l"), "Idle should move the arms");
+            Assert.Greater(Quaternion.Angle(before, arm.localRotation), 0.01f, "Idle should move the arms");
 
             actor.SetMoving(true);
             yield return new WaitForSeconds(0.3f);
             Assert.IsTrue(actor.Animator.GetCurrentAnimatorStateInfo(0).IsName(HeroSpriteActor.RunState), "Should run");
-            var first = BoneAngle(actor.transform, "thigh_r");
+            var thigh = Bone(actor, "RightUpLeg");
+            var first = thigh.localRotation;
             yield return new WaitForSeconds(0.15f);
-            Assert.AreNotEqual(first, BoneAngle(actor.transform, "thigh_r"), "Run should move the legs");
+            Assert.Greater(Quaternion.Angle(first, thigh.localRotation), 1f, "Run should move the legs");
 
             actor.SetMoving(false);
             actor.Attack();
             yield return new WaitForSeconds(0.2f);
             Assert.IsTrue(actor.Animator.GetCurrentAnimatorStateInfo(0).IsName(HeroSpriteActor.AttackState), "Should attack");
-            yield return new WaitForSeconds(1f);
+            yield return new WaitForSeconds(1.6f);
             Assert.IsTrue(actor.Animator.GetCurrentAnimatorStateInfo(0).IsName(HeroSpriteActor.IdleState), "Should return to idle");
         }
 
         [UnityTest]
-        public IEnumerator EvolutionWithNoSpriteEntry_UsesTheFallback()
+        public IEnumerator Hero3D_TurnsToFaceWhereItGoes()
         {
-            Assert.IsTrue(HeroSprites.Has(new HeroLook { DesignId = Hero, Evolution = 0 }));
-            Assert.IsFalse(HeroSprites.Has(new HeroLook { DesignId = Hero, Evolution = 1 }));
-            Assert.IsFalse(HeroSprites.Has(new HeroLook { DesignId = "thunder_empress", Evolution = 0 }));
-            Assert.IsNull(HeroSprites.Spawn(new HeroLook { DesignId = "thunder_empress", Evolution = 0 }, _root.transform));
+            var actor = HeroSprites.Spawn(new HeroLook { DesignId = Hero, Evolution = 0 }, _root.transform);
+            yield return null;
+            actor.Face(Vector3.right);
+            yield return new WaitForSeconds(0.5f);
+            Assert.Greater(Vector3.Dot(actor.Visual.forward, Vector3.right), 0.99f, "Turns towards +X");
+            Assert.Greater(actor.Visual.localScale.x, 0f, "A 3D hero is never mirrored");
+            var head = Bone(actor, "Head").position;
+            var front = Bone(actor, "headfront").position;
+            Assert.Greater(Vector3.Dot((front - head).normalized, Vector3.right), 0.5f, "Its face looks the way it faces");
+        }
+
+        [UnityTest]
+        public IEnumerator EveryHero_HasA3DModel_AtEveryForm_WithAllClips()
+        {
+            foreach (var id in AllHeroes)
+            {
+                for (var form = 0; form <= 3; form++)
+                    Assert.IsTrue(HeroSprites.Has(new HeroLook { DesignId = id, Evolution = form }), $"{id} form {form}");
+                var actor = HeroSprites.Spawn(new HeroLook { DesignId = id, Evolution = 0 }, _root.transform);
+                Assert.IsNotNull(actor, id);
+                Assert.IsTrue(actor.Solid, id);
+                var height = actor.GetComponentsInChildren<SkinnedMeshRenderer>().Select(r => r.bounds.max.y).Max() - actor.transform.position.y;
+                Assert.That(height, Is.InRange(1.2f, 1.9f), $"{id} stands about the sprite heroes' height");
+                var clips = actor.Animator.runtimeAnimatorController.animationClips.Select(c => c.name).ToList();
+                CollectionAssert.IsSubsetOf(new[] { "idle", "run", "attack" }, clips, id);
+                Object.Destroy(actor.gameObject);
+            }
+            Assert.IsFalse(HeroSprites.Has(new HeroLook { DesignId = "no_such_hero", Evolution = 0 }));
+            Assert.IsNull(HeroSprites.Spawn(new HeroLook { DesignId = "no_such_hero", Evolution = 0 }, _root.transform));
             yield return null;
         }
 
         [UnityTest]
-        public IEnumerator SpriteHero_FightsInABattle()
+        public IEnumerator Hero3D_FightsInABattle()
         {
             AssignSage();
             yield return null;
             Controller.ScoutRaid("ridge_outpost");
             Controller.AutoPlaceHeroes();
             yield return null;
-            Assert.IsTrue(Object.FindObjectsByType<HeroSpriteActor>(FindObjectsSortMode.None).Any(a => a.GetComponentInParent<BattleStage>() != null), "Sage should be a sprite in the raid");
+            Assert.IsTrue(Object.FindObjectsByType<HeroSpriteActor>(FindObjectsSortMode.None).Any(a => a.Solid && a.GetComponentInParent<BattleStage>() != null), "Sage should be a 3D model in the raid");
             Controller.StartBattle();
             var stageActor = Object.FindObjectsByType<HeroSpriteActor>(FindObjectsSortMode.None).First(a => a.GetComponentInParent<BattleStage>() != null);
             var ran = false;
@@ -146,6 +178,18 @@ namespace ShinobiDominion.Tests
             var actor = FindActor();
             var iso = Game.IsoCamera;
             var camera = iso.Camera;
+
+            // How the hero and its base are drawn, for checking the hero is never hidden by the painted base.
+            var body = actor.GetComponentInChildren<SkinnedMeshRenderer>();
+            var group = actor.GetComponentInChildren<UnityEngine.Rendering.SortingGroup>();
+            var baseSprites = actor.transform.parent.GetComponentsInChildren<SpriteRenderer>().Where(r => r.GetComponentInParent<HeroSpriteActor>() == null);
+            File.WriteAllLines(Path.Combine(dir, "hero_base_diag.txt"), new[]
+            {
+                $"hero root {actor.transform.position}, body bounds {body.bounds.min} to {body.bounds.max}",
+                $"body order {body.sortingOrder}, group order {(group != null ? group.sortingOrder.ToString() : "none")}, queue {body.sharedMaterial.renderQueue}, shader {body.sharedMaterial.shader.name}",
+                "base sprites: " + string.Join("; ", baseSprites.Select(r => $"{r.name} order {r.sortingOrder} queue {r.sharedMaterial.renderQueue} at {r.transform.position}")),
+                $"camera at {camera.transform.position}, looking {camera.transform.forward}"
+            });
             var canvas = _root.GetComponentInChildren<Canvas>();
             var texture = new RenderTexture(1000, 1000, 24) { antiAliasing = 4 };
             camera.targetTexture = texture;
@@ -261,14 +305,25 @@ namespace ShinobiDominion.Tests
             clock.Stop();
             camera.orthographicSize = 5f;
             yield return ScreenCaptureTests.Capture(camera, wide, Path.Combine(dir, "crowd_30.png"));
-            var renderers = crowd.GetComponentsInChildren<SpriteRenderer>();
-            var atlases = renderers.Where(r => r.sprite != null && r.sprite.name != "shadow").Select(r => r.sprite.texture).Distinct().Count();
-            log.Add($"crowd 30 heroes: {renderers.Length} sprites, {atlases} texture(s), {clock.ElapsedMilliseconds / 60f:F1} ms a frame in the editor");
-            log.Add($"sprite packed: {renderers.First(r => r.sprite.name != "shadow").sprite.packed}");
-            File.WriteAllLines(Path.Combine(dir, "sprite_report.txt"), log);
+            var bodies = crowd.GetComponentsInChildren<SkinnedMeshRenderer>();
+            var triangles = bodies.Sum(r => r.sharedMesh.triangles.Length / 3);
+            log.Add($"crowd 30 heroes: {bodies.Length} skinned bodies, {triangles:N0} triangles, {clock.ElapsedMilliseconds / 60f:F1} ms a frame in the editor");
+
+            // All eight heroes side by side, for review.
+            var lineup = new GameObject("Lineup");
+            for (var i = 0; i < AllHeroes.Length; i++)
+            {
+                var one = HeroSprites.Spawn(new HeroLook { DesignId = AllHeroes[i], Evolution = 0 }, lineup.transform);
+                one.transform.position = camera.transform.position + camera.transform.forward * 80f + camera.transform.right * ((i - 3.5f) * 1.25f) - Vector3.up * 0.6f;
+            }
+            Object.Destroy(crowd);
+            camera.orthographicSize = 3f;
+            for (var i = 0; i < 20; i++) yield return null;
+            yield return ScreenCaptureTests.Capture(camera, wide, Path.Combine(dir, "all_heroes_lineup.png"));
+            Object.Destroy(lineup);
+            File.WriteAllLines(Path.Combine(dir, "hero_report.txt"), log);
 
             camera.targetTexture = null;
-            Object.Destroy(crowd);
             Object.Destroy(texture);
             Object.Destroy(wide);
         }

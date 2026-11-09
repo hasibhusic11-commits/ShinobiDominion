@@ -3,7 +3,8 @@ using UnityEngine;
 namespace ShinobiDominion.Game
 {
     /// <summary>
-    /// Plays a sprite hero's animations and keeps it facing the camera in the 3D world. Visual only:
+    /// Plays a hero's animations. A sprite hero stands flat towards the camera; a 3D hero (solid) turns to face
+    /// where it goes. Visual only:
     /// the battle log and the village decide everything, and this just shows it.
     /// </summary>
     public sealed class HeroSpriteActor : MonoBehaviour
@@ -16,6 +17,13 @@ namespace ShinobiDominion.Game
 
         [SerializeField] private Transform visual;
         [SerializeField] private Animator animator;
+        /// <summary>A 3D model: it turns to face where it goes, instead of standing flat towards the camera.</summary>
+        [SerializeField] private bool solid;
+
+        // 3D models turn this fast, in degrees a second, towards the way they face.
+        private const float TurnSpeed = 720f;
+        private float _yaw;
+        private bool _hasYaw;
 
         private bool _moving;
         private bool _wantsToMove;
@@ -27,11 +35,13 @@ namespace ShinobiDominion.Game
         public Animator Animator => animator;
         public Transform Visual => visual;
         public bool Moving => _moving;
+        public bool Solid => solid;
 
-        public void Configure(Transform visualRoot, Animator clips)
+        public void Configure(Transform visualRoot, Animator clips, bool isSolid = false)
         {
             visual = visualRoot;
             animator = clips;
+            solid = isSolid;
         }
 
         /// <summary>Battle moves one cell at a time, so a short stop between cells keeps the run going.</summary>
@@ -65,6 +75,14 @@ namespace ShinobiDominion.Game
         /// <summary>The art faces screen right. Turns it to whichever side a world direction falls on.</summary>
         public void Face(Vector3 worldDirection)
         {
+            if (solid)
+            {
+                worldDirection.y = 0f;
+                if (worldDirection.sqrMagnitude < 0.0001f) return;
+                _yaw = Mathf.Atan2(worldDirection.x, worldDirection.z) * Mathf.Rad2Deg;
+                _hasYaw = true;
+                return;
+            }
             var viewer = Viewer();
             if (viewer == null) return;
             var along = Vector3.Dot(worldDirection, viewer.transform.right);
@@ -81,6 +99,19 @@ namespace ShinobiDominion.Game
         private void LateUpdate()
         {
             var viewer = Viewer();
+            if (solid)
+            {
+                // Until told where to go, a 3D hero faces the viewer.
+                if (!_hasYaw && viewer != null)
+                {
+                    var toward = -viewer.transform.forward;
+                    _yaw = Mathf.Atan2(toward.x, toward.z) * Mathf.Rad2Deg;
+                    _hasYaw = true;
+                    visual.rotation = Quaternion.Euler(0f, _yaw, 0f);
+                }
+                visual.rotation = Quaternion.RotateTowards(visual.rotation, Quaternion.Euler(0f, _yaw, 0f), TurnSpeed * Time.deltaTime);
+                return;
+            }
             if (viewer == null) return;
             // Stands upright under the camera. The plane leans with the view, so feet stay on their spot.
             visual.rotation = viewer.transform.rotation;

@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace ShinobiDominion.Game
 {
-    /// <summary>One animated sprite hero listed in Config/hero_sprites.json, by hero and evolution form.</summary>
+    /// <summary>One animated hero (sprite or 3D model) listed in Config/hero_sprites.json, by hero and evolution form; form -1 means every form.</summary>
     public sealed class HeroSpriteEntry
     {
         public string heroId;
@@ -60,7 +60,9 @@ namespace ShinobiDominion.Game
                 var document = config != null ? JsonConvert.DeserializeObject<Document>(config.text) : new Document();
                 _entries = document.sprites.Where(s => s.enabled).ToDictionary(s => $"{s.heroId}|{s.form}");
             }
-            return _entries.TryGetValue($"{heroId}|{form}", out var entry) ? entry : null;
+            // An entry for form -1 covers every form the hero has no entry of its own for (the 3D models).
+            if (_entries.TryGetValue($"{heroId}|{form}", out var entry)) return entry;
+            return _entries.TryGetValue($"{heroId}|-1", out var any) ? any : null;
         }
     }
 }

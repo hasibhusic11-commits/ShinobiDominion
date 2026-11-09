@@ -350,7 +350,13 @@ namespace ShinobiDominion.Game
                     new Vector3(footprint.Width * GridSpace.CellSize, height, footprint.Depth * GridSpace.CellSize));
                 if (entry.Hero != null)
                     foreach (var renderer in entry.Hero)
-                        if (renderer != null) renderer.sortingOrder = BuildingSprites.Order(transform.position) + 1;
+                    {
+                        if (renderer == null) continue;
+                        renderer.sortingOrder = BuildingSprites.Order(transform.position) + 1;
+                        // A hero drawn as one group (the 3D heroes) sorts by its group: one step above its base.
+                        var group = renderer.GetComponentInParent<UnityEngine.Rendering.SortingGroup>();
+                        if (group != null) group.sortingOrder = renderer.sortingOrder;
+                    }
                 Celebrate(building, entry);
             }
 
