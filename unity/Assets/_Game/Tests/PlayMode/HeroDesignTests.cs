@@ -20,7 +20,8 @@ namespace ShinobiDominion.Tests
         public void Roster_HasTheTargetCountOfEachRarity()
         {
             var all = Catalog().All;
-            Assert.AreEqual(12, all.Count(h => h.rarity == HeroRarity.Common));
+            // Owner's roster, 2026-11-08 (ADR-036): 10 Common, 10 Elite, 8 Legendary.
+            Assert.AreEqual(10, all.Count(h => h.rarity == HeroRarity.Common));
             Assert.AreEqual(10, all.Count(h => h.rarity == HeroRarity.Elite));
             Assert.AreEqual(8, all.Count(h => h.rarity == HeroRarity.Legendary));
         }

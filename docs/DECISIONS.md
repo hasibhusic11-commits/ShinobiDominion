@@ -89,6 +89,23 @@ Follows the owner's ADR-021. Up to four Troop Camps, gated by Dojo level, and a 
 - Troop names and all numbers are test values. Offline practice troops aren't saved.
 
 
+## ADR-037: The heroes are 3D models, decided by the owner on 2026-11-08
+Replaces the sprite-hero direction for the eight Legendaries. The owner asked for 3D heroes and paid for Meshy Pro.
+- Each hero was made from the owner's painting: Meshy redrew it as a clean A-pose reference without effects (fire, lightning, auras, spirit animals), then made a 20,000-triangle model, auto-rigged it on a shared 24-bone humanoid skeleton and added library animations. Moonfang Oracle's staff came out loose, so it was cut off and reattached to her hand.
+- `tools/art/pack_hero_3d.py` (Blender) packs each hero into one FBX with clips idle, walk, run, attack, special, hit and death. The attack is cut to one strike and nothing drifts. The colour texture is 1024 px.
+- `Hero3DBuilder` (editor) makes an unlit material (the texture already carries the painted light), an Animator with the sprite heroes' states (Idle, Run, Attack) and `Resources/Heroes3D/<id>` at the sprite heroes' height. `hero_sprites.json` lists them with form -1, meaning every evolution form, so evolutions keep the same model until forms get their own.
+- `HeroSpriteActor` gains a solid mode: a 3D hero turns to face where it goes instead of standing flat towards the camera. Village and battle code is unchanged.
+- The Sage's 2D sprite prototype stays in the project but is switched off.
+- Not done yet: special, hit and death clips are imported but not played; effects such as the Sage's flames; separate models per evolution form.
+
+## ADR-036: 10 Common and 10 Elite heroes, rarity-scaled specials, summon odds 70/28/2, decided by the owner on 2026-11-08
+The owner wants many more heroes that are easy to summon.
+- **Roster:** the 20 Common and Elite heroes already in `heroes.json` are now live (`contentComplete`). Two of the 12 Commons were removed so there are exactly 10: Ash Monk (same role and element as Ember Recruit) and Gale Runner (a third Assassin). No player could own them, since incomplete heroes can't be summoned. The other 4 Legendaries stay off until finished.
+- **Odds (no pity):** Common 70%, Elite 28%, Legendary 2%. Each rarity's share is split evenly between its live heroes: 700, 280 and 50 out of 10,000.
+- **Specials by rarity:** Commons' specials still fire after 5 hits but aren't that good; Elites' are a little better; Legendaries' are full. A special's extra effect is scaled to 50% for Common, 75% for Elite and 100% for Legendary: the bonus part of a power hit (an Assassin's 300% becomes 200% or 250%), guard and stun time, and heals. The server sets it from rarity, and C# and Go share a test scenario for it. Solar Beast Sage's rally is Legendary only.
+- **Art:** until the owner's ChatGPT paintings arrive (prompts in `docs/art/common_elite_hero_prompts.md`), these heroes show the old generated figure. Each painting is a neutral A-pose without effects, so it serves both the hero page and Meshy 3D.
+- 50, 75 and 100 are unapproved test values.
+
 ## ADR-035: Hero signature specials, starting with Solar Beast Sage's Radiant Roar, decided by the owner on 2026-11-08
 The owner wants Solar Beast Sage to play like a Castle Clash-style team buffer: he boosts his teammates' attack speed. Only the mechanic is borrowed; no names or art.
 - A hero can now have its own special in place of its role's. `heroes.json` sets `"special": "rally"` on Solar Beast Sage. The server copies it into every battle from the archetype, so the client cannot claim it.

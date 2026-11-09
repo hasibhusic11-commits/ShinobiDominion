@@ -433,6 +433,40 @@ namespace ShinobiDominion.Tests
             Assert.IsEmpty(problems, string.Join("\n", problems));
         }
 
+        // ---------- Special power by rarity (owner's rule, 2026-11-08) ----------
+
+        private static long FirstBurstDamage(int power)
+        {
+            var assassin = new BattleHeroInput { id = "a", role = "Assassin", hp = 50000, attack = 100, defense = 20, x = 3, z = 3, power = power };
+            var result = BattleSim.Run(Outpost(), new List<BattleHeroInput> { assassin });
+            var burstTick = result.events.First(e => e[1] == (long)BattleEventKind.Ability && e[2] == 0)[0];
+            return result.events.First(e => e[1] == (long)BattleEventKind.HeroHit && e[2] == 0 && e[0] == burstTick)[4];
+        }
+
+        [Test]
+        public void SpecialPower_FollowsRarity()
+        {
+            Assert.AreEqual(BattleSim.PowerCommon, BattleSim.PowerFor("Common"));
+            Assert.AreEqual(BattleSim.PowerElite, BattleSim.PowerFor("Elite"));
+            Assert.AreEqual(BattleSim.PowerLegendary, BattleSim.PowerFor("Legendary"));
+            Assert.Less(BattleSim.PowerCommon, BattleSim.PowerElite);
+            Assert.Less(BattleSim.PowerElite, BattleSim.PowerLegendary);
+        }
+
+        [Test]
+        public void CommonSpecials_StillFire_ButHitSofterThanEliteAndLegendary()
+        {
+            var common = FirstBurstDamage(BattleSim.PowerCommon);
+            var elite = FirstBurstDamage(BattleSim.PowerElite);
+            var legendary = FirstBurstDamage(BattleSim.PowerLegendary);
+            Assert.AreEqual(legendary, FirstBurstDamage(0), "No power given means full power");
+            Assert.Less(common, elite);
+            Assert.Less(elite, legendary);
+            // An assassin's burst is 300%: 200% at Common, 250% at Elite (the extra part is scaled).
+            Assert.AreEqual(legendary * 200 / 300, common);
+            Assert.AreEqual(legendary * 250 / 300, elite);
+        }
+
         // ---------- Rally: Solar Beast Sage's Radiant Roar (owner's design, 2026-11-08) ----------
 
         private static int HitsBy(BattleResult result, int unit, int untilTick) =>

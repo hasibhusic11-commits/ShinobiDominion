@@ -64,6 +64,12 @@ const (
 	hasteTicksEvolved = 90
 	hastePercent = 30
 
+	// Special power by rarity (owner's rule, 2026-11-08): Common specials still fire but are weak, Elite a
+	// little stronger, Legendary full. Mirrors BattleSim.PowerCommon and the rest.
+	powerCommon    = 50
+	powerElite     = 75
+	powerLegendary = 100
+
 	// How far a defender notices attackers, and how far from its post it will chase them.
 	defenderAggro = 800
 	defenderLeash = 1400
@@ -107,6 +113,8 @@ type battleHeroInput struct {
 	Special string `json:"special,omitempty"`
 	// Evolution is how many times the hero has evolved (0 to 3); the rally lasts longer from Evo II.
 	Evolution int `json:"evolution,omitempty"`
+	// Power is how strong the special is, in percent of a Legendary's: by rarity, set by the server. 0 means 100.
+	Power int `json:"power,omitempty"`
 }
 
 // battleDefenderInput is a hero guarding the village, standing at a cell on or by its Hero Base.
@@ -121,6 +129,8 @@ type battleDefenderInput struct {
 	Special string `json:"special,omitempty"`
 	// Evolution is how many times the hero has evolved (0 to 3); the rally lasts longer from Evo II.
 	Evolution int `json:"evolution,omitempty"`
+	// Power is how strong the special is, in percent of a Legendary's: by rarity, set by the server. 0 means 100.
+	Power int `json:"power,omitempty"`
 }
 
 type battleBuildingInput struct {
@@ -170,6 +180,7 @@ type battleUnit struct {
 	hasteTimer  int
 	rally       bool
 	evolution   int
+	power       int
 	isTroop     bool
 }
 
@@ -192,6 +203,7 @@ type battleDefender struct {
 	hasteTimer   int
 	rally        bool
 	evolution    int
+	power        int
 }
 
 type battleStructure struct {
@@ -253,7 +265,7 @@ func runDefendedBattle(buildings []battleBuildingInput, heroes []battleHeroInput
 			index: i, role: role, hp: h.Hp, maxHp: h.Hp, attack: h.Attack, defense: h.Defense,
 			px: h.X*cellUnits + cellUnits/2, pz: h.Z*cellUnits + cellUnits/2,
 			target: -1, blocker: -1, needsPlan: true, isTroop: h.IsTroop,
-			rally: !h.IsTroop && h.Special == specialRally, evolution: h.Evolution,
+			rally: !h.IsTroop && h.Special == specialRally, evolution: h.Evolution, power: powerOf(h.Power),
 		})
 	}
 	for i, d := range defenders {
@@ -265,7 +277,7 @@ func runDefendedBattle(buildings []battleBuildingInput, heroes []battleHeroInput
 		sim.defenders = append(sim.defenders, &battleDefender{
 			index: i, role: role, hp: d.Hp, maxHp: d.Hp, attack: d.Attack, defense: d.Defense,
 			px: px, pz: pz, tx: px, tz: pz, homeX: d.X, homeZ: d.Z,
-			rally: d.Special == specialRally, evolution: d.Evolution,
+			rally: d.Special == specialRally, evolution: d.Evolution, power: powerOf(d.Power),
 		})
 	}
 	sim.play()
@@ -444,6 +456,29 @@ func (s *battleSim) spendDefender(defender *battleDefender) {
 
 // ---------- Rally ----------
 
+// powerFor is the special power for a rarity.
+func powerFor(rarity string) int {
+	switch rarity {
+	case "Common":
+		return powerCommon
+	case "Elite":
+		return powerElite
+	}
+	return powerLegendary
+}
+
+func powerOf(power int) int {
+	if power <= 0 {
+		return powerLegendary
+	}
+	return power
+}
+
+// boost scales only the extra part of a burst percent: 300 at power 50 is 200.
+func boost(percent int64, power int) int64 {
+	return 100 + (percent-100)*int64(power)/100
+}
+
 // attackInterval is the ticks between attacks for a role, shortened while hasted.
 func attackInterval(role, hasteTimer int) int {
 	if hasteTimer > 0 {
@@ -615,7 +650,7 @@ func clampHit(amount, hp int64) int64 {
 func (s *battleSim) strikeDefender(unit *battleUnit, defender *battleDefender) {
 	percent := int64(100)
 	if unit.charge >= chargeFull && !unit.isTroop && !unit.rally {
-		percent = burstPercent(unit.role)
+		percent = boost(burstPercent(unit.role), unit.power)
 		if percent != 100 {
 			s.spendUnit(unit)
 			s.log(eventAbility, int64(unit.index), int64(unit.role), 0, 0)
@@ -652,7 +687,7 @@ func (s *battleSim) stepDefender(defender *battleDefender) {
 		s.rallyDefenders(defender)
 	} else if defender.charge >= chargeFull {
 		if defender.role == roleTank && target != nil {
-			defender.guardTimer = 40
+			defender.guardTimer = 40 * defender.power / 100
 			s.spendDefender(defender)
 			s.log(eventDefenderAbility, int64(defender.index), roleTank, 0, 0)
 		} else if defender.role == roleSupport {
@@ -708,7 +743,7 @@ func (s *battleSim) mendDefenders(healer *battleDefender) {
 		if squaredPoints(other.px, other.pz, healer.px, healer.pz) > 600*600 {
 			continue
 		}
-		amount := healer.attack * 2
+		amount := healer.attack * 2 * int64(healer.power) / 100
 		if room := other.maxHp - other.hp; amount > room {
 			amount = room
 		}
@@ -727,7 +762,7 @@ func (s *battleSim) mendDefenders(healer *battleDefender) {
 func (s *battleSim) defenderStrike(defender *battleDefender, unit *battleUnit) {
 	percent := int64(100)
 	if defender.charge >= chargeFull && !defender.rally {
-		percent = burstPercent(defender.role)
+		percent = boost(burstPercent(defender.role), defender.power)
 		if percent != 100 {
 			s.spendDefender(defender)
 			s.log(eventDefenderAbility, int64(defender.index), int64(defender.role), 0, 0)
@@ -810,7 +845,7 @@ func (s *battleSim) selfAbility(unit *battleUnit) {
 	}
 	switch unit.role {
 	case roleTank:
-		unit.guardTimer = 40
+		unit.guardTimer = 40 * unit.power / 100
 		s.spendUnit(unit)
 		s.log(eventAbility, int64(unit.index), roleTank, 0, 0)
 	case roleSupport:
@@ -824,7 +859,7 @@ func (s *battleSim) selfAbility(unit *battleUnit) {
 			if dx*dx+dz*dz > 600*600 {
 				continue
 			}
-			amount := unit.attack * 2
+			amount := unit.attack * 2 * int64(unit.power) / 100
 			if other.maxHp-other.hp < amount {
 				amount = other.maxHp - other.hp
 			}
@@ -853,7 +888,7 @@ func (s *battleSim) selfAbility(unit *battleUnit) {
 			}
 		}
 		if best >= 0 {
-			s.structures[best].stunTimer = 30
+			s.structures[best].stunTimer = 30 * unit.power / 100
 			s.spendUnit(unit)
 			s.log(eventAbility, int64(unit.index), roleControl, 0, 0)
 			s.log(eventStun, int64(s.structures[best].input.ID), 0, 0, 0)
@@ -877,6 +912,7 @@ func (s *battleSim) strike(unit *battleUnit, focus int) {
 			splash = 250
 		}
 		if percent != 100 {
+			percent = boost(percent, unit.power)
 			s.spendUnit(unit)
 			s.log(eventAbility, int64(unit.index), int64(unit.role), 0, 0)
 		}

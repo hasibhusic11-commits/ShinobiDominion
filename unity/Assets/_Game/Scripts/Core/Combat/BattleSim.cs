@@ -18,6 +18,8 @@ namespace ShinobiDominion.Core
         public string special;
         /// <summary>Evolutions the hero has had (0 to 3); the rally lasts longer from Evo II.</summary>
         public int evolution;
+        /// <summary>How strong the special is, in percent of a Legendary's: by rarity, set by the server. 0 means 100.</summary>
+        public int power;
     }
 
     /// <summary>A hero guarding the village, standing at a cell on or by its Hero Base.</summary>
@@ -34,6 +36,8 @@ namespace ShinobiDominion.Core
         public string special;
         /// <summary>Evolutions the hero has had (0 to 3); the rally lasts longer from Evo II.</summary>
         public int evolution;
+        /// <summary>How strong the special is, in percent of a Legendary's: by rarity, set by the server. 0 means 100.</summary>
+        public int power;
     }
 
     public sealed class BattleBuildingInput
@@ -150,6 +154,21 @@ namespace ShinobiDominion.Core
         public const int HasteTicksEvolved = 90;
         public const int HastePercent = 30;
 
+        /// <summary>
+        /// Special power by rarity (owner's rule, 2026-11-08): Common specials still fire but are weak, Elite a little
+        /// stronger, Legendary full. It scales a special's extra effect: bonus damage, guard and stun time, heals.
+        /// </summary>
+        public const int PowerCommon = 50;
+        public const int PowerElite = 75;
+        public const int PowerLegendary = 100;
+
+        public static int PowerFor(string rarity) => rarity == "Common" ? PowerCommon : rarity == "Elite" ? PowerElite : PowerLegendary;
+
+        private static int PowerOf(int power) => power <= 0 ? PowerLegendary : power;
+
+        /// <summary>A burst percent with only its extra part scaled: 300 at power 50 is 200.</summary>
+        private static long Boost(long percent, int power) => 100 + (percent - 100) * power / 100;
+
         // Per role: attack range, walking speed per tick, ticks between attacks, and percent of attack dealt to buildings.
         private static readonly int[] Ranges = { 120, 120, 120, 500, 400, 400 };
         private static readonly int[] Speeds = { 9, 11, 16, 10, 10, 10 };
@@ -194,6 +213,7 @@ namespace ShinobiDominion.Core
             public int HasteTimer;
             public bool Rally;
             public int Evolution;
+            public int Power = 100;
             public bool IsTroop;
         }
 
@@ -217,6 +237,7 @@ namespace ShinobiDominion.Core
             public int HasteTimer;
             public bool Rally;
             public int Evolution;
+            public int Power = 100;
         }
 
         private sealed class Structure
@@ -269,7 +290,8 @@ namespace ShinobiDominion.Core
                     Pz = h.z * CellUnits + CellUnits / 2,
                     IsTroop = h.isTroop,
                     Rally = !h.isTroop && h.special == SpecialRally,
-                    Evolution = h.evolution
+                    Evolution = h.evolution,
+                    Power = PowerOf(h.power)
                 };
             }).ToArray();
             _defenders = (defenders ?? Enumerable.Empty<BattleDefenderInput>()).Select((d, i) =>
@@ -292,7 +314,8 @@ namespace ShinobiDominion.Core
                     HomeX = d.x,
                     HomeZ = d.z,
                     Rally = d.special == SpecialRally,
-                    Evolution = d.evolution
+                    Evolution = d.evolution,
+                    Power = PowerOf(d.power)
                 };
             }).ToArray();
         }
@@ -535,7 +558,7 @@ namespace ShinobiDominion.Core
             {
                 case RoleTank:
                     // Guard: towers in range aim at this hero, and it takes half damage.
-                    unit.GuardTimer = 40;
+                    unit.GuardTimer = 40 * unit.Power / 100;
                     Spend(unit);
                     Log(BattleEventKind.Ability, unit.Index, RoleTank);
                     break;
@@ -548,7 +571,7 @@ namespace ShinobiDominion.Core
                         var dx = (long)(other.Px - unit.Px);
                         var dz = (long)(other.Pz - unit.Pz);
                         if (dx * dx + dz * dz > 600L * 600L) continue;
-                        var amount = Math.Min(unit.Attack * 2, other.MaxHp - other.Hp);
+                        var amount = Math.Min(unit.Attack * 2 * unit.Power / 100, other.MaxHp - other.Hp);
                         other.Hp += amount;
                         if (!healed)
                         {
@@ -577,7 +600,7 @@ namespace ShinobiDominion.Core
                     }
                     if (best >= 0)
                     {
-                        _structures[best].StunTimer = 30;
+                        _structures[best].StunTimer = 30 * unit.Power / 100;
                         Spend(unit);
                         Log(BattleEventKind.Ability, unit.Index, RoleControl);
                         Log(BattleEventKind.Stun, _structures[best].Input.id);
@@ -609,6 +632,7 @@ namespace ShinobiDominion.Core
                 }
                 if (percent != 100)
                 {
+                    percent = Boost(percent, unit.Power);
                     Spend(unit);
                     Log(BattleEventKind.Ability, unit.Index, unit.Role);
                 }
@@ -691,7 +715,7 @@ namespace ShinobiDominion.Core
             var percent = 100L;
             if (unit.Charge >= ChargeFull && !unit.IsTroop && !unit.Rally)
             {
-                percent = BurstPercent(unit.Role);
+                percent = Boost(BurstPercent(unit.Role), unit.Power);
                 if (percent != 100)
                 {
                     Spend(unit);
@@ -722,7 +746,7 @@ namespace ShinobiDominion.Core
             {
                 if (defender.Role == RoleTank && target != null)
                 {
-                    defender.GuardTimer = 40;
+                    defender.GuardTimer = 40 * defender.Power / 100;
                     Spend(defender);
                     Log(BattleEventKind.DefenderAbility, defender.Index, RoleTank);
                 }
@@ -778,7 +802,7 @@ namespace ShinobiDominion.Core
             {
                 if (other.Hp <= 0 || other.Hp >= other.MaxHp) continue;
                 if (SquaredPoints(other.Px, other.Pz, healer.Px, healer.Pz) > 600L * 600L) continue;
-                var amount = Math.Min(healer.Attack * 2, other.MaxHp - other.Hp);
+                var amount = Math.Min(healer.Attack * 2 * healer.Power / 100, other.MaxHp - other.Hp);
                 other.Hp += amount;
                 if (!healed)
                 {
@@ -795,7 +819,7 @@ namespace ShinobiDominion.Core
             var percent = 100L;
             if (defender.Charge >= ChargeFull && !defender.Rally)
             {
-                percent = BurstPercent(defender.Role);
+                percent = Boost(BurstPercent(defender.Role), defender.Power);
                 if (percent != 100)
                 {
                     Spend(defender);
