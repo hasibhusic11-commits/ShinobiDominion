@@ -78,6 +78,7 @@ namespace ShinobiDominion.Tests
             Assert.IsNotNull(actor, "The Sage should stand on the Hero Base");
             Assert.IsTrue(actor.Solid, "The Sage is a 3D model now");
             Assert.IsNotEmpty(actor.GetComponentsInChildren<SkinnedMeshRenderer>(), "A skinned 3D body renders");
+            Assert.AreEqual(VillageView.BaseHeroScale3D, actor.transform.lossyScale.y, 0.001f, "A 3D hero stands at its own size on the base, not enlarged");
             // The test's base may be off screen, where Unity stops animating to save time.
             actor.Animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
             Assert.IsTrue(actor.Animator.GetCurrentAnimatorStateInfo(0).IsName(HeroSpriteActor.IdleState), "Should start idle");

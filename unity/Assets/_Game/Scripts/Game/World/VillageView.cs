@@ -264,6 +264,10 @@ namespace ShinobiDominion.Game
     /// <summary>Keeps world objects in sync with the Village model, and resolves taps to buildings.</summary>
     public sealed class VillageView
     {
+        /// <summary>How large a hero stands on its Hero Base: a 3D hero at its own height, a flat sprite larger.</summary>
+        public const float BaseHeroScale3D = 1f;
+        public const float BaseHeroScaleSprite = 1.35f;
+
         private sealed class Entry
         {
             public GameObject Go;
@@ -434,8 +438,9 @@ namespace ShinobiDominion.Game
                 {
                     // The painted base is a low platform; the hero stands just on top of it.
                     actor.transform.localPosition = Vector3.up * 0.12f;
-                    // Heroes stand large on their bases, so they read clearly from the village camera.
-                    actor.transform.localScale = Vector3.one * 1.35f;
+                    // Flat sprite heroes stand large so they read clearly; a 3D hero already has a full body,
+                    // and at its own size it fits the platform under the banners (owner, 2026-11-08).
+                    actor.transform.localScale = Vector3.one * (actor.Solid ? BaseHeroScale3D : BaseHeroScaleSprite);
                     hero = actor.GetComponentsInChildren<Renderer>(true);
                 }
             }
