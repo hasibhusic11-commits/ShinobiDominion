@@ -93,6 +93,30 @@ namespace ShinobiDominion.Game
         private BattleResult _result;
         private int _nextEvent;
         private float _ticks;
+
+        /// <summary>How fast the log plays: 1, 2 or 3 times. The result is already decided, so this changes nothing in it.</summary>
+        public float PlaybackSpeed = 1f;
+
+        /// <summary>The middle of the attackers still standing, or of the guards once none are; null when nobody is.</summary>
+        public Vector3? ActionCenter
+        {
+            get
+            {
+                foreach (var group in new[] { _units, _defenders })
+                {
+                    var sum = Vector3.zero;
+                    var count = 0;
+                    foreach (var unit in group)
+                    {
+                        if (unit.Go == null || !unit.Go.activeSelf) continue;
+                        sum += unit.Go.transform.position;
+                        count++;
+                    }
+                    if (count > 0) return sum / count;
+                }
+                return null;
+            }
+        }
         private long _totalHp;
         private long _dealtHp;
         private bool _finished;
@@ -304,7 +328,7 @@ namespace ShinobiDominion.Game
             UpdateFlashes();
 
             if (_result == null || _finished) return;
-            var delta = Time.deltaTime * BattleSim.TicksPerSecond;
+            var delta = Time.deltaTime * BattleSim.TicksPerSecond * PlaybackSpeed;
             _ticks += delta;
             while (_nextEvent < _result.events.Count && _result.events[_nextEvent][0] <= _ticks)
                 Apply(_result.events[_nextEvent++], true);

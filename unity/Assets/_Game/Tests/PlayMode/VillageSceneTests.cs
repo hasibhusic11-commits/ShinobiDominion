@@ -105,6 +105,8 @@ namespace ShinobiDominion.Tests
         [Test]
         public void SpatialUi_CoversLittleOfTheScreen()
         {
+            // The first-time guide is a few minutes' help for a new player, not part of the idle screen this rule is about.
+            Controller.SkipGuide();
             // Sample the screen on a grid and count points under any UI picture, so layered parts of one button
             // (face, ring, icon) count once. Soft glows and drop shadows are light, not panels, and are skipped.
             var rects = _root.GetComponentsInChildren<Graphic>(false)

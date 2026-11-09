@@ -69,6 +69,7 @@ namespace ShinobiDominion.Game
             _focusTime = -1f;
             _velocity = Vector3.zero;
             _lastPanFrame = Time.frameCount;
+            _lastTouchTime = Time.unscaledTime;
             // Where the grabbed point would sit exactly under the finger; past the edge the view follows less and less.
             var wanted = _focus + grabbedWorld - GroundPoint(screen);
             _focus.x = Resist(wanted.x, -PanMargin, Extent + PanMargin);
@@ -89,6 +90,7 @@ namespace ShinobiDominion.Game
         /// <summary>Factor below 1 zooms in. The ground under the screen point stays put.</summary>
         public void ZoomAt(float factor, Vector2 screen)
         {
+            _lastTouchTime = Time.unscaledTime;
             _zoomingSmoothly = false;
             var before = GroundPoint(screen);
             Camera.orthographicSize = Mathf.Clamp(Camera.orthographicSize * factor, MinSize, MaxSize);
@@ -113,6 +115,20 @@ namespace ShinobiDominion.Game
         {
             _velocity = Vector3.ClampMagnitude(worldVelocity, 45f);
         }
+
+        /// <summary>
+        /// Drifts the view gently toward a point, as a battle moves. A finger on the screen, a fling or a
+        /// focus move always wins, and the follow waits a moment after the player last touched the view.
+        /// </summary>
+        public void Drift(Vector3 world, float sharpness = 1.2f)
+        {
+            if (Held || _focusTime >= 0f || _velocity.sqrMagnitude > 0.01f || Time.unscaledTime - _lastTouchTime < 2.5f) return;
+            var target = Inside(new Vector3(world.x, 0f, world.z));
+            _focus = Vector3.Lerp(_focus, target, 1f - Mathf.Exp(-sharpness * Time.unscaledDeltaTime));
+            Apply();
+        }
+
+        private float _lastTouchTime = -10f;
 
         public void StopMotion()
         {

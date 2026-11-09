@@ -182,6 +182,7 @@ namespace ShinobiDominion.Game
             UpdateActionBar();
             UpdateGoldPopups();
             UpdateTimerPills();
+            UpdateGuide();
             FetchRaidListWhenFree();
             // Keep trying to reach the server, but never swap the village out mid-action.
             if (_server != null && !IsOnline && !_connecting && UiState.Screen == VillageScreen.Home)
@@ -205,6 +206,7 @@ namespace ShinobiDominion.Game
         {
             var now = Now;
             _view.SetCollectMarkers(building => Village.PendingCollection(building, now) >= 1);
+            _view.SetUpgradeWorks();
         }
 
         private void LateUpdate()
@@ -364,6 +366,7 @@ namespace ShinobiDominion.Game
 
         private bool CollectFromTap(int id)
         {
+            _guideCollected = true;
             if (IsOnline)
             {
                 // If the server says there is nothing yet, the player's tap still opens the panel.
@@ -555,6 +558,7 @@ namespace ShinobiDominion.Game
 
         private void Collect(int id)
         {
+            _guideCollected = true;
             if (RefuseWhenNoServer()) return;
             if (IsOnline)
             {

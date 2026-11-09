@@ -433,15 +433,29 @@ namespace ShinobiDominion.Game
             var bar = new GameObject("BattleBar", typeof(RectTransform));
             var rect = (RectTransform)bar.transform;
             rect.SetParent(_uiRoot, false);
-            Ui.Anchor(rect, new Vector2(0.5f, 1f), new Vector2(430f, 64f), new Vector2(0f, -104f));
+            Ui.Anchor(rect, new Vector2(0.5f, 1f), new Vector2(560f, 64f), new Vector2(0f, -104f));
             Ui.Framed(rect, Ui.PillSprite);
             var text = Ui.Label(bar.transform, "", 24, TextAnchor.MiddleLeft);
             Ui.Anchor((RectTransform)text.transform, new Vector2(0f, 0.5f), new Vector2(270f, 56f), new Vector2(14f, 0f));
             var skip = Ui.Button(bar.transform, "SkipBattleButton", "Skip", SkipBattle, true, null, 22);
             Ui.Anchor((RectTransform)skip.transform, new Vector2(1f, 0.5f), new Vector2(150f, 52f), new Vector2(-8f, 0f));
+            Button speed = null;
+            speed = Ui.Button(bar.transform, "BattleSpeedButton", SpeedCaption(), () =>
+            {
+                _battleSpeed = _battleSpeed >= 3f ? 1f : _battleSpeed + 1f;
+                if (_raid?.Stage != null) _raid.Stage.PlaybackSpeed = _battleSpeed;
+                speed.GetComponentInChildren<Text>().text = SpeedCaption();
+            }, true, null, 22);
+            Ui.Anchor((RectTransform)speed.transform, new Vector2(1f, 0.5f), new Vector2(110f, 52f), new Vector2(-166f, 0f));
+            _raid.Stage.PlaybackSpeed = _battleSpeed;
             _raid.StatusBar = bar;
             _raid.StatusText = text;
         }
+
+        /// <summary>Battle playback speed, kept between battles. It only changes how fast the log plays.</summary>
+        private static float _battleSpeed = 1f;
+
+        private static string SpeedCaption() => $"x{_battleSpeed:0}";
 
         public void SkipBattle()
         {
@@ -453,6 +467,9 @@ namespace ShinobiDominion.Game
             if (_raid?.StatusText == null || _raid.Phase != RaidPhase.Battle) return;
             var seconds = _raid.Stage.SecondsLeft;
             _raid.StatusText.text = $"Time left  {seconds / 60}:{seconds % 60:00}";
+            // The camera drifts after the fight unless the player is looking somewhere else.
+            var center = _raid.Stage.ActionCenter;
+            if (center.HasValue) _camera.Drift(center.Value);
             UpdateBattleHud();
         }
 

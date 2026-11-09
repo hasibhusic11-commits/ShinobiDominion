@@ -282,6 +282,7 @@ namespace ShinobiDominion.Game
             public Bounds Bounds;
             public string Signature;
             public GameObject Marker;
+            public GameObject Works;
             public IsoStand Stand;
             public Renderer[] Hero;
         }
@@ -494,6 +495,30 @@ namespace ShinobiDominion.Game
                 var entry = pair.Value;
                 if (show && entry.Marker == null) entry.Marker = CreateMarker(entry.Go.transform, building.Definition.produces);
                 if (entry.Marker != null) entry.Marker.SetActive(show);
+            }
+        }
+
+        /// <summary>Builders at work over each building being upgraded (ADR-040): sparks and a little dust.</summary>
+        public void SetUpgradeWorks()
+        {
+            foreach (var pair in _views)
+            {
+                var building = _village.Find(pair.Key);
+                if (building == null) continue;
+                var entry = pair.Value;
+                if (building.Upgrading && entry.Works == null)
+                {
+                    var size = building.Footprint.Width;
+                    entry.Works = new GameObject("UpgradeWorks");
+                    entry.Works.transform.SetParent(entry.Go.transform, false);
+                    WorldEffects.Create(entry.Works.transform, "Sparks", new Vector3(0f, 1.2f, 0f), new Color(1f, 0.8f, 0.35f, 1f), new Color(1f, 0.45f, 0.1f, 0f), 7f, 0.6f, 1.6f, 0.07f, size * 0.3f, 2.5f);
+                    WorldEffects.Create(entry.Works.transform, "WorkDust", new Vector3(0f, 0.2f, 0f), new Color(0.85f, 0.76f, 0.6f, 0.5f), new Color(0.85f, 0.76f, 0.6f, 0f), 2.5f, 1.6f, 0.35f, 0.35f, size * 0.45f);
+                }
+                else if (!building.Upgrading && entry.Works != null)
+                {
+                    Object.Destroy(entry.Works);
+                    entry.Works = null;
+                }
             }
         }
 

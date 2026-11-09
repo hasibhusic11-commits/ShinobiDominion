@@ -86,6 +86,12 @@ Verified:
 - A backend test checks that ten finishes at once charge one gem once.
 - Offline Unity tests cover the timer, the finish medallion and an upgrade finishing on its own.
 
+**Feel:**
+- Battles have an x1, x2 or x3 speed button, remembered between battles.
+- The camera drifts after the fight unless you have just moved it.
+- Builders send up sparks and dust over upgrading buildings.
+- New players get a five-step guide with an arrow (collect, summon, assign, first battle, first upgrade). It never blocks a tap, can be skipped, and is remembered.
+
 **Research (ADR-041):**
 - The Research Hut runs troop studies paid in Mana: +8% HP and attack per level.
 - One study runs at a time; gems finish one at once.
@@ -98,7 +104,7 @@ Verified:
 | .NET harness (`tools/core-tests`) | 174 of 174 passed |
 | Go unit tests, including Siege balance and Arena duels | passed; part of the server build |
 | Backend suite, including gift, quest, Siege, Arena, timer and research tests | passed |
-| Unity PlayMode against the live server, including `ModeTests` and `UpgradeTimerTests` | 120 of 120 passed |
+| Unity PlayMode against the live server, including `ModeTests`, `UpgradeTimerTests` and `GuideTests` | 122 of 122 passed |
 
 **Not verified:** how any of it feels in your hands, on a phone, or with two real people in the Arena. Siege and Arena numbers are test values.
 
