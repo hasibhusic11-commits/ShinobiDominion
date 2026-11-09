@@ -43,7 +43,7 @@ namespace ShinobiDominion.Game
                 new GuideStep { Text = "Every army needs a leader. Open the Summoning Gate and summon your first hero.", Building = "summoning_gate", Done = () => Roster.HeroCount > 0 },
                 new GuideStep { Text = "Tap your Hero Base and put your hero on it. They lead your raids and guard the village.", Building = "hero_base", Done = () => Village.Buildings.Any(b => b.AssignedHeroInstanceId != null) },
                 new GuideStep { Text = "Time to fight! Press ATTACK, open the Dungeons and clear the first stage.", PointAtAttack = true, Done = () => LastRaidOutcome != null || LastModeFight != null },
-                new GuideStep { Text = "Upgrade your Dojo: higher levels unlock more buildings. Upgrades take time and a builder.", Building = "dojo_hq", Done = () => Village.HqLevel >= 2 || Village.Buildings.Any(b => b.Upgrading) }
+                new GuideStep { Text = "Upgrade your Town Hall: higher levels unlock more buildings. Upgrades take time and a builder.", Building = "dojo_hq", Done = () => Village.HqLevel >= 2 || Village.Buildings.Any(b => b.Upgrading) }
             };
             _guideStep = PlayerPrefs.GetInt(GuideKey, 0);
         }

@@ -133,7 +133,7 @@ namespace ShinobiDominion.Game
             _panel.ShowScreen("Village Siege", _siegeList == null ? "" : $"{stars} of {total} stars", ShowBattleHub, panel =>
             {
                 if (!string.IsNullOrEmpty(LastMessage)) panel.Line(LastMessage, 20, Ui.AccentColor);
-                panel.Line("Rogue ninja bands storm your own village. Your towers, walls and your hero, who stands by the Dojo, hold them off. Nothing in your village is lost, win or lose.", 19);
+                panel.Line("Rogue ninja bands storm your own village. Your towers, walls and your heroes on their bases hold them off. Nothing in your village is lost, win or lose.", 19);
                 panel.Line("Three stars: under 10% damage. Two: under 30%. One: they take no star. New stars pay once.", 19, Ui.AccentColor);
                 if (_siegeList == null)
                 {
@@ -256,7 +256,7 @@ namespace ShinobiDominion.Game
                 if (fight.IsSiege)
                 {
                     panel.Line($"Siege {fight.Level}: {fight.Title}", 24, new Color(1f, 0.9f, 0.66f));
-                    panel.Line($"{result.damagePercent}% of your village was damaged. " + (result.dojoDestroyed ? "The Dojo fell." : "The Dojo stands."));
+                    panel.Line($"{result.damagePercent}% of your village was damaged. " + (result.dojoDestroyed ? "The Town Hall fell." : "The Town Hall stands."));
                     var landed = fight.Troops.Sum(s => s.count);
                     panel.Line($"Attackers beaten: {landed - result.heroesAlive} of {landed}");
                 }

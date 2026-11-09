@@ -165,5 +165,45 @@ namespace ShinobiDominion.Tests
             yield return ScreenCaptureTests.Capture(camera, texture, Path.Combine(dir, "00_loading.png"));
             camera.targetTexture = null;
         }
+        /// <summary>Every building with the owner's art, at art levels 1, 5 and 10, for review. Needs SD_CAPTURE_DIR.</summary>
+        [UnityTest]
+        public IEnumerator CaptureBuildingShowcase()
+        {
+            var dir = System.Environment.GetEnvironmentVariable("SD_CAPTURE_DIR");
+            if (string.IsNullOrEmpty(dir)) Assert.Ignore("SD_CAPTURE_DIR not set.");
+            Directory.CreateDirectory(dir);
+            LogAssert.ignoreFailingMessages = true;
+            var game = _root.GetComponent<VillageBootstrap>();
+            var camera = game.IsoCamera.Camera;
+            var canvas = _root.GetComponentInChildren<Canvas>();
+            canvas.enabled = false;
+            var texture = new RenderTexture(1920, 1080, 24) { antiAliasing = 4 };
+            camera.targetTexture = texture;
+            var village = Controller.Village;
+            var ids = new[] { "dojo_hq", "hero_altar", "hero_base", "troop_camp", "gold_vault", "guild_hall", "defense_tower", "cannon_tower", "spirit_turret", "arena", "gold_mine", "mana_mill", "mana_vault", "warehouse", "training_grounds", "research_hut" };
+            // Game levels 1, 7 and 15 show art levels 1, 5 and 10.
+            var levels = new[] { 1, 7, 15 };
+            foreach (var level in levels)
+            {
+                var save = new ShinobiDominion.Core.VillageSave { schemaVersion = ShinobiDominion.Core.VillageSave.CurrentSchemaVersion, mapVersion = ShinobiDominion.Core.VillageSave.CurrentMapVersion, gold = 1000, nextInstanceId = 100 };
+                for (var i = 0; i < ids.Length; i++)
+                {
+                    // Some buildings need a level 3 Town Hall to exist at all.
+                    var shown = ids[i] == "dojo_hq" ? System.Math.Max(level, 3) : level;
+                    save.buildings.Add(new ShinobiDominion.Core.BuildingSave { id = i + 1, definitionId = ids[i], x = 6 + (i % 6) * 7, z = 30 - (i / 6) * 9, level = shown });
+                }
+                // A wall corner: a run along x and a run along z, to see both directions join.
+                var wallId = 50;
+                for (var w = 0; w < 7; w++) save.buildings.Add(new ShinobiDominion.Core.BuildingSave { id = wallId++, definitionId = "wall", x = 24 + w, z = 4, level = level });
+                for (var w = 1; w < 7; w++) save.buildings.Add(new ShinobiDominion.Core.BuildingSave { id = wallId++, definitionId = "wall", x = 24, z = 4 + w, level = level });
+                village.Restore(save);
+                yield return null;
+                game.IsoCamera.Initialize(new Vector3(24f, 0f, 24f), 13f);
+                yield return null;
+                yield return ScreenCaptureTests.Capture(camera, texture, Path.Combine(dir, $"80_building_showcase_level_{level:00}.png"));
+            }
+            camera.targetTexture = null;
+            canvas.enabled = true;
+        }
     }
 }

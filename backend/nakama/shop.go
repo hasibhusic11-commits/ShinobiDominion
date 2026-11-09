@@ -169,7 +169,7 @@ func (s *Server) rpcChestOpen(ctx context.Context, logger runtime.Logger, db *sq
 		}
 		hq := int64(v.hqLevel())
 		payGold(v, s.modes.TreasureChest.GoldPerDojoLevel*hq)
-		v.mana += s.modes.TreasureChest.ManaPerDojoLevel * hq
+		payMana(v, s.modes.TreasureChest.ManaPerDojoLevel*hq)
 		return nil
 	})
 }
@@ -190,6 +190,9 @@ func (s *Server) rpcShopBuy(ctx context.Context, logger runtime.Logger, db *sql.
 		}
 		// Gold over the vault's room would be lost, so a swap that doesn't fit is refused instead.
 		if offer.Gold > 0 && v.goldCapacity()-v.gold < offer.Gold {
+			return errNoRoom
+		}
+		if offer.Mana > 0 && v.manaCapacity()-v.mana < offer.Mana {
 			return errNoRoom
 		}
 		v.crystals -= offer.Crystals

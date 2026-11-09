@@ -135,10 +135,14 @@ namespace ShinobiDominion.Game
             foreach (var building in session.buildings)
             {
                 _buildings[building.id] = building;
-                if (!building.isWall) _totalHp += building.hp;
+                // Like the battle itself: walls and traps count for nothing in the damage score.
+                if (!building.isWall && !building.isTrap) _totalHp += building.hp;
             }
             _village = Village.FromSave(catalog, RaidDefinition.ToSave(session.buildings));
             _view = new VillageView(_village, transform, _ => null);
+            // Traps are hidden from the attacker until they go off.
+            foreach (var building in session.buildings)
+                if (building.isTrap) _view.SetGone(building.id);
 
             _quad = new Mesh { name = "BarQuad" };
             _quad.SetVertices(new[] { new Vector3(0f, -0.5f, 0f), new Vector3(1f, -0.5f, 0f), new Vector3(1f, 0.5f, 0f), new Vector3(0f, 0.5f, 0f) });
@@ -559,6 +563,46 @@ namespace ShinobiDominion.Game
                     if (!show) break;
                     var at = CenterOf(_buildings[(int)entry[2]]) + Vector3.up * 2.2f;
                     AddFlash(at, at, 0.8f, 0.5f, 0.8f, new Color(0.7f, 0.6f, 1f));
+                    break;
+                }
+                case BattleEventKind.TrapFired:
+                {
+                    // A hidden trap goes off where it lies: a Bomb Trap bursts, a Hero Trap snaps shut.
+                    if (!show) break;
+                    var trap = _buildings[(int)entry[2]];
+                    var at = CenterOf(trap);
+                    var bomb = entry[3] == 0;
+                    var view = _camera != null ? _camera.GetComponent<IsoCamera>() : null;
+                    if (bomb)
+                    {
+                        GameSounds.Play(GameSound.Crumble, 0.9f);
+                        AddFlash(at + Vector3.up * 0.4f, at + Vector3.up * 0.9f, 0.45f, 0.4f, 3.2f, new Color(1f, 0.6f, 0.2f));
+                        AddFlash(at + Vector3.up * 0.3f, at + Vector3.up * 0.5f, 0.25f, 0.3f, 1.6f, new Color(1f, 0.95f, 0.7f));
+                        var smoke = WorldEffects.Create(transform, "TrapSmoke", at, new Color(0.3f, 0.28f, 0.25f, 0.6f), new Color(0.5f, 0.5f, 0.5f, 0f), 24f, 1.3f, 1.4f, 1.4f, 0.8f);
+                        _expiring.Add(new KeyValuePair<float, GameObject>(Time.time + 1.2f, smoke.gameObject));
+                        if (view != null) view.AddTrauma(0.45f);
+                        Feel.HitStop(Feel.Tier.Medium);
+                    }
+                    else
+                    {
+                        GameSounds.Play(GameSound.Hit, 0.9f);
+                        AddFlash(at + Vector3.up * 0.2f, at + Vector3.up * 1.4f, 0.35f, 0.5f, 1.2f, new Color(1f, 0.82f, 0.3f));
+                        if (view != null) view.AddTrauma(0.25f);
+                    }
+                    break;
+                }
+                case BattleEventKind.TrapHit:
+                {
+                    // b is the unit caught. A Hero Trap also holds the hero still for a moment (the sim's stun).
+                    var unit = _units[(int)entry[3]];
+                    unit.Bar?.Set((float)entry[5] / unit.MaxHp);
+                    if (show)
+                    {
+                        var at = unit.Go.transform.position;
+                        ShowNumber(at + Vector3.up * 2.2f, entry[4], new Color(1f, 0.45f, 0.2f));
+                        var heroTrap = _buildings.TryGetValue((int)entry[2], out var trap) && trap.definitionId == "hero_trap";
+                        if (heroTrap) AddFlash(at + Vector3.up * 2.1f, at + Vector3.up * 2.1f, 1f, 0.45f, 0.7f, new Color(0.7f, 0.6f, 1f));
+                    }
                     break;
                 }
             }

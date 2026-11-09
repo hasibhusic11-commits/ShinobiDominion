@@ -88,6 +88,40 @@ Follows the owner's ADR-021. Up to four Troop Camps, gated by Dojo level, and a 
 - A raid still needs at least one hero. At most 200 troops can land in one raid, to bound the server's work.
 - Troop names and all numbers are test values. Offline practice troops aren't saved.
 
+## ADR-046: The owner's building roster, new art, switchable towers, traps and the painted map, 2026-11-09
+The owner set the official building list, sent new art for every building and a painted village map, and gave count rules. Numbers not named below are Claude's test values.
+
+**Roster and footprints**
+- Town Hall 4×4, Hero Base 2×2, Wall 1×1, traps 1×1, every other building 3×3. The 50×50 map is unchanged.
+- Internal ids stay; display names change: `dojo_hq` is the Town Hall, `research_hut` the Relic Hall (troop research moved there), `troop_camp` the Army Camp, `training_grounds` the Training Center, `defense_tower` the Arrow Tower, `spirit_turret` the Magic Tower.
+- New: Cannon Tower, Guild Hall, Arena, Mana Vault, Warehouse, Bomb Trap, Hero Trap. Removed: Crystal Mine and the Watchtower (the owner dropped it).
+- The Builder Hall and Summoning Gate stay as extras (building-driven navigation).
+- Player-facing text says "Town Hall", never "Dojo".
+
+**Counts (owner)**
+- Warehouse: one. Gold Mine and Mana Mill: four, five from Town Hall 5, six from Town Hall 10.
+
+**One tower, three kinds (owner)**
+- The Arrow, Cannon and Magic Towers are one building. Only the Arrow Tower is in the build catalog. A placed tower switches kind any time from its Switch button: free, instant, keeps its level, not while upgrading.
+- Data: `group: "tower"` on all three; `switchOnly` on the Cannon and Magic Towers; one shared count limit.
+- Server: `sd_village_switch` RPC (`switchKind`), refusal `NotSwitchable`; placing a switch-only kind is refused.
+- Each kind fires its own way, in both sims: Arrow fast single shots; Cannon one heavy shot every 25 ticks with a 1-cell blast at 60%; Magic a 1.5-cell splash at 50%.
+
+**Mana storage**
+- A base cap of 10,000 Mana, raised by each Mana Vault and Warehouse. Collecting and server rewards (`payMana`) stop at the cap; the shop refuses a Mana swap that doesn't fit.
+
+**Traps**
+- Hidden, never targeted, not in the damage score. A Bomb Trap hurts every troop around it once; a Hero Trap hurts and stuns the first hero to step on it. Both sims match (events 17 TrapFired and 18 TrapHit).
+- Battle playback hides traps until they fire, then shows a blast or a snap, damage numbers and the stun.
+
+**Layout migration**
+- `sd_player.layout_version` (migration 015). On load, `fitLayout` deletes buildings no longer in the list and moves overlapping ones to the nearest free spot, walls first.
+
+**Art and the map**
+- Every building on the list uses the owner's art (10 art levels over 15 game levels). Pictures are drawn at 80% of their square, with grass around them.
+- The ground is the owner's painted map. The 50×50 grid runs corner to corner between its four corner torches, fitted with a bilinear map (`VillageMap`). The old built mountain, river and scattered props are not drawn while the painting is present.
+- The camera never shows past the painting: panning springs back at its edges and zoom-out stops when it fills the screen.
+
 ## ADR-045: The Trial Tower, added on 2026-11-09 while the owner slept
 A fifth battle mode, like the genre's hero trials. Numbers are test values in the `trials` block of `modes.json`.
 

@@ -76,18 +76,67 @@ namespace ShinobiDominion.Tests
             Assert.Less(VillageTerrain.Height(25f, -14f), -8f);
             Assert.Less(VillageTerrain.Height(-14f, 25f), -8f);
 
-            var scenery = _root.GetComponentsInChildren<MeshFilter>(true).Where(f => f.transform.parent != null && f.transform.parent.name == "Scenery").Select(f => f.name).OrderBy(n => n);
-            CollectionAssert.AreEqual(new[] { "Ground", "Nature", "Water" }, scenery.ToArray());
         }
 
         [Test]
-        public void NothingOutside_RisesInFrontOfTheMap()
+        public void PaintedMap_IsTheGround_WithTheCornerTorchesOnTheGridCorners()
         {
-            var nature = _root.GetComponentsInChildren<MeshFilter>(true).First(f => f.name == "Nature").sharedMesh;
-            foreach (var vertex in nature.vertices)
+            // The owner's painted map (2026-11-09) replaced the built mountain, forest and river.
+            Assert.IsTrue(VillageMap.Loaded, "The painted map is in use");
+            Assert.IsNotNull(_root.GetComponentsInChildren<MeshFilter>(true).FirstOrDefault(f => f.name == "VillageMap"), "The painting lies on the ground");
+            Assert.IsFalse(_root.GetComponentsInChildren<Transform>(true).Any(t => t.name == "Scenery"), "The old built scenery is gone");
+            Assert.IsFalse(_root.GetComponentsInChildren<Transform>(true).Any(t => t.name == "Props"), "No props scattered over the painted field");
+
+            // The grid runs corner to corner between the four corner torches of the 1536 x 1024 painting.
+            AssertNear(new Vector2(768f, 858f), VillageMap.PixelAt(0f, 0f), "Grid (0,0): the near torch");
+            AssertNear(new Vector2(1487f, 460f), VillageMap.PixelAt(1f, 0f), "Grid (50,0): the right torch");
+            AssertNear(new Vector2(767f, 100f), VillageMap.PixelAt(1f, 1f), "Grid (50,50): the far torch");
+            AssertNear(new Vector2(47f, 460f), VillageMap.PixelAt(0f, 1f), "Grid (0,50): the left torch");
+            foreach (var u in new[] { 0f, 0.3f, 0.5f, 1f })
+            foreach (var v in new[] { 0f, 0.7f, 1f })
             {
-                var inFront = (vertex.x < -3f || vertex.z < -3f) && Mathf.Abs(vertex.x - vertex.z) <= 50f;
-                if (inFront) Assert.Less(vertex.y, 1.2f, $"Something at {vertex} would hide part of the village");
+                var back = VillageMap.GridAt(VillageMap.PixelAt(u, v));
+                Assert.AreEqual(u, back.x, 1e-3f);
+                Assert.AreEqual(v, back.y, 1e-3f);
+            }
+        }
+
+        private static void AssertNear(Vector2 expected, Vector2 actual, string what)
+        {
+            Assert.AreEqual(expected.x, actual.x, 0.5f, what);
+            Assert.AreEqual(expected.y, actual.y, 0.5f, what);
+        }
+
+        [UnityTest]
+        public IEnumerator Camera_NeverShowsPastThePaintedMap()
+        {
+            var view = _root.GetComponent<VillageBootstrap>().IsoCamera;
+            var camera = view.Camera;
+            var middle = new Vector2(camera.pixelWidth * 0.5f, camera.pixelHeight * 0.5f);
+
+            // Zoomed all the way out, and after a drag far past each edge has sprung back.
+            view.ZoomAt(100f, middle);
+            AssertScreenInsideThePainting(camera, "zoomed out");
+            foreach (var push in new[] { new Vector2(4000f, 0f), new Vector2(-4000f, 0f), new Vector2(0f, 4000f), new Vector2(0f, -4000f) })
+            {
+                view.ZoomAt(0.5f, middle);
+                view.PanTo(view.GroundPoint(middle), middle + push);
+                for (var frame = 0; frame < 90; frame++) yield return null;
+                AssertScreenInsideThePainting(camera, $"after a drag of {push}");
+            }
+        }
+
+        private static void AssertScreenInsideThePainting(Camera camera, string when)
+        {
+            foreach (var corner in new[] { new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0f, 1f), new Vector2(1f, 1f) })
+            {
+                var ray = camera.ViewportPointToRay(new Vector3(corner.x, corner.y, 0f));
+                new Plane(Vector3.up, Vector3.zero).Raycast(ray, out var distance);
+                var ground = ray.GetPoint(distance);
+                var size = VillageGrid.Size * GridSpace.CellSize;
+                var pixel = VillageMap.PixelAt(ground.x / size, ground.z / size);
+                Assert.That(pixel.x, Is.InRange(-3f, 1539f), $"{when}: screen corner {corner} is past the painting's side");
+                Assert.That(pixel.y, Is.InRange(-3f, 1027f), $"{when}: screen corner {corner} is past the painting's top or bottom");
             }
         }
 

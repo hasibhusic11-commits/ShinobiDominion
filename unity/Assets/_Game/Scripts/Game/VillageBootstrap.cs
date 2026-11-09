@@ -66,7 +66,8 @@ namespace ShinobiDominion.Game
             var world = new GameObject("World").transform;
             world.SetParent(transform, false);
             GameQuality.Load();
-            VillageScenery.Create(world);
+            // The owner's painted map (VillageMap); the old built scenery only if the painting is missing.
+            if (VillageMap.Create(world) == null) VillageScenery.Create(world);
             GameQuality.Sun = CreateLight(world);
             GameQuality.Load();
 
@@ -74,7 +75,7 @@ namespace ShinobiDominion.Game
             cameraObject.transform.SetParent(transform, false);
             cameraObject.tag = "MainCamera";
             IsoCamera = cameraObject.AddComponent<IsoCamera>();
-            IsoCamera.Initialize(new Vector3(25f, 0f, 25f), 7f);
+            IsoCamera.Initialize(new Vector3(25f, 0f, 25f), 8.5f);
 
             var ui = new UiRoot(transform);
             Controller = gameObject.AddComponent<VillageController>();

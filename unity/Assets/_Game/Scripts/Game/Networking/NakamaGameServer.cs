@@ -24,6 +24,7 @@ namespace ShinobiDominion.Game
         Task<ServerState> PlaceWallsAsync(string key, int x1, int z1, int x2, int z2);
         Task<ServerState> MoveAsync(string key, int id, int x, int z, int rotation);
         Task<ServerState> RemoveAsync(string key, int id);
+        Task<ServerState> SwitchAsync(string key, int id, string to);
         Task<ServerState> UpgradeAsync(string key, int id, bool group);
         Task<ServerState> CollectAsync(string key, int id);
         Task<List<RaidSummary>> RaidListAsync();
@@ -247,6 +248,9 @@ namespace ShinobiDominion.Game
 
         public async Task<ServerState> MoveAsync(string key, int id, int x, int z, int rotation) =>
             ServerState.Parse(await CallAsync("sd_village_move", new { key, id, x, z, rotation }));
+
+        public async Task<ServerState> SwitchAsync(string key, int id, string to) =>
+            ServerState.Parse(await CallAsync("sd_village_switch", new { key, id, to }));
 
         public async Task<ServerState> RemoveAsync(string key, int id) =>
             ServerState.Parse(await CallAsync("sd_village_remove", new { key, id }));

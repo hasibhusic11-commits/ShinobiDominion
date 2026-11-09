@@ -33,6 +33,9 @@ func (s *Server) createStarterVillage(ctx context.Context, tx *sql.Tx, userID st
 		}
 	}
 	gold, mana := s.buildings.StartingGold, s.buildings.StartingMana
+	if _, err := tx.ExecContext(ctx, `UPDATE sd_player SET layout_version = $1 WHERE user_id = $2`, currentLayoutVersion, userID); err != nil {
+		return err
+	}
 	if _, err := tx.ExecContext(ctx, `UPDATE sd_player SET gold = $1, mana = $2, next_building_id = $3, village_ready = TRUE WHERE user_id = $4`, gold, mana, len(starterLayout)+1, userID); err != nil {
 		return err
 	}
@@ -90,8 +93,8 @@ func persistVillage(ctx context.Context, tx *sql.Tx, userID string, v *village, 
 		}
 	}
 	for _, b := range v.updated {
-		if _, err := tx.ExecContext(ctx, `UPDATE sd_building SET x = $1, z = $2, rotation = $3, level = $4, last_collected_ms = $5, upgrade_done_ms = $6 WHERE user_id = $7 AND id = $8`,
-			b.X, b.Z, b.Rotation, b.Level, b.LastCollectedMs, b.UpgradeDoneMs, userID, b.ID); err != nil {
+		if _, err := tx.ExecContext(ctx, `UPDATE sd_building SET x = $1, z = $2, rotation = $3, level = $4, last_collected_ms = $5, upgrade_done_ms = $6, definition_id = $7 WHERE user_id = $8 AND id = $9`,
+			b.X, b.Z, b.Rotation, b.Level, b.LastCollectedMs, b.UpgradeDoneMs, b.Def.ID, userID, b.ID); err != nil {
 			return err
 		}
 	}
@@ -373,5 +376,26 @@ func (s *Server) rpcFinish(ctx context.Context, logger runtime.Logger, db *sql.D
 	}
 	return s.runVillageOp(ctx, db, userID, request.Key, "finish", hashRequest(itoa(request.ID)), func(v *village, now int64) vErr {
 		return v.finishNow(request.ID, now)
+	})
+}
+
+type switchRequest struct {
+	Key string `json:"key"`
+	ID  int    `json:"id"`
+	To  string `json:"to"`
+}
+
+// rpcSwitch turns a placed tower into another of its group (Arrow, Cannon or Magic Tower).
+func (s *Server) rpcSwitch(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error) {
+	userID, err := userFrom(ctx)
+	if err != nil {
+		return "", err
+	}
+	var request switchRequest
+	if err := decodeStrict(payload, &request); err != nil {
+		return "", err
+	}
+	return s.runVillageOp(ctx, db, userID, request.Key, "switch", hashRequest(itoa(request.ID)+"|"+request.To), func(v *village, now int64) vErr {
+		return v.switchKind(request.ID, request.To)
 	})
 }

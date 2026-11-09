@@ -133,7 +133,7 @@ for path in sorted(glob.glob(os.path.join(SRC, '**', '*_level_*.png'), recursive
 if FILL:
     import shutil
     for bid, levels in found.items():
-        for level in range(1, 11):
+        for level in range(1, 16):
             if level in levels:
                 continue
             nearest = min(levels, key=lambda l: (abs(l - level), l))

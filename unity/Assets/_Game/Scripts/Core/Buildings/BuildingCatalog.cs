@@ -13,7 +13,8 @@ namespace ShinobiDominion.Core
         Defense,
         Resources,
         HeroBases,
-        Walls
+        Walls,
+        Traps
     }
 
     /// <summary>Which panel and actions a building offers when it is tapped.</summary>
@@ -31,7 +32,10 @@ namespace ShinobiDominion.Core
         Collector,
         Storage,
         Defense,
-        Wall
+        Wall,
+        Guild,
+        Arena,
+        Trap
     }
 
     [JsonConverter(typeof(StringEnumConverter))]
@@ -57,6 +61,7 @@ namespace ShinobiDominion.Core
         public long production;
         public long storedCap;
         public long goldCapacity;
+        public long manaCapacity;
         public long attack;
         public int range;
         public int bonusPercent;
@@ -79,6 +84,13 @@ namespace ShinobiDominion.Core
         public long costGold;
         public long costCrystals;
         public int[] maxCountByHqLevel = Array.Empty<int>();
+        /// <summary>
+        /// Buildings that are one building to the player: the Arrow, Cannon and Magic Towers (owner, 2026-11-09).
+        /// They share one count limit, and a placed one can switch between them. Empty for everything else.
+        /// </summary>
+        public string group = "";
+        /// <summary>Reached only by switching another building of its group; never in the build catalog.</summary>
+        public bool switchOnly;
         public ResourceKind produces = ResourceKind.None;
         public List<BuildingLevel> levels = new List<BuildingLevel>();
 
@@ -86,6 +98,7 @@ namespace ShinobiDominion.Core
         public int maxLevel => levels.Count;
 
         public bool IsWall => function == BuildingFunction.Wall;
+        public bool IsTrap => function == BuildingFunction.Trap;
 
         /// <summary>The limit for an HQ level. Levels past the table use its last entry.</summary>
         public int MaxCountAt(int hqLevel)
@@ -113,6 +126,7 @@ namespace ShinobiDominion.Core
         public long startingCrystals;
         public long startingMana;
         public long baseGoldCapacity;
+        public long baseManaCapacity;
         public long[] upgradeSeconds;
         public List<BuildingDefinition> buildings = new List<BuildingDefinition>();
     }
@@ -129,6 +143,7 @@ namespace ShinobiDominion.Core
         public long StartingCrystals { get; }
         public long StartingMana { get; }
         public long BaseGoldCapacity { get; }
+        public long BaseManaCapacity { get; }
         private readonly long[] _upgradeSeconds;
         public string BalanceStatus { get; }
 
@@ -139,6 +154,7 @@ namespace ShinobiDominion.Core
             StartingCrystals = file.startingCrystals;
             StartingMana = file.startingMana;
             BaseGoldCapacity = file.baseGoldCapacity;
+            BaseManaCapacity = file.baseManaCapacity;
             _upgradeSeconds = file.upgradeSeconds ?? new long[0];
             BalanceStatus = file.balanceStatus;
             _byId = file.buildings.ToDictionary(definition => definition.id);

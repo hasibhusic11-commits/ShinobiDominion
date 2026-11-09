@@ -195,6 +195,18 @@ type modeFightResponse struct {
 	State          *playerState          `json:"state"`
 }
 
+// payMana adds Mana up to what the village can store, and returns what was added (ADR-046).
+func payMana(v *village, amount int64) int64 {
+	if room := v.manaCapacity() - v.mana; amount > room {
+		amount = room
+	}
+	if amount < 0 {
+		amount = 0
+	}
+	v.mana += amount
+	return amount
+}
+
 func payGold(v *village, amount int64) int64 {
 	if room := v.goldCapacity() - v.gold; amount > room {
 		amount = room
@@ -434,8 +446,7 @@ func (s *Server) rpcSiegeFight(ctx context.Context, logger runtime.Logger, db *s
 			// Only stars beyond the best so far pay, so a level can't be farmed.
 			newStars := int64(stars - best)
 			response.GoldEarned = payGold(v, newStars*level.GoldPerStar)
-			response.ManaEarned = newStars * level.ManaPerStar
-			v.mana += response.ManaEarned
+			response.ManaEarned = payMana(v, newStars*level.ManaPerStar)
 			if best == 0 && level.FirstClearCrystals > 0 {
 				response.CrystalsEarned = level.FirstClearCrystals
 				v.crystals += response.CrystalsEarned
@@ -656,8 +667,7 @@ func (s *Server) rpcArenaFight(ctx context.Context, logger runtime.Logger, db *s
 			}
 			if paid < a.PaidWinsPerDay {
 				response.GoldEarned = payGold(v, a.WinGold)
-				response.ManaEarned = a.WinMana
-				v.mana += a.WinMana
+				response.ManaEarned = payMana(v, a.WinMana)
 			}
 		} else {
 			response.PointsDelta = -a.LossPoints
@@ -963,7 +973,7 @@ func (s *Server) rpcGiftOpen(ctx context.Context, logger runtime.Logger, db *sql
 		beforeGold := v.gold
 		gift := s.modes.DailyGift
 		payGold(v, gift.Gold)
-		v.mana += gift.Mana
+		payMana(v, gift.Mana)
 		v.crystals += gift.Crystals
 		if err := persistVillage(ctx, tx, userID, v, beforeGold, crystals, "daily_gift", request.Key); err != nil {
 			return err

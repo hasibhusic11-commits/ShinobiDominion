@@ -31,12 +31,13 @@ namespace ShinobiDominion.Tests
         [Test]
         public void Footprint_RotationSwapsWidthAndDepth()
         {
-            var training = TestCatalog.Load().Get("training_grounds");
-            var flat = Footprint.Of(training, new GridCoord(0, 0), Rotation.R0);
-            var turned = Footprint.Of(training, new GridCoord(0, 0), Rotation.R90);
+            // Every shipped building is square now, so a made-up 4 x 2 one shows the swap.
+            var oblong = new BuildingDefinition { id = "oblong", width = 4, depth = 2, rotatable = true };
+            var flat = Footprint.Of(oblong, new GridCoord(0, 0), Rotation.R0);
+            var turned = Footprint.Of(oblong, new GridCoord(0, 0), Rotation.R90);
             Assert.AreEqual(4, flat.Width);
-            Assert.AreEqual(3, flat.Depth);
-            Assert.AreEqual(3, turned.Width);
+            Assert.AreEqual(2, flat.Depth);
+            Assert.AreEqual(2, turned.Width);
             Assert.AreEqual(4, turned.Depth);
         }
     }
@@ -49,7 +50,7 @@ namespace ShinobiDominion.Tests
         public void Footprint_CannotOverrunMapEdge()
         {
             var village = TestCatalog.EmptyVillage();
-            Assert.AreEqual(VillageError.None, village.TryPlace("defense_tower", new GridCoord(48, 48), Rotation.R0, Now, out _));
+            Assert.AreEqual(VillageError.None, village.TryPlace("defense_tower", new GridCoord(47, 47), Rotation.R0, Now, out _));
             Assert.AreEqual(VillageError.OutOfBounds, village.TryPlace("hero_base", new GridCoord(49, 49), Rotation.R0, Now, out _));
             Assert.AreEqual(VillageError.OutOfBounds, village.TryPlace("hero_base", new GridCoord(50, 0), Rotation.R0, Now, out _));
             Assert.AreEqual(VillageError.OutOfBounds, village.TryPlace("hero_base", new GridCoord(-1, 0), Rotation.R0, Now, out _));
@@ -126,9 +127,9 @@ namespace ShinobiDominion.Tests
         {
             var village = TestCatalog.EmptyVillage();
             village.TryPlace("training_grounds", new GridCoord(0, 47), Rotation.R0, Now, out var id);
-            Assert.AreEqual(VillageError.OutOfBounds, village.TryMove(id, new GridCoord(0, 47), Rotation.R90));
+            Assert.AreEqual(VillageError.OutOfBounds, village.TryMove(id, new GridCoord(0, 48), Rotation.R90));
             Assert.AreEqual(VillageError.None, village.TryMove(id, new GridCoord(0, 46), Rotation.R90));
-            Assert.AreEqual(new GridCoord(2, 49), village.Find(id).Footprint.Cells().Last());
+            Assert.AreEqual(new GridCoord(2, 48), village.Find(id).Footprint.Cells().Last());
 
             village.TryPlace("hero_base", new GridCoord(20, 20), Rotation.R0, Now, out var baseId);
             Assert.AreEqual(VillageError.NotRotatable, village.TryMove(baseId, new GridCoord(20, 20), Rotation.R90));

@@ -127,6 +127,23 @@ Verified:
 
 All the new numbers are test values. Guild chat needs a word filter and reporting before any public release.
 
+## Building roster, new art, switchable towers and the painted map, 2026-11-09. Awaiting your playtest (ADR-046)
+- Your 20-building list with your footprints, minus the Watchtower you dropped. Every building uses your new art, drawn at 80% of its square.
+- Arrow, Cannon and Magic Towers are one building with a Switch button, and each fires its own way.
+- Your counts: one Warehouse; four Gold Mines and Mana Mills, five from Town Hall 5, six from Town Hall 10.
+- Bomb and Hero Traps work on the server and now show in battle playback.
+- Mana storage has a cap, raised by the Mana Vault and Warehouse.
+- Your painted map is the ground, with the grid running corner to corner between its torches. The camera stays inside it.
+
+**Verified on 2026-11-09:**
+- Server: Go unit tests and shared rule and battle scenarios pass, including tower switching, the new count limits and a Cannon and Magic Tower battle that both copies of the rules play identically. The server integration suite passes (92 s).
+- Unity: all 178 EditMode tests and all 136 PlayMode tests pass against the rebuilt local server, including the Switch button and the painted-map camera tests.
+- Not run: the .NET core test runner, which Windows Application Control blocks on this PC. The same tests ran inside Unity instead.
+
+**Still to do:**
+- Art for the Builder Hall and Summoning Gate (still old).
+- Your numbers for the tower limit and the other counts you have not set.
+
 ## Earlier test results (2026-11-07, branch `feature/campaign`)
 Dungeon campaign and battle feel, awaiting your playtest (ADR-029).
 | Check | Result |

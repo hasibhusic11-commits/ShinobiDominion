@@ -218,9 +218,8 @@ func (s *Server) rpcTrialFight(ctx context.Context, logger runtime.Logger, db *s
 			if best == 0 {
 				// Only the first clear of a floor pays.
 				response.CrystalsEarned = floor.Crystals
-				response.ManaEarned = floor.Mana
 				v.crystals += floor.Crystals
-				v.mana += floor.Mana
+				response.ManaEarned = payMana(v, floor.Mana)
 				if _, err := tx.ExecContext(ctx, `INSERT INTO sd_raid_progress (user_id, raid_id, best_stars) VALUES ($1, $2, 3)
 					ON CONFLICT (user_id, raid_id) DO UPDATE SET best_stars = 3`, userID, trialRaidID(request.Floor)); err != nil {
 					return err

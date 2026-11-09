@@ -41,6 +41,8 @@ namespace ShinobiDominion.Game
             guardian._ringColor = Color.HSVToRGB(hue, Mathf.Max(saturation, 0.75f), 1f);
             guardian._ring = Ring(actor.transform, guardian._ringColor);
             guardian._halo = Halo(guardian._ring.transform);
+            // Standing where it appears means no hop: it is on guard from the start.
+            if ((pedestal - guard).sqrMagnitude < 0.0001f) guardian._clock = HopDelay + HopTime;
             guardian.Apply();
             return guardian;
         }

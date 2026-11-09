@@ -82,7 +82,7 @@ namespace ShinobiDominion.Game
                 {
                     Name = "UpgradeButton", Caption = "Upgrade", Icon = "upgrade", Kind = MedalKind.Secondary,
                     OnClick = () => Upgrade(building.Id, false), Enabled = affordable && Village.HqLevel >= needsDojo && (Village.Catalog.UpgradeSeconds(definition, building.Level + 1) == 0 || Village.BusyBuilders < Village.Builders),
-                    Cost = Village.HqLevel < needsDojo ? $"Dojo {needsDojo}" : cost.ToString("N0"), CostShort = !affordable || Village.HqLevel < needsDojo
+                    Cost = Village.HqLevel < needsDojo ? $"TH {needsDojo}" : cost.ToString("N0"), CostShort = !affordable || Village.HqLevel < needsDojo
                 });
             }
 
@@ -105,6 +105,10 @@ namespace ShinobiDominion.Game
                     return new BarAction { Name = "ChangeHeroButton", Caption = "Hero", Icon = "hero", Kind = MedalKind.Primary, OnClick = () => ShowHeroPicker(building.Id), Enabled = Roster.HeroCount > 0 };
                 case BuildingFunction.SummoningGate:
                     return new BarAction { Name = "OpenGateButton", Caption = "Summon", Icon = "summon", Kind = MedalKind.Primary, OnClick = ShowSummoningGate, Enabled = IsOnline };
+                case BuildingFunction.Guild:
+                    return new BarAction { Name = "GuildButton", Caption = "Guild", Icon = "guild", Kind = MedalKind.Primary, OnClick = () => OpenShortcut("friends"), Enabled = IsOnline };
+                case BuildingFunction.Arena:
+                    return new BarAction { Name = "ArenaButton", Caption = "Arena", Icon = "arena", Kind = MedalKind.Primary, OnClick = () => { CloseAll(); OpenAttack(); OpenArena(); }, Enabled = IsOnline };
                 case BuildingFunction.Research:
                     return new BarAction { Name = "ResearchButton", Caption = "Research", Icon = "research", Kind = MedalKind.Primary, OnClick = () => ShowBuildingDetails(building.Id), Enabled = true };
                 case BuildingFunction.Training:
@@ -113,12 +117,45 @@ namespace ShinobiDominion.Game
                     var pending = Village.PendingCollection(building, Now);
                     return new BarAction { Name = "CollectButton", Caption = "Collect", Icon = "collect", Kind = MedalKind.Primary, OnClick = () => Collect(building.Id), Enabled = pending > 0 };
             }
+            if (!string.IsNullOrEmpty(building.Definition.group))
+                return new BarAction { Name = "SwitchButton", Caption = "Switch", Icon = "replay", Kind = MedalKind.Primary, OnClick = () => ShowTowerSwitch(building.Id), Enabled = !building.Upgrading };
             if (building.Definition.IsWall)
             {
                 var group = Village.ConnectedWalls(building.Id);
                 return new BarAction { Name = "UpgradeGroupButton", Caption = $"All {group.Count}", Icon = "walls", Kind = MedalKind.Primary, OnClick = () => Upgrade(building.Id, true), Enabled = true };
             }
             return null;
+        }
+
+        /// <summary>
+        /// The Arrow, Cannon and Magic Towers are one building the player can switch at any time (owner,
+        /// 2026-11-09): free and instant, keeping the level. The server decides online.
+        /// </summary>
+        private void ShowTowerSwitch(int id)
+        {
+            var building = Village.Find(id);
+            if (building == null) return;
+            HideActionBar();
+            _panel.Show("Switch tower", CloseAll, panel =>
+            {
+                panel.Line($"Your level {building.Level} {building.Definition.displayName} can become another tower. It keeps its level, and switching is free.", 19);
+                foreach (var option in Village.SwitchOptions(building))
+                {
+                    var to = option.id;
+                    panel.Action("Switch_" + to, $"{option.displayName}: {option.description}", () => SwitchTower(id, to), !building.Upgrading, null, 19);
+                }
+            });
+        }
+
+        private void SwitchTower(int id, string to)
+        {
+            if (RefuseWhenNoServer()) return;
+            if (IsOnline)
+            {
+                VillageRequest($"switch|{id}|{to}", key => _server.SwitchAsync(key, id, to), ShowContextPanel, ShowContextPanel);
+                return;
+            }
+            RunAndRefresh(Village.TrySwitch(id, to));
         }
 
         private void ShowActionBar(BuildingInstance building)

@@ -413,6 +413,31 @@ namespace ShinobiDominion.Tests
             }
         }
 
+        // ---------- Traps (ADR-046) ----------
+
+        [Test]
+        public void Traps_FireOnce_BombHitsTroops_HeroTrapHoldsTheHero()
+        {
+            var buildings = Outpost();
+            buildings.Add(new BattleBuildingInput { id = 901, definitionId = "hero_trap", x = 3, z = 3, width = 1, depth = 1, hp = 1, attack = 220, range = 1, isTrap = true });
+            buildings.Add(new BattleBuildingInput { id = 902, definitionId = "bomb_trap", x = 5, z = 3, width = 1, depth = 1, hp = 1, attack = 120, range = 2, isTrap = true });
+            var team = new List<BattleHeroInput> { new BattleHeroInput { id = "h", role = "Fighter", hp = 2600, attack = 150, defense = 40, x = 3, z = 3 } };
+            for (var i = 0; i < 6; i++) team.Add(new BattleHeroInput { id = "militia", role = "Fighter", hp = 110, attack = 14, defense = 5, x = 5, z = 3, isTroop = true });
+            Assert.AreEqual("", BattleSim.DeployError(buildings, team), "Landing on a trap is allowed, so traps stay hidden");
+
+            var result = BattleSim.Run(buildings, team);
+            var fired = result.events.Where(e => e[1] == (long)BattleEventKind.TrapFired).ToList();
+            Assert.AreEqual(2, fired.Count, "Each trap fires exactly once");
+            var trapHits = result.events.Where(e => e[1] == (long)BattleEventKind.TrapHit).ToList();
+            Assert.AreEqual(1, trapHits.Count(e => e[2] == 901 && e[3] == 0), "The Hero Trap hits the hero only");
+            Assert.AreEqual(6, trapHits.Count(e => e[2] == 902), "The Bomb Trap hits every troop in range");
+            Assert.IsFalse(trapHits.Any(e => e[2] == 902 && e[3] == 0), "The Bomb Trap never hits the hero");
+            // Held in place: the hero makes no move for 3 seconds after the trap fires.
+            var heldUntil = fired.First(e => e[2] == 901)[0] + 30;
+            Assert.IsFalse(result.events.Any(e => e[1] == (long)BattleEventKind.Move && e[2] == 0 && e[0] <= heldUntil && e[0] > fired.First(f => f[2] == 901)[0]));
+            Assert.IsFalse(result.events.Any(e => e[1] == (long)BattleEventKind.HeroHit && (e[3] == 901 || e[3] == 902)), "Nobody attacks a trap");
+        }
+
         /// <summary>The server's Go copy of the battle must produce these exact logs too.</summary>
         [Test]
         public void SharedScenarios_MatchExpectedLogs()
@@ -424,11 +449,26 @@ namespace ShinobiDominion.Tests
             {
                 var team = scenario["team"].Select(h => h.ToObject<BattleHeroInput>()).ToList();
                 var defenders = scenario["defenders"]?.Select(d => d.ToObject<BattleDefenderInput>()).ToList();
-                var result = BattleSim.Run(buildings, team, defenders);
+                var extra = scenario["extraBuildings"]?.Select(b => b.ToObject<BattleBuildingInput>()) ?? Enumerable.Empty<BattleBuildingInput>();
+                var result = BattleSim.Run(buildings.Concat(extra).ToList(), team, defenders);
                 var name = scenario.Value<string>("name");
                 var actual = $"stars={result.stars} damage={result.damagePercent} endTick={result.endTick} alive={result.heroesAlive} guards={result.defendersAlive} checksum={result.checksum}";
                 var expected = $"stars={scenario.Value<int>("stars")} damage={scenario.Value<int>("damagePercent")} endTick={scenario.Value<int>("endTick")} alive={scenario.Value<int>("heroesAlive")} guards={scenario.Value<int?>("defendersAlive") ?? 0} checksum={scenario.Value<string>("checksum")}";
                 if (actual != expected) problems.Add($"{name}: got {actual}, expected {expected}");
+                // When a rule or the shipped data changes on purpose, SD_REGEN_BATTLE_VECTORS=<path> rewrites the file from
+                // this C# copy; the Go server then has to reach the same logs on its own.
+                scenario["stars"] = result.stars;
+                scenario["damagePercent"] = result.damagePercent;
+                scenario["endTick"] = result.endTick;
+                scenario["heroesAlive"] = result.heroesAlive;
+                if (scenario["defenders"] != null) scenario["defendersAlive"] = result.defendersAlive;
+                scenario["checksum"] = result.checksum;
+            }
+            var regen = Environment.GetEnvironmentVariable("SD_REGEN_BATTLE_VECTORS");
+            if (!string.IsNullOrEmpty(regen))
+            {
+                File.WriteAllText(regen, vectors.ToString(Newtonsoft.Json.Formatting.Indented) + "\n");
+                return;
             }
             Assert.IsEmpty(problems, string.Join("\n", problems));
         }

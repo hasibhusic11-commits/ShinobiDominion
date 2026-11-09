@@ -38,7 +38,7 @@ namespace ShinobiDominion.Game
         private static readonly Vector3 MapCenter = new Vector3(25f, 0f, 25f);
         private const float RaidCameraSize = 24f;
         private const float BattleCameraSize = 11f;
-        private const float HomeCameraSize = 7f;
+        private const float HomeCameraSize = 8.5f;
 
         private const int TroopsPerTap = 5;
 
@@ -497,7 +497,7 @@ namespace ShinobiDominion.Game
                 DrawResultStars(panel, result.stars);
                 panel.Line($"{result.stars} of 3 stars", 30, Ui.AccentColor);
                 panel.Line($"Damage dealt: {result.damagePercent}%");
-                panel.Line(result.dojoDestroyed ? "The enemy Dojo fell." : "The enemy Dojo still stands.");
+                panel.Line(result.dojoDestroyed ? "The enemy Town Hall fell." : "The enemy Town Hall still stands.");
                 var landed = _raid.Placements.Count + _raid.Stacks.Sum(s => s.count);
                 panel.Line($"Still standing: {result.heroesAlive} of {landed}");
                 var guards = _raid.Session.defenders.Count;

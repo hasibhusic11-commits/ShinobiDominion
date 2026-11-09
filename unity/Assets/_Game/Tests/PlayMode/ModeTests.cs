@@ -392,7 +392,7 @@ namespace ShinobiDominion.Tests
             yield return WaitFor(() => Controller.CurrentChest != null && !Controller.CurrentChest.Ready);
             yield return Await(_direct.GetStateAsync(), s =>
             {
-                Assert.AreEqual(gold + 500, s.Village.gold, "A level 1 Dojo's chest holds 500 gold");
+                Assert.AreEqual(gold + 500, s.Village.gold, "A level 1 Town Hall's chest holds 500 gold");
                 Assert.AreEqual(mana + 150, s.Village.mana);
                 mana = s.Village.mana;
             });

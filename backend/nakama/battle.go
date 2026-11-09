@@ -49,6 +49,15 @@ const (
 	eventCharge = 15
 	// a = unit (c = 0) or defender (c = 1) who roared, b = allies (itself included) now attacking faster.
 	eventRally = 16
+	// a = trap building id, b = 0 for a Bomb Trap or 1 for a Hero Trap. The trap is spent.
+	eventTrapFired = 17
+	// a = trap building id, b = unit hit, c = damage, d = unit HP left.
+	eventTrapHit = 18
+
+	// Traps (ADR-046): a trap fires when an attacker it can catch comes within trapTrigger of its middle. A Bomb
+	// Trap then hits every troop within its range in cells; a Hero Trap hurts that hero and holds it in place.
+	trapTrigger   = 120
+	heroTrapStun  = 30
 
 	// Landed hits that fill a hero's ability bar (owner's rule, 2026-11-08). At full, the special fires and the
 	// bar empties. Mirrors BattleSim.ChargeFull.
@@ -146,6 +155,8 @@ type battleBuildingInput struct {
 	Range        int    `json:"range"`
 	IsWall       bool   `json:"isWall"`
 	IsDefense    bool   `json:"isDefense"`
+	// IsTrap marks a hidden trap: it is walked over, never targeted, and counts for nothing in the score.
+	IsTrap       bool   `json:"isTrap,omitempty"`
 }
 
 type battleResult struct {
@@ -182,6 +193,8 @@ type battleUnit struct {
 	evolution   int
 	power       int
 	isTroop     bool
+	// stunTimer holds a unit in place after a Hero Trap: it does nothing until it runs out.
+	stunTimer   int
 }
 
 type battleDefender struct {
@@ -218,6 +231,7 @@ type battleSim struct {
 	units      []*battleUnit
 	defenders  []*battleDefender
 	structures []*battleStructure
+	traps      []*battleStructure
 	grid       []int
 	cost       []int
 	from       []int
@@ -245,7 +259,12 @@ func runDefendedBattle(buildings []battleBuildingInput, heroes []battleHeroInput
 		from:   make([]int, cells),
 		result: &battleResult{Events: [][]int64{}},
 	}
-	for i, b := range buildings {
+	for _, b := range buildings {
+		if b.IsTrap {
+			sim.traps = append(sim.traps, &battleStructure{input: b, hp: b.Hp, alive: true})
+			continue
+		}
+		i := len(sim.structures)
 		sim.structures = append(sim.structures, &battleStructure{input: b, hp: b.Hp, alive: true})
 		if !b.IsWall {
 			sim.totalHp += b.Hp
@@ -286,6 +305,10 @@ func runDefendedBattle(buildings []battleBuildingInput, heroes []battleHeroInput
 
 func canDeployAt(buildings []battleBuildingInput, x, z int) bool {
 	for _, b := range buildings {
+		// A trap must not give itself away, so landing beside one is allowed.
+		if b.IsTrap {
+			continue
+		}
 		if x >= b.X-deployClearance && x < b.X+b.Width+deployClearance && z >= b.Z-deployClearance && z < b.Z+b.Depth+deployClearance {
 			return false
 		}
@@ -337,6 +360,11 @@ func (s *battleSim) play() {
 		for _, unit := range s.units {
 			if unit.hp > 0 {
 				s.stepUnit(unit)
+			}
+		}
+		for _, trap := range s.traps {
+			if trap.alive {
+				s.checkTrap(trap)
 			}
 		}
 		for _, defender := range s.defenders {
@@ -525,6 +553,10 @@ func (s *battleSim) rallyDefenders(roarer *battleDefender) {
 // ---------- Heroes ----------
 
 func (s *battleSim) stepUnit(unit *battleUnit) {
+	if unit.stunTimer > 0 {
+		unit.stunTimer--
+		return
+	}
 	if unit.attackTimer > 0 {
 		unit.attackTimer--
 	}
@@ -1175,6 +1207,65 @@ func inBattleRange(px, pz int, b battleBuildingInput, reach int) bool {
 	return squaredDistance(px, pz, b) <= int64(reach)*int64(reach)
 }
 
+// ---------- Traps ----------
+
+func trapCentre(b battleBuildingInput) (int, int) {
+	return b.X*cellUnits + b.Width*cellUnits/2, b.Z*cellUnits + b.Depth*cellUnits/2
+}
+
+func (s *battleSim) trapHit(trap *battleStructure, unit *battleUnit) {
+	amount := trap.input.Attack * 100 / (100 + unit.defense)
+	if amount < 1 {
+		amount = 1
+	}
+	if amount > unit.hp {
+		amount = unit.hp
+	}
+	unit.hp -= amount
+	s.log(eventTrapHit, int64(trap.input.ID), int64(unit.index), amount, unit.hp)
+	if unit.hp == 0 {
+		s.log(eventHeroDown, int64(unit.index), 0, 0, 0)
+	}
+}
+
+// checkTrap fires a trap once something it catches comes close: troops for a Bomb Trap, a hero for a Hero Trap.
+func (s *battleSim) checkTrap(trap *battleStructure) {
+	cx, cz := trapCentre(trap.input)
+	heroTrap := trap.input.DefinitionID == "hero_trap"
+	var caught *battleUnit
+	for _, unit := range s.units {
+		if unit.hp <= 0 || unit.isTroop == heroTrap {
+			continue
+		}
+		if squaredPoints(unit.px, unit.pz, cx, cz) <= trapTrigger*trapTrigger {
+			caught = unit
+			break
+		}
+	}
+	if caught == nil {
+		return
+	}
+	trap.alive = false
+	if heroTrap {
+		s.log(eventTrapFired, int64(trap.input.ID), 1, 0, 0)
+		s.trapHit(trap, caught)
+		if caught.hp > 0 {
+			caught.stunTimer = heroTrapStun
+		}
+		return
+	}
+	s.log(eventTrapFired, int64(trap.input.ID), 0, 0, 0)
+	reach := int64(trap.input.Range) * cellUnits
+	for _, unit := range s.units {
+		if unit.hp <= 0 || !unit.isTroop {
+			continue
+		}
+		if squaredPoints(unit.px, unit.pz, cx, cz) <= reach*reach {
+			s.trapHit(trap, unit)
+		}
+	}
+}
+
 // ---------- Towers ----------
 
 func (s *battleSim) stepTower(tower *battleStructure) {
@@ -1190,7 +1281,14 @@ func (s *battleSim) stepTower(tower *battleStructure) {
 	}
 
 	input := tower.input
-	splashing := input.DefinitionID == "spirit_turret"
+	// Each tower fires its own way, as in the client's StepTower: fast single arrows, slow heavy cannon balls
+	// with a small blast, and magic bolts that splash wider for less.
+	cannon := input.DefinitionID == "cannon_tower"
+	splashing := cannon || input.DefinitionID == "spirit_turret"
+	blast, blastPercent := int64(150), int64(50)
+	if cannon {
+		blast, blastPercent = 100, 60
+	}
 	reach := int64(input.Range) * cellUnits
 	var chosen *battleUnit
 	chosenDistance := int64(^uint64(0) >> 1)
@@ -1214,9 +1312,12 @@ func (s *battleSim) stepTower(tower *battleStructure) {
 		return
 	}
 
-	if splashing {
+	switch {
+	case cannon:
+		tower.shotTimer = 25
+	case splashing:
 		tower.shotTimer = 15
-	} else {
+	default:
 		tower.shotTimer = 10
 	}
 	s.shoot(tower, chosen, 100)
@@ -1229,8 +1330,8 @@ func (s *battleSim) stepTower(tower *battleStructure) {
 		}
 		dx := int64(unit.px - chosen.px)
 		dz := int64(unit.pz - chosen.pz)
-		if dx*dx+dz*dz <= 150*150 {
-			s.shoot(tower, unit, 50)
+		if dx*dx+dz*dz <= blast*blast {
+			s.shoot(tower, unit, blastPercent)
 		}
 	}
 }
@@ -1358,7 +1459,7 @@ func expandRaid(raid *raidDefinition, buildings *BuildingCatalog) ([]battleBuild
 		result = append(result, battleBuildingInput{
 			ID: len(result) + 1, DefinitionID: definitionID, X: x, Z: z, Width: def.Width, Depth: def.Depth,
 			Level: level, Hp: row.Hp, Attack: row.Attack, Range: row.Range,
-			IsWall: def.isWall(), IsDefense: def.Function == "Defense",
+			IsWall: def.isWall(), IsDefense: def.Function == "Defense", IsTrap: def.Function == "Trap",
 		})
 		return nil
 	}

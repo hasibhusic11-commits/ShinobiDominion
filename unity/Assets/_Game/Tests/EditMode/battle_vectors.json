@@ -2,153 +2,1077 @@
   "scenarios": [
     {
       "name": "mixed team, strong",
-      "checksum": "955af415171f6f0c", "stars": 3, "damagePercent": 100, "endTick": 455, "heroesAlive": 6,
+      "checksum": "955af415171f6f0c",
+      "stars": 3,
+      "damagePercent": 100,
+      "endTick": 455,
+      "heroesAlive": 6,
       "team": [
-        { "id": "a", "role": "Tank", "hp": 6000, "attack": 240, "defense": 240, "x": 10, "z": 10 },
-        { "id": "b", "role": "Fighter", "hp": 4800, "attack": 360, "defense": 160, "x": 11, "z": 10 },
-        { "id": "c", "role": "Assassin", "hp": 3200, "attack": 440, "defense": 100, "x": 12, "z": 10 },
-        { "id": "d", "role": "Mage", "hp": 3200, "attack": 400, "defense": 100, "x": 13, "z": 10 },
-        { "id": "e", "role": "Control", "hp": 3600, "attack": 320, "defense": 120, "x": 14, "z": 10 },
-        { "id": "f", "role": "Support", "hp": 3600, "attack": 240, "defense": 120, "x": 15, "z": 10 }
+        {
+          "id": "a",
+          "role": "Tank",
+          "hp": 6000,
+          "attack": 240,
+          "defense": 240,
+          "x": 10,
+          "z": 10
+        },
+        {
+          "id": "b",
+          "role": "Fighter",
+          "hp": 4800,
+          "attack": 360,
+          "defense": 160,
+          "x": 11,
+          "z": 10
+        },
+        {
+          "id": "c",
+          "role": "Assassin",
+          "hp": 3200,
+          "attack": 440,
+          "defense": 100,
+          "x": 12,
+          "z": 10
+        },
+        {
+          "id": "d",
+          "role": "Mage",
+          "hp": 3200,
+          "attack": 400,
+          "defense": 100,
+          "x": 13,
+          "z": 10
+        },
+        {
+          "id": "e",
+          "role": "Control",
+          "hp": 3600,
+          "attack": 320,
+          "defense": 120,
+          "x": 14,
+          "z": 10
+        },
+        {
+          "id": "f",
+          "role": "Support",
+          "hp": 3600,
+          "attack": 240,
+          "defense": 120,
+          "x": 15,
+          "z": 10
+        }
       ]
     },
     {
       "name": "mixed team, weak",
-      "checksum": "29fee55453e34ada", "stars": 3, "damagePercent": 100, "endTick": 1014, "heroesAlive": 6,
+      "checksum": "1bd0a8fd13e439ec",
+      "stars": 3,
+      "damagePercent": 100,
+      "endTick": 1072,
+      "heroesAlive": 6,
       "team": [
-        { "id": "a", "role": "Tank", "hp": 1500, "attack": 60, "defense": 60, "x": 40, "z": 40 },
-        { "id": "b", "role": "Fighter", "hp": 1200, "attack": 90, "defense": 40, "x": 41, "z": 41 },
-        { "id": "c", "role": "Assassin", "hp": 800, "attack": 110, "defense": 25, "x": 42, "z": 42 },
-        { "id": "d", "role": "Mage", "hp": 800, "attack": 100, "defense": 25, "x": 3, "z": 3 },
-        { "id": "e", "role": "Control", "hp": 900, "attack": 80, "defense": 30, "x": 4, "z": 3 },
-        { "id": "f", "role": "Support", "hp": 900, "attack": 60, "defense": 30, "x": 5, "z": 3 }
+        {
+          "id": "a",
+          "role": "Tank",
+          "hp": 1500,
+          "attack": 60,
+          "defense": 60,
+          "x": 40,
+          "z": 40
+        },
+        {
+          "id": "b",
+          "role": "Fighter",
+          "hp": 1200,
+          "attack": 90,
+          "defense": 40,
+          "x": 41,
+          "z": 41
+        },
+        {
+          "id": "c",
+          "role": "Assassin",
+          "hp": 800,
+          "attack": 110,
+          "defense": 25,
+          "x": 42,
+          "z": 42
+        },
+        {
+          "id": "d",
+          "role": "Mage",
+          "hp": 800,
+          "attack": 100,
+          "defense": 25,
+          "x": 3,
+          "z": 3
+        },
+        {
+          "id": "e",
+          "role": "Control",
+          "hp": 900,
+          "attack": 80,
+          "defense": 30,
+          "x": 4,
+          "z": 3
+        },
+        {
+          "id": "f",
+          "role": "Support",
+          "hp": 900,
+          "attack": 60,
+          "defense": 30,
+          "x": 5,
+          "z": 3
+        }
       ]
     },
     {
       "name": "heroes and troops together",
-      "checksum": "0c49c155263e99bd", "stars": 3, "damagePercent": 100, "endTick": 1800, "heroesAlive": 1,
+      "checksum": "0988af4f95fa935c",
+      "stars": 3,
+      "damagePercent": 100,
+      "endTick": 1777,
+      "heroesAlive": 1,
       "team": [
-        { "id": "a", "role": "Control", "hp": 2000, "attack": 200, "defense": 60, "x": 25, "z": 5 },
-        { "id": "militia", "role": "Fighter", "hp": 110, "attack": 14, "defense": 5, "x": 10, "z": 10, "isTroop": true },
-        { "id": "militia", "role": "Fighter", "hp": 110, "attack": 14, "defense": 5, "x": 10, "z": 10, "isTroop": true },
-        { "id": "militia", "role": "Fighter", "hp": 110, "attack": 14, "defense": 5, "x": 10, "z": 10, "isTroop": true },
-        { "id": "kunai_thrower", "role": "Mage", "hp": 90, "attack": 26, "defense": 3, "x": 40, "z": 25, "isTroop": true },
-        { "id": "kunai_thrower", "role": "Mage", "hp": 90, "attack": 26, "defense": 3, "x": 40, "z": 25, "isTroop": true },
-        { "id": "shield_bearer", "role": "Tank", "hp": 680, "attack": 24, "defense": 28, "x": 25, "z": 8, "isTroop": true },
-        { "id": "shadow_runner", "role": "Assassin", "hp": 190, "attack": 36, "defense": 8, "x": 8, "z": 25, "isTroop": true }
+        {
+          "id": "a",
+          "role": "Control",
+          "hp": 2000,
+          "attack": 200,
+          "defense": 60,
+          "x": 25,
+          "z": 5
+        },
+        {
+          "id": "militia",
+          "role": "Fighter",
+          "hp": 110,
+          "attack": 14,
+          "defense": 5,
+          "x": 10,
+          "z": 10,
+          "isTroop": true
+        },
+        {
+          "id": "militia",
+          "role": "Fighter",
+          "hp": 110,
+          "attack": 14,
+          "defense": 5,
+          "x": 10,
+          "z": 10,
+          "isTroop": true
+        },
+        {
+          "id": "militia",
+          "role": "Fighter",
+          "hp": 110,
+          "attack": 14,
+          "defense": 5,
+          "x": 10,
+          "z": 10,
+          "isTroop": true
+        },
+        {
+          "id": "kunai_thrower",
+          "role": "Mage",
+          "hp": 90,
+          "attack": 26,
+          "defense": 3,
+          "x": 40,
+          "z": 25,
+          "isTroop": true
+        },
+        {
+          "id": "kunai_thrower",
+          "role": "Mage",
+          "hp": 90,
+          "attack": 26,
+          "defense": 3,
+          "x": 40,
+          "z": 25,
+          "isTroop": true
+        },
+        {
+          "id": "shield_bearer",
+          "role": "Tank",
+          "hp": 680,
+          "attack": 24,
+          "defense": 28,
+          "x": 25,
+          "z": 8,
+          "isTroop": true
+        },
+        {
+          "id": "shadow_runner",
+          "role": "Assassin",
+          "hp": 190,
+          "attack": 36,
+          "defense": 8,
+          "x": 8,
+          "z": 25,
+          "isTroop": true
+        }
       ]
     },
     {
       "name": "one legendary alone",
-      "checksum": "d3957d013aba0c10", "stars": 3, "damagePercent": 100, "endTick": 1252, "heroesAlive": 1,
+      "checksum": "c0fcb0658b9d712c",
+      "stars": 3,
+      "damagePercent": 100,
+      "endTick": 1232,
+      "heroesAlive": 1,
       "team": [
-        { "id": "a", "role": "Fighter", "hp": 28000, "attack": 1140, "defense": 455, "x": 25, "z": 45 }
+        {
+          "id": "a",
+          "role": "Fighter",
+          "hp": 28000,
+          "attack": 1140,
+          "defense": 455,
+          "x": 25,
+          "z": 45
+        }
       ]
     },
     {
       "name": "defended, attackers win",
-      "checksum": "753b8505a2b340f3", "stars": 3, "damagePercent": 100, "endTick": 485, "heroesAlive": 6, "defendersAlive": 0,
+      "checksum": "753b8505a2b340f3",
+      "stars": 3,
+      "damagePercent": 100,
+      "endTick": 485,
+      "heroesAlive": 6,
+      "defendersAlive": 0,
       "team": [
-        { "id": "a", "role": "Tank", "hp": 6000, "attack": 240, "defense": 240, "x": 10, "z": 10 },
-        { "id": "b", "role": "Fighter", "hp": 4800, "attack": 360, "defense": 160, "x": 11, "z": 10 },
-        { "id": "c", "role": "Assassin", "hp": 3200, "attack": 440, "defense": 100, "x": 12, "z": 10 },
-        { "id": "d", "role": "Mage", "hp": 3200, "attack": 400, "defense": 100, "x": 13, "z": 10 },
-        { "id": "e", "role": "Control", "hp": 3600, "attack": 320, "defense": 120, "x": 14, "z": 10 },
-        { "id": "f", "role": "Support", "hp": 3600, "attack": 240, "defense": 120, "x": 15, "z": 10 }
+        {
+          "id": "a",
+          "role": "Tank",
+          "hp": 6000,
+          "attack": 240,
+          "defense": 240,
+          "x": 10,
+          "z": 10
+        },
+        {
+          "id": "b",
+          "role": "Fighter",
+          "hp": 4800,
+          "attack": 360,
+          "defense": 160,
+          "x": 11,
+          "z": 10
+        },
+        {
+          "id": "c",
+          "role": "Assassin",
+          "hp": 3200,
+          "attack": 440,
+          "defense": 100,
+          "x": 12,
+          "z": 10
+        },
+        {
+          "id": "d",
+          "role": "Mage",
+          "hp": 3200,
+          "attack": 400,
+          "defense": 100,
+          "x": 13,
+          "z": 10
+        },
+        {
+          "id": "e",
+          "role": "Control",
+          "hp": 3600,
+          "attack": 320,
+          "defense": 120,
+          "x": 14,
+          "z": 10
+        },
+        {
+          "id": "f",
+          "role": "Support",
+          "hp": 3600,
+          "attack": 240,
+          "defense": 120,
+          "x": 15,
+          "z": 10
+        }
       ],
       "defenders": [
-        { "id": "g1", "role": "Tank", "hp": 1000, "attack": 80, "defense": 30, "x": 14, "z": 14 },
-        { "id": "g2", "role": "Mage", "hp": 1000, "attack": 80, "defense": 30, "x": 17, "z": 17 },
-        { "id": "g3", "role": "Support", "hp": 1000, "attack": 80, "defense": 30, "x": 20, "z": 17 },
-        { "id": "g4", "role": "Assassin", "hp": 1000, "attack": 80, "defense": 30, "x": 12, "z": 20 },
-        { "id": "g5", "role": "Fighter", "hp": 1000, "attack": 80, "defense": 30, "x": 20, "z": 12 }
+        {
+          "id": "g1",
+          "role": "Tank",
+          "hp": 1000,
+          "attack": 80,
+          "defense": 30,
+          "x": 14,
+          "z": 14
+        },
+        {
+          "id": "g2",
+          "role": "Mage",
+          "hp": 1000,
+          "attack": 80,
+          "defense": 30,
+          "x": 17,
+          "z": 17
+        },
+        {
+          "id": "g3",
+          "role": "Support",
+          "hp": 1000,
+          "attack": 80,
+          "defense": 30,
+          "x": 20,
+          "z": 17
+        },
+        {
+          "id": "g4",
+          "role": "Assassin",
+          "hp": 1000,
+          "attack": 80,
+          "defense": 30,
+          "x": 12,
+          "z": 20
+        },
+        {
+          "id": "g5",
+          "role": "Fighter",
+          "hp": 1000,
+          "attack": 80,
+          "defense": 30,
+          "x": 20,
+          "z": 12
+        }
       ]
     },
     {
       "name": "defended, guards win",
-      "checksum": "b9f41ade55b596df", "stars": 0, "damagePercent": 0, "endTick": 349, "heroesAlive": 0, "defendersAlive": 5,
+      "checksum": "b9f41ade55b596df",
+      "stars": 0,
+      "damagePercent": 0,
+      "endTick": 349,
+      "heroesAlive": 0,
+      "defendersAlive": 5,
       "team": [
-        { "id": "a", "role": "Tank", "hp": 6000, "attack": 240, "defense": 240, "x": 10, "z": 10 },
-        { "id": "b", "role": "Fighter", "hp": 4800, "attack": 360, "defense": 160, "x": 11, "z": 10 },
-        { "id": "c", "role": "Assassin", "hp": 3200, "attack": 440, "defense": 100, "x": 12, "z": 10 },
-        { "id": "d", "role": "Mage", "hp": 3200, "attack": 400, "defense": 100, "x": 13, "z": 10 },
-        { "id": "e", "role": "Control", "hp": 3600, "attack": 320, "defense": 120, "x": 14, "z": 10 },
-        { "id": "f", "role": "Support", "hp": 3600, "attack": 240, "defense": 120, "x": 15, "z": 10 }
+        {
+          "id": "a",
+          "role": "Tank",
+          "hp": 6000,
+          "attack": 240,
+          "defense": 240,
+          "x": 10,
+          "z": 10
+        },
+        {
+          "id": "b",
+          "role": "Fighter",
+          "hp": 4800,
+          "attack": 360,
+          "defense": 160,
+          "x": 11,
+          "z": 10
+        },
+        {
+          "id": "c",
+          "role": "Assassin",
+          "hp": 3200,
+          "attack": 440,
+          "defense": 100,
+          "x": 12,
+          "z": 10
+        },
+        {
+          "id": "d",
+          "role": "Mage",
+          "hp": 3200,
+          "attack": 400,
+          "defense": 100,
+          "x": 13,
+          "z": 10
+        },
+        {
+          "id": "e",
+          "role": "Control",
+          "hp": 3600,
+          "attack": 320,
+          "defense": 120,
+          "x": 14,
+          "z": 10
+        },
+        {
+          "id": "f",
+          "role": "Support",
+          "hp": 3600,
+          "attack": 240,
+          "defense": 120,
+          "x": 15,
+          "z": 10
+        }
       ],
       "defenders": [
-        { "id": "g1", "role": "Tank", "hp": 12000, "attack": 960, "defense": 360, "x": 14, "z": 14 },
-        { "id": "g2", "role": "Mage", "hp": 12000, "attack": 960, "defense": 360, "x": 17, "z": 17 },
-        { "id": "g3", "role": "Support", "hp": 12000, "attack": 960, "defense": 360, "x": 20, "z": 17 },
-        { "id": "g4", "role": "Assassin", "hp": 12000, "attack": 960, "defense": 360, "x": 12, "z": 20 },
-        { "id": "g5", "role": "Fighter", "hp": 12000, "attack": 960, "defense": 360, "x": 20, "z": 12 }
+        {
+          "id": "g1",
+          "role": "Tank",
+          "hp": 12000,
+          "attack": 960,
+          "defense": 360,
+          "x": 14,
+          "z": 14
+        },
+        {
+          "id": "g2",
+          "role": "Mage",
+          "hp": 12000,
+          "attack": 960,
+          "defense": 360,
+          "x": 17,
+          "z": 17
+        },
+        {
+          "id": "g3",
+          "role": "Support",
+          "hp": 12000,
+          "attack": 960,
+          "defense": 360,
+          "x": 20,
+          "z": 17
+        },
+        {
+          "id": "g4",
+          "role": "Assassin",
+          "hp": 12000,
+          "attack": 960,
+          "defense": 360,
+          "x": 12,
+          "z": 20
+        },
+        {
+          "id": "g5",
+          "role": "Fighter",
+          "hp": 12000,
+          "attack": 960,
+          "defense": 360,
+          "x": 20,
+          "z": 12
+        }
       ]
     },
     {
       "name": "defended, close fight",
-      "checksum": "6f5f32deaf70c032", "stars": 0, "damagePercent": 0, "endTick": 501, "heroesAlive": 0, "defendersAlive": 5,
+      "checksum": "6f5f32deaf70c032",
+      "stars": 0,
+      "damagePercent": 0,
+      "endTick": 501,
+      "heroesAlive": 0,
+      "defendersAlive": 5,
       "team": [
-        { "id": "a", "role": "Tank", "hp": 6000, "attack": 240, "defense": 240, "x": 10, "z": 10 },
-        { "id": "b", "role": "Fighter", "hp": 4800, "attack": 360, "defense": 160, "x": 11, "z": 10 },
-        { "id": "c", "role": "Assassin", "hp": 3200, "attack": 440, "defense": 100, "x": 12, "z": 10 },
-        { "id": "d", "role": "Mage", "hp": 3200, "attack": 400, "defense": 100, "x": 13, "z": 10 },
-        { "id": "e", "role": "Control", "hp": 3600, "attack": 320, "defense": 120, "x": 14, "z": 10 },
-        { "id": "f", "role": "Support", "hp": 3600, "attack": 240, "defense": 120, "x": 15, "z": 10 }
+        {
+          "id": "a",
+          "role": "Tank",
+          "hp": 6000,
+          "attack": 240,
+          "defense": 240,
+          "x": 10,
+          "z": 10
+        },
+        {
+          "id": "b",
+          "role": "Fighter",
+          "hp": 4800,
+          "attack": 360,
+          "defense": 160,
+          "x": 11,
+          "z": 10
+        },
+        {
+          "id": "c",
+          "role": "Assassin",
+          "hp": 3200,
+          "attack": 440,
+          "defense": 100,
+          "x": 12,
+          "z": 10
+        },
+        {
+          "id": "d",
+          "role": "Mage",
+          "hp": 3200,
+          "attack": 400,
+          "defense": 100,
+          "x": 13,
+          "z": 10
+        },
+        {
+          "id": "e",
+          "role": "Control",
+          "hp": 3600,
+          "attack": 320,
+          "defense": 120,
+          "x": 14,
+          "z": 10
+        },
+        {
+          "id": "f",
+          "role": "Support",
+          "hp": 3600,
+          "attack": 240,
+          "defense": 120,
+          "x": 15,
+          "z": 10
+        }
       ],
       "defenders": [
-        { "id": "g1", "role": "Tank", "hp": 8000, "attack": 640, "defense": 240, "x": 14, "z": 14 },
-        { "id": "g2", "role": "Mage", "hp": 8000, "attack": 640, "defense": 240, "x": 17, "z": 17 },
-        { "id": "g3", "role": "Support", "hp": 8000, "attack": 640, "defense": 240, "x": 20, "z": 17 },
-        { "id": "g4", "role": "Assassin", "hp": 8000, "attack": 640, "defense": 240, "x": 12, "z": 20 },
-        { "id": "g5", "role": "Fighter", "hp": 8000, "attack": 640, "defense": 240, "x": 20, "z": 12 }
+        {
+          "id": "g1",
+          "role": "Tank",
+          "hp": 8000,
+          "attack": 640,
+          "defense": 240,
+          "x": 14,
+          "z": 14
+        },
+        {
+          "id": "g2",
+          "role": "Mage",
+          "hp": 8000,
+          "attack": 640,
+          "defense": 240,
+          "x": 17,
+          "z": 17
+        },
+        {
+          "id": "g3",
+          "role": "Support",
+          "hp": 8000,
+          "attack": 640,
+          "defense": 240,
+          "x": 20,
+          "z": 17
+        },
+        {
+          "id": "g4",
+          "role": "Assassin",
+          "hp": 8000,
+          "attack": 640,
+          "defense": 240,
+          "x": 12,
+          "z": 20
+        },
+        {
+          "id": "g5",
+          "role": "Fighter",
+          "hp": 8000,
+          "attack": 640,
+          "defense": 240,
+          "x": 20,
+          "z": 12
+        }
       ]
     },
     {
       "name": "rally, attacking",
-      "checksum": "0d4110c7b363990b", "stars": 3, "damagePercent": 100, "endTick": 1016, "heroesAlive": 6,
+      "checksum": "38bbe799602e53ed",
+      "stars": 3,
+      "damagePercent": 100,
+      "endTick": 1040,
+      "heroesAlive": 6,
       "team": [
-        { "id": "a", "role": "Tank", "hp": 1500, "attack": 60, "defense": 60, "x": 40, "z": 40 },
-        { "id": "b", "role": "Fighter", "hp": 1200, "attack": 90, "defense": 40, "x": 41, "z": 41, "special": "rally" },
-        { "id": "c", "role": "Assassin", "hp": 800, "attack": 110, "defense": 25, "x": 42, "z": 42 },
-        { "id": "d", "role": "Mage", "hp": 800, "attack": 100, "defense": 25, "x": 3, "z": 3 },
-        { "id": "e", "role": "Control", "hp": 900, "attack": 80, "defense": 30, "x": 4, "z": 3 },
-        { "id": "f", "role": "Support", "hp": 900, "attack": 60, "defense": 30, "x": 5, "z": 3 }
+        {
+          "id": "a",
+          "role": "Tank",
+          "hp": 1500,
+          "attack": 60,
+          "defense": 60,
+          "x": 40,
+          "z": 40
+        },
+        {
+          "id": "b",
+          "role": "Fighter",
+          "hp": 1200,
+          "attack": 90,
+          "defense": 40,
+          "x": 41,
+          "z": 41,
+          "special": "rally"
+        },
+        {
+          "id": "c",
+          "role": "Assassin",
+          "hp": 800,
+          "attack": 110,
+          "defense": 25,
+          "x": 42,
+          "z": 42
+        },
+        {
+          "id": "d",
+          "role": "Mage",
+          "hp": 800,
+          "attack": 100,
+          "defense": 25,
+          "x": 3,
+          "z": 3
+        },
+        {
+          "id": "e",
+          "role": "Control",
+          "hp": 900,
+          "attack": 80,
+          "defense": 30,
+          "x": 4,
+          "z": 3
+        },
+        {
+          "id": "f",
+          "role": "Support",
+          "hp": 900,
+          "attack": 60,
+          "defense": 30,
+          "x": 5,
+          "z": 3
+        }
       ]
     },
     {
       "name": "rally, defending",
-      "checksum": "d77cedd792c1e424", "stars": 0, "damagePercent": 0, "endTick": 619, "heroesAlive": 0, "defendersAlive": 5,
+      "checksum": "d77cedd792c1e424",
+      "stars": 0,
+      "damagePercent": 0,
+      "endTick": 619,
+      "heroesAlive": 0,
+      "defendersAlive": 5,
       "team": [
-        { "id": "a", "role": "Tank", "hp": 6000, "attack": 240, "defense": 240, "x": 10, "z": 10 },
-        { "id": "b", "role": "Fighter", "hp": 4800, "attack": 360, "defense": 160, "x": 11, "z": 10 },
-        { "id": "c", "role": "Assassin", "hp": 3200, "attack": 440, "defense": 100, "x": 12, "z": 10 },
-        { "id": "d", "role": "Mage", "hp": 3200, "attack": 400, "defense": 100, "x": 13, "z": 10 },
-        { "id": "e", "role": "Control", "hp": 3600, "attack": 320, "defense": 120, "x": 14, "z": 10 },
-        { "id": "f", "role": "Support", "hp": 3600, "attack": 240, "defense": 120, "x": 15, "z": 10 }
+        {
+          "id": "a",
+          "role": "Tank",
+          "hp": 6000,
+          "attack": 240,
+          "defense": 240,
+          "x": 10,
+          "z": 10
+        },
+        {
+          "id": "b",
+          "role": "Fighter",
+          "hp": 4800,
+          "attack": 360,
+          "defense": 160,
+          "x": 11,
+          "z": 10
+        },
+        {
+          "id": "c",
+          "role": "Assassin",
+          "hp": 3200,
+          "attack": 440,
+          "defense": 100,
+          "x": 12,
+          "z": 10
+        },
+        {
+          "id": "d",
+          "role": "Mage",
+          "hp": 3200,
+          "attack": 400,
+          "defense": 100,
+          "x": 13,
+          "z": 10
+        },
+        {
+          "id": "e",
+          "role": "Control",
+          "hp": 3600,
+          "attack": 320,
+          "defense": 120,
+          "x": 14,
+          "z": 10
+        },
+        {
+          "id": "f",
+          "role": "Support",
+          "hp": 3600,
+          "attack": 240,
+          "defense": 120,
+          "x": 15,
+          "z": 10
+        }
       ],
       "defenders": [
-        { "id": "g1", "role": "Tank", "hp": 5000, "attack": 400, "defense": 150, "x": 14, "z": 14 },
-        { "id": "g2", "role": "Mage", "hp": 5000, "attack": 400, "defense": 150, "x": 17, "z": 17 },
-        { "id": "g3", "role": "Support", "hp": 5000, "attack": 400, "defense": 150, "x": 20, "z": 17 },
-        { "id": "g4", "role": "Assassin", "hp": 5000, "attack": 400, "defense": 150, "x": 12, "z": 20 },
-        { "id": "g5", "role": "Fighter", "hp": 5000, "attack": 400, "defense": 150, "x": 20, "z": 12, "special": "rally" }
+        {
+          "id": "g1",
+          "role": "Tank",
+          "hp": 5000,
+          "attack": 400,
+          "defense": 150,
+          "x": 14,
+          "z": 14
+        },
+        {
+          "id": "g2",
+          "role": "Mage",
+          "hp": 5000,
+          "attack": 400,
+          "defense": 150,
+          "x": 17,
+          "z": 17
+        },
+        {
+          "id": "g3",
+          "role": "Support",
+          "hp": 5000,
+          "attack": 400,
+          "defense": 150,
+          "x": 20,
+          "z": 17
+        },
+        {
+          "id": "g4",
+          "role": "Assassin",
+          "hp": 5000,
+          "attack": 400,
+          "defense": 150,
+          "x": 12,
+          "z": 20
+        },
+        {
+          "id": "g5",
+          "role": "Fighter",
+          "hp": 5000,
+          "attack": 400,
+          "defense": 150,
+          "x": 20,
+          "z": 12,
+          "special": "rally"
+        }
       ]
     },
     {
       "name": "rarity power",
-      "checksum": "29d14d19ef5a53e6", "stars": 2, "damagePercent": 93, "endTick": 1800, "heroesAlive": 2, "defendersAlive": 0,
+      "checksum": "29d14d19ef5a53e6",
+      "stars": 2,
+      "damagePercent": 93,
+      "endTick": 1800,
+      "heroesAlive": 2,
+      "defendersAlive": 0,
       "team": [
-        { "id": "a", "role": "Tank", "hp": 6000, "attack": 240, "defense": 240, "x": 10, "z": 10, "power": 50 },
-        { "id": "b", "role": "Fighter", "hp": 4800, "attack": 360, "defense": 160, "x": 11, "z": 10, "power": 75 },
-        { "id": "c", "role": "Assassin", "hp": 3200, "attack": 440, "defense": 100, "x": 12, "z": 10, "power": 50 },
-        { "id": "d", "role": "Mage", "hp": 3200, "attack": 400, "defense": 100, "x": 13, "z": 10, "power": 75 },
-        { "id": "e", "role": "Control", "hp": 3600, "attack": 320, "defense": 120, "x": 14, "z": 10, "power": 50 },
-        { "id": "f", "role": "Support", "hp": 3600, "attack": 240, "defense": 120, "x": 15, "z": 10, "power": 75 }
+        {
+          "id": "a",
+          "role": "Tank",
+          "hp": 6000,
+          "attack": 240,
+          "defense": 240,
+          "x": 10,
+          "z": 10,
+          "power": 50
+        },
+        {
+          "id": "b",
+          "role": "Fighter",
+          "hp": 4800,
+          "attack": 360,
+          "defense": 160,
+          "x": 11,
+          "z": 10,
+          "power": 75
+        },
+        {
+          "id": "c",
+          "role": "Assassin",
+          "hp": 3200,
+          "attack": 440,
+          "defense": 100,
+          "x": 12,
+          "z": 10,
+          "power": 50
+        },
+        {
+          "id": "d",
+          "role": "Mage",
+          "hp": 3200,
+          "attack": 400,
+          "defense": 100,
+          "x": 13,
+          "z": 10,
+          "power": 75
+        },
+        {
+          "id": "e",
+          "role": "Control",
+          "hp": 3600,
+          "attack": 320,
+          "defense": 120,
+          "x": 14,
+          "z": 10,
+          "power": 50
+        },
+        {
+          "id": "f",
+          "role": "Support",
+          "hp": 3600,
+          "attack": 240,
+          "defense": 120,
+          "x": 15,
+          "z": 10,
+          "power": 75
+        }
       ],
       "defenders": [
-        { "id": "g1", "role": "Tank", "hp": 5000, "attack": 400, "defense": 150, "x": 14, "z": 14, "power": 75 },
-        { "id": "g2", "role": "Mage", "hp": 5000, "attack": 400, "defense": 150, "x": 17, "z": 17, "power": 50 },
-        { "id": "g3", "role": "Support", "hp": 5000, "attack": 400, "defense": 150, "x": 20, "z": 17, "power": 50 },
-        { "id": "g4", "role": "Assassin", "hp": 5000, "attack": 400, "defense": 150, "x": 12, "z": 20, "power": 75 }
+        {
+          "id": "g1",
+          "role": "Tank",
+          "hp": 5000,
+          "attack": 400,
+          "defense": 150,
+          "x": 14,
+          "z": 14,
+          "power": 75
+        },
+        {
+          "id": "g2",
+          "role": "Mage",
+          "hp": 5000,
+          "attack": 400,
+          "defense": 150,
+          "x": 17,
+          "z": 17,
+          "power": 50
+        },
+        {
+          "id": "g3",
+          "role": "Support",
+          "hp": 5000,
+          "attack": 400,
+          "defense": 150,
+          "x": 20,
+          "z": 17,
+          "power": 50
+        },
+        {
+          "id": "g4",
+          "role": "Assassin",
+          "hp": 5000,
+          "attack": 400,
+          "defense": 150,
+          "x": 12,
+          "z": 20,
+          "power": 75
+        }
+      ]
+    },
+    {
+      "name": "traps: a hero trap and a bomb trap where they land",
+      "checksum": "c612b39ab940cba0",
+      "stars": 2,
+      "damagePercent": 68,
+      "endTick": 874,
+      "heroesAlive": 0,
+      "team": [
+        {
+          "id": "trap-hero",
+          "role": "Fighter",
+          "hp": 2600,
+          "attack": 150,
+          "defense": 40,
+          "x": 3,
+          "z": 3
+        },
+        {
+          "id": "militia",
+          "role": "Fighter",
+          "hp": 110,
+          "attack": 14,
+          "defense": 5,
+          "x": 5,
+          "z": 3,
+          "isTroop": true
+        },
+        {
+          "id": "militia",
+          "role": "Fighter",
+          "hp": 110,
+          "attack": 14,
+          "defense": 5,
+          "x": 5,
+          "z": 3,
+          "isTroop": true
+        },
+        {
+          "id": "militia",
+          "role": "Fighter",
+          "hp": 110,
+          "attack": 14,
+          "defense": 5,
+          "x": 5,
+          "z": 3,
+          "isTroop": true
+        },
+        {
+          "id": "militia",
+          "role": "Fighter",
+          "hp": 110,
+          "attack": 14,
+          "defense": 5,
+          "x": 5,
+          "z": 3,
+          "isTroop": true
+        },
+        {
+          "id": "militia",
+          "role": "Fighter",
+          "hp": 110,
+          "attack": 14,
+          "defense": 5,
+          "x": 5,
+          "z": 3,
+          "isTroop": true
+        },
+        {
+          "id": "militia",
+          "role": "Fighter",
+          "hp": 110,
+          "attack": 14,
+          "defense": 5,
+          "x": 5,
+          "z": 3,
+          "isTroop": true
+        }
+      ],
+      "extraBuildings": [
+        {
+          "id": 901,
+          "definitionId": "hero_trap",
+          "x": 3,
+          "z": 3,
+          "width": 1,
+          "depth": 1,
+          "level": 1,
+          "hp": 1,
+          "attack": 220,
+          "range": 1,
+          "isTrap": true
+        },
+        {
+          "id": 902,
+          "definitionId": "bomb_trap",
+          "x": 5,
+          "z": 3,
+          "width": 1,
+          "depth": 1,
+          "level": 1,
+          "hp": 1,
+          "attack": 120,
+          "range": 2,
+          "isTrap": true
+        }
+      ]
+    },
+    {
+      "name": "towers: a cannon tower and a magic tower against a pack of troops",
+      "checksum": "467a6741e8d07bbf",
+      "stars": 2,
+      "damagePercent": 96,
+      "endTick": 1800,
+      "heroesAlive": 1,
+      "team": [
+        {
+          "id": "trap-hero",
+          "role": "Fighter",
+          "hp": 2600,
+          "attack": 150,
+          "defense": 40,
+          "x": 3,
+          "z": 3
+        },
+        {
+          "id": "militia",
+          "role": "Fighter",
+          "hp": 110,
+          "attack": 14,
+          "defense": 5,
+          "x": 5,
+          "z": 3,
+          "isTroop": true
+        },
+        {
+          "id": "militia",
+          "role": "Fighter",
+          "hp": 110,
+          "attack": 14,
+          "defense": 5,
+          "x": 5,
+          "z": 3,
+          "isTroop": true
+        },
+        {
+          "id": "militia",
+          "role": "Fighter",
+          "hp": 110,
+          "attack": 14,
+          "defense": 5,
+          "x": 5,
+          "z": 3,
+          "isTroop": true
+        },
+        {
+          "id": "militia",
+          "role": "Fighter",
+          "hp": 110,
+          "attack": 14,
+          "defense": 5,
+          "x": 5,
+          "z": 3,
+          "isTroop": true
+        },
+        {
+          "id": "militia",
+          "role": "Fighter",
+          "hp": 110,
+          "attack": 14,
+          "defense": 5,
+          "x": 5,
+          "z": 3,
+          "isTroop": true
+        },
+        {
+          "id": "militia",
+          "role": "Fighter",
+          "hp": 110,
+          "attack": 14,
+          "defense": 5,
+          "x": 5,
+          "z": 3,
+          "isTroop": true
+        }
+      ],
+      "extraBuildings": [
+        {
+          "id": 911,
+          "definitionId": "cannon_tower",
+          "x": 8,
+          "z": 7,
+          "width": 3,
+          "depth": 3,
+          "level": 5,
+          "hp": 3000,
+          "attack": 330,
+          "range": 10
+        },
+        {
+          "id": 912,
+          "definitionId": "spirit_turret",
+          "x": 4,
+          "z": 10,
+          "width": 3,
+          "depth": 3,
+          "level": 5,
+          "hp": 2600,
+          "attack": 150,
+          "range": 13
+        }
       ]
     }
   ]

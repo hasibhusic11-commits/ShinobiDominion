@@ -96,7 +96,8 @@ namespace ShinobiDominion.Core
                     attack = row.attack,
                     range = row.range,
                     isWall = definition.IsWall,
-                    isDefense = definition.function == BuildingFunction.Defense
+                    isDefense = definition.function == BuildingFunction.Defense,
+                    isTrap = definition.function == BuildingFunction.Trap
                 });
             }
 

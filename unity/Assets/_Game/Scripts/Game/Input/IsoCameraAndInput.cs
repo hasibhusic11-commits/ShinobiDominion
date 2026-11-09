@@ -43,13 +43,13 @@ namespace ShinobiDominion.Game
         {
             Camera = GetComponent<Camera>();
             Camera.orthographic = true;
-            Camera.orthographicSize = Mathf.Clamp(size, MinSize, MaxSize);
+            Camera.orthographicSize = Mathf.Clamp(size, MinSize, MaxSizeNow);
             _targetSize = Camera.orthographicSize;
             Camera.nearClipPlane = 0.1f;
             Camera.farClipPlane = 400f;
             Camera.allowMSAA = GameQuality.Current == VisualQuality.High;
             Camera.clearFlags = CameraClearFlags.SolidColor;
-            Camera.backgroundColor = Palette.Sky.linear;
+            Camera.backgroundColor = VillageMap.Loaded ? VillageMap.EdgeColor.linear : Palette.Sky.linear;
             transform.rotation = Quaternion.Euler(IsoCamera.Pitch, 45f, 0f);
             _focus = focus;
             Apply();
@@ -72,8 +72,7 @@ namespace ShinobiDominion.Game
             _lastTouchTime = Time.unscaledTime;
             // Where the grabbed point would sit exactly under the finger; past the edge the view follows less and less.
             var wanted = _focus + grabbedWorld - GroundPoint(screen);
-            _focus.x = Resist(wanted.x, -PanMargin, Extent + PanMargin);
-            _focus.z = Resist(wanted.z, -PanMargin, Extent + PanMargin);
+            _focus = Resisted(wanted);
             Apply();
         }
 
@@ -84,8 +83,40 @@ namespace ShinobiDominion.Game
             return value;
         }
 
-        private Vector3 Inside(Vector3 focus) =>
-            new Vector3(Mathf.Clamp(focus.x, -PanMargin, Extent + PanMargin), 0f, Mathf.Clamp(focus.z, -PanMargin, Extent + PanMargin));
+        private Vector3 Inside(Vector3 focus)
+        {
+            if (!VillageMap.Loaded)
+                return new Vector3(Mathf.Clamp(focus.x, -PanMargin, Extent + PanMargin), 0f, Mathf.Clamp(focus.z, -PanMargin, Extent + PanMargin));
+            ViewLimits(out var min, out var max);
+            var view = VillageMap.ToView(focus);
+            return VillageMap.FromView(new Vector2(Mathf.Clamp(view.x, min.x, max.x), Mathf.Clamp(view.y, min.y, max.y)));
+        }
+
+        /// <summary>The largest zoom-out: the painting fills the screen (VillageMap), or the old fixed limit without it.</summary>
+        private float MaxSizeNow => VillageMap.Loaded && Camera != null ? Mathf.Max(MinSize, Mathf.Min(MaxSize, VillageMap.MaxViewSize(Camera.aspect))) : MaxSize;
+
+        /// <summary>
+        /// Where the view centre may go, in the view plane, so the screen never shows past the painting: its
+        /// rectangle shrunk by half the screen. When the screen is wider than the painting, the centre is fixed.
+        /// </summary>
+        private void ViewLimits(out Vector2 min, out Vector2 max)
+        {
+            var half = new Vector2(Camera.orthographicSize * Camera.aspect, Camera.orthographicSize);
+            min = VillageMap.ViewMin + half;
+            max = VillageMap.ViewMax - half;
+            if (min.x > max.x) min.x = max.x = (VillageMap.ViewMin.x + VillageMap.ViewMax.x) * 0.5f;
+            if (min.y > max.y) min.y = max.y = (VillageMap.ViewMin.y + VillageMap.ViewMax.y) * 0.5f;
+        }
+
+        /// <summary>A drag past the edge follows less and less, in the view plane when the painting is in use.</summary>
+        private Vector3 Resisted(Vector3 wanted)
+        {
+            if (!VillageMap.Loaded)
+                return new Vector3(Resist(wanted.x, -PanMargin, Extent + PanMargin), 0f, Resist(wanted.z, -PanMargin, Extent + PanMargin));
+            ViewLimits(out var min, out var max);
+            var view = VillageMap.ToView(wanted);
+            return VillageMap.FromView(new Vector2(Resist(view.x, min.x, max.x), Resist(view.y, min.y, max.y)));
+        }
 
         /// <summary>Factor below 1 zooms in. The ground under the screen point stays put.</summary>
         public void ZoomAt(float factor, Vector2 screen)
@@ -93,7 +124,7 @@ namespace ShinobiDominion.Game
             _lastTouchTime = Time.unscaledTime;
             _zoomingSmoothly = false;
             var before = GroundPoint(screen);
-            Camera.orthographicSize = Mathf.Clamp(Camera.orthographicSize * factor, MinSize, MaxSize);
+            Camera.orthographicSize = Mathf.Clamp(Camera.orthographicSize * factor, MinSize, MaxSizeNow);
             Apply();
             _focus += before - GroundPoint(screen);
             _targetSize = Camera.orthographicSize;
@@ -105,7 +136,7 @@ namespace ShinobiDominion.Game
         /// <summary>Mouse-wheel zoom eases toward its target rather than jumping.</summary>
         public void ZoomSmooth(float factor, Vector2 screen)
         {
-            _targetSize = Mathf.Clamp(_targetSize * factor, MinSize, MaxSize);
+            _targetSize = Mathf.Clamp(_targetSize * factor, MinSize, MaxSizeNow);
             _zoomAnchor = screen;
             _zoomingSmoothly = true;
         }
@@ -198,8 +229,17 @@ namespace ShinobiDominion.Game
         private void Apply()
         {
             // A drag may stretch past the edge only by the overscroll; the spring in Update brings it back.
-            _focus.x = Mathf.Clamp(_focus.x, -PanMargin - Overscroll, Extent + PanMargin + Overscroll);
-            _focus.z = Mathf.Clamp(_focus.z, -PanMargin - Overscroll, Extent + PanMargin + Overscroll);
+            if (VillageMap.Loaded)
+            {
+                ViewLimits(out var min, out var max);
+                var view = VillageMap.ToView(_focus);
+                _focus = VillageMap.FromView(new Vector2(Mathf.Clamp(view.x, min.x - Overscroll, max.x + Overscroll), Mathf.Clamp(view.y, min.y - Overscroll, max.y + Overscroll)));
+            }
+            else
+            {
+                _focus.x = Mathf.Clamp(_focus.x, -PanMargin - Overscroll, Extent + PanMargin + Overscroll);
+                _focus.z = Mathf.Clamp(_focus.z, -PanMargin - Overscroll, Extent + PanMargin + Overscroll);
+            }
             _focus.y = 0f;
             transform.position = _focus - transform.forward * Distance + _shakeOffset;
         }

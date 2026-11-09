@@ -54,6 +54,8 @@ namespace ShinobiDominion.Core
         public int range;
         public bool isWall;
         public bool isDefense;
+        /// <summary>A hidden trap: walked over, never targeted, and counts for nothing in the score (ADR-046).</summary>
+        public bool isTrap;
     }
 
     /// <summary>What each entry in the battle log means. Numbers are shared with the server.</summary>
@@ -90,7 +92,11 @@ namespace ShinobiDominion.Core
         /// <summary>a = unit (c = 0) or defender (c = 1), b = ability charge now, 0 to BattleSim.ChargeFull.</summary>
         Charge = 15,
         /// <summary>a = unit (c = 0) or defender (c = 1) who roared, b = allies (itself included) now attacking faster.</summary>
-        Rally = 16
+        Rally = 16,
+        /// <summary>a = trap building id, b = 0 for a Bomb Trap or 1 for a Hero Trap. The trap is spent.</summary>
+        TrapFired = 17,
+        /// <summary>a = trap building id, b = unit hit, c = damage, d = unit HP left.</summary>
+        TrapHit = 18
     }
 
     public sealed class BattleResult
@@ -215,6 +221,8 @@ namespace ShinobiDominion.Core
             public int Evolution;
             public int Power = 100;
             public bool IsTroop;
+            /// <summary>Holds the unit in place after a Hero Trap: it does nothing until it runs out.</summary>
+            public int StunTimer;
         }
 
         private sealed class Defender
@@ -252,6 +260,7 @@ namespace ShinobiDominion.Core
         private readonly Unit[] _units;
         private readonly Defender[] _defenders;
         private readonly Structure[] _structures;
+        private readonly Structure[] _traps;
         private readonly int[] _grid = new int[GridSize * GridSize];
         private readonly int[] _cost = new int[GridSize * GridSize];
         private readonly int[] _from = new int[GridSize * GridSize];
@@ -266,7 +275,9 @@ namespace ShinobiDominion.Core
 
         private BattleSim(IEnumerable<BattleBuildingInput> buildings, IEnumerable<BattleHeroInput> heroes, IEnumerable<BattleDefenderInput> defenders)
         {
-            _structures = buildings.Select(b => new Structure { Input = b, Hp = b.hp }).ToArray();
+            var all = buildings.ToList();
+            _structures = all.Where(b => !b.isTrap).Select(b => new Structure { Input = b, Hp = b.hp }).ToArray();
+            _traps = all.Where(b => b.isTrap).Select(b => new Structure { Input = b, Hp = b.hp }).ToArray();
             for (var i = 0; i < _structures.Length; i++)
             {
                 var b = _structures[i].Input;
@@ -351,8 +362,12 @@ namespace ShinobiDominion.Core
         public static bool CanDeployAt(IEnumerable<BattleBuildingInput> buildings, int x, int z)
         {
             foreach (var b in buildings)
+            {
+                // A trap must not give itself away, so landing beside one is allowed.
+                if (b.isTrap) continue;
                 if (x >= b.x - DeployClearance && x < b.x + b.width + DeployClearance && z >= b.z - DeployClearance && z < b.z + b.depth + DeployClearance)
                     return false;
+            }
             return true;
         }
 
@@ -362,6 +377,8 @@ namespace ShinobiDominion.Core
             {
                 foreach (var unit in _units)
                     if (unit.Hp > 0) StepUnit(unit);
+                foreach (var trap in _traps)
+                    if (trap.Alive) CheckTrap(trap);
                 foreach (var defender in _defenders)
                     if (defender.Hp > 0) StepDefender(defender);
                 foreach (var structure in _structures)
@@ -478,6 +495,11 @@ namespace ShinobiDominion.Core
 
         private void StepUnit(Unit unit)
         {
+            if (unit.StunTimer > 0)
+            {
+                unit.StunTimer--;
+                return;
+            }
             if (unit.AttackTimer > 0) unit.AttackTimer--;
             if (unit.GuardTimer > 0) unit.GuardTimer--;
             if (unit.HasteTimer > 0) unit.HasteTimer--;
@@ -1042,6 +1064,56 @@ namespace ShinobiDominion.Core
         private static bool InRange(int px, int pz, BattleBuildingInput b, int range) =>
             SquaredDistance(px, pz, b) <= (long)range * range;
 
+        // ---------- Traps (ADR-046) ----------
+
+        private const int TrapTrigger = 120;
+        private const int HeroTrapStun = 30;
+
+        private void TrapHit(Structure trap, Unit unit)
+        {
+            var amount = trap.Input.attack * 100 / (100 + unit.Defense);
+            if (amount < 1) amount = 1;
+            if (amount > unit.Hp) amount = unit.Hp;
+            unit.Hp -= amount;
+            Log(BattleEventKind.TrapHit, trap.Input.id, unit.Index, amount, unit.Hp);
+            if (unit.Hp == 0) Log(BattleEventKind.HeroDown, unit.Index);
+        }
+
+        /// <summary>Fires a trap once something it catches comes close: troops for a Bomb Trap, a hero for a Hero Trap.</summary>
+        private void CheckTrap(Structure trap)
+        {
+            var b = trap.Input;
+            var cx = b.x * CellUnits + b.width * CellUnits / 2;
+            var cz = b.z * CellUnits + b.depth * CellUnits / 2;
+            var heroTrap = b.definitionId == "hero_trap";
+            Unit caught = null;
+            foreach (var unit in _units)
+            {
+                if (unit.Hp <= 0 || unit.IsTroop == heroTrap) continue;
+                if (SquaredPoints(unit.Px, unit.Pz, cx, cz) <= (long)TrapTrigger * TrapTrigger)
+                {
+                    caught = unit;
+                    break;
+                }
+            }
+            if (caught == null) return;
+            trap.Alive = false;
+            if (heroTrap)
+            {
+                Log(BattleEventKind.TrapFired, b.id, 1);
+                TrapHit(trap, caught);
+                if (caught.Hp > 0) caught.StunTimer = HeroTrapStun;
+                return;
+            }
+            Log(BattleEventKind.TrapFired, b.id, 0);
+            var reach = (long)b.range * CellUnits;
+            foreach (var unit in _units)
+            {
+                if (unit.Hp <= 0 || !unit.IsTroop) continue;
+                if (SquaredPoints(unit.Px, unit.Pz, cx, cz) <= reach * reach) TrapHit(trap, unit);
+            }
+        }
+
         // ---------- Towers ----------
 
         private void StepTower(Structure tower)
@@ -1055,7 +1127,13 @@ namespace ShinobiDominion.Core
             if (tower.ShotTimer > 0) return;
 
             var input = tower.Input;
-            var splashing = input.definitionId == "spirit_turret";
+            // Each tower fires its own way (owner, 2026-11-09: Arrow, Cannon and Magic are one switchable building):
+            // the Arrow Tower shoots fast, single shots; the Cannon Tower fires slow, heavy balls with a small blast;
+            // the Magic Tower's bolts splash wider for less. Mirrors the server's stepTower.
+            var cannon = input.definitionId == "cannon_tower";
+            var splashing = cannon || input.definitionId == "spirit_turret";
+            var blast = cannon ? 100L : 150L;
+            var blastPercent = cannon ? 60L : 50L;
             var reach = (long)input.range * CellUnits;
             Unit chosen = null;
             var chosenDistance = long.MaxValue;
@@ -1075,7 +1153,7 @@ namespace ShinobiDominion.Core
             }
             if (chosen == null) return;
 
-            tower.ShotTimer = splashing ? 15 : 10;
+            tower.ShotTimer = cannon ? 25 : splashing ? 15 : 10;
             Shoot(tower, chosen, 100);
             if (!splashing) return;
             foreach (var unit in _units)
@@ -1083,7 +1161,7 @@ namespace ShinobiDominion.Core
                 if (unit == chosen || unit.Hp <= 0) continue;
                 var dx = (long)(unit.Px - chosen.Px);
                 var dz = (long)(unit.Pz - chosen.Pz);
-                if (dx * dx + dz * dz <= 150L * 150L) Shoot(tower, unit, 50);
+                if (dx * dx + dz * dz <= blast * blast) Shoot(tower, unit, blastPercent);
             }
         }
 

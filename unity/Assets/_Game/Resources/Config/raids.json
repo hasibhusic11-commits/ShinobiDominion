@@ -52,7 +52,7 @@
           "z": 8
         },
         {
-          "def": "crystal_mine",
+          "def": "mana_mill",
           "level": 1,
           "x": 8,
           "z": 40
@@ -234,8 +234,8 @@
         {
           "def": "gold_vault",
           "level": 2,
-          "x": 19,
-          "z": 19
+          "x": 18,
+          "z": 20
         },
         {
           "def": "gold_mine",
@@ -353,7 +353,7 @@
           "z": 29
         },
         {
-          "def": "crystal_mine",
+          "def": "mana_mill",
           "level": 2,
           "x": 29,
           "z": 29
@@ -468,7 +468,7 @@
           "z": 29
         },
         {
-          "def": "crystal_mine",
+          "def": "mana_mill",
           "level": 2,
           "x": 29,
           "z": 29
@@ -589,7 +589,7 @@
           "z": 29
         },
         {
-          "def": "crystal_mine",
+          "def": "mana_mill",
           "level": 3,
           "x": 29,
           "z": 29
@@ -710,7 +710,7 @@
           "z": 29
         },
         {
-          "def": "crystal_mine",
+          "def": "mana_mill",
           "level": 3,
           "x": 29,
           "z": 29
@@ -837,7 +837,7 @@
           "z": 29
         },
         {
-          "def": "crystal_mine",
+          "def": "mana_mill",
           "level": 3,
           "x": 29,
           "z": 29
@@ -976,7 +976,7 @@
           "z": 29
         },
         {
-          "def": "crystal_mine",
+          "def": "mana_mill",
           "level": 4,
           "x": 29,
           "z": 29
@@ -1109,7 +1109,7 @@
           "z": 29
         },
         {
-          "def": "crystal_mine",
+          "def": "mana_mill",
           "level": 4,
           "x": 29,
           "z": 29
@@ -1248,7 +1248,7 @@
           "z": 29
         },
         {
-          "def": "crystal_mine",
+          "def": "mana_mill",
           "level": 4,
           "x": 29,
           "z": 29
@@ -1393,7 +1393,7 @@
           "z": 29
         },
         {
-          "def": "crystal_mine",
+          "def": "mana_mill",
           "level": 5,
           "x": 29,
           "z": 29
@@ -1401,8 +1401,8 @@
         {
           "def": "gold_mine",
           "level": 5,
-          "x": 18,
-          "z": 24
+          "x": 19,
+          "z": 23
         },
         {
           "def": "hero_base",
@@ -1538,7 +1538,7 @@
           "z": 29
         },
         {
-          "def": "crystal_mine",
+          "def": "mana_mill",
           "level": 5,
           "x": 29,
           "z": 29
@@ -1689,7 +1689,7 @@
           "z": 29
         },
         {
-          "def": "crystal_mine",
+          "def": "mana_mill",
           "level": 5,
           "x": 29,
           "z": 29
@@ -1840,7 +1840,7 @@
           "z": 29
         },
         {
-          "def": "crystal_mine",
+          "def": "mana_mill",
           "level": 6,
           "x": 29,
           "z": 29

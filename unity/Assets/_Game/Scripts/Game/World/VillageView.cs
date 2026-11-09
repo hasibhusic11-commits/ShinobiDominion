@@ -268,13 +268,16 @@ namespace ShinobiDominion.Game
         public const float BaseHeroScale3D = 1.35f;
         public const float BaseHeroScaleSprite = 1.35f;
 
-        /// <summary>The Hero Base pedestal: drawn at this share of the footprint, at the back.</summary>
-        public const float PedestalSize = 0.6f;
-        public static readonly Vector3 PedestalOffset = new Vector3(0.3f, 0f, 0.3f);
-        public const float PedestalTop = 0.08f;
+        /// <summary>
+        /// The Hero Base platform fills its square, and the hero stands on its glowing centre ring (owner, 2026-11-09,
+        /// with the new platform art; this replaces the small pedestal and the hop down beside it).
+        /// </summary>
+        public const float PedestalSize = 1f;
+        public static readonly Vector3 PedestalOffset = Vector3.zero;
+        public const float PedestalTop = 0.3f * BuildingSprites.PictureShare;
 
-        /// <summary>Where the hero stands guard: in front of the pedestal and to its left on screen.</summary>
-        public static readonly Vector3 GuardOffset = new Vector3(-0.45f, 0f, 0.75f);
+        /// <summary>Where the hero stands: on the ring, where it appears.</summary>
+        public static readonly Vector3 GuardOffset = PedestalOffset + Vector3.up * PedestalTop;
 
         private sealed class Entry
         {
@@ -307,7 +310,8 @@ namespace ShinobiDominion.Game
             _root = new GameObject("Buildings").transform;
             _root.SetParent(parent, false);
             _walls = new WallView(parent);
-            _props = new VillageProps(village, parent);
+            // The painted map (VillageMap) carries all the scenery and leaves its field clear, so no scattered props on it.
+            _props = VillageMap.Loaded ? null : new VillageProps(village, parent);
             Sync();
         }
 
@@ -442,7 +446,7 @@ namespace ShinobiDominion.Game
             Renderer[] hero = null;
             if (building.Definition.function == BuildingFunction.HeroBase)
             {
-                // A small pedestal at the back of the base, so the hero, not the base, is the star (owner, 2026-11-08).
+                // The platform, at full size (owner, 2026-11-09).
                 if (stand != null)
                 {
                     stand.ArtSize = PedestalSize;
@@ -459,7 +463,7 @@ namespace ShinobiDominion.Game
                 if (actor != null)
                 {
                     actor.transform.localScale = Vector3.one * (actor.Solid ? BaseHeroScale3D : BaseHeroScaleSprite);
-                    // It appears on the pedestal, then hops down beside it to stand guard.
+                    // It stands on the platform's ring.
                     HeroGuard.Attach(actor, go.transform, PedestalOffset + Vector3.up * PedestalTop, GuardOffset, look != null ? look.Color : Color.white);
                     hero = actor.GetComponentsInChildren<Renderer>(true);
                 }

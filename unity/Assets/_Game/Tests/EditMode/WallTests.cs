@@ -61,7 +61,7 @@ namespace ShinobiDominion.Tests
             var preview = village.PreviewWallRun(new GridCoord(0, 0), new GridCoord(9, 0));
 
             Assert.AreEqual(VillageError.Overlap, preview.Error);
-            Assert.AreEqual(2, preview.Cells.Count(c => !c.IsValid), "Only the two tower cells on this row are red");
+            Assert.AreEqual(3, preview.Cells.Count(c => !c.IsValid), "Only the three tower cells on this row are red");
             Assert.AreEqual(VillageError.Overlap, village.TryPlaceWallRun(new GridCoord(0, 0), new GridCoord(9, 0), Now));
             Assert.AreEqual(gold, village.Gold);
             Assert.AreEqual(0, village.CountOf(Village.WallId));

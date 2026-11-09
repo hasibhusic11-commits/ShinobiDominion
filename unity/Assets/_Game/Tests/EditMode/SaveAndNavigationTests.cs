@@ -166,14 +166,22 @@ namespace ShinobiDominion.Tests
         public void ShippedCatalog_MatchesBriefFootprints()
         {
             var catalog = TestCatalog.Load();
-            AssertSize(catalog, "dojo_hq", 5, 5);
+            AssertSize(catalog, "dojo_hq", 4, 4);
             AssertSize(catalog, "builder_hall", 3, 3);
-            AssertSize(catalog, "hero_altar", 4, 4);
+            AssertSize(catalog, "hero_altar", 3, 3);
             AssertSize(catalog, "hero_base", 2, 2);
-            AssertSize(catalog, "defense_tower", 2, 2);
+            AssertSize(catalog, "defense_tower", 3, 3);
             AssertSize(catalog, "gold_mine", 3, 3);
             AssertSize(catalog, "gold_vault", 3, 3);
-            AssertSize(catalog, "summoning_gate", 4, 4);
+            AssertSize(catalog, "summoning_gate", 3, 3);
+            // The owner's list (2026-11-09): Town Hall 4x4, Hero Base 2x2, Wall 1x1, every other building 3x3; traps are 1x1.
+            foreach (var definition in catalog.All)
+            {
+                if (definition.id == "dojo_hq" || definition.id == "hero_base" || definition.IsWall || definition.IsTrap) continue;
+                AssertSize(catalog, definition.id, 3, 3);
+            }
+            AssertSize(catalog, "bomb_trap", 1, 1);
+            AssertSize(catalog, "hero_trap", 1, 1);
             AssertSize(catalog, "wall", 1, 1);
         }
 

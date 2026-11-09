@@ -40,6 +40,7 @@ const (
 	vUpgrading      vErr = "AlreadyUpgrading"
 	vNoBuilder      vErr = "NoFreeBuilder"
 	vNotUpgrading   vErr = "NotUpgrading"
+	vNotSwitchable  vErr = "NotSwitchable"
 )
 
 // BuildingLevel is one row of a building's level table.
@@ -49,6 +50,7 @@ type BuildingLevel struct {
 	Production   int64 `json:"production"`
 	StoredCap    int64 `json:"storedCap"`
 	GoldCapacity int64 `json:"goldCapacity"`
+	ManaCapacity int64 `json:"manaCapacity"`
 	Hp           int64 `json:"hp"`
 	Attack       int64 `json:"attack"`
 	Range        int   `json:"range"`
@@ -66,6 +68,11 @@ type BuildingDef struct {
 	CostGold     int64           `json:"costGold"`
 	CostCrystals int64           `json:"costCrystals"`
 	MaxCountByHQ []int           `json:"maxCountByHqLevel"`
+	// Group joins buildings that are one building in the player's eyes: the Arrow, Cannon and Magic
+	// Towers (owner, 2026-11-09). They share one count limit, and a placed one can switch between them.
+	Group string `json:"group"`
+	// SwitchOnly buildings are reached only by switching a building of their group, never built.
+	SwitchOnly   bool            `json:"switchOnly"`
 	Produces     string          `json:"produces"`
 	Levels       []BuildingLevel `json:"levels"`
 }
@@ -106,6 +113,7 @@ type BuildingCatalog struct {
 	StartingGold     int64         `json:"startingGold"`
 	StartingMana     int64         `json:"startingMana"`
 	BaseGoldCapacity int64         `json:"baseGoldCapacity"`
+	BaseManaCapacity int64         `json:"baseManaCapacity"`
 	// UpgradeSeconds is how long an upgrade to each level takes, indexed by the level reached (ADR-040).
 	UpgradeSeconds   []int64        `json:"upgradeSeconds"`
 	Buildings        []*BuildingDef `json:"buildings"`
@@ -251,6 +259,54 @@ func (v *village) countOf(id string) int {
 	return count
 }
 
+// countLike counts the buildings that use up the same limit as def: its whole group, or its own kind.
+func (v *village) countLike(def *BuildingDef) int {
+	if def.Group == "" {
+		return v.countOf(def.ID)
+	}
+	count := 0
+	for _, b := range v.byID {
+		if b.Def.Group == def.Group {
+			count++
+		}
+	}
+	return count
+}
+
+// switchKind turns a placed building into another of its group (Arrow, Cannon or Magic Tower). It is
+// free and instant and keeps the level; it waits while the building is being upgraded.
+func (v *village) switchKind(id int, to string) vErr {
+	b, ok := v.byID[id]
+	if !ok {
+		return vNotFound
+	}
+	def, ok := v.catalog.byID[to]
+	if !ok {
+		return vUnknown
+	}
+	if b.Def.Group == "" || def.Group != b.Def.Group || def.ID == b.Def.ID || def.Width != b.Def.Width || def.Depth != b.Def.Depth {
+		return vNotSwitchable
+	}
+	if b.UpgradeDoneMs > 0 {
+		return vUpgrading
+	}
+	if b.Level > def.maxLevel() {
+		return vNotSwitchable
+	}
+	b.Def = def
+	v.updated[id] = b
+	return vOK
+}
+
+// manaCapacity is the base plus every Mana Vault and Warehouse (ADR-046).
+func (v *village) manaCapacity() int64 {
+	capacity := v.catalog.BaseManaCapacity
+	for _, b := range v.byID {
+		capacity += b.Def.at(b.Level).ManaCapacity
+	}
+	return capacity
+}
+
 func (v *village) goldCapacity() int64 {
 	capacity := v.catalog.BaseGoldCapacity
 	for _, b := range v.byID {
@@ -291,7 +347,7 @@ func validRotation(rotation int) bool { return rotation >= 0 && rotation <= 3 }
 
 func (v *village) place(definitionID string, x, z, rotation int, nowMs int64) (*building, vErr) {
 	def, ok := v.catalog.byID[definitionID]
-	if !ok {
+	if !ok || def.SwitchOnly {
 		return nil, vUnknown
 	}
 	if !validRotation(rotation) {
@@ -300,7 +356,7 @@ func (v *village) place(definitionID string, x, z, rotation int, nowMs int64) (*
 	if rotation != 0 && !def.Rotatable {
 		return nil, vNotRotatable
 	}
-	if v.countOf(def.ID) >= def.maxCountAt(v.hqLevel()) {
+	if v.countLike(def) >= def.maxCountAt(v.hqLevel()) {
 		return nil, vLimit
 	}
 	if v.gold < def.CostGold || v.crystals < def.CostCrystals {
@@ -618,8 +674,15 @@ func (v *village) collect(id int, nowMs int64) (int64, vErr) {
 		}
 		v.gold += collected
 	case "Mana":
-		// Mana has no village-wide cap: each mill's own storedCap is the only limit (ADR-038).
+		// Mana Vaults and the Warehouse set how much Mana fits (ADR-046).
+		room := v.manaCapacity() - v.mana
+		if room <= 0 {
+			return 0, vStorageFull
+		}
 		collected = pending
+		if room < collected {
+			collected = room
+		}
 		v.mana += collected
 	default:
 		collected = pending

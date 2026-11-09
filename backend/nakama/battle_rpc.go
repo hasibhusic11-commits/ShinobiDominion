@@ -280,6 +280,9 @@ func (s *Server) makeDefender(id, archetypeID string, evolution, level, x, z int
 
 // rivalSnapshot copies a rival's village and guards as they stand now, in a fixed order.
 func (s *Server) rivalSnapshot(ctx context.Context, tx *sql.Tx, rivalID string) ([]battleBuildingInput, []raidDefender, int, error) {
+	if err := s.fitLayout(ctx, tx, rivalID); err != nil {
+		return nil, nil, 0, err
+	}
 	if err := settleUpgrades(ctx, tx, rivalID); err != nil {
 		return nil, nil, 0, err
 	}
@@ -301,7 +304,7 @@ func (s *Server) rivalSnapshot(ctx context.Context, tx *sql.Tx, rivalID string) 
 		buildings = append(buildings, battleBuildingInput{
 			ID: b.ID, DefinitionID: b.Def.ID, X: b.X, Z: b.Z, Width: width, Depth: depth,
 			Level: b.Level, Hp: row.Hp, Attack: row.Attack, Range: row.Range,
-			IsWall: b.Def.isWall(), IsDefense: b.Def.Function == "Defense",
+			IsWall: b.Def.isWall(), IsDefense: b.Def.Function == "Defense", IsTrap: b.Def.Function == "Trap",
 		})
 		if b.Def.ID == "dojo_hq" {
 			dojoLevel = b.Level

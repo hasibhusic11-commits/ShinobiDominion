@@ -13,7 +13,7 @@
       "name": "map edges",
       "startGold": 5000,
       "ops": [
-        { "op": "place", "def": "defense_tower", "x": 48, "z": 48, "expect": "None", "gold": 4400 },
+        { "op": "place", "def": "defense_tower", "x": 47, "z": 47, "expect": "None", "gold": 4400 },
         { "op": "place", "def": "hero_base", "x": 49, "z": 49, "expect": "OutOfBounds" },
         { "op": "place", "def": "hero_base", "x": 50, "z": 0, "expect": "OutOfBounds" },
         { "op": "place", "def": "hero_base", "x": -1, "z": 0, "expect": "OutOfBounds" },
@@ -61,9 +61,9 @@
       "startGold": 5000,
       "ops": [
         { "op": "place", "def": "training_grounds", "x": 0, "z": 47, "expect": "None", "label": "t", "gold": 3500 },
-        { "op": "move", "target": "t", "x": 0, "z": 47, "rotation": 1, "expect": "OutOfBounds" },
+        { "op": "move", "target": "t", "x": 0, "z": 48, "rotation": 1, "expect": "OutOfBounds" },
         { "op": "move", "target": "t", "x": 0, "z": 46, "rotation": 1, "expect": "None" },
-        { "op": "occupied", "x": 2, "z": 49, "expect": "true" },
+        { "op": "occupied", "x": 2, "z": 48, "expect": "true" },
         { "op": "occupied", "x": 3, "z": 49, "expect": "false" },
         { "op": "place", "def": "hero_base", "x": 20, "z": 20, "rotation": 1, "expect": "NotRotatable" },
         { "op": "place", "def": "hero_base", "x": 20, "z": 20, "expect": "None", "label": "b" },
@@ -262,7 +262,6 @@
       "startGold": 5000,
       "ops": [
         { "op": "place", "def": "mana_mill", "x": 1, "z": 1, "expect": "None", "label": "m", "gold": 4400, "mana": 0 },
-        { "op": "place", "def": "mana_mill", "x": 10, "z": 10, "expect": "LimitReached" },
         { "op": "collect", "target": "m", "expect": "NothingToCollect", "mana": 0 },
         { "op": "advanceHours", "hours": 1 },
         { "op": "collect", "target": "m", "expect": "None", "gold": 4400, "mana": 200 },
@@ -303,18 +302,16 @@
       ]
     },
     {
-      "name": "crystal mine pays crystals",
+      "name": "storage caps Mana, and a Mana Vault raises the cap",
       "startGold": 20000,
-      "startCrystals": 7,
+      "startMana": 9900,
       "ops": [
-        { "op": "place", "def": "crystal_mine", "x": 1, "z": 1, "expect": "LimitReached" },
-        { "op": "place", "def": "dojo_hq", "x": 22, "z": 22, "expect": "None", "label": "d" },
-        { "op": "upgrade", "target": "d", "expect": "None" },
-        { "op": "place", "def": "crystal_mine", "x": 1, "z": 1, "expect": "None", "label": "c" },
+        { "op": "place", "def": "mana_mill", "x": 1, "z": 1, "expect": "None", "label": "m" },
         { "op": "advanceHours", "hours": 2 },
-        { "op": "collect", "target": "c", "expect": "None", "crystals": 15 },
-        { "op": "advanceHours", "hours": 100 },
-        { "op": "collect", "target": "c", "expect": "None", "crystals": 31 }
+        { "op": "collect", "target": "m", "expect": "None", "mana": 10000 },
+        { "op": "collect", "target": "m", "expect": "StorageFull", "mana": 10000 },
+        { "op": "place", "def": "mana_vault", "x": 10, "z": 10, "expect": "None" },
+        { "op": "collect", "target": "m", "expect": "None", "mana": 10300 }
       ]
     },
     {
@@ -373,6 +370,43 @@
         { "op": "finishResearch", "troop": "militia", "expect": "NotUpgrading", "crystals": 42 },
         { "op": "setMana", "mana": 0 },
         { "op": "research", "troop": "kunai_thrower", "expect": "InsufficientMana", "mana": 0 }
+      ]
+    },
+    {
+      "name": "the Arrow, Cannon and Magic Towers are one building: switch freely, keep the level, share one limit",
+      "startGold": 20000,
+      "ops": [
+        { "op": "place", "def": "defense_tower", "x": 1, "z": 1, "expect": "None", "label": "t" },
+        { "op": "place", "def": "cannon_tower", "x": 10, "z": 10, "expect": "UnknownBuilding" },
+        { "op": "upgrade", "target": "t", "expect": "None" },
+        { "op": "switch", "target": "t", "def": "cannon_tower", "expect": "None" },
+        { "op": "defAt", "x": 1, "z": 1, "expect": "cannon_tower" },
+        { "op": "levelAt", "x": 1, "z": 1, "expect": "2" },
+        { "op": "switch", "target": "t", "def": "cannon_tower", "expect": "NotSwitchable" },
+        { "op": "switch", "target": "t", "def": "gold_mine", "expect": "NotSwitchable" },
+        { "op": "switch", "target": "t", "def": "spirit_turret", "expect": "None" },
+        { "op": "defAt", "x": 1, "z": 1, "expect": "spirit_turret" },
+        { "op": "place", "def": "defense_tower", "x": 5, "z": 1, "expect": "None", "label": "a" },
+        { "op": "place", "def": "defense_tower", "x": 1, "z": 5, "expect": "LimitReached" },
+        { "op": "switch", "target": "a", "def": "nothing_like_this", "expect": "UnknownBuilding" }
+      ]
+    },
+    {
+      "name": "four Gold Mines and Mana Mills, a fifth at Town Hall 5 and a sixth at Town Hall 10",
+      "startGold": 100000,
+      "ops": [
+        { "op": "place", "def": "dojo_hq", "x": 22, "z": 22, "expect": "None", "label": "d" },
+        { "op": "place", "def": "mana_mill", "x": 1, "z": 1, "expect": "None" },
+        { "op": "place", "def": "mana_mill", "x": 5, "z": 1, "expect": "None" },
+        { "op": "place", "def": "mana_mill", "x": 9, "z": 1, "expect": "None" },
+        { "op": "place", "def": "mana_mill", "x": 13, "z": 1, "expect": "None" },
+        { "op": "place", "def": "mana_mill", "x": 17, "z": 1, "expect": "LimitReached" },
+        { "op": "setLevel", "target": "d", "level": 5 },
+        { "op": "place", "def": "mana_mill", "x": 17, "z": 1, "expect": "None" },
+        { "op": "place", "def": "mana_mill", "x": 21, "z": 1, "expect": "LimitReached" },
+        { "op": "setLevel", "target": "d", "level": 10 },
+        { "op": "place", "def": "mana_mill", "x": 21, "z": 1, "expect": "None" },
+        { "op": "place", "def": "mana_mill", "x": 25, "z": 1, "expect": "LimitReached" }
       ]
     }
   ]

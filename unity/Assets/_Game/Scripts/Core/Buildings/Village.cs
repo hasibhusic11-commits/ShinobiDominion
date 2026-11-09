@@ -34,6 +34,7 @@ namespace ShinobiDominion.Core
         AlreadyUpgrading,
         NoFreeBuilder,
         NotUpgrading,
+        NotSwitchable,
         NoResearchHut,
         ResearchHutTooLow,
         ResearchBusy
@@ -50,7 +51,7 @@ namespace ShinobiDominion.Core
                 case VillageError.OutOfBounds: return "Outside the 50 x 50 village";
                 case VillageError.Overlap: return "Overlaps another building";
                 case VillageError.BlockedTerrain: return "This ground cannot be built on";
-                case VillageError.LimitReached: return "Limit reached for this Dojo level";
+                case VillageError.LimitReached: return "Limit reached for this Town Hall level";
                 case VillageError.InsufficientFunds: return "Not enough resources";
                 case VillageError.NotFound: return "Building no longer exists";
                 case VillageError.NotRotatable: return "This building cannot rotate";
@@ -64,15 +65,16 @@ namespace ShinobiDominion.Core
                 case VillageError.NothingToCollect: return "Nothing to collect yet";
                 case VillageError.StorageFull: return "Storage is full";
                 case VillageError.NotAWall: return "Not a wall";
-                case VillageError.DojoTooLow: return "Upgrade the Dojo first";
+                case VillageError.DojoTooLow: return "Upgrade the Town Hall first";
                 case VillageError.BadTroop: return "That troop can't be trained";
-                case VillageError.NoTrainingHall: return "Build a Training Hall first";
-                case VillageError.TroopLocked: return "Upgrade the Training Hall first";
-                case VillageError.CampsFull: return "Your Troop Camps are full";
+                case VillageError.NoTrainingHall: return "Build a Training Center first";
+                case VillageError.TroopLocked: return "Upgrade the Training Center first";
+                case VillageError.CampsFull: return "Your Army Camps are full";
                 case VillageError.InsufficientMana: return "Not enough Mana";
                 case VillageError.AlreadyUpgrading: return "Already being upgraded";
                 case VillageError.NoFreeBuilder: return "All builders are busy. Wait, or finish an upgrade with gems.";
                 case VillageError.NotUpgrading: return "Nothing is being upgraded here";
+                case VillageError.NotSwitchable: return "This building can't change into that";
                 case VillageError.NoResearchHut: return "Build a Research Hut first";
                 case VillageError.ResearchHutTooLow: return "Upgrade the Research Hut first";
                 case VillageError.ResearchBusy: return "The Research Hut is already studying something";
@@ -138,6 +140,18 @@ namespace ShinobiDominion.Core
             }
         }
 
+        /// <summary>How much Mana the village can hold: a base amount plus each Mana Vault and Warehouse.</summary>
+        public long ManaCapacity
+        {
+            get
+            {
+                var capacity = Catalog.BaseManaCapacity;
+                foreach (var building in _buildings.Values)
+                    capacity += building.Definition.At(building.Level).manaCapacity;
+                return capacity;
+            }
+        }
+
         public BuildingInstance Find(int id) => _buildings.TryGetValue(id, out var building) ? building : null;
 
         public BuildingInstance BuildingAt(GridCoord cell)
@@ -148,6 +162,11 @@ namespace ShinobiDominion.Core
         }
 
         public int CountOf(string definitionId) => _buildings.Values.Count(b => b.Definition.id == definitionId);
+
+        /// <summary>The buildings that use up the same limit as this one: its whole group, or its own kind.</summary>
+        public int CountLike(BuildingDefinition definition) => string.IsNullOrEmpty(definition.group)
+            ? CountOf(definition.id)
+            : _buildings.Values.Count(b => b.Definition.group == definition.group);
         public int LimitOf(BuildingDefinition definition) => definition.MaxCountAt(HqLevel);
         public bool CanAfford(long gold, long crystals) => Gold >= gold && Crystals >= crystals;
 
@@ -199,9 +218,9 @@ namespace ShinobiDominion.Core
         /// <summary>Full check for building something new: limits, funds and footprint.</summary>
         public VillageError CheckNewPlacement(BuildingDefinition definition, GridCoord origin, Rotation rotation)
         {
-            if (definition == null) return VillageError.UnknownBuilding;
+            if (definition == null || definition.switchOnly) return VillageError.UnknownBuilding;
             if (rotation != Rotation.R0 && !definition.rotatable) return VillageError.NotRotatable;
-            if (CountOf(definition.id) >= LimitOf(definition)) return VillageError.LimitReached;
+            if (CountLike(definition) >= LimitOf(definition)) return VillageError.LimitReached;
             if (!CanAfford(definition.costGold, definition.costCrystals)) return VillageError.InsufficientFunds;
             return CheckFootprint(definition, origin, rotation);
         }
@@ -244,6 +263,31 @@ namespace ShinobiDominion.Core
             if (building.Upgrading) return VillageError.AlreadyUpgrading;
             Grid.Clear(building.Footprint);
             _buildings.Remove(id);
+            Changed?.Invoke();
+            return VillageError.None;
+        }
+
+        /// <summary>The other buildings this one can switch into, in catalog order (the Arrow, Cannon and Magic Towers).</summary>
+        public IEnumerable<BuildingDefinition> SwitchOptions(BuildingInstance building) =>
+            building == null || string.IsNullOrEmpty(building.Definition.group)
+                ? Enumerable.Empty<BuildingDefinition>()
+                : Catalog.All.Where(d => d.group == building.Definition.group && d.id != building.Definition.id);
+
+        /// <summary>
+        /// Turns a placed tower into another of its group (owner, 2026-11-09): free, instant, and it keeps its
+        /// level. Not while it is being upgraded. Mirrors the server's switchKind.
+        /// </summary>
+        public VillageError TrySwitch(int id, string toDefinitionId)
+        {
+            var building = Find(id);
+            if (building == null) return VillageError.NotFound;
+            if (!Catalog.TryGet(toDefinitionId, out var to)) return VillageError.UnknownBuilding;
+            var from = building.Definition;
+            if (string.IsNullOrEmpty(from.group) || to.group != from.group || to.id == from.id || to.width != from.width || to.depth != from.depth)
+                return VillageError.NotSwitchable;
+            if (building.Upgrading) return VillageError.AlreadyUpgrading;
+            if (building.Level > to.maxLevel) return VillageError.NotSwitchable;
+            building.Definition = to;
             Changed?.Invoke();
             return VillageError.None;
         }
@@ -525,8 +569,10 @@ namespace ShinobiDominion.Core
             }
             else if (building.Definition.produces == ResourceKind.Mana)
             {
-                // Mana has no village-wide cap: each mill's own storedCap is the only limit (ADR-038).
-                collected = pending;
+                // Mana Vaults and the Warehouse set how much Mana fits (ADR-046).
+                var room = ManaCapacity - Mana;
+                if (room <= 0) return VillageError.StorageFull;
+                collected = Math.Min(pending, room);
                 Mana += collected;
             }
             else
@@ -658,8 +704,8 @@ namespace ShinobiDominion.Core
             {
                 // Villages from before the one-hero rule may keep their extra bases, empty.
                 if (definition.function == BuildingFunction.HeroBase) continue;
-                if (CountOf(definition.id) > LimitOf(definition))
-                    throw new VillageSaveException($"Too many '{definition.id}' for the Dojo level.");
+                if (CountLike(definition) > LimitOf(definition))
+                    throw new VillageSaveException($"Too many '{definition.id}' for the Town Hall level.");
             }
             foreach (var extra in _buildings.Values.Where(b => b.AssignedHeroInstanceId != null).OrderBy(b => b.Id).Skip(MaxAssignedHeroes).ToList())
                 extra.AssignedHeroInstanceId = null;

@@ -219,6 +219,11 @@ func TestSharedRuleScenarios(t *testing.T) {
 						t.Fatalf("%s: level %d, want %d", where, got, want)
 					}
 					continue
+				case "defAt":
+					if got := v.byID[v.occupantAt(op.X, op.Z)].Def.ID; got != op.Expect {
+						t.Fatalf("%s: building %s, want %s", where, got, op.Expect)
+					}
+					continue
 				}
 
 				var result vErr
@@ -235,6 +240,8 @@ func TestSharedRuleScenarios(t *testing.T) {
 					result = v.move(target, op.X, op.Z, op.Rotation)
 				case "remove":
 					result = v.remove(target)
+				case "switch":
+					result = v.switchKind(target, op.Def)
 				case "upgrade":
 					result = v.upgrade(target, clock)
 				case "finish":

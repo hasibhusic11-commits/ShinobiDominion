@@ -24,6 +24,20 @@ namespace ShinobiDominion.EditorTools
             var path = assetPath.Replace('\\', '/');
             var ui = path.Contains("/Resources/UI/");
             var building = path.Contains("/Resources/Buildings/") || path.Contains("/Resources/Props/");
+            if (path.Contains("/Resources/Map/"))
+            {
+                // The owner's painted village map, laid on the ground (VillageMap): a plain texture, full quality.
+                var map = (TextureImporter)assetImporter;
+                map.textureType = TextureImporterType.Default;
+                map.npotScale = TextureImporterNPOTScale.None;
+                map.mipmapEnabled = true;
+                map.wrapMode = TextureWrapMode.Clamp;
+                map.filterMode = FilterMode.Trilinear;
+                map.anisoLevel = 4;
+                map.maxTextureSize = 2048;
+                map.textureCompression = TextureImporterCompression.Uncompressed;
+                return;
+            }
             if (!ui && !building) return;
             var importer = (TextureImporter)assetImporter;
             importer.textureType = TextureImporterType.Sprite;

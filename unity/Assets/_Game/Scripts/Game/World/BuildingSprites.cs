@@ -18,6 +18,13 @@ namespace ShinobiDominion.Game
         /// <summary>A vertical picture under the 30 degree camera looks squashed by cos(30); this undoes it.</summary>
         public const float Lift = 1.1547005f;
 
+        /// <summary>
+        /// Share of its footprint a building picture is drawn at, centred, so a ring of grass shows around each
+        /// building and the village reads less crowded (owner, 2026-11-09: "the buildings look massive").
+        /// Footprints and the map are unchanged; walls stay full size so they still join.
+        /// </summary>
+        public const float PictureShare = 0.8f;
+
         public static readonly Quaternion Upright = Quaternion.Euler(0f, 45f, 0f);
 
         private static readonly Dictionary<string, Sprite> Cache = new Dictionary<string, Sprite>();
@@ -25,7 +32,48 @@ namespace ShinobiDominion.Game
         public static int ArtLevel(int level) =>
             Mathf.Clamp(1 + Mathf.RoundToInt((Mathf.Clamp(level, 1, GameLevels) - 1) * (ArtLevels - 1) / (float)(GameLevels - 1)), 1, ArtLevels);
 
-        public static Sprite For(string id, int level) => Load($"{id}_{ArtLevel(level):00}");
+        /// <summary>
+        /// The picture for a building at a level. A building whose own art has not arrived borrows a stand-in, and
+        /// traps get a small marker drawn in code, so nothing on the map is ever invisible.
+        /// </summary>
+        public static Sprite For(string id, int level)
+        {
+            var own = Load($"{id}_{ArtLevel(level):00}");
+            if (own != null) return own;
+            if (id == "bomb_trap" || id == "hero_trap") return TrapMarker(id == "hero_trap");
+            return StandIns.TryGetValue(id, out var standIn) ? Load($"{standIn}_{ArtLevel(level):00}") : null;
+        }
+
+        private static readonly Dictionary<string, string> StandIns = new Dictionary<string, string>
+        {
+            { "cannon_tower", "spirit_turret" }
+        };
+
+        private static readonly Dictionary<bool, Sprite> TrapMarkers = new Dictionary<bool, Sprite>();
+
+        /// <summary>A flat iron plate with a red (bomb) or gold (hero) mark, lying on its cell.</summary>
+        private static Sprite TrapMarker(bool hero)
+        {
+            if (TrapMarkers.TryGetValue(hero, out var cached) && cached != null) return cached;
+            const int width = 96, height = 52;
+            var pixels = new Color32[width * height];
+            var mark = hero ? new Color(1f, 0.8f, 0.3f) : new Color(0.9f, 0.25f, 0.2f);
+            for (var y = 0; y < height; y++)
+            for (var x = 0; x < width; x++)
+            {
+                // A diamond the shape of one cell seen from the camera, with a rim and a mark in the middle.
+                var u = Mathf.Abs(x - width * 0.5f) / (width * 0.5f) + Mathf.Abs(y - height * 0.5f) / (height * 0.5f);
+                if (u > 1f) continue;
+                var c = u > 0.82f ? new Color(0.18f, 0.17f, 0.2f) : u < 0.32f ? mark : new Color(0.38f, 0.37f, 0.42f);
+                pixels[y * width + x] = new Color(c.r, c.g, c.b, 0.95f);
+            }
+            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
+            texture.SetPixels32(pixels);
+            texture.Apply();
+            var sprite = Sprite.Create(texture, new Rect(0f, 0f, width, height), new Vector2(0.5f, 0f), 100f);
+            TrapMarkers[hero] = sprite;
+            return sprite;
+        }
 
         public static bool Has(string id) => For(id, 1) != null;
 
@@ -146,7 +194,7 @@ namespace ShinobiDominion.Game
         {
             var sprite = For(definition.id, level);
             if (sprite == null) return null;
-            GroundShadow(root, definition.width, definition.depth, tint.a < 1f ? 0.25f : 0.55f);
+            GroundShadow(root, definition.width * PictureShare, definition.depth * PictureShare, tint.a < 1f ? 0.25f : 0.55f);
             var renderer = Stand(root, "Art", sprite, root.position, 1f, 0, tint);
             var stand = renderer.gameObject.AddComponent<IsoStand>();
             stand.Init(definition.width, definition.depth, renderer);
@@ -200,7 +248,7 @@ namespace ShinobiDominion.Game
         {
             var parent = transform.parent;
             if (parent == null) return;
-            var size = Footprint() * GridSpace.CellSize * ArtSize;
+            var size = Footprint() * GridSpace.CellSize * ArtSize * BuildingSprites.PictureShare;
             var half = (size.x + size.y) * 0.25f;
             var centre = parent.position + ArtOffset;
             transform.SetPositionAndRotation(centre + new Vector3(-half, 0f, -half), BuildingSprites.Upright);

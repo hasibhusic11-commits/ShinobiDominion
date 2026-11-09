@@ -142,6 +142,10 @@ namespace ShinobiDominion.Tests
                         var at = village.BuildingAt(new GridCoord(op.Value<int>("x"), op.Value<int>("z")));
                         Assert.AreEqual(int.Parse(op.Value<string>("expect")), at.Level, where);
                         continue;
+                    case "defAt":
+                        var standing = village.BuildingAt(new GridCoord(op.Value<int>("x"), op.Value<int>("z")));
+                        Assert.AreEqual(op.Value<string>("expect"), standing.Definition.id, where);
+                        continue;
                 }
 
                 var actual = Apply(village, op, kind, labels, clock);
@@ -179,6 +183,8 @@ namespace ShinobiDominion.Tests
                     return village.TryMove(TargetOf(village, op, labels), cell, rotation);
                 case "remove":
                     return village.TryRemove(TargetOf(village, op, labels));
+                case "switch":
+                    return village.TrySwitch(TargetOf(village, op, labels), op.Value<string>("def"));
                 case "upgrade":
                     return village.TryUpgrade(TargetOf(village, op, labels), clock);
                 case "finish":

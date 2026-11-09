@@ -32,7 +32,7 @@ func starterBattle(t *testing.T, s *Server, archetypeID string, level int) ([]ba
 		def := s.buildings.byID[item.Def]
 		row := def.at(1)
 		buildings = append(buildings, battleBuildingInput{ID: i + 1, DefinitionID: def.ID, X: item.X, Z: item.Z, Width: def.Width, Depth: def.Depth,
-			Level: 1, Hp: row.Hp, Attack: row.Attack, Range: row.Range, IsWall: def.isWall(), IsDefense: def.Function == "Defense"})
+			Level: 1, Hp: row.Hp, Attack: row.Attack, Range: row.Range, IsWall: def.isWall(), IsDefense: def.Function == "Defense", IsTrap: def.Function == "Trap"})
 		if def.ID == "hero_base" {
 			d, err := s.makeDefender("d1", archetypeID, 0, level, 0, 0)
 			if err != nil {

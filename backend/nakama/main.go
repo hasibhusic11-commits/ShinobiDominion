@@ -161,6 +161,7 @@ func (s *Server) register(initializer runtime.Initializer, logger runtime.Logger
 		"sd_village_upgrade": s.rpcUpgrade,
 		"sd_village_collect": s.rpcCollect,
 		"sd_village_finish": s.rpcFinish,
+		"sd_village_switch": s.rpcSwitch,
 		"sd_research_start": s.rpcResearchStart,
 		"sd_research_finish": s.rpcResearchFinish,
 		"sd_set_name":     s.rpcSetName,
@@ -329,6 +330,9 @@ func (s *Server) lockPlayer(ctx context.Context, tx *sql.Tx, userID string) (int
 		if err := s.createStarterVillage(ctx, tx, userID); err != nil {
 			return 0, err
 		}
+	}
+	if err := s.fitLayout(ctx, tx, userID); err != nil {
+		return 0, err
 	}
 	if err := settleUpgrades(ctx, tx, userID); err != nil {
 		return 0, err

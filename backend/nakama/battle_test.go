@@ -36,6 +36,7 @@ func TestBattle_MatchesTheClientsLogExactly(t *testing.T) {
 			Team          []battleHeroInput `json:"team"`
 			Defenders     []battleDefenderInput `json:"defenders"`
 			DefendersAlive int              `json:"defendersAlive"`
+			ExtraBuildings []battleBuildingInput `json:"extraBuildings"`
 		} `json:"scenarios"`
 	}
 	if err := json.Unmarshal(battleVectorsJSON, &vectors); err != nil {
@@ -45,7 +46,8 @@ func TestBattle_MatchesTheClientsLogExactly(t *testing.T) {
 		t.Fatal("no scenarios")
 	}
 	for _, scenario := range vectors.Scenarios {
-		result, err := runDefendedBattle(raids.byID["ridge_outpost"].expanded, scenario.Team, scenario.Defenders)
+		buildings := append(append([]battleBuildingInput{}, raids.byID["ridge_outpost"].expanded...), scenario.ExtraBuildings...)
+		result, err := runDefendedBattle(buildings, scenario.Team, scenario.Defenders)
 		if err != nil {
 			t.Fatal(err)
 		}

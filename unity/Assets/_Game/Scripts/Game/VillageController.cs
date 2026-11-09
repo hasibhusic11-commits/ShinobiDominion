@@ -462,7 +462,7 @@ namespace ShinobiDominion.Game
                     panel.Action("BuildButton", "Build", () => OpenCatalog(), true, Ui.AccentColor);
                     break;
                 case BuildingFunction.Headquarters:
-                    panel.Line("The Dojo level sets how many of each building you can own.");
+                    panel.Line("The Town Hall level sets how many of each building you can own.");
                     break;
                 case BuildingFunction.HeroAltar:
                     panel.Action("RosterButton", "Open roster", ShowAltarRoster, true, Ui.AccentColor);
@@ -485,6 +485,20 @@ namespace ShinobiDominion.Game
                     break;
                 case BuildingFunction.Research:
                     ResearchActions(panel);
+                    break;
+                case BuildingFunction.Guild:
+                    panel.Line("Found or join a guild here, and talk with your guildmates.", 19);
+                    panel.Action("OpenGuildButton", "Open the guild", () => OpenShortcut("friends"), IsOnline, Ui.AccentColor);
+                    break;
+                case BuildingFunction.Arena:
+                    panel.Line("Duel other heroes for points and a place in the rankings.", 19);
+                    panel.Action("OpenArenaHallButton", "Enter the Arena", () => { CloseAll(); OpenAttack(); OpenArena(); }, IsOnline, Ui.AccentColor);
+                    break;
+                case BuildingFunction.Trap:
+                    var trap = building.Definition.At(building.Level);
+                    panel.Line(building.Definition.id == "hero_trap"
+                        ? $"Hidden from attackers. Holds the attacking hero for 3 seconds and deals {trap.attack:N0} damage, once."
+                        : $"Hidden from attackers. Deals {trap.attack:N0} damage to every troop close by, once.", 19);
                     break;
                 case BuildingFunction.Collector:
                     var pending = Village.PendingCollection(building, Now);
@@ -510,7 +524,7 @@ namespace ShinobiDominion.Game
             if (building.Upgrading) return;
             var cost = building.Definition.UpgradeCost(building.Level);
             var needsDojo = building.Definition.At(building.Level + 1).requiredHq;
-            if (Village.HqLevel < needsDojo) panel.Line($"Next level needs Dojo level {needsDojo}.", 20, Ui.AccentColor);
+            if (Village.HqLevel < needsDojo) panel.Line($"Next level needs Town Hall level {needsDojo}.", 20, Ui.AccentColor);
             var builderFree = Village.Catalog.UpgradeSeconds(building.Definition, building.Level + 1) == 0 || Village.BusyBuilders < Village.Builders;
             panel.Action("UpgradeButton", $"Upgrade ({cost:N0} gold)", () => Upgrade(building.Id, false), Village.CanAfford(cost, 0) && Village.HqLevel >= needsDojo && builderFree);
         }
@@ -678,6 +692,7 @@ namespace ShinobiDominion.Game
                 AddTab(tabs, BuildingCategory.Resources, "Resources", "gold");
                 AddTab(tabs, BuildingCategory.HeroBases, "Hero Base", "hero");
                 AddTab(tabs, BuildingCategory.Walls, "Walls", "walls");
+                AddTab(tabs, BuildingCategory.Traps, "Traps", "attack");
 
                 // Unique essentials such as the Dojo always exist, so they would only be noise here.
                 var cards = Ui.Rect("Cards", content);
@@ -691,7 +706,7 @@ namespace ShinobiDominion.Game
                 grid.childAlignment = TextAnchor.UpperLeft;
                 var index = 0;
                 foreach (var definition in Village.Catalog.InCategory(_catalogCategory))
-                    if (definition.removable)
+                    if (definition.removable && !definition.switchOnly)
                         UiMotion.PopIn(CatalogCard(cards, definition).transform, 0.035f * index++, 0.85f, 0.2f);
 
                 // Undo is offline-only for now: online it would be a free refund the server must not give.
@@ -721,7 +736,7 @@ namespace ShinobiDominion.Game
         /// <summary>A catalog card: name, the real building on a soft glow, footprint and count chips, and the price.</summary>
         private Button CatalogCard(RectTransform grid, BuildingDefinition definition)
         {
-            var count = Village.CountOf(definition.id);
+            var count = Village.CountLike(definition);
             var limit = Village.LimitOf(definition);
             var locked = limit == 0;
             var full = !locked && count >= limit;
@@ -795,7 +810,7 @@ namespace ShinobiDominion.Game
                 HudArt.Picture(shade, "Lock", "icon_lock", new Vector2(0.5f, 0.5f), new Vector2(60f, 60f), new Vector2(0f, 40f));
                 var needs = Village.HqLevel + 1;
                 while (needs < 15 && definition.MaxCountAt(needs) == 0) needs++;
-                var note = HudArt.Label(shade, $"Dojo {needs}", HudArt.Numbers, 18, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.LacquerDeep);
+                var note = HudArt.Label(shade, $"TH {needs}", HudArt.Numbers, 18, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.LacquerDeep);
                 Ui.Anchor(note.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(180f, 26f), new Vector2(0f, -6f));
             }
             return button;
