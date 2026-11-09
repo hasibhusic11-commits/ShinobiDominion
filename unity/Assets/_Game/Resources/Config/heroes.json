@@ -16,12 +16,13 @@
       "skills": [ { "id": "lantern_guard", "displayName": "Lantern Guard", "description": "Draws attacks and hardens against them.", "unlockEvolution": 0 } ]
     },
     {
-      "id": "solar_beast_sage", "displayName": "Solar Beast Sage", "rarity": "Legendary", "role": "Fighter", "affinity": "Solar", "contentComplete": true,
+      "id": "solar_beast_sage", "displayName": "Solar Beast Sage", "rarity": "Legendary", "role": "Fighter", "affinity": "Solar", "contentComplete": true, "special": "rally",
       "baseHp": 1200, "baseAttack": 140, "baseDefense": 55, "growthHp": 34, "growthAttack": 5, "growthDefense": 2, "primaryColor": "#C9772B",
       "skills": [
         { "id": "sun_palm", "displayName": "Sun Palm", "description": "A heavy open-handed blow.", "unlockEvolution": 0 },
+        { "id": "radiant_roar", "special": true, "displayName": "Radiant Roar", "description": "His special. When his charge bar fills, a blazing roar makes every ally nearby, himself and troops included, attack 30% faster for 6 seconds.", "unlockEvolution": 0 },
         { "id": "beast_stride", "displayName": "Beast Stride", "description": "A surging dash empowered by solar force.", "unlockEvolution": 1 },
-        { "id": "radiant_roar", "displayName": "Radiant Roar", "description": "A blazing roar that empowers allies and shakes foes.", "unlockEvolution": 2 },
+        { "id": "roaring_sun", "displayName": "Roaring Sun", "description": "Radiant Roar's burst of speed lasts 9 seconds instead of 6.", "unlockEvolution": 2 },
         { "id": "celestial_guardian", "displayName": "Celestial Guardian", "description": "Summons radiant beast energy to shield and counterattack.", "unlockEvolution": 3 }
       ],
       "forms": [

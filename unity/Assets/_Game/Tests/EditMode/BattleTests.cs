@@ -433,6 +433,75 @@ namespace ShinobiDominion.Tests
             Assert.IsEmpty(problems, string.Join("\n", problems));
         }
 
+        // ---------- Rally: Solar Beast Sage's Radiant Roar (owner's design, 2026-11-08) ----------
+
+        private static int HitsBy(BattleResult result, int unit, int untilTick) =>
+            result.events.Count(e => e[1] == (long)BattleEventKind.HeroHit && e[2] == unit && e[0] <= untilTick);
+
+        private static List<BattleHeroInput> RallyPair(string special) => new List<BattleHeroInput>
+        {
+            new BattleHeroInput { id = "sage", role = "Fighter", hp = 50000, attack = 60, defense = 20, x = 3, z = 3, special = special },
+            new BattleHeroInput { id = "ally", role = "Fighter", hp = 50000, attack = 60, defense = 20, x = 3, z = 4 }
+        };
+
+        [Test]
+        public void Rally_FiresAtFullCharge_InPlaceOfTheFightersPowerHit()
+        {
+            var result = BattleSim.Run(Outpost(), RallyPair(BattleSim.SpecialRally));
+            var rally = result.events.FirstOrDefault(e => e[1] == (long)BattleEventKind.Rally && e[2] == 0 && e[4] == 0);
+            Assert.IsNotNull(rally, "The roar fires once the bar is full");
+            Assert.AreEqual(2, rally[3], "The roarer and the ally beside it are both hasted");
+            var fullTick = ChargeOf(result, 0, 0).First(e => e[3] == BattleSim.ChargeFull)[0];
+            Assert.AreEqual(fullTick + 1, rally[0], "The roar comes at the start of the next tick, without waiting for a hit");
+            var charge = ChargeOf(result, 0, 0).Select(e => e[3]).Take(6).ToArray();
+            CollectionAssert.AreEqual(new long[] { 1, 2, 3, 4, 5, 0 }, charge);
+        }
+
+        [Test]
+        public void Rally_MakesAlliesAttackFaster()
+        {
+            var plain = BattleSim.Run(Outpost(), RallyPair(""));
+            var rallied = BattleSim.Run(Outpost(), RallyPair(BattleSim.SpecialRally));
+            var until = (int)rallied.events.First(e => e[1] == (long)BattleEventKind.Rally)[0] + BattleSim.HasteTicks;
+            Assert.Greater(HitsBy(rallied, 1, until), HitsBy(plain, 1, until), "The ally lands more hits while hasted");
+        }
+
+        [Test]
+        public void Rally_TroopsCannotRoar_ButAreHasted()
+        {
+            var team = RallyPair(BattleSim.SpecialRally);
+            team.Add(new BattleHeroInput { id = "t", role = "Fighter", hp = 50000, attack = 14, defense = 5, x = 5, z = 3, isTroop = true, special = BattleSim.SpecialRally });
+            var result = BattleSim.Run(Outpost(), team);
+            Assert.IsFalse(result.events.Any(e => e[1] == (long)BattleEventKind.Rally && e[2] == 2), "A troop never roars, whatever its input says");
+            Assert.AreEqual(3, result.events.First(e => e[1] == (long)BattleEventKind.Rally)[3], "Troops nearby are hasted");
+        }
+
+        [Test]
+        public void Rally_LastsLonger_FromEvoTwo()
+        {
+            Assert.AreEqual(BattleSim.HasteTicks, BattleSim.HasteFor(1));
+            Assert.AreEqual(BattleSim.HasteTicksEvolved, BattleSim.HasteFor(2));
+            var fresh = BattleSim.Run(Outpost(), RallyPair(BattleSim.SpecialRally));
+            var team = RallyPair(BattleSim.SpecialRally);
+            team[0].evolution = 2;
+            var evolved = BattleSim.Run(Outpost(), team);
+            var from = (int)evolved.events.First(e => e[1] == (long)BattleEventKind.Rally)[0];
+            Assert.AreEqual(from, (int)fresh.events.First(e => e[1] == (long)BattleEventKind.Rally)[0], "Evolution changes how long, not when");
+            Assert.Greater(HitsBy(evolved, 1, from + BattleSim.HasteTicksEvolved), HitsBy(fresh, 1, from + BattleSim.HasteTicksEvolved), "The longer haste lands more hits");
+        }
+
+        [Test]
+        public void Rally_WorksForGuardsToo()
+        {
+            var guards = Guards(4);
+            guards[0].special = BattleSim.SpecialRally;
+            var result = BattleSim.Run(Outpost(), MixedTeam(4), guards);
+            var rally = result.events.FirstOrDefault(e => e[1] == (long)BattleEventKind.Rally && e[4] == 1);
+            Assert.IsNotNull(rally, "A guarding Sage roars for the other guards");
+            Assert.AreEqual(0, rally[2]);
+            Assert.GreaterOrEqual(rally[3], 1);
+        }
+
         // ---------- Ability charge (owner's rule, 2026-11-08) ----------
 
         private static List<long[]> ChargeOf(BattleResult result, int index, int side) =>

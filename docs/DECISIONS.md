@@ -89,6 +89,15 @@ Follows the owner's ADR-021. Up to four Troop Camps, gated by Dojo level, and a 
 - Troop names and all numbers are test values. Offline practice troops aren't saved.
 
 
+## ADR-035: Hero signature specials, starting with Solar Beast Sage's Radiant Roar, decided by the owner on 2026-11-08
+The owner wants Solar Beast Sage to play like a Castle Clash-style team buffer: he boosts his teammates' attack speed. Only the mechanic is borrowed; no names or art.
+- A hero can now have its own special in place of its role's. `heroes.json` sets `"special": "rally"` on Solar Beast Sage. The server copies it into every battle from the archetype, so the client cannot claim it.
+- **Radiant Roar (rally):** when his charge bar fills (5 landed hits), he roars at once instead of making the Fighter power hit. Every living ally within 6 cells, himself and troops included, attacks 30% faster for 6 seconds (60 ticks). Being hasted again resets the 6 seconds; it does not stack.
+- **Roaring Sun (Evo II and up):** the haste lasts 9 seconds. This keeps the spec's rule that skills unlock or improve at each evolution. Battles now receive each hero's evolution for this.
+- It works the same for guards: a guarding Sage roars for the other guards.
+- Radiant Roar moved from Evo II to his base form, because his identity needs it from the start. His skills: Sun Palm (base), Radiant Roar (base, his special), Beast Stride (Evo I), Roaring Sun (Evo II), Celestial Guardian (Evo III). Beast Stride and Celestial Guardian are still descriptions only, as before.
+- C# and Go run the same rule, checked by two new shared battle scenarios. 30%, 6 cells, 6 s and 9 s are unapproved test values.
+
 ## ADR-034: A 30 degree camera, closer default zoom, ground shadows, decided on 2026-11-07
 The owner compared the village with screenshots of two well-known base builders: ours was too far away, at the
 wrong angle for the painted art, and the buildings looked pasted on.

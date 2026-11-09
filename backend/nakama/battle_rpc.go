@@ -50,6 +50,7 @@ type raidTeamMember struct {
 	Attack         int64  `json:"attack"`
 	Defense        int64  `json:"defense"`
 	Speed          int    `json:"speed"`
+	Special        string `json:"special,omitempty"`
 }
 
 // raidDefender is a hero guarding the target, with the stats fixed when the raid started.
@@ -64,6 +65,7 @@ type raidDefender struct {
 	Defense        int64  `json:"defense"`
 	X              int    `json:"x"`
 	Z              int    `json:"z"`
+	Special        string `json:"special,omitempty"`
 }
 
 type raidSummary struct {
@@ -271,7 +273,7 @@ func (s *Server) makeDefender(id, archetypeID string, evolution, level, x, z int
 		return raidDefender{}, errHeroNotFound
 	}
 	hp, attack, defense := heroBattleStats(archetype, evolution, level)
-	return raidDefender{id, archetypeID, evolution, level, archetype.Role, hp, attack, defense, x, z}, nil
+	return raidDefender{id, archetypeID, evolution, level, archetype.Role, hp, attack, defense, x, z, archetype.Special}, nil
 }
 
 // rivalSnapshot copies a rival's village and guards as they stand now, in a fixed order.
@@ -556,6 +558,7 @@ func (s *Server) loadRaidTeam(ctx context.Context, tx *sql.Tx, userID string) ([
 			return nil, err
 		}
 		member.Role = archetype.Role
+		member.Special = archetype.Special
 		member.Speed = roleSpeeds[role]
 		member.Hp, member.Attack, member.Defense = heroBattleStats(archetype, member.EvolutionIndex, member.Level)
 		team = append(team, member)
@@ -636,7 +639,7 @@ func (s *Server) rpcRaidDeploy(ctx context.Context, logger runtime.Logger, db *s
 		}
 		defenders := make([]battleDefenderInput, 0, len(stored))
 		for _, d := range stored {
-			defenders = append(defenders, battleDefenderInput{d.ID, d.Role, d.Hp, d.Attack, d.Defense, d.X, d.Z})
+			defenders = append(defenders, battleDefenderInput{d.ID, d.Role, d.Hp, d.Attack, d.Defense, d.X, d.Z, d.Special, d.EvolutionIndex})
 		}
 		heroes := make([]battleHeroInput, 0, len(request.Placements))
 		for _, placement := range request.Placements {
@@ -649,7 +652,7 @@ func (s *Server) rpcRaidDeploy(ctx context.Context, logger runtime.Logger, db *s
 			if member == nil {
 				return errHeroNotInTeam
 			}
-			heroes = append(heroes, battleHeroInput{member.InstanceID, member.Role, member.Hp, member.Attack, member.Defense, placement.X, placement.Z, false})
+			heroes = append(heroes, battleHeroInput{member.InstanceID, member.Role, member.Hp, member.Attack, member.Defense, placement.X, placement.Z, false, member.Special, member.EvolutionIndex})
 		}
 		// Troops come from the camps and are used up by landing, win or lose.
 		counts, err := loadTroopCounts(ctx, tx, userID)
@@ -672,7 +675,7 @@ func (s *Server) rpcRaidDeploy(ctx context.Context, logger runtime.Logger, db *s
 			}
 			used[stack.TroopID] += stack.Count
 			for i := 0; i < stack.Count; i++ {
-				heroes = append(heroes, battleHeroInput{troop.ID, troop.Role, troop.Hp, troop.Attack, troop.Defense, stack.X, stack.Z, true})
+				heroes = append(heroes, battleHeroInput{troop.ID, troop.Role, troop.Hp, troop.Attack, troop.Defense, stack.X, stack.Z, true, "", 0})
 			}
 		}
 		if refusal := deployError(buildings, heroes); refusal != "" {

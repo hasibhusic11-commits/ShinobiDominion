@@ -26,6 +26,7 @@ namespace ShinobiDominion.Core
         public long attack;
         public long defense;
         public int speed;
+        public string special;
     }
 
     /// <summary>A hero guarding the target, with the stats fixed when the raid started.</summary>
@@ -41,6 +42,7 @@ namespace ShinobiDominion.Core
         public long defense;
         public int x;
         public int z;
+        public string special;
     }
 
     /// <summary>One raid on this player's village. It never says who attacked.</summary>
@@ -76,7 +78,7 @@ namespace ShinobiDominion.Core
         public List<RaidDefender> defenders = new List<RaidDefender>();
 
         public List<BattleDefenderInput> ToDefenderInputs() =>
-            defenders.Select(d => new BattleDefenderInput { id = d.id, role = d.role, hp = d.hp, attack = d.attack, defense = d.defense, x = d.x, z = d.z }).ToList();
+            defenders.Select(d => new BattleDefenderInput { id = d.id, role = d.role, hp = d.hp, attack = d.attack, defense = d.defense, x = d.x, z = d.z, special = d.special, evolution = d.evolutionIndex }).ToList();
 
         /// <summary>
         /// Everything that lands, in battle order: heroes, then each stack of troops. The server builds
@@ -100,7 +102,7 @@ namespace ShinobiDominion.Core
             placements.Select(placement =>
             {
                 var member = team.First(m => m.instanceId == placement.instanceId);
-                return new BattleHeroInput { id = member.instanceId, role = member.role, hp = member.hp, attack = member.attack, defense = member.defense, x = placement.x, z = placement.z };
+                return new BattleHeroInput { id = member.instanceId, role = member.role, hp = member.hp, attack = member.attack, defense = member.defense, x = placement.x, z = placement.z, special = member.special, evolution = member.evolutionIndex };
             }).ToList();
     }
 

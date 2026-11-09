@@ -34,6 +34,8 @@ namespace ShinobiDominion.Core
         public string displayName;
         public string description;
         public int unlockEvolution;
+        /// <summary>The skill is the hero's charge-bar special (shown as "Special").</summary>
+        public bool special;
     }
 
     /// <summary>A hero identity. Rarity, role and affinity describe it but do not identify it; only id does.</summary>
@@ -52,6 +54,8 @@ namespace ShinobiDominion.Core
         public long growthHp;
         public long growthAttack;
         public long growthDefense;
+        /// <summary>The hero's own special in place of its role's: "" or "rally" (BattleSim.SpecialRally).</summary>
+        public string special;
         public string primaryColor;
         public List<HeroSkill> skills = new List<HeroSkill>();
         public List<HeroFormVisual> forms = new List<HeroFormVisual>();

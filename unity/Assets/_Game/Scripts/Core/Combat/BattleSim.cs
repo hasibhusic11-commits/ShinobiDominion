@@ -14,6 +14,10 @@ namespace ShinobiDominion.Core
         public int x;
         public int z;
         public bool isTroop;
+        /// <summary>The hero's own special in place of its role's, from heroes.json: "" or "rally".</summary>
+        public string special;
+        /// <summary>Evolutions the hero has had (0 to 3); the rally lasts longer from Evo II.</summary>
+        public int evolution;
     }
 
     /// <summary>A hero guarding the village, standing at a cell on or by its Hero Base.</summary>
@@ -26,6 +30,10 @@ namespace ShinobiDominion.Core
         public long defense;
         public int x;
         public int z;
+        /// <summary>The hero's own special in place of its role's, from heroes.json: "" or "rally".</summary>
+        public string special;
+        /// <summary>Evolutions the hero has had (0 to 3); the rally lasts longer from Evo II.</summary>
+        public int evolution;
     }
 
     public sealed class BattleBuildingInput
@@ -76,7 +84,9 @@ namespace ShinobiDominion.Core
         /// <summary>a = defender healed, b = amount, c = defender HP now.</summary>
         DefenderHeal = 14,
         /// <summary>a = unit (c = 0) or defender (c = 1), b = ability charge now, 0 to BattleSim.ChargeFull.</summary>
-        Charge = 15
+        Charge = 15,
+        /// <summary>a = unit (c = 0) or defender (c = 1) who roared, b = allies (itself included) now attacking faster.</summary>
+        Rally = 16
     }
 
     public sealed class BattleResult
@@ -129,6 +139,17 @@ namespace ShinobiDominion.Core
         /// </summary>
         public const int ChargeFull = 5;
 
+        /// <summary>
+        /// Rally (Solar Beast Sage's Radiant Roar, owner's design 2026-11-08): at full charge the hero roars at once, and
+        /// every ally within RallyRange, itself and troops included, attacks HastePercent faster for HasteTicks.
+        /// </summary>
+        public const string SpecialRally = "rally";
+        public const int RallyRange = 600;
+        public const int HasteTicks = 60;
+        /// <summary>Roaring Sun (Evo II and up): the haste lasts this long instead.</summary>
+        public const int HasteTicksEvolved = 90;
+        public const int HastePercent = 30;
+
         // Per role: attack range, walking speed per tick, ticks between attacks, and percent of attack dealt to buildings.
         private static readonly int[] Ranges = { 120, 120, 120, 500, 400, 400 };
         private static readonly int[] Speeds = { 9, 11, 16, 10, 10, 10 };
@@ -170,6 +191,9 @@ namespace ShinobiDominion.Core
             public int AttackTimer;
             public int Charge;
             public int GuardTimer;
+            public int HasteTimer;
+            public bool Rally;
+            public int Evolution;
             public bool IsTroop;
         }
 
@@ -190,6 +214,9 @@ namespace ShinobiDominion.Core
             public int AttackTimer;
             public int Charge;
             public int GuardTimer;
+            public int HasteTimer;
+            public bool Rally;
+            public int Evolution;
         }
 
         private sealed class Structure
@@ -240,7 +267,9 @@ namespace ShinobiDominion.Core
                     Defense = h.defense,
                     Px = h.x * CellUnits + CellUnits / 2,
                     Pz = h.z * CellUnits + CellUnits / 2,
-                    IsTroop = h.isTroop
+                    IsTroop = h.isTroop,
+                    Rally = !h.isTroop && h.special == SpecialRally,
+                    Evolution = h.evolution
                 };
             }).ToArray();
             _defenders = (defenders ?? Enumerable.Empty<BattleDefenderInput>()).Select((d, i) =>
@@ -261,7 +290,9 @@ namespace ShinobiDominion.Core
                     Tx = px,
                     Tz = pz,
                     HomeX = d.x,
-                    HomeZ = d.z
+                    HomeZ = d.z,
+                    Rally = d.special == SpecialRally,
+                    Evolution = d.evolution
                 };
             }).ToArray();
         }
@@ -384,12 +415,49 @@ namespace ShinobiDominion.Core
             Log(BattleEventKind.Charge, defender.Index, 0, 1);
         }
 
+        // ---------- Rally ----------
+
+        /// <summary>Ticks between attacks for a role, shortened while hasted.</summary>
+        private static int Interval(int role, int hasteTimer) =>
+            hasteTimer > 0 ? Intervals[role] * 100 / (100 + HastePercent) : Intervals[role];
+
+        public static int HasteFor(int evolution) => evolution >= 2 ? HasteTicksEvolved : HasteTicks;
+
+        private void RallyUnits(Unit roarer)
+        {
+            Spend(roarer);
+            Log(BattleEventKind.Ability, roarer.Index, roarer.Role);
+            var count = 0;
+            foreach (var other in _units)
+            {
+                if (other.Hp <= 0 || SquaredPoints(other.Px, other.Pz, roarer.Px, roarer.Pz) > (long)RallyRange * RallyRange) continue;
+                other.HasteTimer = HasteFor(roarer.Evolution);
+                count++;
+            }
+            Log(BattleEventKind.Rally, roarer.Index, count, 0);
+        }
+
+        private void RallyDefenders(Defender roarer)
+        {
+            Spend(roarer);
+            Log(BattleEventKind.DefenderAbility, roarer.Index, roarer.Role);
+            var count = 0;
+            foreach (var other in _defenders)
+            {
+                if (other.Hp <= 0 || SquaredPoints(other.Px, other.Pz, roarer.Px, roarer.Pz) > (long)RallyRange * RallyRange) continue;
+                other.HasteTimer = HasteFor(roarer.Evolution);
+                count++;
+            }
+            Log(BattleEventKind.Rally, roarer.Index, count, 1);
+        }
+
         // ---------- Heroes ----------
 
         private void StepUnit(Unit unit)
         {
             if (unit.AttackTimer > 0) unit.AttackTimer--;
             if (unit.GuardTimer > 0) unit.GuardTimer--;
+            if (unit.HasteTimer > 0) unit.HasteTimer--;
             if (unit.Idle > 0) unit.Idle--;
             SelfAbility(unit);
 
@@ -400,7 +468,7 @@ namespace ShinobiDominion.Core
                 if (unit.AttackTimer == 0)
                 {
                     StrikeDefender(unit, foe);
-                    unit.AttackTimer = Intervals[unit.Role];
+                    unit.AttackTimer = Interval(unit.Role, unit.HasteTimer);
                 }
                 return;
             }
@@ -418,7 +486,7 @@ namespace ShinobiDominion.Core
                 if (unit.AttackTimer == 0)
                 {
                     Strike(unit, focus);
-                    unit.AttackTimer = Intervals[unit.Role];
+                    unit.AttackTimer = Interval(unit.Role, unit.HasteTimer);
                 }
                 return;
             }
@@ -458,6 +526,11 @@ namespace ShinobiDominion.Core
         private void SelfAbility(Unit unit)
         {
             if (unit.Charge < ChargeFull || unit.IsTroop) return;
+            if (unit.Rally)
+            {
+                RallyUnits(unit);
+                return;
+            }
             switch (unit.Role)
             {
                 case RoleTank:
@@ -518,7 +591,7 @@ namespace ShinobiDominion.Core
             var base_ = unit.Attack * DamagePercents[unit.Role] / 100;
             var percent = 100L;
             var splash = 0;
-            if (unit.Charge >= ChargeFull && !unit.IsTroop)
+            if (unit.Charge >= ChargeFull && !unit.IsTroop && !unit.Rally)
             {
                 switch (unit.Role)
                 {
@@ -616,7 +689,7 @@ namespace ShinobiDominion.Core
         private void StrikeDefender(Unit unit, Defender defender)
         {
             var percent = 100L;
-            if (unit.Charge >= ChargeFull && !unit.IsTroop)
+            if (unit.Charge >= ChargeFull && !unit.IsTroop && !unit.Rally)
             {
                 percent = BurstPercent(unit.Role);
                 if (percent != 100)
@@ -638,9 +711,14 @@ namespace ShinobiDominion.Core
         {
             if (defender.AttackTimer > 0) defender.AttackTimer--;
             if (defender.GuardTimer > 0) defender.GuardTimer--;
+            if (defender.HasteTimer > 0) defender.HasteTimer--;
 
             var target = ClosestAttacker(defender);
-            if (defender.Charge >= ChargeFull)
+            if (defender.Charge >= ChargeFull && defender.Rally)
+            {
+                RallyDefenders(defender);
+            }
+            else if (defender.Charge >= ChargeFull)
             {
                 if (defender.Role == RoleTank && target != null)
                 {
@@ -665,7 +743,7 @@ namespace ShinobiDominion.Core
                 if (defender.AttackTimer == 0)
                 {
                     DefenderStrike(defender, target);
-                    defender.AttackTimer = Intervals[defender.Role];
+                    defender.AttackTimer = Interval(defender.Role, defender.HasteTimer);
                 }
                 return;
             }
@@ -715,7 +793,7 @@ namespace ShinobiDominion.Core
         private void DefenderStrike(Defender defender, Unit unit)
         {
             var percent = 100L;
-            if (defender.Charge >= ChargeFull)
+            if (defender.Charge >= ChargeFull && !defender.Rally)
             {
                 percent = BurstPercent(defender.Role);
                 if (percent != 100)

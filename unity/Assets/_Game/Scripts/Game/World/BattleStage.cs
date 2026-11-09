@@ -506,6 +506,19 @@ namespace ShinobiDominion.Game
                     if (index >= 0 && index < list.Count) list[index].Charge?.Set((float)entry[3] / BattleSim.ChargeFull);
                     break;
                 }
+                case BattleEventKind.Rally:
+                {
+                    // Radiant Roar: a wide golden burst and a callout over the hero.
+                    if (!show) break;
+                    var list = entry[4] == 0 ? _units : _defenders;
+                    var index = (int)entry[2];
+                    if (index < 0 || index >= list.Count) break;
+                    var at = list[index].Go.transform.position + Vector3.up * 0.5f;
+                    var gold = new Color(1f, 0.78f, 0.3f);
+                    AddFlash(at, at, 0.6f, 0.4f, BattleSim.RallyRange / (float)BattleSim.CellUnits * 0.9f, gold);
+                    FloatingText.Create(transform, _camera, at + Vector3.up * 1.4f, "ATTACK SPEED UP!", gold);
+                    break;
+                }
                 case BattleEventKind.DefenderHeal:
                 {
                     var unit = _defenders[(int)entry[2]];

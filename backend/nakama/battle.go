@@ -47,10 +47,22 @@ const (
 	eventDefenderHeal    = 14
 	// a = unit (c = 0) or defender (c = 1), b = ability charge now, 0 to chargeFull.
 	eventCharge = 15
+	// a = unit (c = 0) or defender (c = 1) who roared, b = allies (itself included) now attacking faster.
+	eventRally = 16
 
 	// Landed hits that fill a hero's ability bar (owner's rule, 2026-11-08). At full, the special fires and the
 	// bar empties. Mirrors BattleSim.ChargeFull.
 	chargeFull = 5
+
+	// Rally (Solar Beast Sage's Radiant Roar, owner's design 2026-11-08): at full charge the hero roars at once,
+	// and every ally within rallyRange, itself and troops included, attacks hastePercent faster for hasteTicks.
+	// Mirrors BattleSim.
+	specialRally = "rally"
+	rallyRange   = 600
+	hasteTicks   = 60
+	// Roaring Sun (Evo II and up): the haste lasts this long instead.
+	hasteTicksEvolved = 90
+	hastePercent = 30
 
 	// How far a defender notices attackers, and how far from its post it will chase them.
 	defenderAggro = 800
@@ -91,6 +103,10 @@ type battleHeroInput struct {
 	X       int    `json:"x"`
 	Z       int    `json:"z"`
 	IsTroop bool   `json:"isTroop"`
+	// Special is the hero's own special in place of its role's, from heroes.json: "" or "rally".
+	Special string `json:"special,omitempty"`
+	// Evolution is how many times the hero has evolved (0 to 3); the rally lasts longer from Evo II.
+	Evolution int `json:"evolution,omitempty"`
 }
 
 // battleDefenderInput is a hero guarding the village, standing at a cell on or by its Hero Base.
@@ -102,6 +118,9 @@ type battleDefenderInput struct {
 	Defense int64  `json:"defense"`
 	X       int    `json:"x"`
 	Z       int    `json:"z"`
+	Special string `json:"special,omitempty"`
+	// Evolution is how many times the hero has evolved (0 to 3); the rally lasts longer from Evo II.
+	Evolution int `json:"evolution,omitempty"`
 }
 
 type battleBuildingInput struct {
@@ -148,6 +167,9 @@ type battleUnit struct {
 	attackTimer int
 	charge      int
 	guardTimer  int
+	hasteTimer  int
+	rally       bool
+	evolution   int
 	isTroop     bool
 }
 
@@ -167,6 +189,9 @@ type battleDefender struct {
 	attackTimer  int
 	charge       int
 	guardTimer   int
+	hasteTimer   int
+	rally        bool
+	evolution    int
 }
 
 type battleStructure struct {
@@ -228,6 +253,7 @@ func runDefendedBattle(buildings []battleBuildingInput, heroes []battleHeroInput
 			index: i, role: role, hp: h.Hp, maxHp: h.Hp, attack: h.Attack, defense: h.Defense,
 			px: h.X*cellUnits + cellUnits/2, pz: h.Z*cellUnits + cellUnits/2,
 			target: -1, blocker: -1, needsPlan: true, isTroop: h.IsTroop,
+			rally: !h.IsTroop && h.Special == specialRally, evolution: h.Evolution,
 		})
 	}
 	for i, d := range defenders {
@@ -239,6 +265,7 @@ func runDefendedBattle(buildings []battleBuildingInput, heroes []battleHeroInput
 		sim.defenders = append(sim.defenders, &battleDefender{
 			index: i, role: role, hp: d.Hp, maxHp: d.Hp, attack: d.Attack, defense: d.Defense,
 			px: px, pz: pz, tx: px, tz: pz, homeX: d.X, homeZ: d.Z,
+			rally: d.Special == specialRally, evolution: d.Evolution,
 		})
 	}
 	sim.play()
@@ -415,6 +442,51 @@ func (s *battleSim) spendDefender(defender *battleDefender) {
 	s.log(eventCharge, int64(defender.index), 0, 1, 0)
 }
 
+// ---------- Rally ----------
+
+// attackInterval is the ticks between attacks for a role, shortened while hasted.
+func attackInterval(role, hasteTimer int) int {
+	if hasteTimer > 0 {
+		return roleIntervals[role] * 100 / (100 + hastePercent)
+	}
+	return roleIntervals[role]
+}
+
+func hasteFor(evolution int) int {
+	if evolution >= 2 {
+		return hasteTicksEvolved
+	}
+	return hasteTicks
+}
+
+func (s *battleSim) rallyUnits(roarer *battleUnit) {
+	s.spendUnit(roarer)
+	s.log(eventAbility, int64(roarer.index), int64(roarer.role), 0, 0)
+	count := 0
+	for _, other := range s.units {
+		if other.hp <= 0 || squaredPoints(other.px, other.pz, roarer.px, roarer.pz) > int64(rallyRange)*rallyRange {
+			continue
+		}
+		other.hasteTimer = hasteFor(roarer.evolution)
+		count++
+	}
+	s.log(eventRally, int64(roarer.index), int64(count), 0, 0)
+}
+
+func (s *battleSim) rallyDefenders(roarer *battleDefender) {
+	s.spendDefender(roarer)
+	s.log(eventDefenderAbility, int64(roarer.index), int64(roarer.role), 0, 0)
+	count := 0
+	for _, other := range s.defenders {
+		if other.hp <= 0 || squaredPoints(other.px, other.pz, roarer.px, roarer.pz) > int64(rallyRange)*rallyRange {
+			continue
+		}
+		other.hasteTimer = hasteFor(roarer.evolution)
+		count++
+	}
+	s.log(eventRally, int64(roarer.index), int64(count), 1, 0)
+}
+
 // ---------- Heroes ----------
 
 func (s *battleSim) stepUnit(unit *battleUnit) {
@@ -423,6 +495,9 @@ func (s *battleSim) stepUnit(unit *battleUnit) {
 	}
 	if unit.guardTimer > 0 {
 		unit.guardTimer--
+	}
+	if unit.hasteTimer > 0 {
+		unit.hasteTimer--
 	}
 	if unit.idle > 0 {
 		unit.idle--
@@ -433,7 +508,7 @@ func (s *battleSim) stepUnit(unit *battleUnit) {
 	if foe := s.closestDefender(unit); foe != nil {
 		if unit.attackTimer == 0 {
 			s.strikeDefender(unit, foe)
-			unit.attackTimer = roleIntervals[unit.role]
+			unit.attackTimer = attackInterval(unit.role, unit.hasteTimer)
 		}
 		return
 	}
@@ -455,7 +530,7 @@ func (s *battleSim) stepUnit(unit *battleUnit) {
 	if inBattleRange(unit.px, unit.pz, s.structures[focus].input, roleRanges[unit.role]) {
 		if unit.attackTimer == 0 {
 			s.strike(unit, focus)
-			unit.attackTimer = roleIntervals[unit.role]
+			unit.attackTimer = attackInterval(unit.role, unit.hasteTimer)
 		}
 		return
 	}
@@ -539,7 +614,7 @@ func clampHit(amount, hp int64) int64 {
 
 func (s *battleSim) strikeDefender(unit *battleUnit, defender *battleDefender) {
 	percent := int64(100)
-	if unit.charge >= chargeFull && !unit.isTroop {
+	if unit.charge >= chargeFull && !unit.isTroop && !unit.rally {
 		percent = burstPercent(unit.role)
 		if percent != 100 {
 			s.spendUnit(unit)
@@ -568,9 +643,14 @@ func (s *battleSim) stepDefender(defender *battleDefender) {
 	if defender.guardTimer > 0 {
 		defender.guardTimer--
 	}
+	if defender.hasteTimer > 0 {
+		defender.hasteTimer--
+	}
 
 	target := s.closestAttacker(defender)
-	if defender.charge >= chargeFull {
+	if defender.charge >= chargeFull && defender.rally {
+		s.rallyDefenders(defender)
+	} else if defender.charge >= chargeFull {
 		if defender.role == roleTank && target != nil {
 			defender.guardTimer = 40
 			s.spendDefender(defender)
@@ -588,7 +668,7 @@ func (s *battleSim) stepDefender(defender *battleDefender) {
 	if squaredPoints(defender.px, defender.pz, target.px, target.pz) <= reach {
 		if defender.attackTimer == 0 {
 			s.defenderStrike(defender, target)
-			defender.attackTimer = roleIntervals[defender.role]
+			defender.attackTimer = attackInterval(defender.role, defender.hasteTimer)
 		}
 		return
 	}
@@ -646,7 +726,7 @@ func (s *battleSim) mendDefenders(healer *battleDefender) {
 
 func (s *battleSim) defenderStrike(defender *battleDefender, unit *battleUnit) {
 	percent := int64(100)
-	if defender.charge >= chargeFull {
+	if defender.charge >= chargeFull && !defender.rally {
 		percent = burstPercent(defender.role)
 		if percent != 100 {
 			s.spendDefender(defender)
@@ -724,6 +804,10 @@ func (s *battleSim) selfAbility(unit *battleUnit) {
 	if unit.charge < chargeFull || unit.isTroop {
 		return
 	}
+	if unit.rally {
+		s.rallyUnits(unit)
+		return
+	}
 	switch unit.role {
 	case roleTank:
 		unit.guardTimer = 40
@@ -781,7 +865,7 @@ func (s *battleSim) strike(unit *battleUnit, focus int) {
 	base := unit.attack * roleDamagePercents[unit.role] / 100
 	percent := int64(100)
 	splash := 0
-	if unit.charge >= chargeFull && !unit.isTroop {
+	if unit.charge >= chargeFull && !unit.isTroop && !unit.rally {
 		switch unit.role {
 		case roleFighter:
 			percent = 150

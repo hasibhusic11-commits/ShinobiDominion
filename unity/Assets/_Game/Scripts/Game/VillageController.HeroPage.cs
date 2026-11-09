@@ -279,8 +279,11 @@ namespace ShinobiDominion.Game
         }
 
         // Each skill slot's kind and picture: the first is the basic attack, the last the ultimate.
-        private static readonly string[] SkillKinds = { "Basic", "Skill", "Skill", "Ultimate" };
-        private static readonly string[] SkillIcons = { "attack", "speed", "target", "shield" };
+        private static readonly string[] MiddleIcons = { "target", "speed", "skill" };
+
+        private static string SkillKind(HeroSkill skill, int index, int count) => skill.special ? "Special" : index == 0 ? "Basic" : index == count - 1 ? "Ultimate" : "Skill";
+
+        private static string SkillIcon(int index, int count) => index == 0 ? "attack" : index == count - 1 ? "shield" : MiddleIcons[(index - 1) % MiddleIcons.Length];
 
         /// <summary>
         /// All four skills in a framed list (picture, name, kind, unlocked or the evolution star it needs); the
@@ -310,7 +313,7 @@ namespace ShinobiDominion.Game
             }
             _selectedSkill = Mathf.Clamp(_selectedSkill, 0, skills.Count - 1);
 
-            const float rowHeight = 88f;
+            var rowHeight = skills.Count > 4 ? 74f : 88f;
             const float listTop = 70f;
             // The panel hugs the list and a short explanation, so no empty parchment hangs under it.
             panel.sizeDelta = new Vector2(RightWidth, listTop + skills.Count * rowHeight + 190f);
@@ -341,14 +344,14 @@ namespace ShinobiDominion.Game
                 });
                 UiMotion.Pressable(button);
 
-                var medal = Medal.Create(row, "SkillIcon", MedalKind.IconOnly, SkillIcons[Mathf.Min(i, SkillIcons.Length - 1)], null, null, open, 64f);
+                var medal = Medal.Create(row, "SkillIcon", MedalKind.IconOnly, SkillIcon(i, skills.Count), null, null, open, 64f);
                 Ui.Anchor((RectTransform)medal.transform, new Vector2(0f, 0.5f), new Vector2(64f, 64f), new Vector2(10f, 0f));
                 medal.GetComponent<Button>().enabled = false;
 
                 var title = HudArt.Label(row, skill.displayName, HudArt.Display, 20, TextAnchor.LowerLeft, open ? HudArt.Ivory : HudArt.IvoryMuted, HudArt.LacquerDeep);
                 Ui.Stretch(title.rectTransform, 84f, rowHeight * 0.46f, 56f, 6f);
                 title.horizontalOverflow = HorizontalWrapMode.Overflow;
-                var kind = SkillKinds[Mathf.Min(i, SkillKinds.Length - 1)];
+                var kind = SkillKind(skill, i, skills.Count);
                 var sub = HudArt.Label(row, kind, HudArt.Numbers, 16, TextAnchor.UpperLeft, open ? HudArt.BrassLight : new Color(0.6f, 0.8f, 1f), HudArt.LacquerDeep);
                 Ui.Stretch(sub.rectTransform, 84f, 6f, 8f, rowHeight * 0.56f);
                 if (!open)
@@ -390,7 +393,7 @@ namespace ShinobiDominion.Game
             status.rectTransform.sizeDelta = new Vector2(RightWidth - 90f, 22f);
             status.rectTransform.anchoredPosition = new Vector2(20f, -44f);
 
-            var tag = Ui.Label(paper, SkillKinds[Mathf.Min(_selectedSkill, SkillKinds.Length - 1)].ToUpperInvariant(), 13, TextAnchor.MiddleRight, new Color(0.55f, 0.33f, 0.12f));
+            var tag = Ui.Label(paper, SkillKind(chosen, _selectedSkill, skills.Count).ToUpperInvariant(), 13, TextAnchor.MiddleRight, new Color(0.55f, 0.33f, 0.12f));
             tag.fontStyle = FontStyle.Bold;
             tag.rectTransform.anchorMin = tag.rectTransform.anchorMax = new Vector2(1f, 1f);
             tag.rectTransform.pivot = new Vector2(1f, 1f);

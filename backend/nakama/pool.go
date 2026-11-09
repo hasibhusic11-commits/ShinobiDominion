@@ -47,6 +47,8 @@ type Archetype struct {
 	GrowthHp        int64  `json:"growthHp"`
 	GrowthAttack    int64  `json:"growthAttack"`
 	GrowthDefense   int64  `json:"growthDefense"`
+	// Special is the hero's own special in place of its role's ("" or "rally"), copied into every battle.
+	Special         string `json:"special,omitempty"`
 }
 
 type HeroCatalog struct {
