@@ -2,10 +2,10 @@
   "scenarios": [
     {
       "name": "mixed team, strong",
-      "checksum": "955af415171f6f0c",
+      "checksum": "e27622aafbf62ae6",
       "stars": 3,
       "damagePercent": 100,
-      "endTick": 455,
+      "endTick": 465,
       "heroesAlive": 6,
       "team": [
         {
@@ -66,10 +66,10 @@
     },
     {
       "name": "mixed team, weak",
-      "checksum": "1bd0a8fd13e439ec",
+      "checksum": "97143901e378e109",
       "stars": 3,
       "damagePercent": 100,
-      "endTick": 1072,
+      "endTick": 1132,
       "heroesAlive": 6,
       "team": [
         {
@@ -130,10 +130,10 @@
     },
     {
       "name": "heroes and troops together",
-      "checksum": "0988af4f95fa935c",
-      "stars": 3,
-      "damagePercent": 100,
-      "endTick": 1777,
+      "checksum": "8497623474991507",
+      "stars": 2,
+      "damagePercent": 93,
+      "endTick": 1800,
       "heroesAlive": 1,
       "team": [
         {
@@ -219,7 +219,7 @@
     },
     {
       "name": "one legendary alone",
-      "checksum": "c0fcb0658b9d712c",
+      "checksum": "b052671849192422",
       "stars": 3,
       "damagePercent": 100,
       "endTick": 1232,
@@ -238,10 +238,10 @@
     },
     {
       "name": "defended, attackers win",
-      "checksum": "753b8505a2b340f3",
+      "checksum": "df2676841f8d4cde",
       "stars": 3,
       "damagePercent": 100,
-      "endTick": 485,
+      "endTick": 479,
       "heroesAlive": 6,
       "defendersAlive": 0,
       "team": [
@@ -350,7 +350,7 @@
     },
     {
       "name": "defended, guards win",
-      "checksum": "b9f41ade55b596df",
+      "checksum": "e96a7e26dc529e95",
       "stars": 0,
       "damagePercent": 0,
       "endTick": 349,
@@ -462,7 +462,7 @@
     },
     {
       "name": "defended, close fight",
-      "checksum": "6f5f32deaf70c032",
+      "checksum": "b25b6c19b90d22a1",
       "stars": 0,
       "damagePercent": 0,
       "endTick": 501,
@@ -574,10 +574,10 @@
     },
     {
       "name": "rally, attacking",
-      "checksum": "38bbe799602e53ed",
+      "checksum": "7a8918cf559fad8b",
       "stars": 3,
       "damagePercent": 100,
-      "endTick": 1040,
+      "endTick": 1083,
       "heroesAlive": 6,
       "team": [
         {
@@ -639,10 +639,10 @@
     },
     {
       "name": "rally, defending",
-      "checksum": "d77cedd792c1e424",
+      "checksum": "88e17ff683ce6504",
       "stars": 0,
       "damagePercent": 0,
-      "endTick": 619,
+      "endTick": 616,
       "heroesAlive": 0,
       "defendersAlive": 5,
       "team": [
@@ -752,9 +752,9 @@
     },
     {
       "name": "rarity power",
-      "checksum": "29d14d19ef5a53e6",
+      "checksum": "cd34b36b75837a37",
       "stars": 2,
-      "damagePercent": 93,
+      "damagePercent": 87,
       "endTick": 1800,
       "heroesAlive": 2,
       "defendersAlive": 0,
@@ -865,10 +865,10 @@
     },
     {
       "name": "traps: a hero trap and a bomb trap where they land",
-      "checksum": "c612b39ab940cba0",
+      "checksum": "9ff2f376df8a7258",
       "stars": 2,
-      "damagePercent": 68,
-      "endTick": 874,
+      "damagePercent": 62,
+      "endTick": 798,
       "heroesAlive": 0,
       "team": [
         {
@@ -974,7 +974,7 @@
       "name": "towers: a cannon tower and a magic tower against a pack of troops",
       "checksum": "8416a7ab5396f5e5",
       "stars": 0,
-      "damagePercent": 11,
+      "damagePercent": 10,
       "endTick": 166,
       "heroesAlive": 0,
       "team": [

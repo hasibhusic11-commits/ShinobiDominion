@@ -61,9 +61,24 @@ namespace ShinobiDominion.Tests
             };
         }
 
-        private static List<BattleHeroInput> Team(HeroArchetype hero, int level, int army)
+        /// <summary>
+        /// How many heroes a player fields by this stage: Hero Bases unlock with the Town Hall, up to six (owner,
+        /// 2026-11-09). One at stage 1, then one more about every three stages.
+        /// </summary>
+        public static int HeroesFor(int stage) => Math.Min(6, 1 + stage / 3);
+
+        /// <summary>
+        /// The led hero plus, when the stage allows more, other heroes of the same rarity (each only once), all at the
+        /// same level, landing with the stage's army.
+        /// </summary>
+        private static List<BattleHeroInput> Team(HeroArchetype hero, int level, int army, IList<HeroArchetype> sameRarity = null, int heroes = 1)
         {
             var team = new List<BattleHeroInput> { HeroInput(hero, level, 3, 3) };
+            // Teammates follow the led hero in catalog order, so every team is fixed and every hero gets a turn leading.
+            var pool = (sameRarity ?? new List<HeroArchetype>()).ToList();
+            var start = Math.Max(0, pool.FindIndex(h => h.id == hero.id));
+            for (var i = 1; i < heroes && i < pool.Count; i++)
+                team.Add(HeroInput(pool[(start + i) % pool.Count], level, 3 + i * 2, 3));
             for (var i = 0; i < army; i++)
                 team.Add(new BattleHeroInput { id = "t" + i, role = "Fighter", hp = 110, attack = 14, defense = 5, isTroop = true, x = 2 + i % 10, z = 2 + i / 10 % 3 });
             return team;
@@ -95,7 +110,7 @@ namespace ShinobiDominion.Tests
         /// <summary>
         /// Owner's rule (2026-11-09): Legendaries are rare, so Common and Elite heroes must be able to clear the
         /// campaign well enough to farm it. Dungeons may hold many towers and guards, so each stage has one strength
-        /// percent that scales everything in it. For each stage this finds the strongest setting (100% at most) at which
+        /// percent that scales everything in it. For each stage this finds the strongest setting (up to 300%) at which
         /// at least 70% of Common heroes win a star at the expected level, and writes the strengths as JSON for
         /// tools/balance/generate_campaign.js. Runs only with SD_CAMPAIGN_TUNE=&lt;path to campaign_strength.json&gt;.
         /// </summary>
@@ -119,20 +134,17 @@ namespace ShinobiDominion.Tests
                     raid.strength = strength;
                     var buildings = raid.Expand(catalog);
                     var guards = Guards(raid, catalog, heroes);
-                    var wins = commons.Count(h => BattleSim.Run(buildings, Team(h, expected, army), guards).stars >= 1);
+                    var wins = commons.Count(h => BattleSim.Run(buildings, Team(h, expected, army, commons, HeroesFor(raid.stage)), guards).stars >= 1);
                     return wins * 10 >= commons.Count * 7;
                 }
-                // Strength in steps of 5, from 5 to 100: the highest step the Commons still beat.
-                int low = 1, high = 20;
-                if (CommonsWin(100)) low = 20;
-                else
+                // Strength in steps of 5, from 5 to 300: the highest step the Commons still beat. Above 100 the dungeon is
+                // tougher than its building levels, for teams of several heroes.
+                int low = 1, high = 60;
+                while (low < high)
                 {
-                    while (low < high)
-                    {
-                        var middle = (low + high + 1) / 2;
-                        if (CommonsWin(middle * 5)) low = middle;
-                        else high = middle - 1;
-                    }
+                    var middle = (low + high + 1) / 2;
+                    if (CommonsWin(middle * 5)) low = middle;
+                    else high = middle - 1;
                 }
                 lines.Add($"  \"{raid.id}\": {low * 5}");
             }
@@ -161,7 +173,7 @@ namespace ShinobiDominion.Tests
 
             report.AppendLine("## 1. Campaign");
             report.AppendLine();
-            report.AppendLine($"Each of the {pool.Count} summonable heroes leads the army a player would have by that stage (militia, 10 more per stage, up to 160) at 70%, 100% and 130% of the level expected there. Cells show the average stars, then the share of heroes that win at least one star.");
+            report.AppendLine($"Each of the {pool.Count} summonable heroes leads a team a player would have by that stage: one hero at stage 1, one more about every three stages up to six (the others of the same rarity), and militia (10 more per stage, up to 160), at 70%, 100% and 130% of the level expected there. Cells show the average stars, then the share of heroes that win at least one star.");
             report.AppendLine();
             var header = "| Stage | Expected level | " + string.Join(" | ", byRarity.SelectMany(g => steps.Select(s => $"{g.Rarity} {s.Name}"))) + " | Flag |";
             report.AppendLine(header);
@@ -178,7 +190,7 @@ namespace ShinobiDominion.Tests
                 foreach (var step in steps)
                 {
                     var level = Math.Max(1, (int)Math.Round(expected * step.Scale));
-                    var results = group.Heroes.Select(h => BattleSim.Run(buildings, Team(h, level, ArmyFor(raid.stage)), guards)).ToList();
+                    var results = group.Heroes.Select(h => BattleSim.Run(buildings, Team(h, level, ArmyFor(raid.stage), group.Heroes, HeroesFor(raid.stage)), guards)).ToList();
                     var average = results.Average(r => r.stars);
                     var wins = results.Count(r => r.stars >= 1) * 100 / results.Count;
                     averages[$"{group.Rarity} {step.Name}"] = average;

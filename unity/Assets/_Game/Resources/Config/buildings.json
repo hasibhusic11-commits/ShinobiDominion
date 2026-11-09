@@ -89,7 +89,7 @@
       ]
     },
     {
-      "id": "hero_base", "displayName": "Hero Base", "description": "The pedestal for your one hero, who leads your raids and guards the village. Higher levels strengthen the hero.", "category": "HeroBases", "function": "HeroBase", "width": 2, "depth": 2, "costGold": 400, "maxCountByHqLevel": [1],
+      "id": "hero_base", "displayName": "Hero Base", "description": "The pedestal for your one hero, who leads your raids and guards the village. Higher levels strengthen the hero.", "category": "HeroBases", "function": "HeroBase", "width": 2, "depth": 2, "costGold": 400, "maxCountByHqLevel": [1,2,2,3,3,4,4,5,5,6],
       "levels": [
         {"hp":500,"upgradeCost":400,"requiredHq":1,"range":14,"bonusPercent":2,"might":1},
         {"hp":575,"upgradeCost":800,"requiredHq":1,"range":14,"bonusPercent":4,"might":2},

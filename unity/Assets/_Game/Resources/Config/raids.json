@@ -95,7 +95,7 @@
       "firstClearCrystals": 60,
       "firstClearItem": "",
       "requires": "",
-      "strength": 100,
+      "strength": 115,
       "manaPerStar": 270
     },
     {
@@ -194,7 +194,7 @@
       "firstClearCrystals": 70,
       "firstClearItem": "",
       "requires": "",
-      "strength": 100,
+      "strength": 140,
       "manaPerStar": 400
     },
     {
@@ -211,7 +211,7 @@
       "firstClearCrystals": 80,
       "firstClearItem": "",
       "requires": "cinder_garrison",
-      "strength": 40,
+      "strength": 50,
       "buildings": [
         {
           "def": "dojo_hq",
@@ -322,7 +322,7 @@
       "firstClearCrystals": 90,
       "firstClearItem": "",
       "requires": "stage_03",
-      "strength": 30,
+      "strength": 35,
       "buildings": [
         {
           "def": "dojo_hq",
@@ -464,7 +464,7 @@
       "firstClearCrystals": 250,
       "firstClearItem": "awakening_scroll",
       "requires": "stage_04",
-      "strength": 25,
+      "strength": 40,
       "buildings": [
         {
           "def": "dojo_hq",
@@ -606,7 +606,7 @@
       "firstClearCrystals": 110,
       "firstClearItem": "",
       "requires": "stage_05",
-      "strength": 30,
+      "strength": 50,
       "buildings": [
         {
           "def": "dojo_hq",
@@ -760,7 +760,7 @@
       "firstClearCrystals": 120,
       "firstClearItem": "",
       "requires": "stage_06",
-      "strength": 20,
+      "strength": 35,
       "buildings": [
         {
           "def": "dojo_hq",
@@ -933,7 +933,7 @@
       "firstClearCrystals": 130,
       "firstClearItem": "",
       "requires": "stage_07",
-      "strength": 15,
+      "strength": 35,
       "buildings": [
         {
           "def": "dojo_hq",
@@ -1118,7 +1118,7 @@
       "firstClearCrystals": 140,
       "firstClearItem": "",
       "requires": "stage_08",
-      "strength": 20,
+      "strength": 40,
       "buildings": [
         {
           "def": "dojo_hq",
@@ -1309,7 +1309,7 @@
       "firstClearCrystals": 300,
       "firstClearItem": "ascension_stone",
       "requires": "stage_09",
-      "strength": 15,
+      "strength": 40,
       "buildings": [
         {
           "def": "dojo_hq",
@@ -1525,7 +1525,7 @@
       "firstClearCrystals": 160,
       "firstClearItem": "",
       "requires": "stage_10",
-      "strength": 20,
+      "strength": 50,
       "buildings": [
         {
           "def": "dojo_hq",
@@ -1741,7 +1741,7 @@
       "firstClearCrystals": 170,
       "firstClearItem": "",
       "requires": "stage_11",
-      "strength": 15,
+      "strength": 55,
       "buildings": [
         {
           "def": "dojo_hq",
@@ -1975,7 +1975,7 @@
       "firstClearCrystals": 180,
       "firstClearItem": "",
       "requires": "stage_12",
-      "strength": 20,
+      "strength": 50,
       "buildings": [
         {
           "def": "dojo_hq",
@@ -2228,7 +2228,7 @@
       "firstClearCrystals": 190,
       "firstClearItem": "",
       "requires": "stage_13",
-      "strength": 20,
+      "strength": 55,
       "buildings": [
         {
           "def": "dojo_hq",
@@ -2487,7 +2487,7 @@
       "firstClearCrystals": 350,
       "firstClearItem": "sovereign_scroll",
       "requires": "stage_14",
-      "strength": 15,
+      "strength": 80,
       "buildings": [
         {
           "def": "dojo_hq",

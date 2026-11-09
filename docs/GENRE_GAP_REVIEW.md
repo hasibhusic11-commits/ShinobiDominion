@@ -31,7 +31,7 @@ Status: **Have** (built), **Partial** (built, but differs in a way that matters)
 | Castle Clash system | Shinobi Dominion | Status | Proposed |
 |---|---|---|---|
 | Summon heroes at the Heroes Altar | Summoning Gate, no pity, server-side odds | Have | — |
-| Several heroes fight together in raids and defend on several bases | One hero at a time (owner's earlier rule, `OneHeroOnly`) | **Decide** | Castle Clash fields up to 5 heroes. Allowing 5 Hero Bases and 5 heroes per raid is the biggest single change to how it plays |
+| Several heroes fight together in raids and defend on several bases | Up to six (ADR-048) | Have | — |
 | Levels with Mana, from battle XP | Same (Mana training and battle XP) | Have | — |
 | Evolution / awakening with duplicates and catalysts | Evolution with one duplicate and a catalyst | Have | — |
 | Talents (a random passive per hero, rerollable) | None | Missing | One talent slot per hero, rolled on the server, rerolled with a currency |

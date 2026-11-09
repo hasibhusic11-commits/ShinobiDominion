@@ -26,23 +26,31 @@ namespace ShinobiDominion.Tests
         public static int ArmyFor(int stage) => Math.Min(160, 10 + 10 * stage);
 
         /// <summary>One hero at a level fitting the stage, landing with a militia army, as a player would.</summary>
-        private static List<BattleHeroInput> Team(HeroCatalog heroes, int level, int army, int evolution = 0, string heroId = "solar_beast_sage")
+        private static List<BattleHeroInput> Team(HeroCatalog heroes, int level, int army, int evolution = 0, string heroId = "solar_beast_sage", int count = 1)
         {
             var hero = heroes.Get(heroId);
             var stats = HeroMath.Stats(hero, evolution, level);
             var team = new List<BattleHeroInput> { new BattleHeroInput { id = "h0", role = hero.role.ToString(), hp = stats.Hp, attack = stats.Attack, defense = stats.Defense, x = 3, z = 3 } };
+            // More heroes of the same rarity as the stage allows (up to six, owner 2026-11-09), in catalog order.
+            var mates = heroes.All.Where(h => h.contentComplete && !h.retired && h.rarity == hero.rarity && h.id != hero.id).Take(count - 1).ToList();
+            for (var i = 0; i < mates.Count; i++)
+            {
+                var mate = HeroMath.Stats(mates[i], evolution, level);
+                team.Add(new BattleHeroInput { id = "h" + (i + 1), role = mates[i].role.ToString(), hp = mate.Hp, attack = mate.Attack, defense = mate.Defense, x = 5 + i * 2, z = 3 });
+            }
             for (var i = 0; i < army; i++)
                 team.Add(new BattleHeroInput { id = "t" + i, role = "Fighter", hp = 110, attack = 14, defense = 5, isTroop = true, x = 2 + i % 10, z = 2 + i / 10 % 3 });
             return team;
         }
 
-        private static BattleResult Fight(RaidDefinition raid, HeroCatalog heroes, int level, int evolution = 0) => Fight(raid, heroes, level, ArmyFor(raid.stage), evolution);
+        private static BattleResult Fight(RaidDefinition raid, HeroCatalog heroes, int level, int evolution = 0) =>
+            Fight(raid, heroes, level, ArmyFor(raid.stage), evolution, "solar_beast_sage", BalanceReportTests.HeroesFor(raid.stage));
 
-        private static BattleResult Fight(RaidDefinition raid, HeroCatalog heroes, int level, int army, int evolution, string heroId = "solar_beast_sage")
+        private static BattleResult Fight(RaidDefinition raid, HeroCatalog heroes, int level, int army, int evolution, string heroId = "solar_beast_sage", int count = 1)
         {
             var catalog = TestCatalog.Load();
             var guards = raid.ExpandDefenders(catalog, heroes).Select(d => new BattleDefenderInput { id = d.id, role = d.role, hp = d.hp, attack = d.attack, defense = d.defense, x = d.x, z = d.z });
-            return BattleSim.Run(raid.Expand(catalog), Team(heroes, level, army, evolution, heroId), guards);
+            return BattleSim.Run(raid.Expand(catalog), Team(heroes, level, army, evolution, heroId, count), guards);
         }
 
         [Test]

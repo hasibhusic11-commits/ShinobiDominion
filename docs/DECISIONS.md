@@ -88,6 +88,14 @@ Follows the owner's ADR-021. Up to four Troop Camps, gated by Dojo level, and a 
 - A raid still needs at least one hero. At most 200 troops can land in one raid, to bound the server's work.
 - Troop names and all numbers are test values. Offline practice troops aren't saved.
 
+## ADR-048: Up to six heroes, 2026-11-09
+The owner asked for the game to play like Castle Clash (`GENRE_GAP_REVIEW.md`) and chose six heroes. This replaces ADR-030's one hero at a time.
+
+- Up to six heroes stand on Hero Bases. They all guard the village and all fight in raids. Client: `Village.MaxAssignedHeroes = 6`. Server: `maxBaseSlots = 6`.
+- Hero Bases unlock with the Town Hall: 1 at Town Hall 1, 2 at 2, 3 at 4, 4 at 6, 5 at 8, and 6 from Town Hall 10.
+- Raid teams and rival guards are every hero on a base, so they grow without other changes. Arena and Trial Tower stay one hero against one, as duels.
+- The balance tools field the team a player has by each stage: one hero at stage 1, then one more about every three stages, up to six. The campaign was retuned with them (strengths up to 300% are now allowed); Commons still win every stage at the expected level.
+
 ## ADR-047: Dungeons are not villages, and Common and Elite heroes can farm them, 2026-11-09
 The balance report (`BALANCE_REPORT.md`) showed a Common hero could not clear the campaign from stage 4, and Elites mostly lost at the expected level. Legendaries are rare and summoning has no pity, so most players would be stuck. The owner's direction: Common and Elite heroes must clear enough to farm, and, as in Castle Clash, dungeons are not held to a village's limits.
 

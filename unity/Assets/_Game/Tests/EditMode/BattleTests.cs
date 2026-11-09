@@ -26,6 +26,14 @@ namespace ShinobiDominion.Tests
             return raids.Find("ridge_outpost").Expand(TestCatalog.Load());
         }
 
+        /// <summary>The first outpost at 100% strength, for tests of a rule that should not move with campaign tuning (ADR-047).</summary>
+        private static List<BattleBuildingInput> PlainOutpost()
+        {
+            var outpost = RaidCatalog.FromJson(FindFile("raids.json", "Resources/Config"), TestCatalog.Load()).Find("ridge_outpost");
+            outpost.strength = 100;
+            return outpost.Expand(TestCatalog.Load());
+        }
+
         private static BattleHeroInput Hero(string id, string role, long hp, long attack, long defense, int x, int z) =>
             new BattleHeroInput { id = id, role = role, hp = hp, attack = attack, defense = defense, x = x, z = z };
 
@@ -537,8 +545,8 @@ namespace ShinobiDominion.Tests
         [Test]
         public void Rally_MakesAlliesAttackFaster()
         {
-            var plain = BattleSim.Run(Outpost(), RallyPair(""));
-            var rallied = BattleSim.Run(Outpost(), RallyPair(BattleSim.SpecialRally));
+            var plain = BattleSim.Run(PlainOutpost(), RallyPair(""));
+            var rallied = BattleSim.Run(PlainOutpost(), RallyPair(BattleSim.SpecialRally));
             var until = (int)rallied.events.First(e => e[1] == (long)BattleEventKind.Rally)[0] + BattleSim.HasteTicks;
             Assert.Greater(HitsBy(rallied, 1, until), HitsBy(plain, 1, until), "The ally lands more hits while hasted");
         }
@@ -558,10 +566,10 @@ namespace ShinobiDominion.Tests
         {
             Assert.AreEqual(BattleSim.HasteTicks, BattleSim.HasteFor(1));
             Assert.AreEqual(BattleSim.HasteTicksEvolved, BattleSim.HasteFor(2));
-            var fresh = BattleSim.Run(Outpost(), RallyPair(BattleSim.SpecialRally));
+            var fresh = BattleSim.Run(PlainOutpost(), RallyPair(BattleSim.SpecialRally));
             var team = RallyPair(BattleSim.SpecialRally);
             team[0].evolution = 2;
-            var evolved = BattleSim.Run(Outpost(), team);
+            var evolved = BattleSim.Run(PlainOutpost(), team);
             var from = (int)evolved.events.First(e => e[1] == (long)BattleEventKind.Rally)[0];
             Assert.AreEqual(from, (int)fresh.events.First(e => e[1] == (long)BattleEventKind.Rally)[0], "Evolution changes how long, not when");
             Assert.Greater(HitsBy(evolved, 1, from + BattleSim.HasteTicksEvolved), HitsBy(fresh, 1, from + BattleSim.HasteTicksEvolved), "The longer haste lands more hits");

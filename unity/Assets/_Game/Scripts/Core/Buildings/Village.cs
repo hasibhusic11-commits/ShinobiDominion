@@ -59,7 +59,7 @@ namespace ShinobiDominion.Core
                 case VillageError.NotRemovable: return "This building cannot be removed";
                 case VillageError.NotAHeroBase: return "Only a Hero Base can hold a hero";
                 case VillageError.HeroAlreadyAssigned: return "That hero is already on another base";
-                case VillageError.OneHeroOnly: return "Only one hero can be used at a time. Take your hero off its base first.";
+                case VillageError.OneHeroOnly: return "Up to six heroes can be on bases at once. Take a hero off its base first.";
                 case VillageError.InvalidHeroId: return "Invalid hero";
                 case VillageError.NotACollector: return "This building produces nothing";
                 case VillageError.NothingToCollect: return "Nothing to collect yet";
@@ -503,8 +503,11 @@ namespace ShinobiDominion.Core
 
         // ---------- Hero bases ----------
 
-        /// <summary>Only one hero is used at a time: it leads raids and guards the village (ADR-030).</summary>
-        public const int MaxAssignedHeroes = 1;
+        /// <summary>
+        /// Up to six heroes stand on Hero Bases: they guard the village and fight in raids together (owner, 2026-11-09,
+        /// replacing ADR-030's one hero, like the genre). The Town Hall level decides how many bases can be built.
+        /// </summary>
+        public const int MaxAssignedHeroes = 6;
 
         public VillageError TryAssignHero(int baseId, string heroInstanceId)
         {
