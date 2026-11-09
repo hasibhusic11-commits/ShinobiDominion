@@ -264,9 +264,17 @@ namespace ShinobiDominion.Game
     /// <summary>Keeps world objects in sync with the Village model, and resolves taps to buildings.</summary>
     public sealed class VillageView
     {
-        /// <summary>How large a hero stands on its Hero Base: a 3D hero at its own height, a flat sprite larger.</summary>
-        public const float BaseHeroScale3D = 1f;
+        /// <summary>How large a hero stands by its Hero Base: big next to the small pedestal (owner, 2026-11-08).</summary>
+        public const float BaseHeroScale3D = 1.35f;
         public const float BaseHeroScaleSprite = 1.35f;
+
+        /// <summary>The Hero Base pedestal: drawn at this share of the footprint, at the back.</summary>
+        public const float PedestalSize = 0.6f;
+        public static readonly Vector3 PedestalOffset = new Vector3(0.3f, 0f, 0.3f);
+        public const float PedestalTop = 0.08f;
+
+        /// <summary>Where the hero stands guard: in front of the pedestal and to its left on screen.</summary>
+        public static readonly Vector3 GuardOffset = new Vector3(-0.45f, 0f, 0.75f);
 
         private sealed class Entry
         {
@@ -433,14 +441,25 @@ namespace ShinobiDominion.Game
             Renderer[] hero = null;
             if (building.Definition.function == BuildingFunction.HeroBase)
             {
+                // A small pedestal at the back of the base, so the hero, not the base, is the star (owner, 2026-11-08).
+                if (stand != null)
+                {
+                    stand.ArtSize = PedestalSize;
+                    stand.ArtOffset = PedestalOffset;
+                    stand.Place();
+                }
+                var shadow = go.transform.Find("GroundShadow");
+                if (shadow != null)
+                {
+                    shadow.localScale *= PedestalSize;
+                    shadow.position = go.transform.position + PedestalOffset + new Vector3(0.12f, 0.015f, -0.06f);
+                }
                 var actor = HeroSprites.Spawn(look, go.transform);
                 if (actor != null)
                 {
-                    // The painted base is a low platform; the hero stands just on top of it.
-                    actor.transform.localPosition = Vector3.up * 0.12f;
-                    // Flat sprite heroes stand large so they read clearly; a 3D hero already has a full body,
-                    // and at its own size it fits the platform under the banners (owner, 2026-11-08).
                     actor.transform.localScale = Vector3.one * (actor.Solid ? BaseHeroScale3D : BaseHeroScaleSprite);
+                    // It appears on the pedestal, then hops down beside it to stand guard.
+                    HeroGuard.Attach(actor, go.transform, PedestalOffset + Vector3.up * PedestalTop, GuardOffset, look != null ? look.Color : Color.white);
                     hero = actor.GetComponentsInChildren<Renderer>(true);
                 }
             }

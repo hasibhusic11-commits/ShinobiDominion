@@ -172,6 +172,12 @@ namespace ShinobiDominion.Game
         /// <summary>Squash and stretch on top of the normal size (Feel.Pop). One when at rest.</summary>
         public Vector2 Juice = Vector2.one;
 
+        /// <summary>Draws the picture as if the footprint were this share of its size (the Hero Base's small pedestal).</summary>
+        public float ArtSize = 1f;
+
+        /// <summary>Moves that smaller picture within the footprint, in world units; the art never turns.</summary>
+        public Vector3 ArtOffset;
+
         /// <summary>Height of the picture in world units, for tap bounds.</summary>
         public float WorldHeight => _renderer.sprite.bounds.size.y * transform.lossyScale.y;
 
@@ -194,14 +200,15 @@ namespace ShinobiDominion.Game
         {
             var parent = transform.parent;
             if (parent == null) return;
-            var size = Footprint() * GridSpace.CellSize;
+            var size = Footprint() * GridSpace.CellSize * ArtSize;
             var half = (size.x + size.y) * 0.25f;
-            transform.SetPositionAndRotation(parent.position + new Vector3(-half, 0f, -half), BuildingSprites.Upright);
+            var centre = parent.position + ArtOffset;
+            transform.SetPositionAndRotation(centre + new Vector3(-half, 0f, -half), BuildingSprites.Upright);
             var screenWidth = (size.x + size.y) * 0.70710678f;
             var scale = screenWidth / Mathf.Max(BuildingSprites.BaseWidth(_renderer.sprite), 0.001f);
             var parentScale = parent.lossyScale;
             transform.localScale = new Vector3(scale * Juice.x / parentScale.x, scale * BuildingSprites.Lift * Juice.y / parentScale.y, 1f / parentScale.z);
-            _renderer.sortingOrder = OnTop ? short.MaxValue : BuildingSprites.Order(parent.position);
+            _renderer.sortingOrder = OnTop ? short.MaxValue : BuildingSprites.Order(centre);
         }
 
         private void LateUpdate() => Place();

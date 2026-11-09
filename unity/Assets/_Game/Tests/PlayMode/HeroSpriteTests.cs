@@ -78,7 +78,7 @@ namespace ShinobiDominion.Tests
             Assert.IsNotNull(actor, "The Sage should stand on the Hero Base");
             Assert.IsTrue(actor.Solid, "The Sage is a 3D model now");
             Assert.IsNotEmpty(actor.GetComponentsInChildren<SkinnedMeshRenderer>(), "A skinned 3D body renders");
-            Assert.AreEqual(VillageView.BaseHeroScale3D, actor.transform.lossyScale.y, 0.001f, "A 3D hero stands at its own size on the base, not enlarged");
+            Assert.AreEqual(VillageView.BaseHeroScale3D, actor.transform.lossyScale.y, 0.001f, "A 3D hero stands big beside its small pedestal");
             // The test's base may be off screen, where Unity stops animating to save time.
             actor.Animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
             Assert.IsTrue(actor.Animator.GetCurrentAnimatorStateInfo(0).IsName(HeroSpriteActor.IdleState), "Should start idle");
@@ -102,6 +102,28 @@ namespace ShinobiDominion.Tests
             Assert.IsTrue(actor.Animator.GetCurrentAnimatorStateInfo(0).IsName(HeroSpriteActor.AttackState), "Should attack");
             yield return new WaitForSeconds(1.6f);
             Assert.IsTrue(actor.Animator.GetCurrentAnimatorStateInfo(0).IsName(HeroSpriteActor.IdleState), "Should return to idle");
+        }
+
+        [UnityTest]
+        public IEnumerator Hero3D_HopsOffThePedestal_ToStandGuard_OverAGlowingRing()
+        {
+            AssignSage();
+            yield return null;
+            yield return null;
+            var actor = FindActor();
+            var guard = actor.GetComponent<HeroGuard>();
+            Assert.IsNotNull(guard, "The base hero stands guard");
+            var baseRoot = guard.transform.parent;
+            Assert.Less(Vector3.Distance(actor.transform.position, baseRoot.position + VillageView.PedestalOffset + Vector3.up * VillageView.PedestalTop), 0.05f, "Starts on the pedestal");
+            var stand = baseRoot.GetComponentInChildren<IsoStand>();
+            Assert.AreEqual(VillageView.PedestalSize, stand.ArtSize, "The pedestal is drawn small");
+
+            yield return new WaitForSeconds(HeroGuard.HopDelay + HeroGuard.HopTime + 0.6f);
+            Assert.IsTrue(guard.Guarding);
+            Assert.Less(Vector3.Distance(actor.transform.position, baseRoot.position + VillageView.GuardOffset), 0.05f, "Stands beside the pedestal");
+            Assert.Greater(Vector3.Dot(actor.Visual.forward, new Vector3(-1f, 0f, -1f).normalized), 0.9f, "Faces out, towards the viewer");
+            var ring = actor.GetComponentsInChildren<SpriteRenderer>().First(r => r.name == "GuardRing");
+            Assert.Greater(ring.color.a, 0.2f, "The ring glows once the hero has landed");
         }
 
         [UnityTest]
