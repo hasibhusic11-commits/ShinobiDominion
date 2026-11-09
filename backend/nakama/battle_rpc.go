@@ -280,6 +280,9 @@ func (s *Server) makeDefender(id, archetypeID string, evolution, level, x, z int
 
 // rivalSnapshot copies a rival's village and guards as they stand now, in a fixed order.
 func (s *Server) rivalSnapshot(ctx context.Context, tx *sql.Tx, rivalID string) ([]battleBuildingInput, []raidDefender, int, error) {
+	if err := settleUpgrades(ctx, tx, rivalID); err != nil {
+		return nil, nil, 0, err
+	}
 	v, err := s.loadVillage(ctx, tx, rivalID, 0)
 	if err != nil {
 		return nil, nil, 0, err
@@ -662,6 +665,11 @@ func (s *Server) rpcRaidDeploy(ctx context.Context, logger runtime.Logger, db *s
 		if err != nil {
 			return err
 		}
+		// Research makes landed troops stronger (ADR-041), at the levels finished when the battle is fought.
+		research, err := loadResearch(ctx, tx, userID)
+		if err != nil {
+			return err
+		}
 		landed := 0
 		used := map[string]int{}
 		for _, stack := range request.Troops {
@@ -678,7 +686,12 @@ func (s *Server) rpcRaidDeploy(ctx context.Context, logger runtime.Logger, db *s
 			}
 			used[stack.TroopID] += stack.Count
 			for i := 0; i < stack.Count; i++ {
-				heroes = append(heroes, battleHeroInput{troop.ID, troop.Role, troop.Hp, troop.Attack, troop.Defense, stack.X, stack.Z, true, "", 0, 0})
+				level := 0
+				if entry := research[troop.ID]; entry != nil {
+					level = entry.Level
+				}
+				hp, attack, defense := s.troops.boosted(troop, level)
+				heroes = append(heroes, battleHeroInput{troop.ID, troop.Role, hp, attack, defense, stack.X, stack.Z, true, "", 0, 0})
 			}
 		}
 		if refusal := deployError(buildings, heroes); refusal != "" {

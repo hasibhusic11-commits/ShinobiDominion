@@ -113,6 +113,7 @@ namespace ShinobiDominion.Core
         public long startingCrystals;
         public long startingMana;
         public long baseGoldCapacity;
+        public long[] upgradeSeconds;
         public List<BuildingDefinition> buildings = new List<BuildingDefinition>();
     }
 
@@ -128,6 +129,7 @@ namespace ShinobiDominion.Core
         public long StartingCrystals { get; }
         public long StartingMana { get; }
         public long BaseGoldCapacity { get; }
+        private readonly long[] _upgradeSeconds;
         public string BalanceStatus { get; }
 
         private BuildingCatalog(BuildingCatalogFile file)
@@ -137,9 +139,14 @@ namespace ShinobiDominion.Core
             StartingCrystals = file.startingCrystals;
             StartingMana = file.startingMana;
             BaseGoldCapacity = file.baseGoldCapacity;
+            _upgradeSeconds = file.upgradeSeconds ?? new long[0];
             BalanceStatus = file.balanceStatus;
             _byId = file.buildings.ToDictionary(definition => definition.id);
         }
+
+        /// <summary>How long upgrading to a level takes, in seconds. Walls are always instant (ADR-040).</summary>
+        public long UpgradeSeconds(BuildingDefinition definition, int level) =>
+            definition.IsWall || level < 0 || level >= _upgradeSeconds.Length ? 0 : _upgradeSeconds[level];
 
         public static BuildingCatalog FromJson(string json)
         {
@@ -200,6 +207,9 @@ namespace ShinobiDominion.Core
         public int Level = 1;
         public string AssignedHeroInstanceId;
         public long LastCollectedUtcTicks;
+        /// <summary>When a running upgrade finishes; 0 when none is running (ADR-040).</summary>
+        public long UpgradeDoneUtcTicks;
+        public bool Upgrading => UpgradeDoneUtcTicks > 0;
 
         public Footprint Footprint => Footprint.Of(Definition, Origin, Rotation);
         public long MaxHp => Definition.HpAtLevel(Level);

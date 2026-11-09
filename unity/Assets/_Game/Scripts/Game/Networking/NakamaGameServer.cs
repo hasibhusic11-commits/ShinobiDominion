@@ -45,6 +45,9 @@ namespace ShinobiDominion.Game
         Task<QuestBoard> QuestBoardAsync();
         Task<QuestBoard> QuestClaimAsync(string key, string questId);
         Task<QuestBoard> GiftOpenAsync(string key);
+        Task<ServerState> FinishUpgradeAsync(string key, int id);
+        Task<ServerState> ResearchStartAsync(string key, string troopId);
+        Task<ServerState> ResearchFinishAsync(string key, string troopId);
     }
 
     public sealed class GameServerException : Exception
@@ -166,6 +169,12 @@ namespace ShinobiDominion.Game
         public async Task<QuestBoard> QuestClaimAsync(string key, string questId) => QuestBoard.Parse(await CallAsync("sd_quest_claim", new { key, questId }));
 
         public async Task<QuestBoard> GiftOpenAsync(string key) => QuestBoard.Parse(await CallAsync("sd_gift_open", new { key }));
+
+        public async Task<ServerState> FinishUpgradeAsync(string key, int id) => ServerState.Parse(await CallAsync("sd_village_finish", new { key, id }));
+
+        public async Task<ServerState> ResearchStartAsync(string key, string troopId) => ServerState.Parse(await CallAsync("sd_research_start", new { key, troopId }));
+
+        public async Task<ServerState> ResearchFinishAsync(string key, string troopId) => ServerState.Parse(await CallAsync("sd_research_finish", new { key, troopId }));
 
         public async Task<ServerState> TrainTroopsAsync(string key, string troopId, int count) =>
             ServerState.Parse(await CallAsync("sd_troop_train", new { key, troopId, count }));

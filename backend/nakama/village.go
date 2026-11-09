@@ -37,6 +37,9 @@ const (
 	vNotAWall       vErr = "NotAWall"
 	vDojoTooLow     vErr = "DojoTooLow"
 	vNoMana         vErr = "InsufficientMana"
+	vUpgrading      vErr = "AlreadyUpgrading"
+	vNoBuilder      vErr = "NoFreeBuilder"
+	vNotUpgrading   vErr = "NotUpgrading"
 )
 
 // BuildingLevel is one row of a building's level table.
@@ -103,6 +106,8 @@ type BuildingCatalog struct {
 	StartingGold     int64         `json:"startingGold"`
 	StartingMana     int64         `json:"startingMana"`
 	BaseGoldCapacity int64         `json:"baseGoldCapacity"`
+	// UpgradeSeconds is how long an upgrade to each level takes, indexed by the level reached (ADR-040).
+	UpgradeSeconds   []int64        `json:"upgradeSeconds"`
 	Buildings        []*BuildingDef `json:"buildings"`
 	byID             map[string]*BuildingDef
 }
@@ -166,6 +171,8 @@ type building struct {
 	Rotation        int
 	Level           int
 	LastCollectedMs int64
+	// UpgradeDoneMs is when a running upgrade finishes, on the server's clock; 0 when none is running.
+	UpgradeDoneMs   int64
 }
 
 func (b *building) size() (int, int) {
@@ -396,6 +403,9 @@ func (v *village) remove(id int) vErr {
 	if !b.Def.removable() {
 		return vNotRemovable
 	}
+	if b.UpgradeDoneMs > 0 {
+		return vUpgrading
+	}
 	v.fill(b, 0)
 	delete(v.byID, id)
 	delete(v.updated, id)
@@ -403,10 +413,14 @@ func (v *village) remove(id int) vErr {
 	return vOK
 }
 
-func (v *village) upgrade(id int) vErr {
+func (v *village) upgrade(id int, nowMs int64) vErr {
+	v.settle(nowMs)
 	b, ok := v.byID[id]
 	if !ok {
 		return vNotFound
+	}
+	if b.UpgradeDoneMs > 0 {
+		return vUpgrading
 	}
 	if b.Level >= b.Def.maxLevel() {
 		return vMaxLevel
@@ -414,12 +428,89 @@ func (v *village) upgrade(id int) vErr {
 	if v.hqLevel() < b.Def.at(b.Level+1).RequiredHq {
 		return vDojoTooLow
 	}
+	seconds := v.catalog.upgradeTime(b.Def, b.Level+1)
+	if seconds > 0 && v.busyBuilders() >= v.builders() {
+		return vNoBuilder
+	}
 	cost := b.Def.at(b.Level).UpgradeCost
 	if v.gold < cost {
 		return vFunds
 	}
 	v.gold -= cost
+	if seconds > 0 {
+		b.UpgradeDoneMs = nowMs + seconds*1000
+	} else {
+		b.Level++
+	}
+	v.updated[id] = b
+	return vOK
+}
+
+// upgradeTime is how long upgrading to a level takes. Walls are always instant.
+func (c *BuildingCatalog) upgradeTime(def *BuildingDef, level int) int64 {
+	if def.isWall() || level < 0 || level >= len(c.UpgradeSeconds) {
+		return 0
+	}
+	return c.UpgradeSeconds[level]
+}
+
+// builders is how many upgrades can run at once: 2, then one more at Builder Hall levels 6 and 11.
+func (v *village) builders() int {
+	hall := 1
+	for _, b := range v.byID {
+		if b.Def.ID == "builder_hall" && b.Level > hall {
+			hall = b.Level
+		}
+	}
+	return 2 + (hall-1)/5
+}
+
+func (v *village) busyBuilders() int {
+	busy := 0
+	for _, b := range v.byID {
+		if b.UpgradeDoneMs > 0 {
+			busy++
+		}
+	}
+	return busy
+}
+
+// settle finishes every upgrade whose time has come. The server runs it before any change.
+func (v *village) settle(nowMs int64) {
+	for id, b := range v.byID {
+		if b.UpgradeDoneMs > 0 && b.UpgradeDoneMs <= nowMs {
+			b.Level++
+			b.UpgradeDoneMs = 0
+			v.updated[id] = b
+		}
+	}
+}
+
+// finishCost is the gems to finish an upgrade now: one per two minutes left, at least one.
+func finishCost(remainingMs int64) int64 {
+	if remainingMs <= 0 {
+		return 0
+	}
+	return (remainingMs + 119999) / 120000
+}
+
+// finishNow pays gems to complete a running upgrade at once.
+func (v *village) finishNow(id int, nowMs int64) vErr {
+	v.settle(nowMs)
+	b, ok := v.byID[id]
+	if !ok {
+		return vNotFound
+	}
+	if b.UpgradeDoneMs == 0 {
+		return vNotUpgrading
+	}
+	cost := finishCost(b.UpgradeDoneMs - nowMs)
+	if v.crystals < cost {
+		return vFunds
+	}
+	v.crystals -= cost
 	b.Level++
+	b.UpgradeDoneMs = 0
 	v.updated[id] = b
 	return vOK
 }

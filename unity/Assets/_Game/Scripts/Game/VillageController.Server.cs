@@ -73,6 +73,7 @@ namespace ShinobiDominion.Game
             Roster.ReplaceWithServerState(state.RosterJson);
             ServerCrystals = state.Crystals;
             Army.Replace(state.Troops);
+            Research.Replace(state.Research);
             if (state.Village != null) Village.Restore(state.Village);
             RefreshHud();
             if (_selectionCells != null && UiState.Screen == VillageScreen.BuildingPanel)
@@ -127,7 +128,11 @@ namespace ShinobiDominion.Game
 
         private async void Run(Func<Task> work, Action onFailure = null)
         {
-            if (_busy) return;
+            if (_busy)
+            {
+                Debug.Log("A server request was ignored because another is still running.");
+                return;
+            }
             _busy = true;
             try
             {

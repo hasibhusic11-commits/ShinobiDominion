@@ -31,6 +31,8 @@ namespace ShinobiDominion.Game
             public bool Enabled;
             public string Cost;
             public bool CostShort;
+            /// <summary>The picture beside the cost: gold unless set.</summary>
+            public string CostIcon;
         }
 
         private void HideActionBar()
@@ -60,7 +62,18 @@ namespace ShinobiDominion.Game
             var primary = PrimaryAction(building);
             if (primary.HasValue) actions.Add(primary.Value);
 
-            if (building.Level < definition.maxLevel)
+            if (building.Upgrading)
+            {
+                // While it upgrades, the medallion finishes the job for gems instead (ADR-040).
+                var gems = Village.FinishCost(building.UpgradeDoneUtcTicks - Now);
+                actions.Add(new BarAction
+                {
+                    Name = "FinishUpgradeButton", Caption = FormatDuration(building.UpgradeDoneUtcTicks - Now), Icon = "crystals", Kind = MedalKind.Secondary,
+                    OnClick = () => FinishUpgrade(building.Id), Enabled = Village.Crystals >= gems,
+                    Cost = gems.ToString("N0"), CostShort = Village.Crystals < gems, CostIcon = "icon_crystals"
+                });
+            }
+            else if (building.Level < definition.maxLevel)
             {
                 var cost = definition.UpgradeCost(building.Level);
                 var needsDojo = definition.At(building.Level + 1).requiredHq;
@@ -68,14 +81,14 @@ namespace ShinobiDominion.Game
                 actions.Add(new BarAction
                 {
                     Name = "UpgradeButton", Caption = "Upgrade", Icon = "upgrade", Kind = MedalKind.Secondary,
-                    OnClick = () => Upgrade(building.Id, false), Enabled = affordable && Village.HqLevel >= needsDojo,
+                    OnClick = () => Upgrade(building.Id, false), Enabled = affordable && Village.HqLevel >= needsDojo && (Village.Catalog.UpgradeSeconds(definition, building.Level + 1) == 0 || Village.BusyBuilders < Village.Builders),
                     Cost = Village.HqLevel < needsDojo ? $"Dojo {needsDojo}" : cost.ToString("N0"), CostShort = !affordable || Village.HqLevel < needsDojo
                 });
             }
 
             actions.Add(new BarAction { Name = "MoveButton", Caption = "Move", Icon = "move", Kind = MedalKind.Secondary, OnClick = () => BeginMove(building.Id), Enabled = true });
             if (definition.removable)
-                actions.Add(new BarAction { Name = "RemoveButton", Caption = "Remove", Icon = "remove", Kind = MedalKind.Destructive, OnClick = () => RemoveSelected(building.Id), Enabled = true });
+                actions.Add(new BarAction { Name = "RemoveButton", Caption = "Remove", Icon = "remove", Kind = MedalKind.Destructive, OnClick = () => RemoveSelected(building.Id), Enabled = !building.Upgrading });
             return actions;
         }
 
@@ -92,6 +105,8 @@ namespace ShinobiDominion.Game
                     return new BarAction { Name = "ChangeHeroButton", Caption = "Hero", Icon = "hero", Kind = MedalKind.Primary, OnClick = () => ShowHeroPicker(building.Id), Enabled = Roster.HeroCount > 0 };
                 case BuildingFunction.SummoningGate:
                     return new BarAction { Name = "OpenGateButton", Caption = "Summon", Icon = "summon", Kind = MedalKind.Primary, OnClick = ShowSummoningGate, Enabled = IsOnline };
+                case BuildingFunction.Research:
+                    return new BarAction { Name = "ResearchButton", Caption = "Research", Icon = "research", Kind = MedalKind.Primary, OnClick = () => ShowBuildingDetails(building.Id), Enabled = true };
                 case BuildingFunction.Training:
                     return new BarAction { Name = "TrainButton", Caption = "Train", Icon = "train", Kind = MedalKind.Primary, OnClick = () => ShowBuildingDetails(building.Id), Enabled = true };
                 case BuildingFunction.Collector:
@@ -149,7 +164,7 @@ namespace ShinobiDominion.Game
                 var medal = Medal.Create(bar, action.Name, action.Kind, action.Icon, action.Caption, action.OnClick, action.Enabled, size);
                 var rect = (RectTransform)medal.transform;
                 Ui.Anchor(rect, new Vector2(1f, 0f), new Vector2(size, size), new Vector2(x + size, bottom));
-                if (!string.IsNullOrEmpty(action.Cost)) CostTag(rect, action.Cost, action.CostShort);
+                if (!string.IsNullOrEmpty(action.Cost)) CostTag(rect, action.Cost, action.CostShort, action.CostIcon ?? "icon_gold");
                 UiMotion.PopIn(rect, 0.04f * index++, 0.6f, 0.22f);
                 x += size + ActionGap;
             }
@@ -158,12 +173,12 @@ namespace ShinobiDominion.Game
         }
 
         /// <summary>A small lacquer tag under a medallion with a coin and the price; red when it cannot be paid.</summary>
-        private static void CostTag(RectTransform medal, string cost, bool short_)
+        private static void CostTag(RectTransform medal, string cost, bool short_, string icon)
         {
             var tag = Ui.Rect("CostTag", medal);
             Ui.Anchor(tag, new Vector2(0.5f, 1f), new Vector2(84f, 24f), new Vector2(0f, 14f));
             HudArt.Plate(tag).pixelsPerUnitMultiplier = 2.6f;
-            HudArt.Picture(tag, "Coin", "icon_gold", new Vector2(0f, 0.5f), new Vector2(20f, 20f), new Vector2(5f, 0f));
+            HudArt.Picture(tag, "Coin", icon, new Vector2(0f, 0.5f), new Vector2(20f, 20f), new Vector2(5f, 0f));
             var text = HudArt.Label(tag, cost, HudArt.Numbers, 15, TextAnchor.MiddleRight, short_ ? HudArt.CrimsonLight : HudArt.Ivory, HudArt.LacquerDeep);
             Ui.Stretch(text.rectTransform, 24f, 0f, 8f, 0f);
         }

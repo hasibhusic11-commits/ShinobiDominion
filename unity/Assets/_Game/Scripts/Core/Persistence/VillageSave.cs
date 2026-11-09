@@ -51,6 +51,8 @@ namespace ShinobiDominion.Core
         public int level;
         public string assignedHeroInstanceId;
         public long lastCollectedUtcTicks;
+        /// <summary>When a running upgrade finishes; 0 when none is running (ADR-040).</summary>
+        public long upgradeDoneUtcTicks;
     }
 
     /// <summary>Snapshot undo stack. Restoring also restores the wallet, so undo refunds exactly.</summary>

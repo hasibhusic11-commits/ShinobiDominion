@@ -55,7 +55,7 @@ func (s *Server) loadVillage(ctx context.Context, tx *sql.Tx, userID string, cry
 	}
 	v := newVillage(s.buildings, gold, crystals, nextID)
 	v.mana, v.loadedMana = mana, mana
-	rows, err := tx.QueryContext(ctx, `SELECT id, definition_id, x, z, rotation, level, last_collected_ms FROM sd_building WHERE user_id = $1 ORDER BY id`, userID)
+	rows, err := tx.QueryContext(ctx, `SELECT id, definition_id, x, z, rotation, level, last_collected_ms, upgrade_done_ms FROM sd_building WHERE user_id = $1 ORDER BY id`, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +63,7 @@ func (s *Server) loadVillage(ctx context.Context, tx *sql.Tx, userID string, cry
 	for rows.Next() {
 		b := &building{}
 		var definitionID string
-		if err := rows.Scan(&b.ID, &definitionID, &b.X, &b.Z, &b.Rotation, &b.Level, &b.LastCollectedMs); err != nil {
+		if err := rows.Scan(&b.ID, &definitionID, &b.X, &b.Z, &b.Rotation, &b.Level, &b.LastCollectedMs, &b.UpgradeDoneMs); err != nil {
 			return nil, err
 		}
 		def, ok := s.buildings.byID[definitionID]
@@ -84,14 +84,14 @@ func persistVillage(ctx context.Context, tx *sql.Tx, userID string, v *village, 
 		if _, deleted := v.byID[b.ID]; !deleted {
 			continue
 		}
-		if _, err := tx.ExecContext(ctx, `INSERT INTO sd_building (user_id, id, definition_id, x, z, rotation, level, last_collected_ms) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-			userID, b.ID, b.Def.ID, b.X, b.Z, b.Rotation, b.Level, b.LastCollectedMs); err != nil {
+		if _, err := tx.ExecContext(ctx, `INSERT INTO sd_building (user_id, id, definition_id, x, z, rotation, level, last_collected_ms, upgrade_done_ms) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+			userID, b.ID, b.Def.ID, b.X, b.Z, b.Rotation, b.Level, b.LastCollectedMs, b.UpgradeDoneMs); err != nil {
 			return err
 		}
 	}
 	for _, b := range v.updated {
-		if _, err := tx.ExecContext(ctx, `UPDATE sd_building SET x = $1, z = $2, rotation = $3, level = $4, last_collected_ms = $5 WHERE user_id = $6 AND id = $7`,
-			b.X, b.Z, b.Rotation, b.Level, b.LastCollectedMs, userID, b.ID); err != nil {
+		if _, err := tx.ExecContext(ctx, `UPDATE sd_building SET x = $1, z = $2, rotation = $3, level = $4, last_collected_ms = $5, upgrade_done_ms = $6 WHERE user_id = $7 AND id = $8`,
+			b.X, b.Z, b.Rotation, b.Level, b.LastCollectedMs, b.UpgradeDoneMs, userID, b.ID); err != nil {
 			return err
 		}
 	}
@@ -145,6 +145,7 @@ type buildingState struct {
 	Level         int     `json:"level"`
 	AssignedHero  *string `json:"assignedHeroInstanceId"`
 	LastCollected int64   `json:"lastCollectedUtcTicks"`
+	UpgradeDone   int64   `json:"upgradeDoneUtcTicks"`
 }
 
 func loadVillageState(ctx context.Context, tx *sql.Tx, userID string, crystals int64) (*villageState, error) {
@@ -152,7 +153,7 @@ func loadVillageState(ctx context.Context, tx *sql.Tx, userID string, crystals i
 	if err := tx.QueryRowContext(ctx, `SELECT gold, mana, next_building_id FROM sd_player WHERE user_id = $1`, userID).Scan(&state.Gold, &state.Mana, &state.NextInstanceID); err != nil {
 		return nil, err
 	}
-	rows, err := tx.QueryContext(ctx, `SELECT b.id, b.definition_id, b.x, b.z, b.rotation, b.level, b.last_collected_ms,
+	rows, err := tx.QueryContext(ctx, `SELECT b.id, b.definition_id, b.x, b.z, b.rotation, b.level, b.last_collected_ms, b.upgrade_done_ms,
 		(SELECT h.instance_id::text FROM sd_hero h WHERE h.user_id = b.user_id AND h.base_slot = b.id)
 		FROM sd_building b WHERE b.user_id = $1 ORDER BY b.id`, userID)
 	if err != nil {
@@ -162,11 +163,14 @@ func loadVillageState(ctx context.Context, tx *sql.Tx, userID string, crystals i
 	for rows.Next() {
 		var entry buildingState
 		var hero sql.NullString
-		var collectedMs int64
-		if err := rows.Scan(&entry.ID, &entry.DefinitionID, &entry.X, &entry.Z, &entry.Rotation, &entry.Level, &collectedMs, &hero); err != nil {
+		var collectedMs, doneMs int64
+		if err := rows.Scan(&entry.ID, &entry.DefinitionID, &entry.X, &entry.Z, &entry.Rotation, &entry.Level, &collectedMs, &doneMs, &hero); err != nil {
 			return nil, err
 		}
 		entry.LastCollected = ticksFromMillis(collectedMs)
+		if doneMs > 0 {
+			entry.UpgradeDone = ticksFromMillis(doneMs)
+		}
 		if hero.Valid {
 			value := hero.String
 			entry.AssignedHero = &value
@@ -338,7 +342,7 @@ func (s *Server) rpcUpgrade(ctx context.Context, logger runtime.Logger, db *sql.
 		if request.Group {
 			return v.upgradeWallGroup(request.ID)
 		}
-		return v.upgrade(request.ID)
+		return v.upgrade(request.ID, now)
 	})
 }
 
@@ -354,5 +358,20 @@ func (s *Server) rpcCollect(ctx context.Context, logger runtime.Logger, db *sql.
 	return s.runVillageOp(ctx, db, userID, request.Key, "collect", hashRequest(itoa(request.ID)), func(v *village, now int64) vErr {
 		_, refusal := v.collect(request.ID, now)
 		return refusal
+	})
+}
+
+// rpcFinish pays gems to finish a running upgrade at once (ADR-040).
+func (s *Server) rpcFinish(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error) {
+	userID, err := userFrom(ctx)
+	if err != nil {
+		return "", err
+	}
+	var request buildingRequest
+	if err := decodeStrict(payload, &request); err != nil {
+		return "", err
+	}
+	return s.runVillageOp(ctx, db, userID, request.Key, "finish", hashRequest(itoa(request.ID)), func(v *village, now int64) vErr {
+		return v.finishNow(request.ID, now)
 	})
 }

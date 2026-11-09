@@ -28,10 +28,12 @@ namespace ShinobiDominion.Core
         private sealed class Document
         {
             public int schemaVersion;
+            public ResearchSettings research;
             public List<TroopDefinition> troops = new List<TroopDefinition>();
         }
 
         public IReadOnlyList<TroopDefinition> All { get; private set; }
+        public ResearchSettings Research { get; private set; }
 
         public TroopDefinition Find(string id) => All.FirstOrDefault(t => t.id == id);
 
@@ -46,7 +48,10 @@ namespace ShinobiDominion.Core
                     throw new FormatException($"Troop {troop.id} has invalid values.");
                 BattleSim.RoleNumber(troop.role);
             }
-            return new TroopCatalog { All = document.troops };
+            var research = document.research;
+            if (research == null || research.maxLevel < 1 || research.seconds == null || research.seconds.Length <= research.maxLevel || research.percentPerLevel < 0 || research.manaPerLevel < 1)
+                throw new FormatException("Troop research settings are missing or invalid.");
+            return new TroopCatalog { All = document.troops, Research = research };
         }
     }
 

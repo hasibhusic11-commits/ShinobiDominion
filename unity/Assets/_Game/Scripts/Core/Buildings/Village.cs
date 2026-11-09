@@ -30,7 +30,13 @@ namespace ShinobiDominion.Core
         TroopLocked,
         CampsFull,
         OneHeroOnly,
-        InsufficientMana
+        InsufficientMana,
+        AlreadyUpgrading,
+        NoFreeBuilder,
+        NotUpgrading,
+        NoResearchHut,
+        ResearchHutTooLow,
+        ResearchBusy
     }
 
     public static class VillageErrorText
@@ -64,6 +70,12 @@ namespace ShinobiDominion.Core
                 case VillageError.TroopLocked: return "Upgrade the Training Hall first";
                 case VillageError.CampsFull: return "Your Troop Camps are full";
                 case VillageError.InsufficientMana: return "Not enough Mana";
+                case VillageError.AlreadyUpgrading: return "Already being upgraded";
+                case VillageError.NoFreeBuilder: return "All builders are busy. Wait, or finish an upgrade with gems.";
+                case VillageError.NotUpgrading: return "Nothing is being upgraded here";
+                case VillageError.NoResearchHut: return "Build a Research Hut first";
+                case VillageError.ResearchHutTooLow: return "Upgrade the Research Hut first";
+                case VillageError.ResearchBusy: return "The Research Hut is already studying something";
                 default: return error.ToString();
             }
         }
@@ -158,6 +170,15 @@ namespace ShinobiDominion.Core
             return VillageError.None;
         }
 
+        /// <summary>Takes gems for finishing something now. Online, the server decides this.</summary>
+        public bool TrySpendCrystals(long amount)
+        {
+            if (amount < 0 || Crystals < amount) return false;
+            Crystals -= amount;
+            Changed?.Invoke();
+            return true;
+        }
+
         // ---------- Placement ----------
 
         public VillageError CheckFootprint(BuildingDefinition definition, GridCoord origin, Rotation rotation, int ignoreInstanceId = 0)
@@ -220,22 +241,87 @@ namespace ShinobiDominion.Core
             var building = Find(id);
             if (building == null) return VillageError.NotFound;
             if (!building.Definition.removable) return VillageError.NotRemovable;
+            if (building.Upgrading) return VillageError.AlreadyUpgrading;
             Grid.Clear(building.Footprint);
             _buildings.Remove(id);
             Changed?.Invoke();
             return VillageError.None;
         }
 
-        public VillageError TryUpgrade(int id)
+        /// <summary>Upgrades on this device's clock. Online, the server's clock decides.</summary>
+        public VillageError TryUpgrade(int id) => TryUpgrade(id, DateTime.UtcNow.Ticks);
+
+        /// <summary>
+        /// Starts an upgrade (ADR-040). Levels with an upgrade time need a free builder, and the building reaches
+        /// the new level when the time is up; instant ones level at once. Mirrors the server's upgrade.
+        /// </summary>
+        public VillageError TryUpgrade(int id, long nowUtcTicks)
         {
+            Settle(nowUtcTicks);
             var building = Find(id);
             if (building == null) return VillageError.NotFound;
+            if (building.Upgrading) return VillageError.AlreadyUpgrading;
             if (building.Level >= building.Definition.maxLevel) return VillageError.MaxLevel;
             if (HqLevel < building.Definition.At(building.Level + 1).requiredHq) return VillageError.DojoTooLow;
+            var seconds = Catalog.UpgradeSeconds(building.Definition, building.Level + 1);
+            if (seconds > 0 && BusyBuilders >= Builders) return VillageError.NoFreeBuilder;
             var cost = building.Definition.UpgradeCost(building.Level);
             if (!CanAfford(cost, 0)) return VillageError.InsufficientFunds;
             Gold -= cost;
+            if (seconds > 0) building.UpgradeDoneUtcTicks = nowUtcTicks + seconds * TimeSpan.TicksPerSecond;
+            else building.Level++;
+            Changed?.Invoke();
+            return VillageError.None;
+        }
+
+        /// <summary>How many upgrades can run at once: 2, then one more at Builder Hall levels 6 and 11.</summary>
+        public int Builders
+        {
+            get
+            {
+                var hall = 1;
+                foreach (var building in _buildings.Values)
+                    if (building.Definition.id == "builder_hall" && building.Level > hall) hall = building.Level;
+                return 2 + (hall - 1) / 5;
+            }
+        }
+
+        public int BusyBuilders => _buildings.Values.Count(b => b.Upgrading);
+
+        /// <summary>Finishes every upgrade whose time has come. True if any did.</summary>
+        public bool Settle(long nowUtcTicks)
+        {
+            var changed = false;
+            foreach (var building in _buildings.Values)
+            {
+                if (!building.Upgrading || building.UpgradeDoneUtcTicks > nowUtcTicks) continue;
+                building.Level++;
+                building.UpgradeDoneUtcTicks = 0;
+                changed = true;
+            }
+            if (changed) Changed?.Invoke();
+            return changed;
+        }
+
+        /// <summary>Gems to finish an upgrade now: one per two minutes left, at least one. Mirrors the server.</summary>
+        public static long FinishCost(long remainingTicks)
+        {
+            if (remainingTicks <= 0) return 0;
+            var remainingMs = remainingTicks / TimeSpan.TicksPerMillisecond;
+            return (remainingMs + 119999) / 120000;
+        }
+
+        public VillageError TryFinishNow(int id, long nowUtcTicks)
+        {
+            Settle(nowUtcTicks);
+            var building = Find(id);
+            if (building == null) return VillageError.NotFound;
+            if (!building.Upgrading) return VillageError.NotUpgrading;
+            var cost = FinishCost(building.UpgradeDoneUtcTicks - nowUtcTicks);
+            if (Crystals < cost) return VillageError.InsufficientFunds;
+            Crystals -= cost;
             building.Level++;
+            building.UpgradeDoneUtcTicks = 0;
             Changed?.Invoke();
             return VillageError.None;
         }
@@ -481,7 +567,8 @@ namespace ShinobiDominion.Core
                     rotation = (int)building.Rotation,
                     level = building.Level,
                     assignedHeroInstanceId = building.AssignedHeroInstanceId,
-                    lastCollectedUtcTicks = building.LastCollectedUtcTicks
+                    lastCollectedUtcTicks = building.LastCollectedUtcTicks,
+                    upgradeDoneUtcTicks = building.UpgradeDoneUtcTicks
                 });
             }
             return save;
@@ -537,6 +624,8 @@ namespace ShinobiDominion.Core
                     throw new VillageSaveException($"Building {entry.id} cannot be rotated.");
                 if (entry.level < 1 || entry.level > definition.maxLevel)
                     throw new VillageSaveException($"Invalid level on building {entry.id}.");
+                if (entry.upgradeDoneUtcTicks < 0 || (entry.upgradeDoneUtcTicks > 0 && entry.level >= definition.maxLevel))
+                    throw new VillageSaveException($"Invalid upgrade on building {entry.id}.");
                 var origin = new GridCoord(entry.x, entry.z);
                 var footprintError = CheckFootprint(definition, origin, rotation);
                 if (footprintError != VillageError.None)
@@ -557,7 +646,8 @@ namespace ShinobiDominion.Core
                     Rotation = rotation,
                     Level = entry.level,
                     AssignedHeroInstanceId = string.IsNullOrEmpty(entry.assignedHeroInstanceId) ? null : entry.assignedHeroInstanceId,
-                    LastCollectedUtcTicks = entry.lastCollectedUtcTicks
+                    LastCollectedUtcTicks = entry.lastCollectedUtcTicks,
+                    UpgradeDoneUtcTicks = entry.upgradeDoneUtcTicks
                 };
                 _buildings.Add(building.Id, building);
                 Grid.Fill(building.Footprint, building.Id);

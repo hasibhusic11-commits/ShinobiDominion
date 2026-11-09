@@ -76,12 +76,29 @@ Smoothness:
 - A camera that springs back at the edges.
 - Faster texture building at startup.
 
+**Build timers (ADR-040):**
+- Upgrades past level 2 take time and need one of your builders (2 at first).
+- A timer floats over each upgrading building.
+- Gems finish an upgrade at once.
+
+Verified:
+- The shared rule scenarios pass in C# and Go.
+- A backend test checks that ten finishes at once charge one gem once.
+- Offline Unity tests cover the timer, the finish medallion and an upgrade finishing on its own.
+
+**Research (ADR-041):**
+- The Research Hut runs troop studies paid in Mana: +8% HP and attack per level.
+- One study runs at a time; gems finish one at once.
+- Studies apply to your troops in raids and dungeons.
+
+`Campaign_ThroughTheScreen_ShowsLockedStages_AndServerRefusesThem` failed in some full runs. Its server refusal could take longer than the test's fixed one-second wait, so the test now waits for the answer. The Battle menu also now loads its list once any earlier request finishes, instead of dropping it.
+
 | Check | Result |
 |---|---|
 | .NET harness (`tools/core-tests`) | 174 of 174 passed |
 | Go unit tests, including Siege balance and Arena duels | passed; part of the server build |
-| Backend suite, including gift, quest, Siege and Arena tests | passed |
-| Unity PlayMode against the live server, including the new `ModeTests` | 114 of 114 passed |
+| Backend suite, including gift, quest, Siege, Arena, timer and research tests | passed |
+| Unity PlayMode against the live server, including `ModeTests` and `UpgradeTimerTests` | 120 of 120 passed |
 
 **Not verified:** how any of it feels in your hands, on a phone, or with two real people in the Arena. Siege and Arena numbers are test values.
 

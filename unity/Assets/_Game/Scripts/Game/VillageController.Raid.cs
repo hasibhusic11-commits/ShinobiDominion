@@ -121,7 +121,21 @@ namespace ShinobiDominion.Game
             _raidList = null;
             LastMessage = null;
             ShowRaidList();
-            if (!IsOnline) return;
+            // Fetched as soon as no other request is running, so a tap still in flight can't swallow it.
+            _raidListWanted = IsOnline;
+            FetchRaidListWhenFree();
+        }
+
+        private void ShowRaidList() => ShowBattleHub();
+
+        private bool _raidListWanted;
+
+        /// <summary>Called on opening ATTACK and every frame: loads the raid list once nothing else is in flight.</summary>
+        private void FetchRaidListWhenFree()
+        {
+            if (!_raidListWanted || _busy) return;
+            _raidListWanted = false;
+            if (!IsOnline || UiState.Screen != VillageScreen.AttackFlow || _raid != null) return;
             Run(async () =>
             {
                 var list = await _server.RaidListAsync();
@@ -134,8 +148,6 @@ namespace ShinobiDominion.Game
                 if (UiState.Screen == VillageScreen.AttackFlow && _raid == null) ShowRaidList();
             });
         }
-
-        private void ShowRaidList() => ShowBattleHub();
 
         public void ScoutRaid(string raidId)
         {
@@ -390,7 +402,7 @@ namespace ShinobiDominion.Game
                 return;
             }
 
-            var heroes = _raid.Session.ToUnits(_raid.Placements, _raid.Stacks, TroopData);
+            var heroes = _raid.Session.ToUnits(_raid.Placements, _raid.Stacks, TroopData, Research);
             var refusal = BattleSim.DeployError(_raid.Session.buildings, heroes);
             if (refusal.Length > 0)
             {

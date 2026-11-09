@@ -126,6 +126,7 @@ type buildingView struct {
 	Rotation     int     `json:"rotation"`
 	Level        int     `json:"level"`
 	Hero         *string `json:"assignedHeroInstanceId"`
+	UpgradeDone  int64   `json:"upgradeDoneUtcTicks"`
 }
 
 type villageView struct {

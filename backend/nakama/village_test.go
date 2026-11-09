@@ -37,6 +37,7 @@ type vectorOp struct {
 	CountDef string   `json:"countDef"`
 	Level    *int     `json:"level"`
 	Hours    int64    `json:"hours"`
+	Minutes  int64    `json:"minutes"`
 	Troop    string   `json:"troop"`
 }
 
@@ -107,8 +108,12 @@ func TestSharedRuleScenarios(t *testing.T) {
 				t.Fatal(troopErr)
 			}
 			counts := map[string]int{}
+			research := map[string]*researchEntry{}
 			for index, op := range scenario.Ops {
 				where := "step " + strconv.Itoa(index+1)
+				// The server finishes due upgrades before every change, under the player lock.
+				v.settle(clock)
+				settleResearch(research, clock)
 				target := op.ID
 				if op.Target != "" {
 					target = labels[op.Target]
@@ -122,6 +127,7 @@ func TestSharedRuleScenarios(t *testing.T) {
 					continue
 				case "setLevel":
 					v.byID[target].Level = *op.Level
+					v.byID[target].UpgradeDoneMs = 0
 					continue
 				case "train":
 					want := op.Expect
@@ -136,6 +142,37 @@ func TestSharedRuleScenarios(t *testing.T) {
 					}
 					if op.Mana != nil && v.mana != *op.Mana {
 						t.Fatalf("%s: mana %d, want %d", where, v.mana, *op.Mana)
+					}
+					continue
+				case "research", "finishResearch":
+					want := op.Expect
+					if want == "None" {
+						want = ""
+					}
+					var got vErr
+					if op.Op == "research" {
+						got = startResearch(v, troops, research, op.Troop, clock)
+					} else {
+						got = finishResearch(v, research, op.Troop, clock)
+					}
+					if string(got) != want {
+						t.Fatalf("%s %s: got %q, want %q", where, op.Op, got, op.Expect)
+					}
+					if op.Mana != nil && v.mana != *op.Mana {
+						t.Fatalf("%s: mana %d, want %d", where, v.mana, *op.Mana)
+					}
+					if op.Crystals != nil && v.crystals != *op.Crystals {
+						t.Fatalf("%s: crystals %d, want %d", where, v.crystals, *op.Crystals)
+					}
+					continue
+				case "researchLevel":
+					want, _ := strconv.Atoi(op.Expect)
+					got := 0
+					if entry := research[op.Troop]; entry != nil {
+						got = entry.Level
+					}
+					if got != want {
+						t.Fatalf("%s: %s research level %d, want %d", where, op.Troop, got, want)
 					}
 					continue
 				case "setMana":
@@ -162,6 +199,14 @@ func TestSharedRuleScenarios(t *testing.T) {
 					continue
 				case "advanceHours":
 					clock += op.Hours * 3600000
+					continue
+				case "advanceMinutes":
+					clock += op.Minutes * 60000
+					continue
+				case "upgrading":
+					if (op.Expect == "true") != (v.byID[target].UpgradeDoneMs > 0) {
+						t.Fatalf("%s: upgrading should be %s", where, op.Expect)
+					}
 					continue
 				case "occupied":
 					if (op.Expect == "true") != (v.occupantAt(op.X, op.Z) != 0) {
@@ -191,7 +236,9 @@ func TestSharedRuleScenarios(t *testing.T) {
 				case "remove":
 					result = v.remove(target)
 				case "upgrade":
-					result = v.upgrade(target)
+					result = v.upgrade(target, clock)
+				case "finish":
+					result = v.finishNow(target, clock)
 				case "upgradeGroup":
 					result = v.upgradeWallGroup(target)
 				case "collect":

@@ -5,6 +5,7 @@
   "startingCrystals": 100,
   "startingMana": 500,
   "baseGoldCapacity": 20000,
+  "upgradeSeconds": [0, 0, 0, 60, 180, 600, 1200, 2400, 3600, 7200, 14400, 21600, 28800, 43200, 57600, 86400],
   "buildings": [
     {
       "id": "dojo_hq", "displayName": "Dojo HQ", "description": "The heart of the village. Its level sets building limits and how far others can be upgraded.", "category": "Structures", "function": "Headquarters", "width": 5, "depth": 5, "removable": false, "costGold": 0, "maxCountByHqLevel": [1],
@@ -127,7 +128,7 @@
       ]
     },
     {
-      "id": "research_hut", "displayName": "Research Hut", "description": "Research upgrades. Available in a later phase.", "category": "Structures", "function": "Research", "width": 3, "depth": 3, "costGold": 1200, "maxCountByHqLevel": [0, 1],
+      "id": "research_hut", "displayName": "Research Hut", "description": "Studies that make each kind of troop stronger, paid for in Mana. One study at a time; a higher hut allows higher studies.", "category": "Structures", "function": "Research", "width": 3, "depth": 3, "costGold": 1200, "maxCountByHqLevel": [0, 1],
       "levels": [
         {"hp":400,"upgradeCost":700,"requiredHq":1,"might":3},
         {"hp":460,"upgradeCost":1400,"requiredHq":1,"might":6},

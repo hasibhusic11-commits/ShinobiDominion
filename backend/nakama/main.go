@@ -160,6 +160,9 @@ func (s *Server) register(initializer runtime.Initializer, logger runtime.Logger
 		"sd_village_remove": s.rpcRemove,
 		"sd_village_upgrade": s.rpcUpgrade,
 		"sd_village_collect": s.rpcCollect,
+		"sd_village_finish": s.rpcFinish,
+		"sd_research_start": s.rpcResearchStart,
+		"sd_research_finish": s.rpcResearchFinish,
 		"sd_troop_train":  s.rpcTroopTrain,
 		"sd_hero_train":   s.rpcHeroTrain,
 		"sd_raid_list":    s.rpcRaidList,
@@ -315,7 +318,20 @@ func (s *Server) lockPlayer(ctx context.Context, tx *sql.Tx, userID string) (int
 			return 0, err
 		}
 	}
+	if err := settleUpgrades(ctx, tx, userID); err != nil {
+		return 0, err
+	}
+	if err := settleResearchSQL(ctx, tx, userID); err != nil {
+		return 0, err
+	}
 	return crystals, nil
+}
+
+// settleUpgrades finishes every upgrade whose time has passed, on the server's clock (ADR-040). It runs under
+// the player lock before anything else, so every call sees finished buildings at their new level.
+func settleUpgrades(ctx context.Context, tx *sql.Tx, userID string) error {
+	_, err := tx.ExecContext(ctx, `UPDATE sd_building SET level = level + 1, upgrade_done_ms = 0 WHERE user_id = $1 AND upgrade_done_ms > 0 AND upgrade_done_ms <= $2`, userID, nowMillis())
+	return err
 }
 
 func addLedger(ctx context.Context, tx *sql.Tx, userID string, delta, balance int64, reason, ref string) error {
@@ -368,6 +384,7 @@ type playerState struct {
 	Items         map[string]int64 `json:"items"`
 	Village       *villageState    `json:"village"`
 	Troops        map[string]int   `json:"troops"`
+	Research      map[string]researchView `json:"research"`
 }
 
 func loadState(ctx context.Context, tx *sql.Tx, userID string, crystals int64) (*playerState, error) {
@@ -415,6 +432,11 @@ func loadState(ctx context.Context, tx *sql.Tx, userID string, crystals int64) (
 		return state, err
 	}
 	state.Troops, err = loadTroopCounts(ctx, tx, userID)
+	if err != nil {
+		return state, err
+	}
+	research, err := loadResearch(ctx, tx, userID)
+	state.Research = researchViews(research)
 	return state, err
 }
 

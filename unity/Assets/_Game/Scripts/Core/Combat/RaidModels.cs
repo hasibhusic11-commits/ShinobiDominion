@@ -86,14 +86,16 @@ namespace ShinobiDominion.Core
         /// Everything that lands, in battle order: heroes, then each stack of troops. The server builds
         /// its list the same way, so the log's unit numbers mean the same thing on both sides.
         /// </summary>
-        public List<BattleHeroInput> ToUnits(IEnumerable<RaidPlacement> placements, IEnumerable<RaidTroopStack> stacks, TroopCatalog troops)
+        public List<BattleHeroInput> ToUnits(IEnumerable<RaidPlacement> placements, IEnumerable<RaidTroopStack> stacks, TroopCatalog troops, TroopResearch research = null)
         {
             var units = ToHeroes(placements);
             foreach (var stack in stacks)
             {
                 var troop = troops.Find(stack.troopId);
+                // Research makes landed troops stronger (ADR-041), the same way the server builds them.
+                var (hp, attack, defense) = TroopResearch.Boosted(troops, troop, research?.LevelOf(troop.id) ?? 0);
                 for (var i = 0; i < stack.count; i++)
-                    units.Add(new BattleHeroInput { id = troop.id, role = troop.role, hp = troop.hp, attack = troop.attack, defense = troop.defense, x = stack.x, z = stack.z, isTroop = true });
+                    units.Add(new BattleHeroInput { id = troop.id, role = troop.role, hp = hp, attack = attack, defense = defense, x = stack.x, z = stack.z, isTroop = true });
             }
             return units;
         }

@@ -181,6 +181,8 @@ namespace ShinobiDominion.Game
             UpdateRaid();
             UpdateActionBar();
             UpdateGoldPopups();
+            UpdateTimerPills();
+            FetchRaidListWhenFree();
             // Keep trying to reach the server, but never swap the village out mid-action.
             if (_server != null && !IsOnline && !_connecting && UiState.Screen == VillageScreen.Home)
             {
@@ -195,6 +197,7 @@ namespace ShinobiDominion.Game
             _markerTimer -= Time.unscaledDeltaTime;
             if (_markerTimer > 0f) return;
             _markerTimer = 1f;
+            TickUpgrades();
             RefreshCollectMarkers();
         }
 
@@ -442,7 +445,7 @@ namespace ShinobiDominion.Game
                     panel.Action("UpgradeGroupButton", $"Upgrade connected walls ({group.Count})", () => Upgrade(building.Id, true));
                 }
                 panel.Action("MoveButton", "Move", () => BeginMove(building.Id));
-                if (definition.removable) panel.Action("RemoveButton", "Remove", () => RemoveSelected(building.Id));
+                if (definition.removable) panel.Action("RemoveButton", "Remove", () => RemoveSelected(building.Id), !building.Upgrading);
             });
         }
 
@@ -476,7 +479,7 @@ namespace ShinobiDominion.Game
                     panel.Line($"All camps: {Army.UsedSpace(TroopData)} of {Army.Capacity(Village)} space used. Train troops at the Training Hall.");
                     break;
                 case BuildingFunction.Research:
-                    panel.Line("Research arrives in a later phase. It will cost Mana.", 20, Ui.AccentColor);
+                    ResearchActions(panel);
                     break;
                 case BuildingFunction.Collector:
                     var pending = Village.PendingCollection(building, Now);
@@ -498,10 +501,13 @@ namespace ShinobiDominion.Game
                 panel.Line("Maximum level reached.");
                 return;
             }
+            TimedUpgradeLines(panel, building);
+            if (building.Upgrading) return;
             var cost = building.Definition.UpgradeCost(building.Level);
             var needsDojo = building.Definition.At(building.Level + 1).requiredHq;
             if (Village.HqLevel < needsDojo) panel.Line($"Next level needs Dojo level {needsDojo}.", 20, Ui.AccentColor);
-            panel.Action("UpgradeButton", $"Upgrade ({cost:N0} gold)", () => Upgrade(building.Id, false), Village.CanAfford(cost, 0) && Village.HqLevel >= needsDojo);
+            var builderFree = Village.Catalog.UpgradeSeconds(building.Definition, building.Level + 1) == 0 || Village.BusyBuilders < Village.Builders;
+            panel.Action("UpgradeButton", $"Upgrade ({cost:N0} gold)", () => Upgrade(building.Id, false), Village.CanAfford(cost, 0) && Village.HqLevel >= needsDojo && builderFree);
         }
 
         /// <summary>Each stat this building has, as now -> next level. Stats a building lacks stay hidden.</summary>

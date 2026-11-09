@@ -68,6 +68,6 @@ $buildings = @(
 )
 
 $items = $buildings | ForEach-Object { "    {`n      " + $_.head + ",`n      ""levels"": " + (Levels $_) + "`n    }" }
-$json = "{`n  ""schemaVersion"": 2,`n  ""balanceStatus"": ""PROPOSED TEST VALUES - NOT APPROVED"",`n  ""startingGold"": 5000,`n  ""startingCrystals"": 100,`n  ""baseGoldCapacity"": 20000,`n  ""buildings"": [`n" + ($items -join ",`n") + "`n  ]`n}`n"
+$json = "{`n  ""schemaVersion"": 2,`n  ""balanceStatus"": ""PROPOSED TEST VALUES - NOT APPROVED"",`n  ""startingGold"": 5000,`n  ""startingCrystals"": 100,`n  ""startingMana"": 500,`n  ""baseGoldCapacity"": 20000,`n  ""upgradeSeconds"": [0, 0, 0, 60, 180, 600, 1200, 2400, 3600, 7200, 14400, 21600, 28800, 43200, 57600, 86400],`n  ""buildings"": [`n" + ($items -join ",`n") + "`n  ]`n}`n"
 [IO.File]::WriteAllText((Resolve-Path (Split-Path $out)).Path + '\buildings.json', $json)
 Write-Output 'buildings.json written.'

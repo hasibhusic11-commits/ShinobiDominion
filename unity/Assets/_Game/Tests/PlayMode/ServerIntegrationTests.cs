@@ -379,7 +379,8 @@ namespace ShinobiDominion.Tests
 
             // Even if a tampered client asks anyway, the server decides.
             Controller.ScoutRaid("stage_05");
-            yield return new WaitForSeconds(1f);
+            // The refusal can take more than a second when the whole suite is loading the server.
+            yield return WaitFor(() => Controller.LastMessage != null || Controller.CurrentRaidPhase != null);
             Assert.IsNull(Controller.CurrentRaidPhase, "A locked stage must not start");
             Assert.That(Controller.LastMessage, Does.Contain("stage before"));
         }

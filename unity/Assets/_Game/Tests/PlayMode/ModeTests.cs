@@ -180,7 +180,9 @@ namespace ShinobiDominion.Tests
             {
                 Assert.AreEqual(fight.Points, board.points);
                 Assert.AreEqual(fight.Won ? 1 : 0, board.wins);
-                Assert.IsTrue(board.top.Any(e => e.isMe) || board.rank > board.top.Count, "The player is ranked");
+                Assert.GreaterOrEqual(board.rank, 1, "The player is ranked");
+                // Ties share a rank, so a tied player can be ranked within the top yet listed below it.
+                foreach (var mine in board.top.Where(e => e.isMe)) Assert.AreEqual(fight.Points, mine.points);
             });
             yield return Await(_direct.QuestBoardAsync(), b => Assert.AreEqual(1, b.Quests.First(q => q.id == "arena").progress));
         }

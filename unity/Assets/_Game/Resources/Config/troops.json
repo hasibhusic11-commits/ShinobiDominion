@@ -1,6 +1,7 @@
 {
   "schemaVersion": 1,
   "balanceStatus": "PROPOSED TEST VALUES AND PROVISIONAL NAMES - NOT APPROVED",
+  "research": { "maxLevel": 10, "percentPerLevel": 8, "manaPerLevel": 20, "seconds": [0, 300, 900, 1800, 3600, 7200, 14400, 28800, 43200, 64800, 86400] },
   "troops": [
     { "id": "militia", "displayName": "Village Militia", "description": "Cheap fighters who rush the nearest building.", "space": 1, "goldCost": 25, "manaCost": 10, "requiredHall": 1, "role": "Fighter", "hp": 110, "attack": 14, "defense": 5 },
     { "id": "kunai_thrower", "displayName": "Kunai Thrower", "description": "Frail, but strikes from a distance.", "space": 2, "goldCost": 60, "manaCost": 20, "requiredHall": 1, "role": "Mage", "hp": 90, "attack": 26, "defense": 3 },

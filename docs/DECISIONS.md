@@ -88,6 +88,59 @@ Follows the owner's ADR-021. Up to four Troop Camps, gated by Dojo level, and a 
 - A raid still needs at least one hero. At most 200 troops can land in one raid, to bound the server's work.
 - Troop names and all numbers are test values. Offline practice troops aren't saved.
 
+## ADR-041: Troop research at the Research Hut, added on 2026-11-09 while the owner slept
+The owner said Mana pays for research (ADR-038), and the Research Hut was already in the catalog. Numbers are test values in the `research` block of `troops.json`, read by both client and server.
+
+**How studies work**
+- Each study raises one kind of troop's HP and attack by 8% per level, up to level 10. Defense does not change.
+- Study level N needs a Research Hut of level N or higher.
+- A study costs the troop's training Mana × 20 × N². For example, the first Village Militia study costs 200 Mana.
+- Studies take from 5 minutes for level 1 to 24 hours for level 10.
+
+**Limits and finishing**
+- Only one study runs at a time.
+- Like upgrades (ADR-040), a study finishes on its own on the server's clock, or at once for gems.
+
+**In battle**
+- Research applies to your troops when they land in raids and dungeons.
+- It does not apply to Siege attackers, who are enemies.
+- The client builds boosted troops the same way, so battle logs still match.
+
+The new table is in `011_research.sql`. The shared rule scenarios cover research in both C# and Go.
+
+## ADR-040: Upgrades take time and builders, added on 2026-11-08 while the owner slept
+This replaces "Upgrades are instant" in ADR-025, because Castle Clash style games have build timers. All numbers are test values, set in `upgradeSeconds` in `buildings.json`, which the client and server both read.
+
+**Timing**
+- Upgrading to level 2 is instant, as before.
+- Higher levels take time:
+  - 1 minute for level 3.
+  - Rising to 1 hour for level 9.
+  - 24 hours for level 15.
+- Walls are always instant.
+- Placing a new building is still instant.
+
+**Builders**
+- Each running upgrade uses one builder.
+- A village has 2 builders, plus 1 at Builder Hall level 6 and 1 more at level 11.
+- When all builders are busy, a timed upgrade is refused with "All builders are busy".
+
+**Finishing**
+- The building reaches its new level on its own when the time is up, on the server's clock.
+- The server finishes due upgrades under the player lock before every call, so the client's clock can't speed anything up.
+- A running upgrade can be finished at once for gems: 1 gem per 2 minutes left, at least 1.
+
+**While upgrading**
+- A building keeps working at its old level.
+- It can be moved, but not removed or upgraded again.
+
+**On screen**
+- A timer with a progress bar floats over each building being upgraded.
+- The building's Upgrade medallion becomes a "finish for gems" medallion.
+- The details panel shows how long an upgrade takes and how many builders are free.
+
+New column is in `010_upgrade_timers.sql`. The shared rule scenarios cover timers, builders and finishing, and run in both C# and Go.
+
 ## ADR-039: Game modes, quests and the daily gift, added on 2026-11-08 while the owner slept
 The owner asked for "game modes available" and smoothness, and said to decide open questions by asking "would Castle Clash have this?". Claude made these choices, and the owner can overrule any of them. All numbers are test values in `Resources/Config/modes.json`, which the client and server both read.
 - **ATTACK now opens a Battle menu** with four modes: Raid (rivals), Dungeons, **Village Siege** and **Arena**. The home screen is unchanged.

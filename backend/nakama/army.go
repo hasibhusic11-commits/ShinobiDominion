@@ -43,12 +43,14 @@ type troopDef struct {
 type troopCatalog struct {
 	all  []*troopDef
 	byID map[string]*troopDef
+	research researchConfig
 }
 
 func loadTroopCatalog(data []byte) (*troopCatalog, error) {
 	var document struct {
 		SchemaVersion int         `json:"schemaVersion"`
 		Troops        []*troopDef `json:"troops"`
+		Research      researchConfig `json:"research"`
 	}
 	if err := json.Unmarshal(data, &document); err != nil {
 		return nil, err
@@ -56,7 +58,10 @@ func loadTroopCatalog(data []byte) (*troopCatalog, error) {
 	if document.SchemaVersion != 1 {
 		return nil, errors.New("unsupported troop file")
 	}
-	catalog := &troopCatalog{all: document.Troops, byID: map[string]*troopDef{}}
+	catalog := &troopCatalog{all: document.Troops, byID: map[string]*troopDef{}, research: document.Research}
+	if document.Research.MaxLevel < 1 || len(document.Research.Seconds) <= document.Research.MaxLevel || document.Research.PercentPerLevel < 0 || document.Research.ManaPerLevel < 1 {
+		return nil, errNoResearch
+	}
 	for _, troop := range document.Troops {
 		if troop.Space < 1 || troop.GoldCost < 0 || troop.ManaCost < 0 || troop.Hp < 1 || troop.RequiredHall < 1 {
 			return nil, errors.New("troop " + troop.ID + " has invalid values")

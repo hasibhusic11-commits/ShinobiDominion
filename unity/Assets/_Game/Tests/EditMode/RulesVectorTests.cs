@@ -63,6 +63,7 @@ namespace ShinobiDominion.Tests
 
             var labels = new Dictionary<string, int>();
             var army = new Army();
+            var research = new TroopResearch();
             var troops = TroopCatalog.FromJson(ReadConfig("troops.json"));
             var heroes = HeroCatalog.FromJson(ReadConfig("heroes.json"));
             long clock = TimeSpan.TicksPerHour * 1000;
@@ -70,6 +71,9 @@ namespace ShinobiDominion.Tests
             foreach (var op in scenario["ops"])
             {
                 step++;
+                // The server finishes due upgrades before every change, under the player lock.
+                village.Settle(clock);
+                research.Settle(clock);
                 var where = $"{name}, step {step}";
                 var kind = op.Value<string>("op");
                 switch (kind)
@@ -82,7 +86,9 @@ namespace ShinobiDominion.Tests
                     case "setLevel":
                         var levelSave = village.ToSave();
                         var levelId = TargetOf(village, op, labels);
-                        levelSave.buildings.Find(b => b.id == levelId).level = op.Value<int>("level");
+                        var levelEntry = levelSave.buildings.Find(b => b.id == levelId);
+                        levelEntry.level = op.Value<int>("level");
+                        levelEntry.upgradeDoneUtcTicks = 0;
                         village.Restore(levelSave);
                         continue;
                     case "train":
@@ -109,6 +115,24 @@ namespace ShinobiDominion.Tests
                         continue;
                     case "advanceHours":
                         clock += TimeSpan.TicksPerHour * op.Value<long>("hours");
+                        continue;
+                    case "research":
+                    case "finishResearch":
+                        var studied = kind == "research"
+                            ? research.TryStart(village, troops, op.Value<string>("troop"), clock)
+                            : research.TryFinish(village, op.Value<string>("troop"), clock);
+                        Assert.AreEqual(op.Value<string>("expect"), studied.ToString(), where);
+                        if (op["mana"] != null) Assert.AreEqual(op.Value<long>("mana"), village.Mana, where + " mana");
+                        if (op["crystals"] != null) Assert.AreEqual(op.Value<long>("crystals"), village.Crystals, where + " crystals");
+                        continue;
+                    case "researchLevel":
+                        Assert.AreEqual(int.Parse(op.Value<string>("expect")), research.LevelOf(op.Value<string>("troop")), where);
+                        continue;
+                    case "advanceMinutes":
+                        clock += TimeSpan.TicksPerMinute * op.Value<long>("minutes");
+                        continue;
+                    case "upgrading":
+                        Assert.AreEqual(op.Value<string>("expect") == "true", village.Find(TargetOf(village, op, labels)).Upgrading, where);
                         continue;
                     case "occupied":
                         var hit = village.BuildingAt(new GridCoord(op.Value<int>("x"), op.Value<int>("z")));
@@ -156,7 +180,9 @@ namespace ShinobiDominion.Tests
                 case "remove":
                     return village.TryRemove(TargetOf(village, op, labels));
                 case "upgrade":
-                    return village.TryUpgrade(TargetOf(village, op, labels));
+                    return village.TryUpgrade(TargetOf(village, op, labels), clock);
+                case "finish":
+                    return village.TryFinishNow(TargetOf(village, op, labels), clock);
                 case "upgradeGroup":
                     return village.TryUpgradeWallGroup(TargetOf(village, op, labels));
                 case "collect":

@@ -14,6 +14,8 @@ namespace ShinobiDominion.Core
         public Dictionary<int, string> HeroBySlot = new Dictionary<int, string>();
         public VillageSave Village;
         public Dictionary<string, int> Troops = new Dictionary<string, int>();
+        /// <summary>Research levels and running studies (ADR-041), by troop id.</summary>
+        public Dictionary<string, ResearchEntry> Research = new Dictionary<string, ResearchEntry>();
 
         public static ServerState Parse(string json) => FromToken(ParseObject(json));
 
@@ -32,6 +34,13 @@ namespace ShinobiDominion.Core
                     var count = pair.Value.Value<int>();
                     if (count < 0) throw new FormatException("Server returned a negative troop count.");
                     state.Troops[pair.Key] = count;
+                }
+            if (token["research"] is JObject research)
+                foreach (var pair in research)
+                {
+                    var entry = new ResearchEntry { Level = pair.Value.Value<int?>("level") ?? 0, DoneUtcTicks = pair.Value.Value<long?>("doneUtcTicks") ?? 0 };
+                    if (entry.Level < 0 || entry.DoneUtcTicks < 0) throw new FormatException("Server returned impossible research.");
+                    state.Research[pair.Key] = entry;
                 }
             if (token["heroes"] is JArray heroes)
             {
