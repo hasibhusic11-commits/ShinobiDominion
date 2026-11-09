@@ -1128,12 +1128,12 @@ namespace ShinobiDominion.Core
 
             var input = tower.Input;
             // Each tower fires its own way (owner, 2026-11-09: Arrow, Cannon and Magic are one switchable building):
-            // the Arrow Tower shoots fast, single shots; the Cannon Tower fires slow, heavy balls with a small blast;
+            // the Arrow Tower shoots fast, single shots; the Cannon Tower fires slow, heavy balls whose blast hits everyone close by in full;
             // the Magic Tower's bolts splash wider for less. Mirrors the server's stepTower.
             var cannon = input.definitionId == "cannon_tower";
             var splashing = cannon || input.definitionId == "spirit_turret";
-            var blast = cannon ? 100L : 150L;
-            var blastPercent = cannon ? 60L : 50L;
+            var blast = cannon ? 125L : 150L;
+            var blastPercent = cannon ? 100L : 40L;
             var reach = (long)input.range * CellUnits;
             Unit chosen = null;
             var chosenDistance = long.MaxValue;

@@ -1282,12 +1282,12 @@ func (s *battleSim) stepTower(tower *battleStructure) {
 
 	input := tower.input
 	// Each tower fires its own way, as in the client's StepTower: fast single arrows, slow heavy cannon balls
-	// with a small blast, and magic bolts that splash wider for less.
+	// whose blast hits everyone close by in full, and magic bolts that splash wider for less.
 	cannon := input.DefinitionID == "cannon_tower"
 	splashing := cannon || input.DefinitionID == "spirit_turret"
-	blast, blastPercent := int64(150), int64(50)
+	blast, blastPercent := int64(150), int64(40)
 	if cannon {
-		blast, blastPercent = 100, 60
+		blast, blastPercent = 125, 100
 	}
 	reach := int64(input.Range) * cellUnits
 	var chosen *battleUnit

@@ -105,7 +105,7 @@ The owner set the official building list, sent new art for every building and a 
 - The Arrow, Cannon and Magic Towers are one building. Only the Arrow Tower is in the build catalog. A placed tower switches kind any time from its Switch button: free, instant, keeps its level, not while upgrading.
 - Data: `group: "tower"` on all three; `switchOnly` on the Cannon and Magic Towers; one shared count limit.
 - Server: `sd_village_switch` RPC (`switchKind`), refusal `NotSwitchable`; placing a switch-only kind is refused.
-- Each kind fires its own way, in both sims: Arrow fast single shots; Cannon one heavy shot every 25 ticks with a 1-cell blast at 60%; Magic a 1.5-cell splash at 50%.
+- Each kind has one job, in both sims (tuned with the balance report, `BALANCE_REPORT.md`): the Arrow Tower does the most damage to heroes (fast single shots); the Cannon Tower crushes armoured packs (one heavy shot every 25 ticks, 2.2x attack, a 1.25-cell blast at full damage, shortest range); the Magic Tower clears swarms (1.2x attack every 15 ticks, a 1.5-cell splash at 40%, the Arrow Tower's range).
 
 **Mana storage**
 - A base cap of 10,000 Mana, raised by each Mana Vault and Warehouse. Collecting and server rewards (`payMana`) stop at the cap; the shop refuses a Mana swap that doesn't fit.

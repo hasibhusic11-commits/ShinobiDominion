@@ -351,21 +351,21 @@
     {
       "id": "spirit_turret", "displayName": "Magic Tower", "description": "Spirit bolts that also hurt attackers standing close to the target.", "category": "Defense", "function": "Defense", "width": 3, "depth": 3, "costGold": 900, "maxCountByHqLevel": [2,3,4,6,8], "group": "tower", "switchOnly": true,
       "levels": [
-        {"hp":500,"upgradeCost":500,"requiredHq":1,"attack":90,"range":14,"might":6},
-        {"hp":575,"upgradeCost":1000,"requiredHq":1,"attack":120,"range":14,"might":12},
-        {"hp":675,"upgradeCost":2000,"requiredHq":1,"attack":150,"range":15,"might":18},
-        {"hp":800,"upgradeCost":3500,"requiredHq":1,"attack":180,"range":15,"might":24},
-        {"hp":925,"upgradeCost":6000,"requiredHq":3,"attack":210,"range":16,"might":30},
-        {"hp":1100,"upgradeCost":10000,"requiredHq":3,"attack":240,"range":16,"might":36},
-        {"hp":1300,"upgradeCost":16000,"requiredHq":3,"attack":270,"range":16,"might":42},
-        {"hp":1525,"upgradeCost":25000,"requiredHq":6,"attack":300,"range":17,"might":48},
-        {"hp":1775,"upgradeCost":37500,"requiredHq":6,"attack":330,"range":17,"might":54},
-        {"hp":2075,"upgradeCost":55000,"requiredHq":6,"attack":360,"range":17,"might":60},
-        {"hp":2425,"upgradeCost":80000,"requiredHq":9,"attack":390,"range":18,"might":66},
-        {"hp":2825,"upgradeCost":115000,"requiredHq":9,"attack":420,"range":18,"might":72},
-        {"hp":3300,"upgradeCost":160000,"requiredHq":9,"attack":450,"range":18,"might":78},
-        {"hp":3850,"upgradeCost":225000,"requiredHq":12,"attack":480,"range":19,"might":84},
-        {"hp":4500,"upgradeCost":0,"requiredHq":12,"attack":510,"range":19,"might":90}
+        {"hp":500,"upgradeCost":500,"requiredHq":1,"attack":72,"range":13,"might":6},
+        {"hp":575,"upgradeCost":1000,"requiredHq":1,"attack":96,"range":13,"might":12},
+        {"hp":675,"upgradeCost":2000,"requiredHq":1,"attack":120,"range":14,"might":18},
+        {"hp":800,"upgradeCost":3500,"requiredHq":1,"attack":144,"range":14,"might":24},
+        {"hp":925,"upgradeCost":6000,"requiredHq":3,"attack":168,"range":15,"might":30},
+        {"hp":1100,"upgradeCost":10000,"requiredHq":3,"attack":192,"range":15,"might":36},
+        {"hp":1300,"upgradeCost":16000,"requiredHq":3,"attack":216,"range":15,"might":42},
+        {"hp":1525,"upgradeCost":25000,"requiredHq":6,"attack":240,"range":16,"might":48},
+        {"hp":1775,"upgradeCost":37500,"requiredHq":6,"attack":264,"range":16,"might":54},
+        {"hp":2075,"upgradeCost":55000,"requiredHq":6,"attack":288,"range":16,"might":60},
+        {"hp":2425,"upgradeCost":80000,"requiredHq":9,"attack":312,"range":17,"might":66},
+        {"hp":2825,"upgradeCost":115000,"requiredHq":9,"attack":336,"range":17,"might":72},
+        {"hp":3300,"upgradeCost":160000,"requiredHq":9,"attack":360,"range":17,"might":78},
+        {"hp":3850,"upgradeCost":225000,"requiredHq":12,"attack":384,"range":18,"might":84},
+        {"hp":4500,"upgradeCost":0,"requiredHq":12,"attack":408,"range":18,"might":90}
       ]
     },
     {

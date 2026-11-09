@@ -972,11 +972,11 @@
     },
     {
       "name": "towers: a cannon tower and a magic tower against a pack of troops",
-      "checksum": "467a6741e8d07bbf",
-      "stars": 2,
-      "damagePercent": 96,
-      "endTick": 1800,
-      "heroesAlive": 1,
+      "checksum": "8416a7ab5396f5e5",
+      "stars": 0,
+      "damagePercent": 11,
+      "endTick": 166,
+      "heroesAlive": 0,
       "team": [
         {
           "id": "trap-hero",
@@ -1059,7 +1059,8 @@
           "level": 5,
           "hp": 3000,
           "attack": 330,
-          "range": 10
+          "range": 10,
+          "isDefense": true
         },
         {
           "id": 912,
@@ -1071,7 +1072,8 @@
           "level": 5,
           "hp": 2600,
           "attack": 150,
-          "range": 13
+          "range": 13,
+          "isDefense": true
         }
       ]
     }
