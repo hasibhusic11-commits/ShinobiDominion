@@ -17,7 +17,7 @@ namespace ShinobiDominion.EditorTools
         private static readonly Regex Border = new Regex(@"_s(\d+)$");
 
         /// <summary>Raising this reimports every texture the rules apply to.</summary>
-        public override uint GetVersion() => 2;
+        public override uint GetVersion() => 3;
 
         private void OnPreprocessTexture()
         {
@@ -36,6 +36,18 @@ namespace ShinobiDominion.EditorTools
                 map.anisoLevel = 4;
                 map.maxTextureSize = 2048;
                 map.textureCompression = TextureImporterCompression.Uncompressed;
+                return;
+            }
+            if (path.Contains("/Resources/HeroConcepts/"))
+            {
+                // The hero paintings (HeroConcepts), cropped into cards at run time: full quality, as the UI art is.
+                // Compressed, their fine painted detail went blocky and grainy on the cards (owner, 2026-11-09).
+                var painting = (TextureImporter)assetImporter;
+                painting.mipmapEnabled = true;
+                painting.mipmapFilter = TextureImporterMipFilter.KaiserFilter;
+                painting.filterMode = FilterMode.Trilinear;
+                painting.anisoLevel = 2;
+                painting.textureCompression = TextureImporterCompression.Uncompressed;
                 return;
             }
             if (!ui && !building) return;

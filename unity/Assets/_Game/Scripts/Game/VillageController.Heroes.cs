@@ -105,8 +105,9 @@ namespace ShinobiDominion.Game
 
         private void HeroPicture(RectTransform parent, HeroArchetype archetype, int evolution, float size, float feet)
         {
-            // The concept paintings show each hero's base form only, so evolved forms keep their own pictures.
-            if (evolution == 0 && HeroConcepts.Has(archetype.id))
+            // A hero with a concept painting always shows it. Evolved forms have no paintings of their own yet, and the
+            // small built-in figure looked far worse (owner, 2026-11-09), so they show their base painting until they do.
+            if (HeroConcepts.Has(archetype.id))
             {
                 ConceptPicture(parent, archetype.id, size, feet);
                 return;

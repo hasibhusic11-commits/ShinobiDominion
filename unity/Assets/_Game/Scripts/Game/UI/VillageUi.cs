@@ -476,7 +476,7 @@ namespace ShinobiDominion.Game
 
             // Currencies: gold, gems and mana, each on the pack's bar with its picture on the left and a "+".
             var barsRight = -(Margin + 78f + 64f + 22f);
-            // The picture is still named icon_chakra; the currency is Mana (owner, 2026-11-08).
+            // Gems are the purple gem (icon_crystals) and Mana the blue swirl (icon_chakra), as the owner reads them (2026-11-09).
             _mana = Counter(Root, "Mana", "chakra", barsRight, onShop, out _, out _);
             _crystals = Counter(Root, "Crystals", "crystals", barsRight - (BarWidth + BarGap), onShop, out _, out _);
             _gold = Counter(Root, "Gold", "gold", barsRight - 2f * (BarWidth + BarGap), onShop, out _goldFill, out _goldFillImage);
@@ -524,7 +524,7 @@ namespace ShinobiDominion.Game
             HudArt.DropShadow(plate);
             // The bar's own socket holds a painted coin; a round navy socket covers it so each currency shows its own picture.
             HudArt.Picture(plate, "Socket", "hud_small_round_button", new Vector2(0f, 0.5f), new Vector2(56f, 56f), new Vector2(-6f, 0f)).preserveAspect = true;
-            var picture = HudArt.Picture(plate, "Icon", icon == "crystals" ? "gem_crystal" : "icon_" + icon, new Vector2(0f, 0.5f), new Vector2(48f, 48f), new Vector2(-2f, 1f));
+            var picture = HudArt.Picture(plate, "Icon", "icon_" + icon, new Vector2(0f, 0.5f), new Vector2(48f, 48f), new Vector2(-2f, 1f));
             picture.preserveAspect = true;
             var text = HudArt.Label(plate, string.Empty, HudArt.Numbers, 24, TextAnchor.MiddleRight, HudArt.Ivory, HudArt.LacquerDeep);
             Ui.Stretch(text.rectTransform, 48f, 4f, 50f, 2f);
@@ -663,7 +663,7 @@ namespace ShinobiDominion.Game
                 coin.sizeDelta = new Vector2(34f, 34f);
                 coin.anchoredPosition = start;
                 var image = coin.gameObject.AddComponent<Image>();
-                image.sprite = HudArt.Sprite(crystals ? "gem_crystal" : "icon_gold");
+                image.sprite = HudArt.Sprite(crystals ? "icon_crystals" : "icon_gold");
                 image.preserveAspect = true;
                 image.raycastTarget = false;
                 var angle = (i / (float)count) * Mathf.PI * 2f + UnityEngine.Random.value * 0.6f;
@@ -962,7 +962,7 @@ namespace ShinobiDominion.Game
             return row;
         }
 
-        /// <summary>A wrapping grid of fixed-size cards.</summary>
+        /// <summary>A wrapping grid of fixed-size cards, centred so the gap left over by the last column splits evenly (owner, 2026-11-09).</summary>
         public RectTransform Grid(Vector2 cellSize)
         {
             var grid = Ui.Rect("Grid", _content);
@@ -970,7 +970,7 @@ namespace ShinobiDominion.Game
             layout.cellSize = cellSize;
             layout.spacing = new Vector2(12f, 12f);
             layout.startAxis = GridLayoutGroup.Axis.Horizontal;
-            layout.childAlignment = TextAnchor.UpperLeft;
+            layout.childAlignment = TextAnchor.UpperCenter;
             return grid;
         }
 
