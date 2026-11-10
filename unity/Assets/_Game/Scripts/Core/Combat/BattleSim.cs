@@ -63,6 +63,33 @@ namespace ShinobiDominion.Core
         public bool isTrap;
     }
 
+    /// <summary>
+    /// One cast of a battle spell (ADR-052), already worked out from spells.json for the caster's spell level, so the
+    /// sim needs no catalog. SpellDefinition.ToInput builds it on the client; the server builds its own from the same file.
+    /// </summary>
+    public sealed class BattleSpellInput
+    {
+        /// <summary>The spell's id in spells.json. For the caller's use; the sim does not read it.</summary>
+        public string id;
+        /// <summary>"damage", "heal", "freeze" or "boost".</summary>
+        public string effect;
+        /// <summary>The cell the spell is centred on: any cell of the grid, buildings included.</summary>
+        public int x;
+        public int z;
+        /// <summary>Reach from the middle of that cell, in battle units (BattleSim.CellUnits to a cell).</summary>
+        public int radius;
+        /// <summary>How many times it applies. Freeze and boost apply once.</summary>
+        public int pulses;
+        /// <summary>Ticks from one application to the next.</summary>
+        public int pulseTicks;
+        /// <summary>Damage or heal per pulse in HP, or the percent more damage of a boost. 0 for a freeze.</summary>
+        public long power;
+        /// <summary>How long a freeze or a boost lasts, in ticks. 0 for damage and heal.</summary>
+        public int ticks;
+        /// <summary>When it was cast: it lands after this tick and first applies on the next one.</summary>
+        public int tick;
+    }
+
     /// <summary>What each entry in the battle log means. Numbers are shared with the server.</summary>
     public enum BattleEventKind
     {
@@ -106,7 +133,31 @@ namespace ShinobiDominion.Core
         /// Timed battles only (ADR-050): a = unit, b = cell x, c = cell z. The unit lands there; it acts from this tick.
         /// Units are numbered in landing order.
         /// </summary>
-        Deploy = 19
+        Deploy = 19,
+        /// <summary>
+        /// Timed battles only (ADR-052): a = cast number, b = cell x, c = cell z, d = effect number (BattleSim.EffectDamage
+        /// and the rest). A spell lands, centred on the middle of that cell. Casts are numbered in the order they land,
+        /// which is their order in the sent list. Its first SpellPulse follows on the same tick.
+        /// </summary>
+        SpellCast = 20,
+        /// <summary>
+        /// a = cast number, b = which application this is (1 for the first), c = how many it has in all, d = radius in
+        /// battle units. One per application, freeze and boost included; the entries for each target it changed follow.
+        /// </summary>
+        SpellPulse = 21,
+        /// <summary>a = cast number, b = building id, c = damage, d = building HP left. BuildingDown follows if it fell.</summary>
+        SpellHit = 22,
+        /// <summary>a = cast number, b = defender, c = damage, d = defender HP left. DefenderDown follows if it fell.</summary>
+        SpellHitDefender = 23,
+        /// <summary>a = cast number, b = unit healed, c = amount, d = unit HP now.</summary>
+        SpellHeal = 24,
+        /// <summary>
+        /// a = cast number, b = 0 for a tower or 1 for a defender, c = building id or defender, d = ticks it cannot act,
+        /// this tick included.
+        /// </summary>
+        SpellFreeze = 25,
+        /// <summary>a = cast number, b = unit, c = ticks the boost lasts, this tick included, d = percent more damage.</summary>
+        SpellBoost = 26
     }
 
     public sealed class BattleResult
@@ -178,6 +229,24 @@ namespace ShinobiDominion.Core
         public const int PowerElite = 75;
         public const int PowerLegendary = 100;
 
+        /// <summary>What a battle spell does (ADR-052), as the number the log uses for it.</summary>
+        public const int EffectDamage = 0;
+        public const int EffectHeal = 1;
+        public const int EffectFreeze = 2;
+        public const int EffectBoost = 3;
+
+        public static int EffectNumber(string effect)
+        {
+            switch (effect)
+            {
+                case "damage": return EffectDamage;
+                case "heal": return EffectHeal;
+                case "freeze": return EffectFreeze;
+                case "boost": return EffectBoost;
+                default: throw new FormatException("Unknown spell effect " + effect);
+            }
+        }
+
         public static int PowerFor(string rarity) => rarity == "Common" ? PowerCommon : rarity == "Elite" ? PowerElite : PowerLegendary;
 
         private static int PowerOf(int power) => power <= 0 ? PowerLegendary : power;
@@ -233,6 +302,9 @@ namespace ShinobiDominion.Core
             public bool IsTroop;
             /// <summary>Holds the unit in place after a Hero Trap: it does nothing until it runs out.</summary>
             public int StunTimer;
+            /// <summary>A boost spell (ADR-052): the unit deals BoostPercent more damage on every tick before BoostUntil.</summary>
+            public int BoostUntil;
+            public long BoostPercent;
         }
 
         private sealed class Defender
@@ -256,6 +328,20 @@ namespace ShinobiDominion.Core
             public bool Rally;
             public int Evolution;
             public int Power = 100;
+            /// <summary>Holds the defender in place under a freeze spell (ADR-052): it does nothing until it runs out.</summary>
+            public int StunTimer;
+        }
+
+        /// <summary>A spell that has landed (ADR-052).</summary>
+        private sealed class Spell
+        {
+            public int Index;
+            public BattleSpellInput Input;
+            public int Effect;
+            public int Cx;
+            public int Cz;
+            public int PulsesLeft;
+            public int NextPulse;
         }
 
         private sealed class Structure
@@ -272,6 +358,10 @@ namespace ShinobiDominion.Core
         private readonly List<BattleHeroInput> _landed = new List<BattleHeroInput>();
         /// <summary>Cards dropped but not landed yet, in landing order.</summary>
         private readonly List<BattleHeroInput> _pending = new List<BattleHeroInput>();
+        /// <summary>Spells cast but not landed yet, in the order cast (ADR-052).</summary>
+        private readonly List<BattleSpellInput> _pendingCasts = new List<BattleSpellInput>();
+        /// <summary>Landed spells, by cast number.</summary>
+        private readonly List<Spell> _spells = new List<Spell>();
         /// <summary>A timed battle (ADR-050) ends at its end tick or when every building is down, never because the field is empty.</summary>
         private readonly bool _timed;
         private readonly int _endTick;
@@ -340,14 +430,21 @@ namespace ShinobiDominion.Core
         /// <summary>
         /// The whole battle at once. With an end tick above 0 it is a timed battle (ADR-050): each unit lands at its
         /// deployTick, in LandingOrder, and the battle stops at the end tick (when the attacker ended it) or when
-        /// every building is down. This is how the server re-fights a battle the player fought live.
+        /// every building is down. This is how the server re-fights a battle the player fought live. Spells (ADR-052)
+        /// land at their tick, in the order listed; only a timed battle may have any.
         /// </summary>
-        public static BattleResult Run(IEnumerable<BattleBuildingInput> buildings, IEnumerable<BattleHeroInput> heroes, IEnumerable<BattleDefenderInput> defenders, int endTick)
+        public static BattleResult Run(IEnumerable<BattleBuildingInput> buildings, IEnumerable<BattleHeroInput> heroes, IEnumerable<BattleDefenderInput> defenders, int endTick, IEnumerable<BattleSpellInput> casts = null)
         {
             var sim = new BattleSim(buildings, defenders, endTick);
             if (sim._timed) sim._pending.AddRange(LandingOrder(heroes));
             else
                 foreach (var hero in heroes) sim.Land(hero);
+            if (casts != null)
+            {
+                sim._pendingCasts.AddRange(casts.Select((c, i) => (c, i)).OrderBy(p => p.c.tick).ThenBy(p => p.i).Select(p => p.c));
+                if (sim._pendingCasts.Count > 0 && !sim._timed) throw new FormatException("Only a timed battle can have spells.");
+                foreach (var cast in sim._pendingCasts) CheckSpell(cast);
+            }
             while (sim.Step()) { }
             return sim.Finish();
         }
@@ -369,6 +466,12 @@ namespace ShinobiDominion.Core
         public int UnitsStanding => _units.Count(u => u.Hp > 0);
         /// <summary>Dropped cards that land on the next Step.</summary>
         public int UnitsPending => _pending.Count;
+        /// <summary>Spells cast that land on the next Step (ADR-052).</summary>
+        public int SpellsPending => _pendingCasts.Count;
+        /// <summary>Spells on the field that still have a pulse to come.</summary>
+        public int SpellsActive => _spells.Count(s => s.PulsesLeft > 0);
+        /// <summary>The input of a cast, landed or not, by the cast number the log uses for it.</summary>
+        public BattleSpellInput CastInput(int index) => index < _spells.Count ? _spells[index].Input : _pendingCasts[index - _spells.Count];
         public int DamagePercent => _totalHp == 0 ? 100 : (int)(_dealtHp * 100 / _totalHp);
         /// <summary>The input of a landed unit, by the number the log uses for it.</summary>
         public BattleHeroInput LandedInput(int index) => _landed[index];
@@ -385,6 +488,27 @@ namespace ShinobiDominion.Core
             var at = _pending.Count;
             while (at > 0 && LandsAfter(_pending[at - 1], unit)) at--;
             _pending.Insert(at, unit);
+        }
+
+        /// <summary>
+        /// Casts a spell now (ADR-052): it lands after the current tick, so it first applies on the next one. Sets its
+        /// tick and returns its cast number, the one the log uses. Check SpellCatalog.CastError first; this does not.
+        /// </summary>
+        public int CastSpell(BattleSpellInput spell)
+        {
+            if (!_timed || _done) throw new InvalidOperationException("Spells can only be cast in a running live battle.");
+            CheckSpell(spell);
+            spell.tick = _tick;
+            _pendingCasts.Add(spell);
+            return _spells.Count + _pendingCasts.Count - 1;
+        }
+
+        /// <summary>Throws when a spell's numbers could not have come from a valid spells.json.</summary>
+        private static void CheckSpell(BattleSpellInput spell)
+        {
+            EffectNumber(spell.effect);
+            if (spell.radius < 0 || spell.pulses < 1 || spell.pulseTicks < 1 || spell.power < 0 || spell.ticks < 0)
+                throw new FormatException("Spell " + spell.id + " has invalid values.");
         }
 
         private static bool LandsAfter(BattleHeroInput a, BattleHeroInput b) =>
@@ -477,6 +601,15 @@ namespace ShinobiDominion.Core
                 Land(input);
                 Log(BattleEventKind.Deploy, _units.Count - 1, input.x, input.z);
             }
+            // Spells cast after the last tick land now, after the cards, and every spell due applies before anyone moves.
+            while (_pendingCasts.Count > 0 && _pendingCasts[0].tick < _tick)
+            {
+                var input = _pendingCasts[0];
+                _pendingCasts.RemoveAt(0);
+                LandSpell(input);
+            }
+            foreach (var spell in _spells)
+                if (spell.PulsesLeft > 0 && spell.NextPulse <= _tick) Pulse(spell);
             foreach (var unit in _units)
                 if (unit.Hp > 0) StepUnit(unit);
             foreach (var trap in _traps)
@@ -538,6 +671,98 @@ namespace ShinobiDominion.Core
 
         private void Log(BattleEventKind kind, long a, long b = 0, long c = 0, long d = 0) =>
             _result.events.Add(new[] { _tick, (long)kind, a, b, c, d });
+
+        // ---------- Spells (ADR-052) ----------
+
+        private void LandSpell(BattleSpellInput input)
+        {
+            var spell = new Spell
+            {
+                Index = _spells.Count,
+                Input = input,
+                Effect = EffectNumber(input.effect),
+                Cx = input.x * CellUnits + CellUnits / 2,
+                Cz = input.z * CellUnits + CellUnits / 2,
+                PulsesLeft = input.pulses,
+                NextPulse = _tick
+            };
+            _spells.Add(spell);
+            Log(BattleEventKind.SpellCast, spell.Index, input.x, input.z, spell.Effect);
+        }
+
+        /// <summary>One application of a spell to everything in its ring right now.</summary>
+        private void Pulse(Spell spell)
+        {
+            var input = spell.Input;
+            spell.PulsesLeft--;
+            spell.NextPulse = _tick + input.pulseTicks;
+            Log(BattleEventKind.SpellPulse, spell.Index, input.pulses - spell.PulsesLeft, input.pulses, input.radius);
+            var reach = (long)input.radius * input.radius;
+            switch (spell.Effect)
+            {
+                case EffectDamage:
+                    // Buildings take it in full, walls included; hidden traps are not touched. Guards take it less their defense.
+                    for (var i = 0; i < _structures.Length; i++)
+                    {
+                        var structure = _structures[i];
+                        if (!structure.Alive || SquaredDistance(spell.Cx, spell.Cz, structure.Input) > reach) continue;
+                        var amount = Math.Min(Math.Max(input.power, 1), structure.Hp);
+                        structure.Hp -= amount;
+                        if (!structure.Input.isWall) _dealtHp += amount;
+                        Log(BattleEventKind.SpellHit, spell.Index, structure.Input.id, amount, structure.Hp);
+                        if (structure.Hp == 0) Collapse(i);
+                    }
+                    foreach (var defender in _defenders)
+                    {
+                        if (defender.Hp <= 0 || SquaredPoints(defender.Px, defender.Pz, spell.Cx, spell.Cz) > reach) continue;
+                        var amount = input.power * 100 / (100 + defender.Defense);
+                        if (defender.GuardTimer > 0) amount /= 2;
+                        amount = Math.Min(Math.Max(amount, 1), defender.Hp);
+                        defender.Hp -= amount;
+                        Log(BattleEventKind.SpellHitDefender, spell.Index, defender.Index, amount, defender.Hp);
+                        if (defender.Hp == 0) Log(BattleEventKind.DefenderDown, defender.Index);
+                    }
+                    break;
+                case EffectHeal:
+                    foreach (var unit in _units)
+                    {
+                        if (unit.Hp <= 0 || unit.Hp >= unit.MaxHp || SquaredPoints(unit.Px, unit.Pz, spell.Cx, spell.Cz) > reach) continue;
+                        var amount = Math.Min(input.power, unit.MaxHp - unit.Hp);
+                        if (amount < 1) continue;
+                        unit.Hp += amount;
+                        Log(BattleEventKind.SpellHeal, spell.Index, unit.Index, amount, unit.Hp);
+                    }
+                    break;
+                case EffectFreeze:
+                    // Towers and guards step after spells, so a freeze of N ticks stops them on this tick and the N - 1 after.
+                    foreach (var structure in _structures)
+                    {
+                        if (!structure.Alive || !structure.Input.isDefense || SquaredDistance(spell.Cx, spell.Cz, structure.Input) > reach) continue;
+                        structure.StunTimer = Math.Max(structure.StunTimer, input.ticks);
+                        Log(BattleEventKind.SpellFreeze, spell.Index, 0, structure.Input.id, structure.StunTimer);
+                    }
+                    foreach (var defender in _defenders)
+                    {
+                        if (defender.Hp <= 0 || SquaredPoints(defender.Px, defender.Pz, spell.Cx, spell.Cz) > reach) continue;
+                        defender.StunTimer = Math.Max(defender.StunTimer, input.ticks);
+                        Log(BattleEventKind.SpellFreeze, spell.Index, 1, defender.Index, defender.StunTimer);
+                    }
+                    break;
+                case EffectBoost:
+                    foreach (var unit in _units)
+                    {
+                        if (unit.Hp <= 0 || SquaredPoints(unit.Px, unit.Pz, spell.Cx, spell.Cz) > reach) continue;
+                        unit.BoostUntil = _tick + input.ticks;
+                        unit.BoostPercent = input.power;
+                        Log(BattleEventKind.SpellBoost, spell.Index, unit.Index, input.ticks, input.power);
+                    }
+                    break;
+            }
+        }
+
+        /// <summary>A unit's attack right now: more while a boost spell is on it.</summary>
+        private long AttackOf(Unit unit) =>
+            _tick < unit.BoostUntil ? unit.Attack * (100 + unit.BoostPercent) / 100 : unit.Attack;
 
         // ---------- Ability charge ----------
 
@@ -746,7 +971,7 @@ namespace ShinobiDominion.Core
 
         private void Strike(Unit unit, int focus)
         {
-            var base_ = unit.Attack * DamagePercents[unit.Role] / 100;
+            var base_ = AttackOf(unit) * DamagePercents[unit.Role] / 100;
             var percent = 100L;
             var splash = 0;
             if (unit.Charge >= ChargeFull && !unit.IsTroop && !unit.Rally)
@@ -794,8 +1019,13 @@ namespace ShinobiDominion.Core
             structure.Hp -= amount;
             if (!structure.Input.isWall) _dealtHp += amount;
             Log(BattleEventKind.HeroHit, unit.Index, structure.Input.id, amount, structure.Hp);
-            if (structure.Hp > 0) return;
+            if (structure.Hp == 0) Collapse(index);
+        }
 
+        /// <summary>A building at 0 HP falls: its cells open up, and anyone heading for it plans again.</summary>
+        private void Collapse(int index)
+        {
+            var structure = _structures[index];
             structure.Alive = false;
             var b = structure.Input;
             for (var z = b.z; z < b.z + b.depth; z++)
@@ -858,7 +1088,7 @@ namespace ShinobiDominion.Core
                 }
             }
             if (percent == 100) Gain(unit);
-            var amount = unit.Attack * percent / 100 * 100 / (100 + defender.Defense);
+            var amount = AttackOf(unit) * percent / 100 * 100 / (100 + defender.Defense);
             if (defender.GuardTimer > 0) amount /= 2;
             amount = Math.Min(Math.Max(amount, 1), defender.Hp);
             defender.Hp -= amount;
@@ -868,6 +1098,11 @@ namespace ShinobiDominion.Core
 
         private void StepDefender(Defender defender)
         {
+            if (defender.StunTimer > 0)
+            {
+                defender.StunTimer--;
+                return;
+            }
             if (defender.AttackTimer > 0) defender.AttackTimer--;
             if (defender.GuardTimer > 0) defender.GuardTimer--;
             if (defender.HasteTimer > 0) defender.HasteTimer--;

@@ -53,7 +53,11 @@ func (s *Server) beginRivalRaid(ctx context.Context, tx *sql.Tx, userID, rivalID
 		AvailableGold: lootGold,
 		AvailableMana: lootMana,
 	}
-	return raidStartResponse{AttackID: attackID, Raid: summary, Buildings: buildings, Team: team, Defenders: defenders}, nil
+	spells, err := s.raidSpells(ctx, tx, userID)
+	if err != nil {
+		return raidStartResponse{}, err
+	}
+	return raidStartResponse{AttackID: attackID, Raid: summary, Buildings: buildings, Team: team, Defenders: defenders, Spells: spells}, nil
 }
 
 // takeLoot pays the attacker its share of the loot on offer and takes the same from the rival, then shields the rival

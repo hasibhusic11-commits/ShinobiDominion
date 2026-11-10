@@ -12,7 +12,7 @@ namespace ShinobiDominion.Game
     /// log back. Either way it decides nothing: every hit, death and result comes from the log, and for a live raid the
     /// server fights the same drops again and its result is the one that counts.
     /// </summary>
-    public sealed class BattleStage : MonoBehaviour
+    public sealed partial class BattleStage : MonoBehaviour
     {
         private const float HeroScale = 1.9f;
         private const float TroopScale = 1.45f;
@@ -39,35 +39,11 @@ namespace ShinobiDominion.Game
             public float Kick;
             public Vector3 KickDirection;
             public Vector3 Offset;
-        }
-
-        private sealed class Bar
-        {
-            public GameObject Root;
-            public Transform Fill;
-            public float Width;
-            public float Height = BarHeight;
-            public MeshRenderer FillRenderer;
-            public Material Normal;
-            public Material Full;
-
-            public void Set(float fraction)
-            {
-                Fill.localScale = new Vector3(Width * Mathf.Clamp01(fraction), Height * 0.7f, 1f);
-                // A full charge bar turns bright: the special fires on the hero's next chance.
-                if (Full != null) FillRenderer.sharedMaterial = fraction >= 1f ? Full : Normal;
-            }
-        }
-
-        private sealed class Flash
-        {
-            public Transform Item;
-            public Vector3 From;
-            public Vector3 To;
-            public float Age;
-            public float Duration;
-            public float StartSize;
-            public float EndSize;
+            /// <summary>The fighter's role number (BattleSim.RoleNumber): 3 and up fight at range.</summary>
+            public int Role;
+            public bool Troop;
+            /// <summary>How far above the ground a unit that was just dropped still is.</summary>
+            public float Drop;
         }
 
         private RaidSession _session;
@@ -169,6 +145,7 @@ namespace ShinobiDominion.Game
                 var figure = CreateFigureFrom(defenderLook(defender), defender.id, defender.x, defender.z);
                 figure.Go.name = "BattleDefender";
                 figure.Speed = BattleSim.SpeedOf(defender.role);
+                figure.Role = BattleSim.RoleNumber(defender.role);
                 figure.MaxHp = defender.hp;
                 figure.OnBase = true;
                 figure.HomeX = figure.Px;
@@ -267,7 +244,7 @@ namespace ShinobiDominion.Game
             // A defender stands up on its Hero Base until it steps off.
             var raised = figure.OnBase && Mathf.Abs(figure.Px - figure.HomeX) < BattleSim.CellUnits && Mathf.Abs(figure.Pz - figure.HomeZ) < BattleSim.CellUnits;
             var at = new Vector3(figure.Px / BattleSim.CellUnits, raised ? BuildingMeshes.PedestalTop : 0f, figure.Pz / BattleSim.CellUnits);
-            figure.Go.transform.localPosition = at + figure.Offset + figure.KickDirection * figure.Kick;
+            figure.Go.transform.localPosition = at + figure.Offset + figure.KickDirection * figure.Kick + Vector3.up * figure.Drop;
         }
 
         // ---------- Playing the log back ----------
@@ -280,6 +257,7 @@ namespace ShinobiDominion.Game
                 var figure = _placed[placement.instanceId];
                 var member = _session.team.Find(m => m.instanceId == placement.instanceId);
                 figure.Speed = member.speed;
+                figure.Role = BattleSim.RoleNumber(member.role);
                 figure.MaxHp = member.hp;
                 figure.Bar = CreateBar(figure.Go.transform.position + Vector3.up * (figure.Actor != null ? 3.5f : 3.1f), 1.4f, new Color(0.35f, 0.85f, 0.35f));
                 figure.Bar.Root.transform.SetParent(figure.Go.transform, true);
@@ -306,6 +284,8 @@ namespace ShinobiDominion.Game
                         Tx = px,
                         Tz = pz,
                         Speed = BattleSim.SpeedOf(troop.role),
+                        Role = BattleSim.RoleNumber(troop.role),
+                        Troop = true,
                         MaxHp = troop.hp,
                         Offset = offset
                     });
@@ -346,7 +326,7 @@ namespace ShinobiDominion.Game
         }
 
         /// <summary>A unit the live battle just landed: a hero figure with its bars, or a troop beside its group.</summary>
-        private void AddLanded(int index, int x, int z)
+        private Figure AddLanded(int index, int x, int z)
         {
             if (index != _units.Count) throw new InvalidOperationException($"Unit {index} landed out of order.");
             var input = _live.LandedInput(index);
@@ -357,6 +337,7 @@ namespace ShinobiDominion.Game
             {
                 figure = CreateFigure(input.id, x, z);
                 figure.Speed = BattleSim.SpeedOf(input.role);
+                figure.Role = BattleSim.RoleNumber(input.role);
                 figure.MaxHp = input.hp;
                 figure.Bar = CreateBar(figure.Go.transform.position + Vector3.up * (figure.Actor != null ? 3.5f : 3.1f), 1.4f, new Color(0.35f, 0.85f, 0.35f));
                 figure.Bar.Root.transform.SetParent(figure.Go.transform, true);
@@ -377,14 +358,14 @@ namespace ShinobiDominion.Game
                     Tx = px,
                     Tz = pz,
                     Speed = BattleSim.SpeedOf(input.role),
+                    Role = BattleSim.RoleNumber(input.role),
+                    Troop = true,
                     MaxHp = input.hp,
                     Offset = offset
                 };
             }
             _units.Add(figure);
-            var at = figure.Go.transform.position;
-            AddFlash(at + Vector3.up * 0.2f, at + Vector3.up * 0.6f, 0.3f, 0.2f, input.isTroop ? 0.6f : 1.1f, new Color(0.85f, 0.95f, 1f));
-            GameSounds.Play(GameSound.Click, input.isTroop ? 0.3f : 0.6f);
+            return figure;
         }
 
         /// <summary>Jumps straight to the result. It changes nothing, as the result is already decided.</summary>
@@ -398,19 +379,7 @@ namespace ShinobiDominion.Game
 
         private void Update()
         {
-            if (_camera != null)
-                foreach (var pair in _buildingBars)
-                    pair.Value.Root.transform.rotation = _camera.transform.rotation;
-            foreach (var unit in _units)
-            {
-                if (unit.Bar != null && _camera != null) unit.Bar.Root.transform.rotation = _camera.transform.rotation;
-                if (unit.Charge != null && _camera != null) unit.Charge.Root.transform.rotation = _camera.transform.rotation;
-            }
-            foreach (var unit in _defenders)
-            {
-                if (unit.Bar != null && _camera != null) unit.Bar.Root.transform.rotation = _camera.transform.rotation;
-                if (unit.Charge != null && _camera != null) unit.Charge.Root.transform.rotation = _camera.transform.rotation;
-            }
+            TickBars();
             UpdateFlashes();
 
             if (_live != null)
@@ -460,17 +429,25 @@ namespace ShinobiDominion.Game
                 unit.Go.transform.rotation = Quaternion.LookRotation(new Vector3(0f, 0f, -Mathf.Sign(unit.Tz - unit.Pz + 0.001f)));
             }
             unit.Kick = Mathf.MoveTowards(unit.Kick, 0f, ticks * 0.05f);
+            unit.Drop = Mathf.MoveTowards(unit.Drop, 0f, ticks * 0.6f);
             PlaceFigure(unit);
         }
 
+        /// <summary>
+        /// Applies one line of the battle log. What the line changes (health, who is standing, what has fallen) is
+        /// always applied; how it looks and sounds is only shown when the battle is being watched.
+        /// </summary>
         private void Apply(long[] entry, bool show)
         {
             var kind = (BattleEventKind)entry[1];
             switch (kind)
             {
                 case BattleEventKind.Deploy:
-                    AddLanded((int)entry[2], (int)entry[3], (int)entry[4]);
+                {
+                    var figure = AddLanded((int)entry[2], (int)entry[3], (int)entry[4]);
+                    if (show) ShowLanding(figure);
                     break;
+                }
                 case BattleEventKind.Move:
                 {
                     var unit = _units[(int)entry[2]];
@@ -483,50 +460,20 @@ namespace ShinobiDominion.Game
                     var unit = _units[(int)entry[2]];
                     var building = _buildings[(int)entry[3]];
                     if (!building.isWall) _dealtHp += entry[4];
-                    if (show)
-                    {
-                        var center = CenterOf(building);
-                        var from = unit.Go.transform.position + Vector3.up;
-                        var direction = center - unit.Go.transform.position;
-                        direction.y = 0f;
-                        if (direction.sqrMagnitude > 0.001f)
-                        {
-                            unit.Go.transform.rotation = Quaternion.LookRotation(-direction.normalized);
-                            unit.KickDirection = direction.normalized;
-                            unit.Kick = 0.22f;
-                            if (unit.Actor != null)
-                            {
-                                unit.Actor.Face(direction);
-                                unit.Actor.Attack();
-                            }
-                        }
-                        ShowNumber(center + Vector3.up * 1.6f, entry[4], new Color(1f, 0.95f, 0.8f));
-                        GameSounds.Play(GameSound.Hit, 0.55f);
-                        _view.HitFlash(building.id);
-                        var ranged = direction.magnitude > 2.5f;
-                        if (ranged) AddFlash(from, center + Vector3.up * 0.8f, 0.2f, 0.1f, 0.1f, new Color(1f, 0.85f, 0.45f));
-                        else AddFlash(center + Vector3.up * 0.6f, center + Vector3.up * 0.6f, 0.12f, 0.05f, 0.25f, new Color(1f, 0.9f, 0.6f));
-                        BarFor(building).Set((float)entry[5] / building.hp);
-                    }
+                    SetBuildingBar(building, entry[5], show);
+                    if (show) ShowStrike(unit, building, entry[4]);
                     break;
                 }
                 case BattleEventKind.BuildingDown:
                 {
                     var building = _buildings[(int)entry[2]];
                     if (building.definitionId == "dojo_hq") DojoDown = true;
-                    if (show) GameSounds.Play(building.isWall ? GameSound.Hit : GameSound.Crumble, building.isWall ? 0.6f : 1f);
-                    if (show) Impact(building);
+                    ShowCollapse(building, show);
                     _view.SetGone(building.id);
                     if (_buildingBars.TryGetValue(building.id, out var bar))
                     {
-                        Destroy(bar.Root);
+                        RemoveBar(bar);
                         _buildingBars.Remove(building.id);
-                    }
-                    if (!building.isWall) AddRubble(building);
-                    if (show)
-                    {
-                        var smoke = WorldEffects.Create(transform, "Smoke", CenterOf(building), new Color(0.35f, 0.33f, 0.3f, 0.55f), new Color(0.5f, 0.5f, 0.5f, 0f), building.isWall ? 8f : 22f, 1.4f, 1.1f, building.isWall ? 0.7f : 1.5f, building.width * 0.4f);
-                        _expiring.Add(new KeyValuePair<float, GameObject>(Time.time + 1.2f, smoke.gameObject));
                     }
                     break;
                 }
@@ -534,42 +481,25 @@ namespace ShinobiDominion.Game
                 {
                     var unit = _units[(int)entry[3]];
                     unit.Bar?.Set((float)entry[5] / unit.MaxHp);
-                    if (show)
-                    {
-                        GameSounds.Play(GameSound.Shot, 0.4f);
-                        ShowNumber(unit.Go.transform.position + Vector3.up * 2.2f, entry[4], new Color(1f, 0.45f, 0.35f));
-                        var building = _buildings[(int)entry[2]];
-                        AddFlash(CenterOf(building) + Vector3.up * 2f, unit.Go.transform.position + Vector3.up, 0.18f, 0.09f, 0.09f, new Color(1f, 0.55f, 0.25f));
-                    }
+                    if (show) ShowTowerShot(_buildings[(int)entry[2]], unit, entry[4], entry[0]);
                     break;
                 }
                 case BattleEventKind.HeroDown:
                 {
                     var unit = _units[(int)entry[2]];
                     AddGrave(unit.Go.transform.position);
-                    if (show) GameSounds.Play(GameSound.Fall);
-                    if (show) AddFlash(unit.Go.transform.position + Vector3.up * 0.6f, unit.Go.transform.position + Vector3.up * 0.8f, 0.4f, 0.1f, 0.7f, new Color(0.9f, 0.9f, 1f));
+                    if (show) ShowFall(unit);
                     unit.Go.SetActive(false);
                     break;
                 }
                 case BattleEventKind.Ability:
-                {
-                    if (!show) break;
-                    var unit = _units[(int)entry[2]];
-                    GameSounds.Play(GameSound.Ability, 0.5f);
-                    var at = unit.Go.transform.position + Vector3.up * 0.9f;
-                    AddFlash(at, at, 0.35f, 0.15f, 0.55f, AbilityColor((int)entry[3]));
+                    if (show) ShowAbility(_units[(int)entry[2]], (int)entry[3], 0.5f);
                     break;
-                }
                 case BattleEventKind.Heal:
                 {
                     var unit = _units[(int)entry[2]];
                     unit.Bar?.Set((float)entry[4] / unit.MaxHp);
-                    if (show)
-                    {
-                        var at = unit.Go.transform.position + Vector3.up;
-                        AddFlash(at, at + Vector3.up * 0.8f, 0.5f, 0.15f, 0.05f, new Color(0.5f, 1f, 0.55f));
-                    }
+                    if (show) ShowHeal(unit);
                     break;
                 }
                 case BattleEventKind.DefenderMove:
@@ -583,40 +513,27 @@ namespace ShinobiDominion.Game
                 {
                     var target = _units[(int)entry[3]];
                     target.Bar?.Set((float)entry[5] / target.MaxHp);
-                    if (show)
-                    {
-                        ShowBlow(_defenders[(int)entry[2]], target);
-                        ShowNumber(target.Go.transform.position + Vector3.up * 2.2f, entry[4], new Color(1f, 0.45f, 0.35f));
-                    }
+                    if (show) ShowBlow(_defenders[(int)entry[2]], target, entry[4], Hurt);
                     break;
                 }
                 case BattleEventKind.DefenderDamaged:
                 {
                     var target = _defenders[(int)entry[3]];
                     target.Bar?.Set((float)entry[5] / target.MaxHp);
-                    if (show)
-                    {
-                        ShowBlow(_units[(int)entry[2]], target);
-                        ShowNumber(target.Go.transform.position + Vector3.up * 2.2f, entry[4], new Color(1f, 0.95f, 0.8f));
-                    }
+                    if (show) ShowBlow(_units[(int)entry[2]], target, entry[4], Ivory);
                     break;
                 }
                 case BattleEventKind.DefenderDown:
                 {
                     var unit = _defenders[(int)entry[2]];
                     AddGrave(unit.Go.transform.position);
-                    if (show) GameSounds.Play(GameSound.Fall);
-                    if (show) AddFlash(unit.Go.transform.position + Vector3.up * 0.6f, unit.Go.transform.position + Vector3.up * 0.8f, 0.4f, 0.4f, 0.05f, new Color(0.9f, 0.3f, 0.25f));
+                    if (show) ShowFall(unit);
                     unit.Go.SetActive(false);
                     break;
                 }
                 case BattleEventKind.DefenderAbility:
-                {
-                    if (!show) break;
-                    var at = _defenders[(int)entry[2]].Go.transform.position + Vector3.up * 0.9f;
-                    AddFlash(at, at, 0.35f, 0.15f, 0.55f, AbilityColor((int)entry[3]));
+                    if (show) ShowAbility(_defenders[(int)entry[2]], (int)entry[3], 0.4f);
                     break;
-                }
                 case BattleEventKind.Charge:
                 {
                     var list = entry[4] == 0 ? _units : _defenders;
@@ -626,76 +543,92 @@ namespace ShinobiDominion.Game
                 }
                 case BattleEventKind.Rally:
                 {
-                    // Radiant Roar: a wide golden burst and a callout over the hero.
                     if (!show) break;
                     var list = entry[4] == 0 ? _units : _defenders;
                     var index = (int)entry[2];
-                    if (index < 0 || index >= list.Count) break;
-                    var at = list[index].Go.transform.position + Vector3.up * 0.5f;
-                    var gold = new Color(1f, 0.78f, 0.3f);
-                    AddFlash(at, at, 0.6f, 0.4f, BattleSim.RallyRange / (float)BattleSim.CellUnits * 0.9f, gold);
-                    FloatingText.Create(transform, _camera, at + Vector3.up * 1.4f, "ATTACK SPEED UP!", gold);
+                    if (index >= 0 && index < list.Count) ShowRally(list[index]);
                     break;
                 }
                 case BattleEventKind.DefenderHeal:
                 {
                     var unit = _defenders[(int)entry[2]];
                     unit.Bar?.Set((float)entry[4] / unit.MaxHp);
-                    if (show)
-                    {
-                        var at = unit.Go.transform.position + Vector3.up;
-                        AddFlash(at, at + Vector3.up * 0.8f, 0.5f, 0.15f, 0.05f, new Color(0.5f, 1f, 0.55f));
-                    }
+                    if (show) ShowHeal(unit);
                     break;
                 }
                 case BattleEventKind.Stun:
-                {
-                    if (!show) break;
-                    var at = CenterOf(_buildings[(int)entry[2]]) + Vector3.up * 2.2f;
-                    AddFlash(at, at, 0.8f, 0.5f, 0.8f, new Color(0.7f, 0.6f, 1f));
+                    if (show) ShowStun(_buildings[(int)entry[2]]);
                     break;
-                }
                 case BattleEventKind.TrapFired:
-                {
-                    // A hidden trap goes off where it lies: a Bomb Trap bursts, a Hero Trap snaps shut.
-                    if (!show) break;
-                    var trap = _buildings[(int)entry[2]];
-                    var at = CenterOf(trap);
-                    var bomb = entry[3] == 0;
-                    var view = _camera != null ? _camera.GetComponent<IsoCamera>() : null;
-                    if (bomb)
-                    {
-                        GameSounds.Play(GameSound.Crumble, 0.9f);
-                        AddFlash(at + Vector3.up * 0.4f, at + Vector3.up * 0.9f, 0.45f, 0.4f, 3.2f, new Color(1f, 0.6f, 0.2f));
-                        AddFlash(at + Vector3.up * 0.3f, at + Vector3.up * 0.5f, 0.25f, 0.3f, 1.6f, new Color(1f, 0.95f, 0.7f));
-                        var smoke = WorldEffects.Create(transform, "TrapSmoke", at, new Color(0.3f, 0.28f, 0.25f, 0.6f), new Color(0.5f, 0.5f, 0.5f, 0f), 24f, 1.3f, 1.4f, 1.4f, 0.8f);
-                        _expiring.Add(new KeyValuePair<float, GameObject>(Time.time + 1.2f, smoke.gameObject));
-                        if (view != null) view.AddTrauma(0.45f);
-                        Feel.HitStop(Feel.Tier.Medium);
-                    }
-                    else
-                    {
-                        GameSounds.Play(GameSound.Hit, 0.9f);
-                        AddFlash(at + Vector3.up * 0.2f, at + Vector3.up * 1.4f, 0.35f, 0.5f, 1.2f, new Color(1f, 0.82f, 0.3f));
-                        if (view != null) view.AddTrauma(0.25f);
-                    }
+                    if (show) ShowTrap(_buildings[(int)entry[2]], entry[3] == 0);
                     break;
-                }
                 case BattleEventKind.TrapHit:
                 {
                     // b is the unit caught. A Hero Trap also holds the hero still for a moment (the sim's stun).
                     var unit = _units[(int)entry[3]];
                     unit.Bar?.Set((float)entry[5] / unit.MaxHp);
-                    if (show)
-                    {
-                        var at = unit.Go.transform.position;
-                        ShowNumber(at + Vector3.up * 2.2f, entry[4], new Color(1f, 0.45f, 0.2f));
-                        var heroTrap = _buildings.TryGetValue((int)entry[2], out var trap) && trap.definitionId == "hero_trap";
-                        if (heroTrap) AddFlash(at + Vector3.up * 2.1f, at + Vector3.up * 2.1f, 1f, 0.45f, 0.7f, new Color(0.7f, 0.6f, 1f));
-                    }
+                    if (!show) break;
+                    ShowNumber(unit.Go.transform.position + Vector3.up * 2.2f, entry[4], new Color(1f, 0.45f, 0.2f));
+                    if (_buildings.TryGetValue((int)entry[2], out var trap) && trap.definitionId == "hero_trap") ShowSnare(unit);
                     break;
                 }
+                case BattleEventKind.SpellCast:
+                {
+                    var cast = (int)entry[2];
+                    _castAt[cast] = new Vector3(entry[3] + 0.5f, 0f, entry[4] + 0.5f);
+                    _castEffect[cast] = (int)entry[5];
+                    if (show) ShowSpellCast(cast, (int)entry[5]);
+                    break;
+                }
+                case BattleEventKind.SpellPulse:
+                    if (show) ShowSpellPulse((int)entry[2], (int)entry[3], (int)entry[4], entry[5] / (float)BattleSim.CellUnits);
+                    break;
+                case BattleEventKind.SpellHit:
+                {
+                    var building = _buildings[(int)entry[3]];
+                    if (!building.isWall) _dealtHp += entry[4];
+                    SetBuildingBar(building, entry[5], show);
+                    if (show) ShowSpellHit(building, entry[4]);
+                    break;
+                }
+                case BattleEventKind.SpellHitDefender:
+                {
+                    var target = _defenders[(int)entry[3]];
+                    target.Bar?.Set((float)entry[5] / target.MaxHp);
+                    if (show) ShowSpellHitDefender(target, entry[4]);
+                    break;
+                }
+                case BattleEventKind.SpellHeal:
+                {
+                    var unit = _units[(int)entry[3]];
+                    unit.Bar?.Set((float)entry[5] / unit.MaxHp);
+                    if (show) ShowHeal(unit);
+                    break;
+                }
+                case BattleEventKind.SpellFreeze:
+                {
+                    if (!show) break;
+                    var seconds = Seconds(entry[5]);
+                    if (entry[3] == 0)
+                    {
+                        if (_buildings.TryGetValue((int)entry[4], out var tower)) ShowFreeze(tower, seconds);
+                    }
+                    else if (entry[4] >= 0 && entry[4] < _defenders.Count) ShowFreeze(_defenders[(int)entry[4]], seconds);
+                    break;
+                }
+                case BattleEventKind.SpellBoost:
+                    if (show) ShowBoost(_units[(int)entry[3]]);
+                    break;
             }
+        }
+
+        /// <summary>
+        /// A building's health bar. It appears on the first hit that is watched; a skipped battle only updates the
+        /// bars already up.
+        /// </summary>
+        private void SetBuildingBar(BattleBuildingInput building, long hpLeft, bool show)
+        {
+            if (show || _buildingBars.ContainsKey(building.id)) BarFor(building).Set((float)hpLeft / building.hp);
         }
 
         /// <summary>A damage number, at most one every short moment so a big fight stays readable.</summary>
@@ -726,28 +659,6 @@ namespace ShinobiDominion.Game
             var renderer = go.AddComponent<MeshRenderer>();
             renderer.sharedMaterial = Mats.World;
             renderer.shadowCastingMode = ShadowCastingMode.Off;
-        }
-
-        /// <summary>One hero striking another: it faces the target, lunges, and a small burst lands.</summary>
-        private void ShowBlow(Figure from, Figure to)
-        {
-            GameSounds.Play(GameSound.Hit, 0.6f);
-            var direction = to.Go.transform.position - from.Go.transform.position;
-            direction.y = 0f;
-            if (direction.sqrMagnitude > 0.001f)
-            {
-                from.Go.transform.rotation = Quaternion.LookRotation(-direction.normalized);
-                from.KickDirection = direction.normalized;
-                from.Kick = 0.22f;
-                if (from.Actor != null)
-                {
-                    from.Actor.Face(direction);
-                    from.Actor.Attack();
-                }
-            }
-            var impact = to.Go.transform.position + Vector3.up;
-            if (direction.magnitude > 2.5f) AddFlash(from.Go.transform.position + Vector3.up, impact, 0.2f, 0.1f, 0.1f, new Color(1f, 0.85f, 0.45f));
-            else AddFlash(impact, impact, 0.12f, 0.05f, 0.25f, new Color(1f, 0.9f, 0.6f));
         }
 
         private static Color AbilityColor(int role)
@@ -784,40 +695,12 @@ namespace ShinobiDominion.Game
         private Bar CreateChargeBar(Figure figure)
         {
             var at = figure.Go.transform.position + Vector3.up * ((figure.Actor != null ? 3.5f : 3.1f) - BarHeight * 1.25f);
-            var bar = CreateBar(at, 1.4f, new Color(0.98f, 0.76f, 0.22f), 0.55f);
+            var bar = CreateBar(at, 1.4f, new Color(0.98f, 0.76f, 0.22f), 0.55f, lag: false);
             bar.Root.name = "ChargeBar";
             bar.Root.transform.SetParent(figure.Go.transform, true);
             bar.Normal = bar.FillRenderer.sharedMaterial;
             bar.Full = Mats.OnTop(new Color(0.75f, 0.98f, 1f));
             bar.Set(0f);
-            return bar;
-        }
-
-        private Bar CreateBar(Vector3 at, float width, Color color, float heightScale = 1f)
-        {
-            var root = new GameObject("HealthBar");
-            root.transform.SetParent(transform, false);
-            root.transform.position = at;
-            if (_camera != null) root.transform.rotation = _camera.transform.rotation;
-
-            Transform Piece(string name, Color tint, float x, float y, float w, float h, float z)
-            {
-                var piece = new GameObject(name);
-                piece.transform.SetParent(root.transform, false);
-                piece.transform.localPosition = new Vector3(x, y, z);
-                piece.transform.localScale = new Vector3(w, h, 1f);
-                piece.AddComponent<MeshFilter>().sharedMesh = _quad;
-                var renderer = piece.AddComponent<MeshRenderer>();
-                renderer.sharedMaterial = Mats.OnTop(tint);
-                renderer.shadowCastingMode = ShadowCastingMode.Off;
-                return piece.transform;
-            }
-
-            var height = BarHeight * heightScale;
-            Piece("Back", new Color(0.08f, 0.07f, 0.08f, 0.9f), -width * 0.5f - 0.03f, 0f, width + 0.06f, height, 0.01f);
-            var bar = new Bar { Root = root, Width = width, Height = height };
-            bar.Fill = Piece("Fill", color, -width * 0.5f, 0f, width, height * 0.7f, 0f);
-            bar.FillRenderer = bar.Fill.GetComponent<MeshRenderer>();
             return bar;
         }
 
@@ -827,29 +710,15 @@ namespace ShinobiDominion.Game
         /// </summary>
         private void Impact(BattleBuildingInput building)
         {
-            var view = _camera != null ? _camera.GetComponent<IsoCamera>() : null;
             if (building.isWall)
             {
-                if (view != null) view.AddTrauma(0.12f);
+                Shake(0.12f);
                 return;
             }
             var dojo = building.definitionId == "dojo_hq";
-            if (view != null) view.AddTrauma(dojo ? 0.85f : 0.4f);
+            Shake(dojo ? 0.85f : 0.4f);
+            if (dojo) ZoomPunch(0.07f);
             Feel.HitStop(dojo ? Feel.Tier.Large : Feel.Tier.Medium);
-        }
-
-        private void AddFlash(Vector3 from, Vector3 to, float duration, float startSize, float endSize, Color color)
-        {
-            var go = new GameObject("Flash");
-            go.transform.SetParent(transform, false);
-            go.transform.position = from;
-            go.transform.localScale = Vector3.one * startSize;
-            go.AddComponent<MeshFilter>().sharedMesh = _orb;
-            var renderer = go.AddComponent<MeshRenderer>();
-            renderer.sharedMaterials = _orbMaterials;
-            renderer.shadowCastingMode = ShadowCastingMode.Off;
-            TintOrb(go, color);
-            _flashes.Add(new Flash { Item = go.transform, From = from, To = to, Duration = duration, StartSize = startSize, EndSize = endSize });
         }
 
         /// <summary>Colour lives in the mesh, so each colour of flash gets its own small mesh.</summary>
@@ -868,57 +737,11 @@ namespace ShinobiDominion.Game
             go.GetComponent<MeshFilter>().sharedMesh = mesh;
         }
 
-        private void UpdateFlashes()
-        {
-            for (var i = _flashes.Count - 1; i >= 0; i--)
-            {
-                var flash = _flashes[i];
-                flash.Age += Time.deltaTime;
-                var t = Mathf.Clamp01(flash.Age / flash.Duration);
-                flash.Item.position = Vector3.Lerp(flash.From, flash.To, t);
-                flash.Item.localScale = Vector3.one * Mathf.Lerp(flash.StartSize, flash.EndSize, t);
-                if (t >= 1f)
-                {
-                    Destroy(flash.Item.gameObject);
-                    _flashes.RemoveAt(i);
-                }
-            }
-            for (var i = _expiring.Count - 1; i >= 0; i--)
-            {
-                if (Time.time < _expiring[i].Key) continue;
-                var system = _expiring[i].Value.GetComponent<ParticleSystem>();
-                if (system != null) system.Stop(true, ParticleSystemStopBehavior.StopEmitting);
-                Destroy(_expiring[i].Value, 2f);
-                _expiring.RemoveAt(i);
-            }
-        }
-
-        private void AddRubble(BattleBuildingInput building)
-        {
-            var builder = new MeshBuilder { ContactShade = false };
-            var dark = new Color(0.22f, 0.20f, 0.19f);
-            var light = new Color(0.42f, 0.39f, 0.36f);
-            var random = new System.Random(building.id * 31);
-            var size = new Vector3(building.width * 0.42f, 0.18f, building.depth * 0.42f);
-            builder.Blob(Vector3.up * 0.03f, size, dark, ArtSurface.Rock, 0f, 0f, 9, 4, 0.14f, building.id, light);
-            for (var i = 0; i < building.width * 3; i++)
-            {
-                var offset = new Vector3(((float)random.NextDouble() - 0.5f) * building.width * 0.8f, 0.08f, ((float)random.NextDouble() - 0.5f) * building.depth * 0.8f);
-                builder.Blob(offset, Vector3.one * (0.08f + (float)random.NextDouble() * 0.1f), light, ArtSurface.Rock, 0f, 0f, 5, 3, 0.15f, i);
-            }
-            var go = new GameObject("Rubble");
-            go.transform.SetParent(transform, false);
-            go.transform.localPosition = CenterOf(building);
-            var mesh = builder.Build("Rubble");
-            _ownedMeshes.Add(mesh);
-            go.AddComponent<MeshFilter>().sharedMesh = mesh;
-            go.AddComponent<MeshRenderer>().sharedMaterials = builder.LitMaterials();
-        }
-
         private void OnDestroy()
         {
             foreach (var mesh in _ownedMeshes)
                 if (mesh != null) Destroy(mesh);
+            DestroyFx();
         }
     }
 }

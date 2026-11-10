@@ -39,18 +39,24 @@ namespace ShinobiDominion.Game
             Ui.Stretch(screen);
             _raid.DeployScreen = screen.gameObject;
 
+            // The base is what the player is looking at, so words lie over it only while they are needed: how to
+            // start, what a picked spell does, or why a tap was refused. Once an army is down there is none.
             var hint = string.IsNullOrEmpty(LastMessage)
-                ? (AnythingDropped ? "Drop more cards any time, or End Battle." : "The clock is running: pick a card, then tap open ground. Red ground is too close.")
+                ? (SpellHint() ?? (AnythingDropped ? null : "Pick a card, then tap open ground."))
                 : LastMessage;
-            var hintLabel = HudArt.Label(screen, hint, HudArt.Numbers, 20, TextAnchor.MiddleCenter, string.IsNullOrEmpty(LastMessage) ? HudArt.Ivory : Ui.AccentColor, HudArt.LacquerDeep);
-            hintLabel.raycastTarget = false;
-            // Narrow enough to stay clear of the loot panel at the top right; two lines at most.
-            Ui.Anchor(hintLabel.rectTransform, new Vector2(0.5f, 1f), new Vector2(600f, 54f), new Vector2(0f, -224f));
-            hintLabel.horizontalOverflow = HorizontalWrapMode.Wrap;
-            hintLabel.verticalOverflow = VerticalWrapMode.Truncate;
-            hintLabel.resizeTextForBestFit = true;
-            hintLabel.resizeTextMinSize = 15;
-            hintLabel.resizeTextMaxSize = 20;
+            if (!string.IsNullOrEmpty(hint))
+            {
+                var hintLabel = HudArt.Label(screen, hint, HudArt.Numbers, 20, TextAnchor.MiddleCenter, string.IsNullOrEmpty(LastMessage) ? HudArt.Ivory : Ui.AccentColor, HudArt.LacquerDeep);
+                hintLabel.name = "BattleHint";
+                hintLabel.raycastTarget = false;
+                // Narrow enough to stay clear of the loot panel at the top right; two lines at most.
+                Ui.Anchor(hintLabel.rectTransform, new Vector2(0.5f, 1f), new Vector2(600f, 54f), new Vector2(0f, -224f));
+                hintLabel.horizontalOverflow = HorizontalWrapMode.Wrap;
+                hintLabel.verticalOverflow = VerticalWrapMode.Truncate;
+                hintLabel.resizeTextForBestFit = true;
+                hintLabel.resizeTextMinSize = 15;
+                hintLabel.resizeTextMaxSize = 20;
+            }
 
             // Above the cards, at the left: drop everything left at once.
             if (!NothingLeftToDrop)
@@ -60,6 +66,7 @@ namespace ShinobiDominion.Game
                 Ui.Anchor((RectTransform)auto.transform, new Vector2(0f, 0f), new Vector2(130f, 52f), new Vector2(16f, CardHeight + 41f));
             }
 
+            BuildSpellButtons(screen);
             BuildCardRow(true);
         }
 
@@ -174,6 +181,7 @@ namespace ShinobiDominion.Game
         {
             if (!LiveRunning) return;
             _raid.SelectedTroop = null;
+            _raid.SelectedSpell = null;
             _raid.SelectedHero = instanceId;
             ShowDeployScreen();
         }
@@ -182,6 +190,7 @@ namespace ShinobiDominion.Game
         {
             if (!LiveRunning) return;
             _raid.SelectedTroop = troopId;
+            _raid.SelectedSpell = null;
             _raid.SelectedHero = null;
             ShowDeployScreen();
         }
@@ -257,6 +266,8 @@ namespace ShinobiDominion.Game
             Ui.Anchor(time.rectTransform, new Vector2(0.5f, 0f), new Vector2(300f, 48f), new Vector2(0f, 0f));
             _raid.StatusBar = bar;
             _raid.StatusText = time;
+            // A new label is empty: the clock writes it again at once.
+            _raid.ClockSecond = -1;
             BuildCardRow(live);
         }
 
@@ -274,7 +285,14 @@ namespace ShinobiDominion.Game
             UiMotion.SlideIn(target, new Vector2(340f, 0f), 0.3f);
             _battleHud = new BattleHud { Stars = new Image[3] };
             for (var i = 0; i < 3; i++)
-                _battleHud.Stars[i] = Ui.Icon(target, UiSkin.Diamond(new Color(0.35f, 0.35f, 0.38f), new Color(0.2f, 0.2f, 0.23f)), new Vector2(0.5f, 0f), new Vector2(42f, 42f), new Vector2((i - 1) * 56f, 12f));
+            {
+                // The painted star, dark until it is earned.
+                var star = Ui.Icon(target, HudArt.Sprite("icon_star"), new Vector2(0.5f, 0f), new Vector2(46f, 46f), new Vector2((i - 1) * 56f, 10f));
+                star.name = "Star" + (i + 1);
+                star.preserveAspect = true;
+                star.color = UnlitStar;
+                _battleHud.Stars[i] = star;
+            }
 
             // Bottom right: how much is destroyed, above the card row.
             var damage = Ui.Rect("Damage", hud);
@@ -284,7 +302,8 @@ namespace ShinobiDominion.Game
             Ui.Stretch(_battleHud.Damage.rectTransform);
 
             var banner = Ui.Strong(Ui.Label(_raid.StatusBar.transform.parent, "BATTLE!", 72, TextAnchor.MiddleCenter, new Color(1f, 0.82f, 0.35f)));
-            Ui.Anchor(banner.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(620f, 120f), new Vector2(0f, 110f));
+            // Below the clock and its hint, over the base.
+            Ui.Anchor(banner.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(620f, 120f), new Vector2(0f, -10f));
             UiMotion.PopIn(banner.transform, 0f, 2.2f, 0.4f);
             Destroy(banner.gameObject, 1.1f);
         }

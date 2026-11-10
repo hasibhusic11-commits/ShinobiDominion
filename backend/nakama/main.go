@@ -83,6 +83,7 @@ type Server struct {
 	buildings *BuildingCatalog
 	raids   *raidCatalog
 	troops  *troopCatalog
+	spells  *spellCatalog
 	modes   *modesConfig
 	pool    *SummonPool
 	dev     bool
@@ -113,6 +114,10 @@ func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runti
 	if err != nil {
 		return fmt.Errorf("troop catalog: %w", err)
 	}
+	spells, err := loadSpellCatalog(spellsJSON)
+	if err != nil {
+		return fmt.Errorf("spell catalog: %w", err)
+	}
 	modes, err := loadModes(modesJSON, troops, buildings)
 	if err != nil {
 		return fmt.Errorf("modes: %w", err)
@@ -126,6 +131,7 @@ func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runti
 		buildings: buildings,
 		raids:   raids,
 		troops:  troops,
+		spells:  spells,
 		modes:   modes,
 		pool:    pool,
 		dev:     devModeEnabled(env),

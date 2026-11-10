@@ -22,9 +22,19 @@ func loadTestRaids(t *testing.T) *raidCatalog {
 	return raids
 }
 
+// spellEventNames are the client's names for the spell kinds of event, which the vectors count entries by.
+var spellEventNames = map[int64]string{
+	eventSpellCast: "SpellCast", eventSpellPulse: "SpellPulse", eventSpellHit: "SpellHit", eventSpellHitDefender: "SpellHitDefender",
+	eventSpellHeal: "SpellHeal", eventSpellFreeze: "SpellFreeze", eventSpellBoost: "SpellBoost",
+}
+
 // The same scenarios run through the client's BattleSim, so the two must agree on every event.
 func TestBattle_MatchesTheClientsLogExactly(t *testing.T) {
 	raids := loadTestRaids(t)
+	spells, err := loadSpellCatalog(spellsJSON)
+	if err != nil {
+		t.Fatal(err)
+	}
 	var vectors struct {
 		Scenarios []struct {
 			Name          string            `json:"name"`
@@ -39,6 +49,11 @@ func TestBattle_MatchesTheClientsLogExactly(t *testing.T) {
 			ExtraBuildings []battleBuildingInput `json:"extraBuildings"`
 			// BattleEnd is the end tick of a timed battle (ADR-050); 0 for the old all-at-once kind.
 			BattleEnd int `json:"battleEnd"`
+			// Spells is what the raid may cast and Casts is what it did cast (ADR-052), both as the server gets them.
+			Spells []raidSpell `json:"spells"`
+			Casts  []spellCast `json:"casts"`
+			// SpellEvents is how many entries of each spell kind the log holds, by the client's name for the kind.
+			SpellEvents map[string]int `json:"spellEvents"`
 		} `json:"scenarios"`
 	}
 	if err := json.Unmarshal(battleVectorsJSON, &vectors); err != nil {
@@ -47,9 +62,18 @@ func TestBattle_MatchesTheClientsLogExactly(t *testing.T) {
 	if len(vectors.Scenarios) == 0 {
 		t.Fatal("no scenarios")
 	}
+	withCasts := 0
 	for _, scenario := range vectors.Scenarios {
 		buildings := append(append([]battleBuildingInput{}, raids.byID["ridge_outpost"].expanded...), scenario.ExtraBuildings...)
-		result, err := runTimedBattle(buildings, scenario.Team, scenario.Defenders, scenario.BattleEnd)
+		if refusal := castError(scenario.Spells, scenario.Casts, scenario.BattleEnd); refusal != "" {
+			t.Errorf("%s: its casts are refused with %s", scenario.Name, refusal)
+			continue
+		}
+		casts, err := spells.toInputs(scenario.Spells, scenario.Casts)
+		if err != nil {
+			t.Fatal(err)
+		}
+		result, err := runTimedBattle(buildings, scenario.Team, scenario.Defenders, scenario.BattleEnd, casts)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -57,6 +81,30 @@ func TestBattle_MatchesTheClientsLogExactly(t *testing.T) {
 			result.EndTick != scenario.EndTick || result.HeroesAlive != scenario.HeroesAlive || result.DefendersAlive != scenario.DefendersAlive {
 			t.Errorf("%s: got stars=%d damage=%d end=%d alive=%d checksum=%s", scenario.Name, result.Stars, result.DamagePercent, result.EndTick, result.HeroesAlive, result.Checksum)
 		}
+		counts := map[string]int{}
+		for _, event := range result.Events {
+			if name, ok := spellEventNames[event[1]]; ok {
+				counts[name]++
+			}
+		}
+		if scenario.Casts == nil {
+			// A battle without casts logs nothing a client from before spells would not know.
+			if len(counts) != 0 {
+				t.Errorf("%s: spell events %v in a battle without casts", scenario.Name, counts)
+			}
+			continue
+		}
+		withCasts++
+		same := len(counts) == len(scenario.SpellEvents)
+		for name, count := range counts {
+			same = same && scenario.SpellEvents[name] == count
+		}
+		if !same {
+			t.Errorf("%s: spell events %v, expected %v", scenario.Name, counts, scenario.SpellEvents)
+		}
+	}
+	if withCasts == 0 {
+		t.Error("no scenario has casts")
 	}
 }
 

@@ -91,6 +91,17 @@ namespace ShinobiDominion.Core
         public List<BattleBuildingInput> buildings = new List<BattleBuildingInput>();
         public List<RaidTeamMember> team = new List<RaidTeamMember>();
         public List<RaidDefender> defenders = new List<RaidDefender>();
+        /// <summary>
+        /// The spells this raid may cast, each once, and their levels (ADR-052). The server decides it from the
+        /// attacker's Research Hut. Empty from a server that has no spells.
+        /// </summary>
+        public List<RaidSpell> spells = new List<RaidSpell>();
+
+        /// <summary>Empty when these casts are legal for this raid. See SpellCatalog.CastError.</summary>
+        public string CastError(IList<RaidSpellCast> casts, int endTick) => SpellCatalog.CastError(spells, casts, endTick);
+
+        /// <summary>The casts as the sim takes them, in the order sent. The server works out the same numbers.</summary>
+        public List<BattleSpellInput> ToCasts(IEnumerable<RaidSpellCast> casts, SpellCatalog catalog) => catalog.ToInputs(spells, casts);
 
         public List<BattleDefenderInput> ToDefenderInputs() =>
             defenders.Select(d => new BattleDefenderInput { id = d.id, role = d.role, hp = d.hp, attack = d.attack, defense = d.defense, x = d.x, z = d.z, special = d.special, evolution = d.evolutionIndex, power = d.power }).ToList();

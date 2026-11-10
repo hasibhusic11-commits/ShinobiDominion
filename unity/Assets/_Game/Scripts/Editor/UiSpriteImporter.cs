@@ -11,6 +11,7 @@ namespace ShinobiDominion.EditorTools
     /// it shimmers and looks pixelated.
     /// Building sprites stand on their bottom edge (the front corner of the footprint). The two wall arms stand
     /// on the corner where they meet: the Z arm on its bottom right, the X arm on its bottom left.
+    /// Battle effect pictures under Resources/Effects (shots, sparks, bursts) turn about their middle.
     /// </summary>
     public sealed class UiSpriteImporter : AssetPostprocessor
     {
@@ -24,6 +25,7 @@ namespace ShinobiDominion.EditorTools
             var path = assetPath.Replace('\\', '/');
             var ui = path.Contains("/Resources/UI/");
             var building = path.Contains("/Resources/Buildings/") || path.Contains("/Resources/Props/");
+            var effect = path.Contains("/Resources/Effects/");
             if (path.Contains("/Resources/Map/"))
             {
                 // The owner's painted village map, laid on the ground (VillageMap): a plain texture, full quality.
@@ -50,7 +52,7 @@ namespace ShinobiDominion.EditorTools
                 painting.textureCompression = TextureImporterCompression.Uncompressed;
                 return;
             }
-            if (!ui && !building) return;
+            if (!ui && !building && !effect) return;
             var importer = (TextureImporter)assetImporter;
             importer.textureType = TextureImporterType.Sprite;
             importer.spriteImportMode = SpriteImportMode.Single;
@@ -67,7 +69,13 @@ namespace ShinobiDominion.EditorTools
             var settings = new TextureImporterSettings();
             importer.ReadTextureSettings(settings);
             settings.spriteMeshType = SpriteMeshType.FullRect;
-            if (ui)
+            if (effect)
+            {
+                // Drawn small and often, so half size is plenty; the pivot stays in the middle so they can spin.
+                importer.maxTextureSize = 256;
+                settings.spriteAlignment = (int)SpriteAlignment.Center;
+            }
+            else if (ui)
             {
                 var match = Border.Match(name);
                 if (match.Success)

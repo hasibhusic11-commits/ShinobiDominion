@@ -1379,6 +1379,907 @@
         }
       ],
       "battleEnd": 1500
+    },
+    {
+      "name": "spells: each of the four once, against guards",
+      "checksum": "d2bd4951348d3638",
+      "stars": 0,
+      "damagePercent": 10,
+      "endTick": 900,
+      "heroesAlive": 0,
+      "team": [
+        {
+          "id": "a",
+          "role": "Tank",
+          "hp": 6000,
+          "attack": 240,
+          "defense": 240,
+          "x": 10,
+          "z": 10
+        },
+        {
+          "id": "b",
+          "role": "Fighter",
+          "hp": 4800,
+          "attack": 360,
+          "defense": 160,
+          "x": 11,
+          "z": 10
+        },
+        {
+          "id": "c",
+          "role": "Assassin",
+          "hp": 3200,
+          "attack": 440,
+          "defense": 100,
+          "x": 12,
+          "z": 10
+        },
+        {
+          "id": "d",
+          "role": "Mage",
+          "hp": 3200,
+          "attack": 400,
+          "defense": 100,
+          "x": 13,
+          "z": 10
+        },
+        {
+          "id": "e",
+          "role": "Control",
+          "hp": 3600,
+          "attack": 320,
+          "defense": 120,
+          "x": 14,
+          "z": 10
+        },
+        {
+          "id": "f",
+          "role": "Support",
+          "hp": 3600,
+          "attack": 240,
+          "defense": 120,
+          "x": 15,
+          "z": 10
+        }
+      ],
+      "defenders": [
+        {
+          "id": "g1",
+          "role": "Tank",
+          "hp": 8000,
+          "attack": 640,
+          "defense": 240,
+          "x": 14,
+          "z": 14
+        },
+        {
+          "id": "g2",
+          "role": "Mage",
+          "hp": 8000,
+          "attack": 640,
+          "defense": 240,
+          "x": 17,
+          "z": 17
+        },
+        {
+          "id": "g3",
+          "role": "Support",
+          "hp": 8000,
+          "attack": 640,
+          "defense": 240,
+          "x": 20,
+          "z": 17
+        },
+        {
+          "id": "g4",
+          "role": "Assassin",
+          "hp": 8000,
+          "attack": 640,
+          "defense": 240,
+          "x": 12,
+          "z": 20
+        },
+        {
+          "id": "g5",
+          "role": "Fighter",
+          "hp": 8000,
+          "attack": 640,
+          "defense": 240,
+          "x": 20,
+          "z": 12
+        }
+      ],
+      "defendersAlive": 5,
+      "battleEnd": 900,
+      "spells": [
+        {
+          "id": "ember_rain",
+          "level": 4
+        },
+        {
+          "id": "mending_mist",
+          "level": 3
+        },
+        {
+          "id": "frost_seal",
+          "level": 2
+        },
+        {
+          "id": "war_drum",
+          "level": 1
+        }
+      ],
+      "casts": [
+        {
+          "spellId": "war_drum",
+          "x": 12,
+          "z": 11,
+          "tick": 5
+        },
+        {
+          "spellId": "frost_seal",
+          "x": 16,
+          "z": 15,
+          "tick": 30
+        },
+        {
+          "spellId": "ember_rain",
+          "x": 17,
+          "z": 17,
+          "tick": 60
+        },
+        {
+          "spellId": "mending_mist",
+          "x": 14,
+          "z": 13,
+          "tick": 120
+        }
+      ],
+      "spellEvents": {
+        "SpellCast": 4,
+        "SpellPulse": 10,
+        "SpellHit": 21,
+        "SpellHitDefender": 6,
+        "SpellHeal": 5,
+        "SpellFreeze": 3,
+        "SpellBoost": 6
+      }
+    },
+    {
+      "name": "spells: a cast on the same tick as a drop",
+      "checksum": "6ba7c387acdead95",
+      "stars": 0,
+      "damagePercent": 39,
+      "endTick": 500,
+      "heroesAlive": 2,
+      "team": [
+        {
+          "id": "a",
+          "role": "Control",
+          "hp": 2000,
+          "attack": 200,
+          "defense": 60,
+          "x": 25,
+          "z": 5
+        },
+        {
+          "id": "militia",
+          "role": "Fighter",
+          "hp": 110,
+          "attack": 14,
+          "defense": 5,
+          "x": 10,
+          "z": 10,
+          "isTroop": true,
+          "deployTick": 40
+        },
+        {
+          "id": "militia",
+          "role": "Fighter",
+          "hp": 110,
+          "attack": 14,
+          "defense": 5,
+          "x": 10,
+          "z": 10,
+          "isTroop": true,
+          "deployTick": 40
+        },
+        {
+          "id": "militia",
+          "role": "Fighter",
+          "hp": 110,
+          "attack": 14,
+          "defense": 5,
+          "x": 10,
+          "z": 10,
+          "isTroop": true,
+          "deployTick": 40
+        },
+        {
+          "id": "kunai_thrower",
+          "role": "Mage",
+          "hp": 90,
+          "attack": 26,
+          "defense": 3,
+          "x": 12,
+          "z": 12,
+          "isTroop": true,
+          "deployTick": 41
+        }
+      ],
+      "battleEnd": 500,
+      "spells": [
+        {
+          "id": "war_drum",
+          "level": 3
+        },
+        {
+          "id": "frost_seal",
+          "level": 1
+        }
+      ],
+      "casts": [
+        {
+          "spellId": "war_drum",
+          "x": 10,
+          "z": 10,
+          "tick": 40
+        },
+        {
+          "spellId": "frost_seal",
+          "x": 19,
+          "z": 19,
+          "tick": 40
+        }
+      ],
+      "spellEvents": {
+        "SpellCast": 2,
+        "SpellPulse": 2,
+        "SpellFreeze": 1,
+        "SpellBoost": 3
+      }
+    },
+    {
+      "name": "spells: an ember rain brings down the last building",
+      "checksum": "4ad1e3f92caa7571",
+      "stars": 3,
+      "damagePercent": 100,
+      "endTick": 421,
+      "heroesAlive": 6,
+      "team": [
+        {
+          "id": "a",
+          "role": "Tank",
+          "hp": 30000,
+          "attack": 1200,
+          "defense": 1200,
+          "x": 10,
+          "z": 10
+        },
+        {
+          "id": "b",
+          "role": "Fighter",
+          "hp": 24000,
+          "attack": 1800,
+          "defense": 800,
+          "x": 11,
+          "z": 10
+        },
+        {
+          "id": "c",
+          "role": "Assassin",
+          "hp": 16000,
+          "attack": 2200,
+          "defense": 500,
+          "x": 12,
+          "z": 10
+        },
+        {
+          "id": "d",
+          "role": "Mage",
+          "hp": 16000,
+          "attack": 2000,
+          "defense": 500,
+          "x": 13,
+          "z": 10
+        },
+        {
+          "id": "e",
+          "role": "Control",
+          "hp": 18000,
+          "attack": 1600,
+          "defense": 600,
+          "x": 14,
+          "z": 10
+        },
+        {
+          "id": "f",
+          "role": "Support",
+          "hp": 18000,
+          "attack": 1200,
+          "defense": 600,
+          "x": 15,
+          "z": 10
+        }
+      ],
+      "battleEnd": 1200,
+      "spells": [
+        {
+          "id": "ember_rain",
+          "level": 3
+        }
+      ],
+      "casts": [
+        {
+          "spellId": "ember_rain",
+          "x": 9,
+          "z": 41,
+          "tick": 410
+        }
+      ],
+      "spellEvents": {
+        "SpellCast": 1,
+        "SpellPulse": 2,
+        "SpellHit": 2
+      }
+    },
+    {
+      "name": "spells: a strong ember rain fells weak guards",
+      "checksum": "abd0d769d9ff7328",
+      "stars": 2,
+      "damagePercent": 93,
+      "endTick": 700,
+      "heroesAlive": 6,
+      "team": [
+        {
+          "id": "a",
+          "role": "Tank",
+          "hp": 3000,
+          "attack": 120,
+          "defense": 120,
+          "x": 10,
+          "z": 10
+        },
+        {
+          "id": "b",
+          "role": "Fighter",
+          "hp": 2400,
+          "attack": 180,
+          "defense": 80,
+          "x": 11,
+          "z": 10
+        },
+        {
+          "id": "c",
+          "role": "Assassin",
+          "hp": 1600,
+          "attack": 220,
+          "defense": 50,
+          "x": 12,
+          "z": 10
+        },
+        {
+          "id": "d",
+          "role": "Mage",
+          "hp": 1600,
+          "attack": 200,
+          "defense": 50,
+          "x": 13,
+          "z": 10
+        },
+        {
+          "id": "e",
+          "role": "Control",
+          "hp": 1800,
+          "attack": 160,
+          "defense": 60,
+          "x": 14,
+          "z": 10
+        },
+        {
+          "id": "f",
+          "role": "Support",
+          "hp": 1800,
+          "attack": 120,
+          "defense": 60,
+          "x": 15,
+          "z": 10
+        }
+      ],
+      "defenders": [
+        {
+          "id": "g1",
+          "role": "Tank",
+          "hp": 1000,
+          "attack": 80,
+          "defense": 30,
+          "x": 14,
+          "z": 14
+        },
+        {
+          "id": "g2",
+          "role": "Mage",
+          "hp": 1000,
+          "attack": 80,
+          "defense": 30,
+          "x": 17,
+          "z": 17
+        },
+        {
+          "id": "g3",
+          "role": "Support",
+          "hp": 1000,
+          "attack": 80,
+          "defense": 30,
+          "x": 20,
+          "z": 17
+        },
+        {
+          "id": "g4",
+          "role": "Assassin",
+          "hp": 1000,
+          "attack": 80,
+          "defense": 30,
+          "x": 12,
+          "z": 20
+        },
+        {
+          "id": "g5",
+          "role": "Fighter",
+          "hp": 1000,
+          "attack": 80,
+          "defense": 30,
+          "x": 20,
+          "z": 12
+        }
+      ],
+      "defendersAlive": 0,
+      "battleEnd": 700,
+      "spells": [
+        {
+          "id": "ember_rain",
+          "level": 15
+        },
+        {
+          "id": "frost_seal",
+          "level": 13
+        }
+      ],
+      "casts": [
+        {
+          "spellId": "ember_rain",
+          "x": 17,
+          "z": 17,
+          "tick": 0
+        },
+        {
+          "spellId": "frost_seal",
+          "x": 14,
+          "z": 14,
+          "tick": 3
+        }
+      ],
+      "spellEvents": {
+        "SpellCast": 2,
+        "SpellPulse": 4,
+        "SpellHit": 10,
+        "SpellHitDefender": 4,
+        "SpellFreeze": 1
+      }
+    },
+    {
+      "name": "spells: walls only, nobody in the ring, and a rain cut off by the end",
+      "checksum": "7c036050c915b950",
+      "stars": 0,
+      "damagePercent": 21,
+      "endTick": 200,
+      "heroesAlive": 6,
+      "team": [
+        {
+          "id": "a",
+          "role": "Tank",
+          "hp": 1500,
+          "attack": 60,
+          "defense": 60,
+          "x": 10,
+          "z": 10
+        },
+        {
+          "id": "b",
+          "role": "Fighter",
+          "hp": 1200,
+          "attack": 90,
+          "defense": 40,
+          "x": 11,
+          "z": 10
+        },
+        {
+          "id": "c",
+          "role": "Assassin",
+          "hp": 800,
+          "attack": 110,
+          "defense": 25,
+          "x": 12,
+          "z": 10
+        },
+        {
+          "id": "d",
+          "role": "Mage",
+          "hp": 800,
+          "attack": 100,
+          "defense": 25,
+          "x": 13,
+          "z": 10
+        },
+        {
+          "id": "e",
+          "role": "Control",
+          "hp": 900,
+          "attack": 80,
+          "defense": 30,
+          "x": 14,
+          "z": 10
+        },
+        {
+          "id": "f",
+          "role": "Support",
+          "hp": 900,
+          "attack": 60,
+          "defense": 30,
+          "x": 15,
+          "z": 10
+        }
+      ],
+      "battleEnd": 200,
+      "spells": [
+        {
+          "id": "ember_rain",
+          "level": 1
+        },
+        {
+          "id": "mending_mist",
+          "level": 1
+        },
+        {
+          "id": "frost_seal",
+          "level": 13
+        },
+        {
+          "id": "war_drum",
+          "level": 12
+        }
+      ],
+      "casts": [
+        {
+          "spellId": "frost_seal",
+          "x": 0,
+          "z": 0,
+          "tick": 0
+        },
+        {
+          "spellId": "mending_mist",
+          "x": 49,
+          "z": 49,
+          "tick": 0
+        },
+        {
+          "spellId": "war_drum",
+          "x": 45,
+          "z": 3,
+          "tick": 100
+        },
+        {
+          "spellId": "ember_rain",
+          "x": 33,
+          "z": 16,
+          "tick": 185
+        }
+      ],
+      "spellEvents": {
+        "SpellCast": 4,
+        "SpellPulse": 9,
+        "SpellHit": 14
+      }
+    }
+  ],
+  "refusedCasts": [
+    {
+      "name": "a spell the session does not have",
+      "spells": [
+        {
+          "id": "ember_rain",
+          "level": 1
+        }
+      ],
+      "casts": [
+        {
+          "spellId": "war_drum",
+          "x": 10,
+          "z": 10,
+          "tick": 5
+        }
+      ],
+      "battleEnd": 300,
+      "error": "SPELL_LOCKED"
+    },
+    {
+      "name": "a spell that is not in the game",
+      "spells": [
+        {
+          "id": "ember_rain",
+          "level": 1
+        }
+      ],
+      "casts": [
+        {
+          "spellId": "meteor",
+          "x": 10,
+          "z": 10,
+          "tick": 5
+        }
+      ],
+      "battleEnd": 300,
+      "error": "SPELL_LOCKED"
+    },
+    {
+      "name": "no spells at all",
+      "spells": [],
+      "casts": [
+        {
+          "spellId": "ember_rain",
+          "x": 10,
+          "z": 10,
+          "tick": 5
+        }
+      ],
+      "battleEnd": 300,
+      "error": "SPELL_LOCKED"
+    },
+    {
+      "name": "the same spell twice",
+      "spells": [
+        {
+          "id": "ember_rain",
+          "level": 1
+        },
+        {
+          "id": "mending_mist",
+          "level": 1
+        }
+      ],
+      "casts": [
+        {
+          "spellId": "ember_rain",
+          "x": 10,
+          "z": 10,
+          "tick": 5
+        },
+        {
+          "spellId": "mending_mist",
+          "x": 10,
+          "z": 10,
+          "tick": 6
+        },
+        {
+          "spellId": "ember_rain",
+          "x": 20,
+          "z": 20,
+          "tick": 50
+        }
+      ],
+      "battleEnd": 300,
+      "error": "SPELL_USED"
+    },
+    {
+      "name": "a cell left of the grid",
+      "spells": [
+        {
+          "id": "ember_rain",
+          "level": 1
+        }
+      ],
+      "casts": [
+        {
+          "spellId": "ember_rain",
+          "x": -1,
+          "z": 10,
+          "tick": 5
+        }
+      ],
+      "battleEnd": 300,
+      "error": "BAD_SPELL_CELL"
+    },
+    {
+      "name": "a cell past the far edge",
+      "spells": [
+        {
+          "id": "ember_rain",
+          "level": 1
+        }
+      ],
+      "casts": [
+        {
+          "spellId": "ember_rain",
+          "x": 10,
+          "z": 50,
+          "tick": 5
+        }
+      ],
+      "battleEnd": 300,
+      "error": "BAD_SPELL_CELL"
+    },
+    {
+      "name": "a cast before the battle",
+      "spells": [
+        {
+          "id": "ember_rain",
+          "level": 1
+        }
+      ],
+      "casts": [
+        {
+          "spellId": "ember_rain",
+          "x": 10,
+          "z": 10,
+          "tick": -1
+        }
+      ],
+      "battleEnd": 300,
+      "error": "BAD_DEPLOY_TICK"
+    },
+    {
+      "name": "a cast on the end tick",
+      "spells": [
+        {
+          "id": "ember_rain",
+          "level": 1
+        }
+      ],
+      "casts": [
+        {
+          "spellId": "ember_rain",
+          "x": 10,
+          "z": 10,
+          "tick": 300
+        }
+      ],
+      "battleEnd": 300,
+      "error": "BAD_DEPLOY_TICK"
+    },
+    {
+      "name": "a cast in a battle that is not timed",
+      "spells": [
+        {
+          "id": "ember_rain",
+          "level": 1
+        }
+      ],
+      "casts": [
+        {
+          "spellId": "ember_rain",
+          "x": 10,
+          "z": 10,
+          "tick": 0
+        }
+      ],
+      "battleEnd": 0,
+      "error": "BAD_DEPLOY_TICK"
+    },
+    {
+      "name": "an end tick past the limit",
+      "spells": [
+        {
+          "id": "ember_rain",
+          "level": 1
+        }
+      ],
+      "casts": [
+        {
+          "spellId": "ember_rain",
+          "x": 10,
+          "z": 10,
+          "tick": 0
+        }
+      ],
+      "battleEnd": 1801,
+      "error": "BAD_DEPLOY_TICK"
+    },
+    {
+      "name": "casts out of order",
+      "spells": [
+        {
+          "id": "ember_rain",
+          "level": 1
+        },
+        {
+          "id": "mending_mist",
+          "level": 1
+        }
+      ],
+      "casts": [
+        {
+          "spellId": "ember_rain",
+          "x": 10,
+          "z": 10,
+          "tick": 50
+        },
+        {
+          "spellId": "mending_mist",
+          "x": 10,
+          "z": 10,
+          "tick": 49
+        }
+      ],
+      "battleEnd": 300,
+      "error": "DEPLOY_TICK_ORDER"
+    },
+    {
+      "name": "locked is found before a bad cell",
+      "spells": [
+        {
+          "id": "ember_rain",
+          "level": 1
+        }
+      ],
+      "casts": [
+        {
+          "spellId": "war_drum",
+          "x": -5,
+          "z": 99,
+          "tick": 999
+        }
+      ],
+      "battleEnd": 300,
+      "error": "SPELL_LOCKED"
+    },
+    {
+      "name": "two casts on one tick are fine",
+      "spells": [
+        {
+          "id": "ember_rain",
+          "level": 1
+        },
+        {
+          "id": "mending_mist",
+          "level": 1
+        }
+      ],
+      "casts": [
+        {
+          "spellId": "ember_rain",
+          "x": 0,
+          "z": 0,
+          "tick": 7
+        },
+        {
+          "spellId": "mending_mist",
+          "x": 49,
+          "z": 49,
+          "tick": 7
+        }
+      ],
+      "battleEnd": 300,
+      "error": ""
+    },
+    {
+      "name": "the last tick before the end is fine",
+      "spells": [
+        {
+          "id": "war_drum",
+          "level": 2
+        }
+      ],
+      "casts": [
+        {
+          "spellId": "war_drum",
+          "x": 25,
+          "z": 25,
+          "tick": 299
+        }
+      ],
+      "battleEnd": 300,
+      "error": ""
     }
   ]
 }

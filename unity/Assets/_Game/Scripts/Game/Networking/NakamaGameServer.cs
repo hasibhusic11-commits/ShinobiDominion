@@ -31,8 +31,11 @@ namespace ShinobiDominion.Game
         Task<RaidSession> RivalStartAsync(string key);
         Task<RaidSession> RevengeAsync(string key, string attackId);
         Task<List<DefenseRecord>> DefenseLogAsync();
-        /// <summary>Sends a fought battle: where and when each card fell, and the tick it ended (0: the old all-at-once kind, ADR-050).</summary>
-        Task<RaidOutcome> RaidDeployAsync(string key, string attackId, IList<RaidPlacement> placements, IList<RaidTroopStack> troops, int endTick);
+        /// <summary>
+        /// Sends a fought battle: where and when each card fell, and the tick it ended (0: the old all-at-once kind, ADR-050).
+        /// casts: the spells cast in a live battle, in the order cast (ADR-052); null or empty when there were none.
+        /// </summary>
+        Task<RaidOutcome> RaidDeployAsync(string key, string attackId, IList<RaidPlacement> placements, IList<RaidTroopStack> troops, int endTick, IList<RaidSpellCast> casts = null);
         Task<ServerState> TrainTroopsAsync(string key, string troopId, int count);
         Task<ServerState> TrainHeroAsync(string key, string instanceId);
     }
@@ -170,8 +173,14 @@ namespace ShinobiDominion.Game
 
         public async Task<List<DefenseRecord>> DefenseLogAsync() => DefenseRecord.ParseList(await CallAsync("sd_defense_log", null));
 
-        public async Task<RaidOutcome> RaidDeployAsync(string key, string attackId, IList<RaidPlacement> placements, IList<RaidTroopStack> troops, int endTick) =>
-            RaidOutcome.Parse(await CallAsync("sd_raid_deploy", new { key, attackId, placements, troops, endTick }));
+        public async Task<RaidOutcome> RaidDeployAsync(string key, string attackId, IList<RaidPlacement> placements, IList<RaidTroopStack> troops, int endTick, IList<RaidSpellCast> casts = null)
+        {
+            // Casts (ADR-052) go in the request only when there are some, so a battle without spells is sent as before.
+            var payload = casts != null && casts.Count > 0
+                ? new { key, attackId, placements, troops, endTick, casts }
+                : (object)new { key, attackId, placements, troops, endTick };
+            return RaidOutcome.Parse(await CallAsync("sd_raid_deploy", payload));
+        }
 
         public async Task<List<SiegeSummary>> SiegeListAsync() => SiegeSummary.ParseList(await CallAsync("sd_siege_list", null));
 

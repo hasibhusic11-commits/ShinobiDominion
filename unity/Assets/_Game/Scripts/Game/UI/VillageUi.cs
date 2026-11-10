@@ -362,6 +362,9 @@ namespace ShinobiDominion.Game
             canvasObject.transform.SetParent(parent, false);
             Canvas = canvasObject.AddComponent<Canvas>();
             Canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            // An overlay canvas draws last whatever this says. The number only matters when a capture test puts the
+            // canvas in front of the world camera: there it must stay above the battle's effects and health bars.
+            Canvas.sortingOrder = 30000;
             Canvas.pixelPerfect = true;
             var scaler = canvasObject.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;

@@ -434,6 +434,9 @@ namespace ShinobiDominion.Game
             if (_views.TryGetValue(instanceId, out var entry) && entry.Stand != null) Feel.HitFlash(entry.Stand.Renderer);
         }
 
+        /// <summary>The standing picture of a building, or null when it has none (walls, traps, fallen buildings).</summary>
+        public IsoStand StandOf(int instanceId) => _views.TryGetValue(instanceId, out var entry) ? entry.Stand : null;
+
 
         private Entry Create(BuildingInstance building, HeroLook look, string signature)
         {

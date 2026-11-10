@@ -90,6 +90,18 @@ type raidStartResponse struct {
 	Buildings []battleBuildingInput `json:"buildings"`
 	Team      []raidTeamMember      `json:"team"`
 	Defenders []raidDefender        `json:"defenders"`
+	// Spells the attacker may cast in this raid, once each, and at what level (ADR-052). Never null.
+	Spells []raidSpell `json:"spells"`
+}
+
+// raidSpells lists the spells a player's raids may cast: what the Research Hut in their own village has opened
+// (ADR-052). Call it under the player lock, which has already finished any upgrade that was due.
+func (s *Server) raidSpells(ctx context.Context, tx *sql.Tx, userID string) ([]raidSpell, error) {
+	v, err := s.loadVillage(ctx, tx, userID, 0)
+	if err != nil {
+		return nil, err
+	}
+	return s.spells.available(v.researchHutLevel()), nil
 }
 
 type deployPlacement struct {
@@ -220,12 +232,17 @@ func (s *Server) rpcRaidStart(ctx context.Context, logger runtime.Logger, db *sq
 		if err != nil {
 			return err
 		}
+		spells, err := s.raidSpells(ctx, tx, userID)
+		if err != nil {
+			return err
+		}
 		output, err = marshal(raidStartResponse{
 			AttackID:  attackID,
 			Raid:      raidSummary{raid.ID, raid.DisplayName, raid.Description, raid.GoldPerStar, best, raid.ManaPerStar, 0, 0},
 			Buildings: raid.expanded,
 			Team:      team,
 			Defenders: defenders,
+			Spells:    spells,
 		})
 		if err != nil {
 			return err
@@ -531,8 +548,9 @@ func (s *Server) rpcRaidDeploy(ctx context.Context, logger runtime.Logger, db *s
 	if err != nil {
 		return "", err
 	}
-	// The request can only say where and when cards fell, and when the attacker ended the battle. Strict decoding
-	// refuses anything else, such as a claimed result or reward. The server fights the battle again from these.
+	// The request can only say where and when cards fell and spells were cast, and when the attacker ended the battle.
+	// Strict decoding refuses anything else, such as a claimed result or reward. The server fights the battle again
+	// from these.
 	var request struct {
 		Key        string            `json:"key"`
 		AttackID   string            `json:"attackId"`
@@ -541,6 +559,9 @@ func (s *Server) rpcRaidDeploy(ctx context.Context, logger runtime.Logger, db *s
 		// EndTick is when a live battle ended (ADR-050). 0 is the old way: everything lands at once and the battle
 		// runs until one side is gone, which a live player can always do too.
 		EndTick int `json:"endTick,omitempty"`
+		// Casts are the spells cast in a live battle (ADR-052), in the order cast. Only a battle with an EndTick may
+		// have any.
+		Casts []spellCast `json:"casts,omitempty"`
 	}
 	if err := decodeStrict(payload, &request); err != nil {
 		return "", err
@@ -554,7 +575,7 @@ func (s *Server) rpcRaidDeploy(ctx context.Context, logger runtime.Logger, db *s
 	if !s.limiter.Allow(userID, time.Now()) {
 		return "", errRateLimited
 	}
-	requestHash := hashRequest(placementHash(request.AttackID, request.Placements, request.Troops, request.EndTick))
+	requestHash := hashRequest(placementHash(request.AttackID, request.Placements, request.Troops, request.EndTick, request.Casts))
 
 	var output string
 	err = withTx(ctx, db, func(tx *sql.Tx) error {
@@ -659,9 +680,23 @@ func (s *Server) rpcRaidDeploy(ctx context.Context, logger runtime.Logger, db *s
 		if refusal := deployError(buildings, heroes, request.EndTick); refusal != "" {
 			return gameError(refusal, codePrecondition)
 		}
+		// Spells (ADR-052): what this raid may cast is worked out here, from the attacker's own Research Hut as it
+		// stands now, so nothing the client says about it counts. Each spell once, on a cell of the grid.
+		v, err := s.loadVillage(ctx, tx, userID, crystals)
+		if err != nil {
+			return err
+		}
+		granted := s.spells.available(v.researchHutLevel())
+		if refusal := castError(granted, request.Casts, request.EndTick); refusal != "" {
+			return gameError(refusal, codePrecondition)
+		}
+		casts, err := s.spells.toInputs(granted, request.Casts)
+		if err != nil {
+			return err
+		}
 
 		// The server's own fight decides the result; the client's live copy only showed it (ADR-050).
-		result, err := runTimedBattle(buildings, heroes, defenders, request.EndTick)
+		result, err := runTimedBattle(buildings, heroes, defenders, request.EndTick, casts)
 		if err != nil {
 			return err
 		}
@@ -671,10 +706,6 @@ func (s *Server) rpcRaidDeploy(ctx context.Context, logger runtime.Logger, db *s
 			}
 		}
 
-		v, err := s.loadVillage(ctx, tx, userID, crystals)
-		if err != nil {
-			return err
-		}
 		beforeGold := v.gold
 		var earned, manaEarned, xpEarned, crystalsEarned int64
 		var levelsGained int

@@ -58,6 +58,30 @@ const (
 	// Timed battles only (ADR-050): a = unit, b = cell x, c = cell z. The unit lands there; it acts from this tick.
 	// Units are numbered in landing order.
 	eventDeploy = 19
+	// Spells, timed battles only (ADR-052). In each of these a = cast number: casts are numbered in the order they
+	// land, which is their order in the sent list.
+	// b = cell x, c = cell z, d = effect number (effectDamage and the rest). The spell lands, centred on the middle
+	// of that cell. Its first eventSpellPulse follows on the same tick.
+	eventSpellCast = 20
+	// b = which application this is (1 for the first), c = how many it has in all, d = radius in battle units. One
+	// per application, freeze and boost included; the entries for each target it changed follow.
+	eventSpellPulse = 21
+	// b = building id, c = damage, d = building HP left. eventBuildingDown follows if it fell.
+	eventSpellHit = 22
+	// b = defender, c = damage, d = defender HP left. eventDefenderDown follows if it fell.
+	eventSpellHitDefender = 23
+	// b = unit healed, c = amount, d = unit HP now.
+	eventSpellHeal = 24
+	// b = 0 for a tower or 1 for a defender, c = building id or defender, d = ticks it cannot act, this tick included.
+	eventSpellFreeze = 25
+	// b = unit, c = ticks the boost lasts, this tick included, d = percent more damage.
+	eventSpellBoost = 26
+
+	// What a battle spell does (ADR-052), as the number the log uses for it. Mirrors BattleSim.EffectDamage and the rest.
+	effectDamage = 0
+	effectHeal   = 1
+	effectFreeze = 2
+	effectBoost  = 3
 
 	// Traps (ADR-046): a trap fires when an attacker it can catch comes within trapTrigger of its middle. A Bomb
 	// Trap then hits every troop within its range in cells; a Hero Trap hurts that hero and holds it in place.
@@ -112,6 +136,45 @@ func roleNumber(role string) (int, error) {
 		return roleSupport, nil
 	}
 	return 0, errors.New("unknown role " + role)
+}
+
+// effectNumber mirrors BattleSim.EffectNumber.
+func effectNumber(effect string) (int, error) {
+	switch effect {
+	case "damage":
+		return effectDamage, nil
+	case "heal":
+		return effectHeal, nil
+	case "freeze":
+		return effectFreeze, nil
+	case "boost":
+		return effectBoost, nil
+	}
+	return 0, errors.New("unknown spell effect " + effect)
+}
+
+// battleSpellInput is one cast of a battle spell (ADR-052), already worked out from spells.json for the caster's
+// spell level, so the sim needs no catalog. Mirrors BattleSpellInput in BattleSim.cs; spellCatalog.toInput builds it.
+type battleSpellInput struct {
+	// ID is the spell's id in spells.json. The sim does not read it.
+	ID string `json:"id"`
+	// Effect is "damage", "heal", "freeze" or "boost".
+	Effect string `json:"effect"`
+	// X, Z: the cell the spell is centred on, any cell of the grid, buildings included.
+	X int `json:"x"`
+	Z int `json:"z"`
+	// Radius is the reach from the middle of that cell, in battle units (cellUnits to a cell).
+	Radius int `json:"radius"`
+	// Pulses is how many times it applies. Freeze and boost apply once.
+	Pulses int `json:"pulses"`
+	// PulseTicks is the ticks from one application to the next.
+	PulseTicks int `json:"pulseTicks"`
+	// Power is the damage or heal of each application, or the percent more damage of a boost. 0 for a freeze.
+	Power int64 `json:"power"`
+	// Ticks is how long a freeze or a boost lasts. 0 for damage and heal.
+	Ticks int `json:"ticks"`
+	// Tick is the tick of the battle the spell was cast on. It lands at the start of the next one.
+	Tick int `json:"tick"`
 }
 
 type battleHeroInput struct {
@@ -203,6 +266,9 @@ type battleUnit struct {
 	isTroop     bool
 	// stunTimer holds a unit in place after a Hero Trap: it does nothing until it runs out.
 	stunTimer   int
+	// A boost spell (ADR-052): the unit deals boostPercent more damage on every tick before boostUntil.
+	boostUntil   int
+	boostPercent int64
 }
 
 type battleDefender struct {
@@ -225,6 +291,19 @@ type battleDefender struct {
 	rally        bool
 	evolution    int
 	power        int
+	// stunTimer is a freeze spell (ADR-052): the defender does nothing, and its own timers stand still, until it runs out.
+	stunTimer    int
+}
+
+// battleSpell is a spell that has landed (ADR-052).
+type battleSpell struct {
+	index      int
+	input      battleSpellInput
+	effect     int
+	cx         int
+	cz         int
+	pulsesLeft int
+	nextPulse  int
 }
 
 type battleStructure struct {
@@ -239,6 +318,9 @@ type battleSim struct {
 	units      []*battleUnit
 	// pending holds cards dropped but not landed yet, in landing order.
 	pending []battleHeroInput
+	// pendingCasts holds spells cast but not landed yet, in the order cast (ADR-052); spells holds the landed ones.
+	pendingCasts []battleSpellInput
+	spells       []*battleSpell
 	// timed (ADR-050): the battle ends at endTick or when every building is down, never because the field is empty.
 	timed   bool
 	endTick int
@@ -267,12 +349,13 @@ func runBattle(buildings []battleBuildingInput, heroes []battleHeroInput) (*batt
 
 // runDefendedBattle fights with everyone landed before the first tick, until one side is gone or time is up.
 func runDefendedBattle(buildings []battleBuildingInput, heroes []battleHeroInput, defenders []battleDefenderInput) (*battleResult, error) {
-	return runTimedBattle(buildings, heroes, defenders, 0)
+	return runTimedBattle(buildings, heroes, defenders, 0, nil)
 }
 
 // runTimedBattle mirrors BattleSim.Run with an end tick. Above 0 it is a timed battle (ADR-050): each unit lands at its
 // DeployTick, in landingOrder, and the battle stops at endTick (when the attacker ended it) or when every building is down.
-func runTimedBattle(buildings []battleBuildingInput, heroes []battleHeroInput, defenders []battleDefenderInput, endTick int) (*battleResult, error) {
+// Spells (ADR-052) land on the tick after their own, after the cards of that tick; only a timed battle can have them.
+func runTimedBattle(buildings []battleBuildingInput, heroes []battleHeroInput, defenders []battleDefenderInput, endTick int, casts []battleSpellInput) (*battleResult, error) {
 	cells := battleGridSize * battleGridSize
 	sim := &battleSim{
 		grid:    make([]int, cells),
@@ -320,6 +403,18 @@ func runTimedBattle(buildings []battleBuildingInput, heroes []battleHeroInput, d
 	} else {
 		for _, h := range heroes {
 			sim.land(h)
+		}
+	}
+	if len(casts) > 0 {
+		if !sim.timed {
+			return nil, errors.New("only a timed battle can have spells")
+		}
+		sim.pendingCasts = append([]battleSpellInput{}, casts...)
+		sort.SliceStable(sim.pendingCasts, func(i, j int) bool { return sim.pendingCasts[i].Tick < sim.pendingCasts[j].Tick })
+		for _, cast := range sim.pendingCasts {
+			if err := checkSpell(cast); err != nil {
+				return nil, err
+			}
 		}
 	}
 	for sim.step() {
@@ -435,6 +530,17 @@ func (s *battleSim) step() bool {
 		s.land(input)
 		s.log(eventDeploy, int64(len(s.units)-1), int64(input.X), int64(input.Z), 0)
 	}
+	// Spells cast after the last tick land now, after the cards, and every spell due applies before anyone moves.
+	for len(s.pendingCasts) > 0 && s.pendingCasts[0].Tick < s.tick {
+		input := s.pendingCasts[0]
+		s.pendingCasts = s.pendingCasts[1:]
+		s.landSpell(input)
+	}
+	for _, spell := range s.spells {
+		if spell.pulsesLeft > 0 && spell.nextPulse <= s.tick {
+			s.pulse(spell)
+		}
+	}
 	for _, unit := range s.units {
 		if unit.hp > 0 {
 			s.stepUnit(unit)
@@ -463,6 +569,124 @@ func (s *battleSim) step() bool {
 		s.done = true
 	}
 	return !s.done
+}
+
+// ---------- Spells (ADR-052) ----------
+
+// checkSpell refuses a spell whose numbers could not have come from a valid spells.json, like BattleSim.CheckSpell.
+func checkSpell(spell battleSpellInput) error {
+	if _, err := effectNumber(spell.Effect); err != nil {
+		return err
+	}
+	if spell.Radius < 0 || spell.Pulses < 1 || spell.PulseTicks < 1 || spell.Power < 0 || spell.Ticks < 0 {
+		return errors.New("spell " + spell.ID + " has invalid values")
+	}
+	return nil
+}
+
+// landSpell mirrors BattleSim.LandSpell. The effect was checked before the battle began.
+func (s *battleSim) landSpell(input battleSpellInput) {
+	effect, _ := effectNumber(input.Effect)
+	spell := &battleSpell{
+		index:      len(s.spells),
+		input:      input,
+		effect:     effect,
+		cx:         input.X*cellUnits + cellUnits/2,
+		cz:         input.Z*cellUnits + cellUnits/2,
+		pulsesLeft: input.Pulses,
+		nextPulse:  s.tick,
+	}
+	s.spells = append(s.spells, spell)
+	s.log(eventSpellCast, int64(spell.index), int64(input.X), int64(input.Z), int64(spell.effect))
+}
+
+// pulse applies a spell once to everything in its ring, like BattleSim.Pulse.
+func (s *battleSim) pulse(spell *battleSpell) {
+	input := spell.input
+	spell.pulsesLeft--
+	spell.nextPulse = s.tick + input.PulseTicks
+	cast := int64(spell.index)
+	s.log(eventSpellPulse, cast, int64(input.Pulses-spell.pulsesLeft), int64(input.Pulses), int64(input.Radius))
+	reach := int64(input.Radius) * int64(input.Radius)
+	switch spell.effect {
+	case effectDamage:
+		for i, structure := range s.structures {
+			if !structure.alive || squaredDistance(spell.cx, spell.cz, structure.input) > reach {
+				continue
+			}
+			amount := clampHit(input.Power, structure.hp)
+			structure.hp -= amount
+			if !structure.input.IsWall {
+				s.dealtHp += amount
+			}
+			s.log(eventSpellHit, cast, int64(structure.input.ID), amount, structure.hp)
+			if structure.hp == 0 {
+				s.collapse(i)
+			}
+		}
+		for _, defender := range s.defenders {
+			if defender.hp <= 0 || squaredPoints(defender.px, defender.pz, spell.cx, spell.cz) > reach {
+				continue
+			}
+			amount := input.Power * 100 / (100 + defender.defense)
+			if defender.guardTimer > 0 {
+				amount /= 2
+			}
+			amount = clampHit(amount, defender.hp)
+			defender.hp -= amount
+			s.log(eventSpellHitDefender, cast, int64(defender.index), amount, defender.hp)
+			if defender.hp == 0 {
+				s.log(eventDefenderDown, int64(defender.index), 0, 0, 0)
+			}
+		}
+	case effectHeal:
+		for _, unit := range s.units {
+			if unit.hp <= 0 || unit.hp >= unit.maxHp || squaredPoints(unit.px, unit.pz, spell.cx, spell.cz) > reach {
+				continue
+			}
+			amount := input.Power
+			if amount > unit.maxHp-unit.hp {
+				amount = unit.maxHp - unit.hp
+			}
+			if amount < 1 {
+				continue
+			}
+			unit.hp += amount
+			s.log(eventSpellHeal, cast, int64(unit.index), amount, unit.hp)
+		}
+	case effectFreeze:
+		for _, structure := range s.structures {
+			if !structure.alive || !structure.input.IsDefense || squaredDistance(spell.cx, spell.cz, structure.input) > reach {
+				continue
+			}
+			structure.stunTimer = maxInt(structure.stunTimer, input.Ticks)
+			s.log(eventSpellFreeze, cast, 0, int64(structure.input.ID), int64(structure.stunTimer))
+		}
+		for _, defender := range s.defenders {
+			if defender.hp <= 0 || squaredPoints(defender.px, defender.pz, spell.cx, spell.cz) > reach {
+				continue
+			}
+			defender.stunTimer = maxInt(defender.stunTimer, input.Ticks)
+			s.log(eventSpellFreeze, cast, 1, int64(defender.index), int64(defender.stunTimer))
+		}
+	case effectBoost:
+		for _, unit := range s.units {
+			if unit.hp <= 0 || squaredPoints(unit.px, unit.pz, spell.cx, spell.cz) > reach {
+				continue
+			}
+			unit.boostUntil = s.tick + input.Ticks
+			unit.boostPercent = input.Power
+			s.log(eventSpellBoost, cast, int64(unit.index), int64(input.Ticks), input.Power)
+		}
+	}
+}
+
+// attackOf is a unit's attack this tick: more while a boost spell is on it. Mirrors BattleSim.AttackOf.
+func (s *battleSim) attackOf(unit *battleUnit) int64 {
+	if s.tick < unit.boostUntil {
+		return unit.attack * (100 + unit.boostPercent) / 100
+	}
+	return unit.attack
 }
 
 // finish scores the battle at the tick it stopped, like BattleSim.Finish.
@@ -776,7 +1000,7 @@ func (s *battleSim) strikeDefender(unit *battleUnit, defender *battleDefender) {
 	if percent == 100 {
 		s.gainUnit(unit)
 	}
-	amount := unit.attack * percent / 100 * 100 / (100 + defender.defense)
+	amount := s.attackOf(unit) * percent / 100 * 100 / (100 + defender.defense)
 	if defender.guardTimer > 0 {
 		amount /= 2
 	}
@@ -789,6 +1013,10 @@ func (s *battleSim) strikeDefender(unit *battleUnit, defender *battleDefender) {
 }
 
 func (s *battleSim) stepDefender(defender *battleDefender) {
+	if defender.stunTimer > 0 {
+		defender.stunTimer--
+		return
+	}
 	if defender.attackTimer > 0 {
 		defender.attackTimer--
 	}
@@ -1014,7 +1242,7 @@ func (s *battleSim) selfAbility(unit *battleUnit) {
 }
 
 func (s *battleSim) strike(unit *battleUnit, focus int) {
-	base := unit.attack * roleDamagePercents[unit.role] / 100
+	base := s.attackOf(unit) * roleDamagePercents[unit.role] / 100
 	percent := int64(100)
 	splash := 0
 	if unit.charge >= chargeFull && !unit.isTroop && !unit.rally {
@@ -1068,10 +1296,14 @@ func (s *battleSim) damage(unit *battleUnit, index int, amount int64) {
 		s.dealtHp += amount
 	}
 	s.log(eventHeroHit, int64(unit.index), int64(structure.input.ID), amount, structure.hp)
-	if structure.hp > 0 {
-		return
+	if structure.hp == 0 {
+		s.collapse(index)
 	}
+}
 
+// collapse takes a building with no HP left off the field, like BattleSim.Collapse.
+func (s *battleSim) collapse(index int) {
+	structure := s.structures[index]
 	structure.alive = false
 	b := structure.input
 	for z := b.Z; z < b.Z+b.Depth; z++ {
@@ -1617,13 +1849,16 @@ func heroBattleStats(a Archetype, evolution, level int) (hp, attack, defense int
 	return a.BaseHp + a.GrowthHp*steps, a.BaseAttack + a.GrowthAttack*steps, a.BaseDefense + a.GrowthDefense*steps
 }
 
-func placementHash(attackID string, parts []deployPlacement, stacks []troopStack, endTick int) string {
+func placementHash(attackID string, parts []deployPlacement, stacks []troopStack, endTick int, casts []spellCast) string {
 	joined := attackID + "|" + strconv.Itoa(endTick) + "|"
 	for _, stack := range stacks {
 		joined += stack.TroopID + ":" + strconv.Itoa(stack.X) + ":" + strconv.Itoa(stack.Z) + ":" + strconv.Itoa(stack.Count) + ":" + strconv.Itoa(stack.Tick) + "|"
 	}
 	for _, part := range parts {
 		joined += part.InstanceID + ":" + strconv.Itoa(part.X) + ":" + strconv.Itoa(part.Z) + ":" + strconv.Itoa(part.Tick) + "|"
+	}
+	for _, cast := range casts {
+		joined += "spell:" + cast.SpellID + ":" + strconv.Itoa(cast.X) + ":" + strconv.Itoa(cast.Z) + ":" + strconv.Itoa(cast.Tick) + "|"
 	}
 	return joined
 }

@@ -130,6 +130,13 @@ namespace ShinobiDominion.Tests
             controller.Select(millId);
             yield return shot("25_mana_mill");
             controller.CloseAll();
+            // A Relic Hall, so the raid has a spell to cast (ADR-052). It opens at Town Hall level 2.
+            var withHall = village.ToSave();
+            withHall.gold += 5000;
+            withHall.buildings.Find(b => b.definitionId == "dojo_hq").level = 2;
+            village.Restore(withHall);
+            var hallCells = new[] { new GridCoord(38, 30), new GridCoord(8, 38), new GridCoord(40, 8) };
+            Assert.IsTrue(hallCells.Any(cell => village.TryPlace("research_hut", cell, Rotation.R0, 0, out _) == VillageError.None), "Relic Hall placement");
             controller.OpenAttack();
             yield return shot("20_raid_choose");
             controller.ScoutRaid("ridge_outpost");
@@ -137,9 +144,18 @@ namespace ShinobiDominion.Tests
             controller.AutoPlaceHeroes();
             yield return new WaitForSeconds(6f);
             yield return shot("22_raid_battle");
-            yield return new WaitForSeconds(8f);
+            controller.SelectSpell("ember_rain");
+            yield return null;
+            yield return shot("22a_raid_spell_picked");
+            controller.TapDeployCell(new GridCoord(23, 23));
+            Assert.AreEqual(1, controller.SpellsCast, controller.LastMessage);
+            yield return new WaitForSeconds(0.3f);
+            yield return shot("22b_raid_spell_lands");
+            yield return new WaitForSeconds(1.1f);
+            yield return shot("22c_raid_spell_second_wave");
+            yield return new WaitForSeconds(6.6f);
             yield return shot("23_raid_battle_later");
-            controller.SkipBattle();
+            if (controller.CurrentRaidPhase == RaidPhase.Battle) controller.SkipBattle();
             yield return shot("24_raid_result");
             controller.FinishRaid();
             yield return null;

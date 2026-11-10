@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "balanceStatus": "PROPOSED TEST VALUES AND PROVISIONAL NAMES - NOT APPROVED",
+  "notes": "A spell opens when the Research Hut reaches unlockHutLevel; that is spell level 1, and each hut level after it is one spell level more, up to the length of power. radius is in battle units (100 = one cell). durationTicks is in battle ticks (10 = one second). power, by spell level: damage and heal = HP per pulse; freeze = percent of durationTicks the targets stay frozen; boost = percent more damage for durationTicks.",
+  "spells": [
+    { "id": "ember_rain", "displayName": "Ember Rain", "description": "Burning embers fall on enemy buildings and guards in the ring.", "effect": "damage", "unlockHutLevel": 1, "radius": 300, "durationTicks": 30, "pulses": 3, "power": [120, 190, 260, 330, 400, 470, 540, 610, 680, 750, 820, 890, 960, 1030, 1100] },
+    { "id": "mending_mist", "displayName": "Mending Mist", "description": "A healing mist mends your heroes and troops in the ring.", "effect": "heal", "unlockHutLevel": 2, "radius": 350, "durationTicks": 50, "pulses": 5, "power": [80, 130, 180, 230, 280, 330, 380, 430, 480, 530, 580, 630, 680, 730] },
+    { "id": "frost_seal", "displayName": "Frost Seal", "description": "Towers and guards in the ring are frozen and cannot act.", "effect": "freeze", "unlockHutLevel": 3, "radius": 350, "durationTicks": 40, "pulses": 1, "power": [100, 105, 110, 115, 120, 125, 130, 135, 140, 145, 150, 155, 160] },
+    { "id": "war_drum", "displayName": "War Drum", "description": "Your heroes and troops in the ring hit harder for a while.", "effect": "boost", "unlockHutLevel": 4, "radius": 400, "durationTicks": 50, "pulses": 1, "power": [25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80] }
+  ]
+}

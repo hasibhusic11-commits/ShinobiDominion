@@ -156,13 +156,20 @@ namespace ShinobiDominion.Game
 
         private BattleHud _battleHud;
 
+        /// <summary>A star not earned yet: the painted star, darkened.</summary>
+        private static readonly Color UnlitStar = new Color(0.2f, 0.21f, 0.27f, 0.95f);
+
+        /// <summary>The clock in the last half minute.</summary>
+        private static readonly Color ClockWarning = new Color(1f, 0.46f, 0.38f);
+
         private void UpdateBattleHud()
         {
             if (_battleHud == null || _raid == null) return;
             var stage = _raid.Stage;
             if (stage.DamagePercent != _battleHud.Shown)
             {
-                // Only when it changes, so the label is not rebuilt every frame.
+                // Only when it changes, so the label is not rebuilt every frame. A rise gives the number a bump.
+                if (_battleHud.Shown >= 0 && stage.DamagePercent > _battleHud.Shown) UiMotion.Punch(_battleHud.Damage.transform, 0.12f, 0.2f);
                 _battleHud.Shown = stage.DamagePercent;
                 _battleHud.Damage.text = $"{stage.DamagePercent}%";
             }
@@ -170,12 +177,29 @@ namespace ShinobiDominion.Game
             if (lit <= _battleHud.Lit) return;
             for (var i = _battleHud.Lit; i < lit && i < 3; i++)
             {
-                _battleHud.Stars[i].sprite = UiSkin.Diamond(new Color(1f, 0.87f, 0.4f), new Color(0.9f, 0.55f, 0.12f));
+                _battleHud.Stars[i].color = Color.white;
                 UiMotion.Punch(_battleHud.Stars[i].transform, 0.5f, 0.45f);
                 UiMotion.Shine(_battleHud.Stars[i], new Color(1f, 0.95f, 0.75f, 0.9f), 2.5f, 0.35f);
             }
             _battleHud.Lit = lit;
             GameSounds.Play(GameSound.Star);
+        }
+
+        /// <summary>
+        /// The clock at the top of a battle. It is rewritten once a second, turns red for the last half minute, and
+        /// ticks and bumps through the last ten seconds.
+        /// </summary>
+        private void UpdateBattleClock()
+        {
+            var seconds = _raid.Stage.SecondsLeft;
+            if (seconds == _raid.ClockSecond) return;
+            var first = _raid.ClockSecond < 0;
+            _raid.ClockSecond = seconds;
+            _raid.StatusText.text = $"Time left  {seconds / 60}:{seconds % 60:00}";
+            _raid.StatusText.color = seconds <= 30 ? ClockWarning : HudArt.Ivory;
+            if (first || seconds > 10 || seconds <= 0) return;
+            UiMotion.Punch(_raid.StatusText.transform, 0.14f, 0.25f);
+            GameSounds.Play(GameSound.Tick, 0.5f);
         }
 
         /// <summary>Three big stars across the result panel, lit for those earned.</summary>
@@ -184,9 +208,16 @@ namespace ShinobiDominion.Game
             var row = panel.Block(76f);
             for (var i = 0; i < 3; i++)
             {
-                var sprite = i < stars ? UiSkin.Diamond(new Color(1f, 0.87f, 0.4f), new Color(0.9f, 0.55f, 0.12f)) : UiSkin.Diamond(new Color(0.3f, 0.3f, 0.33f), new Color(0.17f, 0.17f, 0.2f));
-                var icon = Ui.Icon(row, sprite, new Vector2(0.5f, 0.5f), new Vector2(70f, 70f), new Vector2((i - 1) * 90f, 0f));
-                if (i >= stars) continue;
+                // The middle star stands a little taller, so the three read as one crest.
+                var size = i == 1 ? 82f : 68f;
+                var icon = Ui.Icon(row, HudArt.Sprite("icon_star"), new Vector2(0.5f, 0.5f), new Vector2(size, size), new Vector2((i - 1) * 88f, i == 1 ? 2f : -4f));
+                icon.name = "ResultStar" + (i + 1);
+                icon.preserveAspect = true;
+                if (i >= stars)
+                {
+                    icon.color = UnlitStar;
+                    continue;
+                }
                 // Earned stars land one at a time, then keep a slow shine.
                 UiMotion.PopIn(icon.transform, 0.2f + i * 0.28f, 0.1f, 0.42f);
                 UiMotion.Shine(icon, new Color(1f, 0.95f, 0.75f, 0.9f), 2.6f, 0.35f);

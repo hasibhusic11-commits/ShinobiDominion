@@ -45,6 +45,8 @@ namespace ShinobiDominion.Game
             Camera.orthographic = true;
             Camera.orthographicSize = Mathf.Clamp(size, MinSize, MaxSizeNow);
             _targetSize = Camera.orthographicSize;
+            _punchShown = 0f;
+            _punchTime = -1f;
             Camera.nearClipPlane = 0.1f;
             Camera.farClipPlane = 400f;
             Camera.allowMSAA = GameQuality.Current == VisualQuality.High;
@@ -53,6 +55,37 @@ namespace ShinobiDominion.Game
             transform.rotation = Quaternion.Euler(IsoCamera.Pitch, 45f, 0f);
             _focus = focus;
             Apply();
+        }
+
+        /// <summary>
+        /// Cuts to a view of one patch of ground: centred on it, and as close as still shows the whole patch
+        /// inside the given share of the screen, on a wide screen or a tall one. A battle opens this way, on the
+        /// enemy base and not on the whole field. <paramref name="lower"/> sets the patch that share of the screen
+        /// height below the middle, for a screen whose top is busier than its bottom.
+        /// </summary>
+        public void Frame(Vector3 min, Vector3 max, float fill, float smallest, float largest, float lower = 0f)
+        {
+            var turn = Quaternion.Euler(Pitch, 45f, 0f);
+            var right = turn * Vector3.right;
+            var up = turn * Vector3.up;
+            var centre = new Vector3((min.x + max.x) * 0.5f, 0f, (min.z + max.z) * 0.5f);
+            var halfWide = 0f;
+            var halfTall = 0f;
+            for (var i = 0; i < 4; i++)
+            {
+                var corner = new Vector3(i % 2 == 0 ? min.x : max.x, 0f, i < 2 ? min.z : max.z) - centre;
+                halfWide = Mathf.Max(halfWide, Mathf.Abs(Vector3.Dot(corner, right)));
+                halfTall = Mathf.Max(halfTall, Mathf.Abs(Vector3.Dot(corner, up)));
+            }
+            var aspect = GetComponent<Camera>().aspect;
+            var size = Mathf.Clamp(Mathf.Max(halfTall, halfWide / Mathf.Max(aspect, 0.1f)) / Mathf.Clamp(fill, 0.2f, 1f), smallest, largest);
+            // Looking further along the ground lowers what is on it: by the sine of the pitch for every unit, out
+            // of a screen that is twice the size tall.
+            var ahead = turn * Vector3.forward;
+            ahead.y = 0f;
+            centre += ahead.normalized * (lower * 2f * size / Mathf.Sin(Pitch * Mathf.Deg2Rad));
+            StopMotion();
+            Initialize(centre, size);
         }
 
         public Vector3 GroundPoint(Vector2 screen)
@@ -253,10 +286,39 @@ namespace ShinobiDominion.Game
         /// <summary>Adds shake, 0 to 1. Hits add up; they never reset it.</summary>
         public void AddTrauma(float amount) => _trauma = Mathf.Clamp01(_trauma + amount);
 
+        // Zoom punch (game-feel skill): the view leans in for a moment on the biggest hits, then eases back out.
+        private const float PunchSeconds = 0.5f;
+        private float _punchGoal;
+        private float _punchTime = -1f;
+        /// <summary>How much of the view's size the punch is holding back right now.</summary>
+        private float _punchShown;
+
+        /// <summary>Leans the view in by a share of its size (0.05 = 5%) and lets it ease back. The biggest one wins.</summary>
+        public void ZoomPunch(float share)
+        {
+            var goal = (Camera.orthographicSize + _punchShown) * Mathf.Clamp(share, 0f, 0.2f);
+            if (_punchTime >= 0f && goal <= _punchGoal) return;
+            _punchGoal = goal;
+            _punchTime = 0f;
+        }
+
+        private void StepPunch(float dt)
+        {
+            if (_punchTime < 0f) return;
+            _punchTime += dt;
+            var t = Mathf.Clamp01(_punchTime / PunchSeconds);
+            // In fast, out slow.
+            var now = t >= 1f ? 0f : _punchGoal * Mathf.Sin(Mathf.PI * Mathf.Pow(t, 0.6f));
+            Camera.orthographicSize += _punchShown - now;
+            _punchShown = now;
+            if (t >= 1f) _punchTime = -1f;
+        }
+
         private void LateUpdate()
         {
-            if (_trauma <= 0f && _shakeOffset == Vector3.zero) return;
             var dt = Time.unscaledDeltaTime;
+            StepPunch(dt);
+            if (_trauma <= 0f && _shakeOffset == Vector3.zero) return;
             _trauma = Mathf.Max(_trauma - 1.6f * dt, 0f);
             _shakeTime += dt * 32f;
             var shake = _trauma * _trauma;

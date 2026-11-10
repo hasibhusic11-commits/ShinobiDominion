@@ -455,15 +455,26 @@ namespace ShinobiDominion.Tests
         {
             var vectors = JObject.Parse(FindFile("battle_vectors.json", "Tests/EditMode"));
             var buildings = Outpost();
+            var spells = SpellCatalog.FromJson(FindFile("spells.json", "Resources/Config"));
             var problems = new List<string>();
             foreach (var scenario in vectors["scenarios"])
             {
+                var name = scenario.Value<string>("name");
                 var team = scenario["team"].Select(h => h.ToObject<BattleHeroInput>()).ToList();
                 var defenders = scenario["defenders"]?.Select(d => d.ToObject<BattleDefenderInput>()).ToList();
                 var extra = scenario["extraBuildings"]?.Select(b => b.ToObject<BattleBuildingInput>()) ?? Enumerable.Empty<BattleBuildingInput>();
                 // battleEnd marks a timed battle (ADR-050): the end tick the attacker chose; absent for the all-at-once kind.
-                var result = BattleSim.Run(buildings.Concat(extra).ToList(), team, defenders, scenario.Value<int?>("battleEnd") ?? 0);
-                var name = scenario.Value<string>("name");
+                var battleEnd = scenario.Value<int?>("battleEnd") ?? 0;
+                // spells is what the raid may cast and casts is what it did cast (ADR-052), both as the server gets them.
+                var available = scenario["spells"]?.ToObject<List<RaidSpell>>();
+                var casts = scenario["casts"]?.ToObject<List<RaidSpellCast>>();
+                var refusal = SpellCatalog.CastError(available, casts, battleEnd);
+                if (refusal != "")
+                {
+                    problems.Add($"{name}: its casts are refused with {refusal}");
+                    continue;
+                }
+                var result = BattleSim.Run(buildings.Concat(extra).ToList(), team, defenders, battleEnd, spells.ToInputs(available, casts));
                 var actual = $"stars={result.stars} damage={result.damagePercent} endTick={result.endTick} alive={result.heroesAlive} guards={result.defendersAlive} checksum={result.checksum}";
                 var expected = $"stars={scenario.Value<int>("stars")} damage={scenario.Value<int>("damagePercent")} endTick={scenario.Value<int>("endTick")} alive={scenario.Value<int>("heroesAlive")} guards={scenario.Value<int?>("defendersAlive") ?? 0} checksum={scenario.Value<string>("checksum")}";
                 if (actual != expected) problems.Add($"{name}: got {actual}, expected {expected}");
@@ -475,6 +486,21 @@ namespace ShinobiDominion.Tests
                 scenario["heroesAlive"] = result.heroesAlive;
                 if (scenario["defenders"] != null) scenario["defendersAlive"] = result.defendersAlive;
                 scenario["checksum"] = result.checksum;
+                if (casts == null) continue;
+                // How many entries of each spell kind the log holds, so a scenario cannot stop showing what it is for.
+                var counts = new JObject();
+                foreach (var kind in result.events.Select(e => e[1]).Where(k => k >= (long)BattleEventKind.SpellCast).Distinct().OrderBy(k => k))
+                    counts[((BattleEventKind)kind).ToString()] = result.events.Count(e => e[1] == kind);
+                if (!JToken.DeepEquals(counts, scenario["spellEvents"]))
+                    problems.Add($"{name}: spell events {counts.ToString(Newtonsoft.Json.Formatting.None)}, expected {scenario["spellEvents"]?.ToString(Newtonsoft.Json.Formatting.None)}");
+                scenario["spellEvents"] = counts;
+            }
+            // Cast lists the server must refuse, each with the reason; an empty error is a list it must take.
+            foreach (var refused in vectors["refusedCasts"] ?? new JArray())
+            {
+                var error = SpellCatalog.CastError(refused["spells"]?.ToObject<List<RaidSpell>>(), refused["casts"]?.ToObject<List<RaidSpellCast>>(), refused.Value<int?>("battleEnd") ?? 0);
+                if (error != refused.Value<string>("error"))
+                    problems.Add($"refused casts, {refused.Value<string>("name")}: got '{error}', expected '{refused.Value<string>("error")}'");
             }
             var regen = Environment.GetEnvironmentVariable("SD_REGEN_BATTLE_VECTORS");
             if (!string.IsNullOrEmpty(regen))

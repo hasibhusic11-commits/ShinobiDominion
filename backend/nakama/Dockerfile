@@ -7,6 +7,7 @@ COPY unity/Assets/_Game/Resources/Config/heroes.json ./config/heroes.json
 COPY unity/Assets/_Game/Resources/Config/buildings.json ./config/buildings.json
 COPY unity/Assets/_Game/Resources/Config/raids.json ./config/raids.json
 COPY unity/Assets/_Game/Resources/Config/troops.json ./config/troops.json
+COPY unity/Assets/_Game/Resources/Config/spells.json ./config/spells.json
 COPY unity/Assets/_Game/Resources/Config/modes.json ./config/modes.json
 COPY unity/Assets/_Game/Tests/EditMode/rules_vectors.json ./testdata/rules_vectors.json
 COPY unity/Assets/_Game/Tests/EditMode/battle_vectors.json ./testdata/battle_vectors.json

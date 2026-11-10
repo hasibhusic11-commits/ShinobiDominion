@@ -19,6 +19,7 @@
     <Content Include="..\..\unity\Assets\_Game\Tests\EditMode\battle_vectors.json" Link="Config\battle_vectors.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\unity\Assets\_Game\Resources\Config\raids.json" Link="Config\raids.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\unity\Assets\_Game\Resources\Config\troops.json" Link="Config\troops.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\unity\Assets\_Game\Resources\Config\spells.json" Link="Config\spells.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />

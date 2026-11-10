@@ -31,12 +31,18 @@ namespace ShinobiDominion.Game
             public string SelectedTroop;
             /// <summary>The hero card chosen to land next; null lands them in order.</summary>
             public string SelectedHero;
+            /// <summary>The spells cast so far, in order (ADR-052); sent with the drops.</summary>
+            public readonly List<RaidSpellCast> Casts = new List<RaidSpellCast>();
+            /// <summary>The spell picked and waiting for a tap on the map.</summary>
+            public string SelectedSpell;
             public GameObject DeployScreen;
             public GameObject CardRow;
             public RaidOutcome Outcome;
             public GameObject StatusBar;
             public GameObject Hud;
             public Text StatusText;
+            /// <summary>The second the clock last showed; -1 before it has shown any.</summary>
+            public int ClockSecond = -1;
             /// <summary>A live raid's own battle (ADR-050); null for a fight the server already fought.</summary>
             public BattleSim Live;
             /// <summary>The live battle is over: it can no longer change and is being sent or shown.</summary>
@@ -45,6 +51,15 @@ namespace ShinobiDominion.Game
 
         private static readonly Vector3 MapCenter = new Vector3(25f, 0f, 25f);
         private const float RaidCameraSize = 24f;
+        /// <summary>Open ground kept in view around the enemy base, in cells: room to drop an army.</summary>
+        private const int RaidDropMargin = 6;
+        /// <summary>The base and its drop margin fill this share of the screen when a raid opens.</summary>
+        private const float RaidFill = 0.94f;
+        /// <summary>
+        /// How far below the middle of the screen the base sits when a raid opens, as a share of the screen height.
+        /// The clear band between the clock and the cards is centred that far below the middle.
+        /// </summary>
+        private const float RaidLower = 0.03f;
         private const float BattleCameraSize = 11f;
         private const float HomeCameraSize = 8.5f;
 
@@ -220,6 +235,8 @@ namespace ShinobiDominion.Game
                     speed = BattleSim.SpeedOf(role)
                 });
             }
+            // Practice has no server to say which spells the Relic Hall has opened.
+            session.spells = SpellData.Available(Village);
             return session;
         }
 
@@ -230,6 +247,47 @@ namespace ShinobiDominion.Game
         /// Cards are dropped while it runs. This device steps its own copy so every drop shows straight away; the server
         /// fights the same drops again when it ends, and its result is the one that counts.
         /// </summary>
+        /// <summary>A building further than this from the rest of the base, in cells, is left out of the opening view.</summary>
+        private const int RaidOutlierGap = 4;
+
+        /// <summary>
+        /// Opens the battle on the heart of the enemy base: the Town Hall and everything that hangs together with
+        /// it, plus open ground to drop on. A lone mine in a far corner is left for the player to find by
+        /// panning; counting it would push the view back out to the whole field.
+        /// </summary>
+        private void FrameBase(RaidSession session)
+        {
+            var rest = session.buildings == null ? new List<BattleBuildingInput>() : session.buildings.Where(b => !b.isTrap).ToList();
+            if (rest.Count == 0)
+            {
+                _camera.StopMotion();
+                _camera.Initialize(MapCenter, RaidCameraSize);
+                return;
+            }
+            var heart = rest.FirstOrDefault(b => b.definitionId == "dojo_hq") ?? rest.OrderByDescending(b => b.width * b.depth).First();
+            rest.Remove(heart);
+            int minX = heart.x, minZ = heart.z, maxX = heart.x + heart.width, maxZ = heart.z + heart.depth;
+            for (var grew = true; grew;)
+            {
+                grew = false;
+                for (var i = rest.Count - 1; i >= 0; i--)
+                {
+                    var b = rest[i];
+                    var gap = Mathf.Max(Mathf.Max(minX - (b.x + b.width), b.x - maxX), Mathf.Max(minZ - (b.z + b.depth), b.z - maxZ));
+                    if (gap > RaidOutlierGap) continue;
+                    minX = Mathf.Min(minX, b.x);
+                    minZ = Mathf.Min(minZ, b.z);
+                    maxX = Mathf.Max(maxX, b.x + b.width);
+                    maxZ = Mathf.Max(maxZ, b.z + b.depth);
+                    rest.RemoveAt(i);
+                    grew = true;
+                }
+            }
+            var min = new Vector3(Mathf.Max(0, minX - RaidDropMargin), 0f, Mathf.Max(0, minZ - RaidDropMargin));
+            var max = new Vector3(Mathf.Min(VillageGrid.Size, maxX + RaidDropMargin), 0f, Mathf.Min(VillageGrid.Size, maxZ + RaidDropMargin));
+            _camera.Frame(min * GridSpace.CellSize, max * GridSpace.CellSize, RaidFill, BattleCameraSize * 0.75f, RaidCameraSize, RaidLower);
+        }
+
         private void EnterPrepare(RaidSession session)
         {
             var stageObject = new GameObject("BattleStage");
@@ -243,8 +301,7 @@ namespace ShinobiDominion.Game
             _panel.Hide();
             _view.SetVisible(false);
             if (_life != null) _life.gameObject.SetActive(false);
-            _camera.StopMotion();
-            _camera.Initialize(MapCenter, RaidCameraSize);
+            FrameBase(session);
 
             var blocked = new List<KeyValuePair<GridCoord, bool>>();
             for (var z = 0; z < VillageGrid.Size; z++)
@@ -315,6 +372,13 @@ namespace ShinobiDominion.Game
         public void TapDeployCell(GridCoord cell)
         {
             if (!LiveRunning) return;
+            if (_raid.SelectedSpell != null)
+            {
+                // A spell may land anywhere on the map, on the enemy too.
+                if (CastSpellAt(_raid.SelectedSpell, cell)) _raid.SelectedSpell = null;
+                ShowPreparePanel();
+                return;
+            }
             if (!VillageGrid.InBounds(cell.X, cell.Z) || !BattleSim.CanDeployAt(_raid.Session.buildings, cell.X, cell.Z))
             {
                 LastMessage = "Too close to the enemy: drop on open ground.";
@@ -435,8 +499,8 @@ namespace ShinobiDominion.Game
                 return;
             }
             var live = _raid.Live;
-            // Cards dropped this tick land before the end, so every drop is inside the battle.
-            if (!live.Done && (live.UnitsPending > 0 || live.Tick == 0)) live.Step();
+            // Cards dropped and spells cast this tick land before the end, so each is inside the battle.
+            if (!live.Done && (live.UnitsPending > 0 || live.SpellsPending > 0 || live.Tick == 0)) live.Step();
             live.Finish();
             LiveBattleOver();
         }
@@ -475,12 +539,14 @@ namespace ShinobiDominion.Game
         {
             var placements = raid.Placements.ToList();
             var stacks = raid.Stacks.ToList();
+            var casts = raid.Casts.ToList();
             var endTick = raid.Live.Tick;
-            var signature = string.Join(",", placements.Select(p => $"{p.instanceId}:{p.x}:{p.z}:{p.tick}")) + "|" + string.Join(",", stacks.Select(s => $"{s.troopId}:{s.x}:{s.z}:{s.count}:{s.tick}")) + "|" + endTick;
+            var signature = string.Join(",", placements.Select(p => $"{p.instanceId}:{p.x}:{p.z}:{p.tick}")) + "|" + string.Join(",", stacks.Select(s => $"{s.troopId}:{s.x}:{s.z}:{s.count}:{s.tick}")) + "|" + endTick
+                + "|" + string.Join(",", casts.Select(c => $"{c.spellId}:{c.x}:{c.z}:{c.tick}"));
             var key = KeyFor($"raid-deploy|{raid.Session.attackId}|{signature}");
             Run(async () =>
             {
-                var outcome = await _server.RaidDeployAsync(key, raid.Session.attackId, placements, stacks, endTick);
+                var outcome = await _server.RaidDeployAsync(key, raid.Session.attackId, placements, stacks, endTick, casts);
                 ClearKey();
                 LastMessage = null;
                 // The server's fight is the one that counts. The two can only differ if this device was tampered with.
@@ -519,14 +585,17 @@ namespace ShinobiDominion.Game
         private void UpdateRaid()
         {
             if (_raid?.StatusText == null || _raid.Phase != RaidPhase.Battle) return;
-            var seconds = _raid.Stage.SecondsLeft;
-            _raid.StatusText.text = $"Time left  {seconds / 60}:{seconds % 60:00}";
-            // The camera drifts after the fight unless the player is looking somewhere else.
-            var center = _raid.Stage.ActionCenter;
+            UpdateBattleClock();
+            // A fight played back is followed by the camera. A live raid is not: the player is aiming drops and
+            // spells at the base, so the view stays where they left it.
+            var center = _raid.Live == null ? _raid.Stage.ActionCenter : null;
             if (center.HasValue) _camera.Drift(center.Value);
             UpdateBattleHud();
-            // Everyone dropped has fallen and no card is left: nothing more can happen, so the battle ends.
-            if (LiveRunning && _raid.Live.Tick > 0 && AnythingDropped && _raid.Live.UnitsPending == 0 && _raid.Live.UnitsStanding == 0 && NothingLeftToDrop)
+            UpdateSpellAim();
+            // Everyone dropped has fallen, no card is left and no spell is still falling: nothing more can happen, so
+            // the battle ends. A spell not cast by then is not waited for.
+            if (LiveRunning && _raid.Live.Tick > 0 && AnythingDropped && _raid.Live.UnitsPending == 0 && _raid.Live.UnitsStanding == 0 && NothingLeftToDrop
+                && _raid.Live.SpellsPending == 0 && _raid.Live.SpellsActive == 0)
                 EndLiveBattle();
         }
 
@@ -558,6 +627,7 @@ namespace ShinobiDominion.Game
                 var guards = _raid.Session.defenders.Count;
                 if (guards > 0) panel.Line($"Enemy heroes beaten: {guards - result.defendersAlive} of {guards}");
                 panel.Line($"Time: {result.endTick / BattleSim.TicksPerSecond} seconds");
+                if (_raid.Casts.Count > 0) panel.Line($"Spells cast: {_raid.Casts.Count}");
                 if (_raid.Session.attackId == "practice") panel.Line("Practice battle: no reward.", 20, Ui.AccentColor);
                 else if (outcome.GoldEarned + outcome.ManaEarned > 0) panel.Line(outcome.ManaEarned > 0 ? $"Earned {outcome.GoldEarned:N0} gold and {outcome.ManaEarned:N0} Mana" : $"Earned {outcome.GoldEarned:N0} gold");
                 else if (_raid.Session.raid.id == "rival") panel.Line(result.stars == 0 ? "No gold: earn a star to get paid." : "No gold: this rival already paid today, you reached today's limit, or your vault is full.");
