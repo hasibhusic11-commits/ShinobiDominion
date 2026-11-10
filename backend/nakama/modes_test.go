@@ -38,7 +38,7 @@ func starterBattle(t *testing.T, s *Server, archetypeID string, level int) ([]ba
 			if err != nil {
 				t.Fatal(err)
 			}
-			guard = append(guard, battleDefenderInput{d.ID, d.Role, d.Hp, d.Attack, d.Defense, d.X, d.Z, d.Special, d.EvolutionIndex, d.Power})
+			guard = append(guard, battleDefenderInput{d.ID, d.Role, d.Hp, d.Attack, d.Defense, d.X, d.Z, d.Special, d.EvolutionIndex, d.Power, d.StartCharge, d.SpeedPercent})
 		}
 	}
 	x, z, _ := siegeGuardPost(buildings)
@@ -152,7 +152,7 @@ func arenaDuel(t *testing.T, s *Server, attacker string, attackerLevel int, guar
 	buildings := []battleBuildingInput{{ID: 1, DefinitionID: shrine.ID, X: a.ShrineX, Z: a.ShrineZ, Width: shrine.Width, Depth: shrine.Depth, Level: 1, Hp: a.ShrineHp}}
 	archetype := s.catalog.byID[attacker]
 	hp, attack, defense := heroBattleStats(archetype, 0, attackerLevel)
-	units := []battleHeroInput{{"me", archetype.Role, hp, attack, defense, a.HeroX, a.HeroZ, false, archetype.Special, 0, powerFor(archetype.Rarity), 0}}
+	units := []battleHeroInput{{"me", archetype.Role, hp, attack, defense, a.HeroX, a.HeroZ, false, archetype.Special, 0, powerFor(archetype.Rarity), 0, 0, 0, 0}}
 	if refusal := deployError(buildings, units, 0); refusal != "" {
 		t.Fatal(refusal)
 	}
@@ -160,7 +160,7 @@ func arenaDuel(t *testing.T, s *Server, attacker string, attackerLevel int, guar
 	if err != nil {
 		t.Fatal(err)
 	}
-	result, err := runDefendedBattle(buildings, units, []battleDefenderInput{{d.ID, d.Role, d.Hp, d.Attack, d.Defense, d.X, d.Z, d.Special, d.EvolutionIndex, d.Power}})
+	result, err := runDefendedBattle(buildings, units, []battleDefenderInput{{d.ID, d.Role, d.Hp, d.Attack, d.Defense, d.X, d.Z, d.Special, d.EvolutionIndex, d.Power, 0, 0}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -225,13 +225,13 @@ func trialDuel(t *testing.T, s *Server, attacker string, attackerLevel int, floo
 	buildings := []battleBuildingInput{{ID: 1, DefinitionID: shrine.ID, X: a.ShrineX, Z: a.ShrineZ, Width: shrine.Width, Depth: shrine.Depth, Level: 1, Hp: g.ShrineHp}}
 	archetype := s.catalog.byID[attacker]
 	hp, attack, defense := heroBattleStats(archetype, 0, attackerLevel)
-	units := []battleHeroInput{{"me", archetype.Role, hp, attack, defense, a.HeroX, a.HeroZ, false, archetype.Special, 0, powerFor(archetype.Rarity), 0}}
+	units := []battleHeroInput{{"me", archetype.Role, hp, attack, defense, a.HeroX, a.HeroZ, false, archetype.Special, 0, powerFor(archetype.Rarity), 0, 0, 0, 0}}
 	d, err := s.makeDefender("d1", g.ArchetypeID, g.Evolution, g.Level, a.GuardX, a.GuardZ)
 	if err != nil {
 		t.Fatal(err)
 	}
 	power := s.modes.Trials.PowerPercentBase + s.modes.Trials.PowerPercentPerFloor*int64(floor)
-	result, err := runDefendedBattle(buildings, units, []battleDefenderInput{{d.ID, d.Role, scaled(d.Hp, power), scaled(d.Attack, power), scaled(d.Defense, power), d.X, d.Z, d.Special, d.EvolutionIndex, d.Power}})
+	result, err := runDefendedBattle(buildings, units, []battleDefenderInput{{d.ID, d.Role, scaled(d.Hp, power), scaled(d.Attack, power), scaled(d.Defense, power), d.X, d.Z, d.Special, d.EvolutionIndex, d.Power, 0, 0}})
 	if err != nil {
 		t.Fatal(err)
 	}

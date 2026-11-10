@@ -33,6 +33,14 @@ namespace ShinobiDominion.Core
         public int speed;
         public string special;
         public int power;
+        /// <summary>The hero's talent as the battle takes it (ADR-053), worked out by the server.</summary>
+        public int startCharge;
+        public int siegePercent;
+        public int speedPercent;
+        /// <summary>For display: the technique rank and the talent the stats above already include.</summary>
+        public int techniqueRank;
+        public string talentId;
+        public int talentLevel;
     }
 
     /// <summary>A hero guarding the target, with the stats fixed when the raid started.</summary>
@@ -50,6 +58,8 @@ namespace ShinobiDominion.Core
         public int z;
         public string special;
         public int power;
+        public int startCharge;
+        public int speedPercent;
     }
 
     /// <summary>One raid on this player's village. It never says who attacked.</summary>
@@ -104,7 +114,7 @@ namespace ShinobiDominion.Core
         public List<BattleSpellInput> ToCasts(IEnumerable<RaidSpellCast> casts, SpellCatalog catalog) => catalog.ToInputs(spells, casts);
 
         public List<BattleDefenderInput> ToDefenderInputs() =>
-            defenders.Select(d => new BattleDefenderInput { id = d.id, role = d.role, hp = d.hp, attack = d.attack, defense = d.defense, x = d.x, z = d.z, special = d.special, evolution = d.evolutionIndex, power = d.power }).ToList();
+            defenders.Select(d => new BattleDefenderInput { id = d.id, role = d.role, hp = d.hp, attack = d.attack, defense = d.defense, x = d.x, z = d.z, special = d.special, evolution = d.evolutionIndex, power = d.power, startCharge = d.startCharge, speedPercent = d.speedPercent }).ToList();
 
         /// <summary>
         /// Everything that lands, as sent: heroes, then each stack of troops, each with its drop tick. The server
@@ -130,7 +140,7 @@ namespace ShinobiDominion.Core
             placements.Select(placement =>
             {
                 var member = team.First(m => m.instanceId == placement.instanceId);
-                return new BattleHeroInput { id = member.instanceId, role = member.role, hp = member.hp, attack = member.attack, defense = member.defense, x = placement.x, z = placement.z, special = member.special, evolution = member.evolutionIndex, power = member.power, deployTick = placement.tick };
+                return new BattleHeroInput { id = member.instanceId, role = member.role, hp = member.hp, attack = member.attack, defense = member.defense, x = placement.x, z = placement.z, special = member.special, evolution = member.evolutionIndex, power = member.power, deployTick = placement.tick, startCharge = member.startCharge, siegePercent = member.siegePercent, speedPercent = member.speedPercent };
             }).ToList();
     }
 
@@ -145,6 +155,8 @@ namespace ShinobiDominion.Core
         public int LevelsGained;
         public long CrystalsEarned;
         public string ItemEarned;
+        /// <summary>Technique Manuals and Talent Tokens the win paid (ADR-053), by item id. Never null.</summary>
+        public Dictionary<string, long> ItemsEarned = new Dictionary<string, long>();
         public ServerState State;
 
         public static RaidOutcome Parse(string json)
@@ -162,6 +174,13 @@ namespace ShinobiDominion.Core
                 CrystalsEarned = token.Value<long?>("crystalsEarned") ?? 0,
                 ItemEarned = token.Value<string>("itemEarned") ?? ""
             };
+            if (token["itemsEarned"] is JObject items)
+                foreach (var pair in items)
+                {
+                    var count = pair.Value.Value<long>();
+                    if (count < 0) throw new FormatException("Server sent a negative reward.");
+                    if (count > 0) outcome.ItemsEarned[pair.Key] = count;
+                }
             if (outcome.XpEarned < 0 || outcome.CrystalsEarned < 0) throw new FormatException("Server sent a negative reward.");
             if (outcome.GoldEarned < 0 || outcome.ManaEarned < 0) throw new FormatException("Server sent a negative reward.");
             if (token["state"] is JObject state) outcome.State = ServerState.FromToken(state);

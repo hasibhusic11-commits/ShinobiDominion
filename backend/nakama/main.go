@@ -180,6 +180,8 @@ func (s *Server) register(initializer runtime.Initializer, logger runtime.Logger
 		"sd_chest_open":   s.rpcChestOpen,
 		"sd_shop_buy":     s.rpcShopBuy,
 		"sd_gear_upgrade": s.rpcGearUpgrade,
+		"sd_technique_rank_up": s.rpcTechniqueRankUp,
+		"sd_talent_roll":  s.rpcTalentRoll,
 		"sd_trial_list":   s.rpcTrialList,
 		"sd_trial_fight":  s.rpcTrialFight,
 		"sd_troop_train":  s.rpcTroopTrain,
@@ -400,6 +402,10 @@ type heroState struct {
 	BaseSlot       *int   `json:"baseSlot"`
 	// Gear is the hero's Weapon, Armor and Charm levels (ADR-044).
 	Gear           []int  `json:"gear"`
+	// TechniqueRank and the talent the hero holds (ADR-053); the talent is "" and 0 before its first roll.
+	TechniqueRank  int    `json:"techniqueRank"`
+	TalentID       string `json:"talentId"`
+	TalentLevel    int    `json:"talentLevel"`
 }
 
 type playerState struct {
@@ -418,7 +424,7 @@ type playerState struct {
 
 func loadState(ctx context.Context, tx *sql.Tx, userID string, crystals int64) (*playerState, error) {
 	state := &playerState{SchemaVersion: 1, Crystals: crystals, Heroes: []heroState{}, Items: map[string]int64{}}
-	rows, err := tx.QueryContext(ctx, `SELECT instance_id::text, archetype_id, evolution, level, experience, locked, base_slot, gear_weapon, gear_armor, gear_charm FROM sd_hero WHERE user_id = $1 ORDER BY created_at, instance_id`, userID)
+	rows, err := tx.QueryContext(ctx, `SELECT instance_id::text, archetype_id, evolution, level, experience, locked, base_slot, gear_weapon, gear_armor, gear_charm, technique_rank, talent_id, talent_level FROM sd_hero WHERE user_id = $1 ORDER BY created_at, instance_id`, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -427,7 +433,7 @@ func loadState(ctx context.Context, tx *sql.Tx, userID string, crystals int64) (
 		var hero heroState
 		var slot sql.NullInt64
 		hero.Gear = make([]int, 3)
-		if err := rows.Scan(&hero.InstanceID, &hero.ArchetypeID, &hero.EvolutionIndex, &hero.Level, &hero.Experience, &hero.Locked, &slot, &hero.Gear[0], &hero.Gear[1], &hero.Gear[2]); err != nil {
+		if err := rows.Scan(&hero.InstanceID, &hero.ArchetypeID, &hero.EvolutionIndex, &hero.Level, &hero.Experience, &hero.Locked, &slot, &hero.Gear[0], &hero.Gear[1], &hero.Gear[2], &hero.TechniqueRank, &hero.TalentID, &hero.TalentLevel); err != nil {
 			return nil, err
 		}
 		if slot.Valid {
@@ -955,6 +961,13 @@ func (s *Server) seedDevInventory(ctx context.Context, tx *sql.Tx, userID string
 		if err := addItemLedger(ctx, tx, userID, catalyst, 1, "dev_seed", "account"); err != nil {
 			return err
 		}
+	}
+	// Enough manuals and tokens to try technique ranks and talents (ADR-053).
+	if err := grantItems(ctx, tx, userID, s.catalog.Technique.Item, 20, "dev_seed", "account"); err != nil {
+		return err
+	}
+	if err := grantItems(ctx, tx, userID, s.catalog.Talents.Item, 5, "dev_seed", "account"); err != nil {
+		return err
 	}
 	return nil
 }

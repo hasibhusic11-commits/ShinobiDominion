@@ -63,6 +63,9 @@ namespace ShinobiDominion.Game
         Task<ChestView> ChestOpenAsync(string key);
         Task<ChestView> ShopBuyAsync(string key, string offerId);
         Task<ServerState> GearUpgradeAsync(string key, string instanceId, int slot);
+        /// <summary>Hero mastery (ADR-053): one technique rank, and one talent roll made by the server.</summary>
+        Task<ServerState> TechniqueRankUpAsync(string key, string instanceId);
+        Task<ServerState> TalentRollAsync(string key, string instanceId);
         Task<List<TrialFloor>> TrialListAsync();
         Task<ModeFight> TrialFightAsync(string key, int floor);
     }
@@ -222,6 +225,10 @@ namespace ShinobiDominion.Game
         public async Task<ChestView> ShopBuyAsync(string key, string offerId) => ChestView.Parse(await CallAsync("sd_shop_buy", new { key, offerId }));
 
         public async Task<ServerState> GearUpgradeAsync(string key, string instanceId, int slot) => ServerState.Parse(await CallAsync("sd_gear_upgrade", new { key, instanceId, slot }));
+
+        public async Task<ServerState> TechniqueRankUpAsync(string key, string instanceId) => ServerState.Parse(await CallAsync("sd_technique_rank_up", new { key, instanceId }));
+
+        public async Task<ServerState> TalentRollAsync(string key, string instanceId) => ServerState.Parse(await CallAsync("sd_talent_roll", new { key, instanceId }));
 
         public async Task<List<TrialFloor>> TrialListAsync() => TrialFloor.ParseList(await CallAsync("sd_trial_list", null));
 

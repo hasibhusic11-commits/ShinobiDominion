@@ -240,6 +240,13 @@ namespace ShinobiDominion.Game
                 Reveal(found);
                 UiMotion.Shine(found, Color.white, 2f, 0.3f);
             }
+            // Technique Manuals and Talent Tokens (ADR-053), in a fixed order.
+            foreach (var pair in outcome.ItemsEarned.OrderBy(p => p.Key, System.StringComparer.Ordinal))
+            {
+                var earned = panel.Line($"Found: {pair.Value:N0} {ItemName(pair.Key)}{(pair.Value == 1 ? "" : "s")}", 21, new Color(1f, 0.87f, 0.4f));
+                earned.name = "ItemsEarned_" + pair.Key;
+                Reveal(earned);
+            }
         }
     }
 

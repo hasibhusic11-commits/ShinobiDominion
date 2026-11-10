@@ -25,7 +25,7 @@ notice theirs is better. Each row says why.
 | Battle HUD | Level | Was behind: flat boxes and diamond shapes for stars. Now painted stars that pop in, a damage bar, a clock that turns red and ticks at the end, and a result with stars and counted loot. The clock is still outlined text, not a painted dial. |
 | Battle camera | Level | Was behind: the whole 50 by 50 field was shown. Now a raid opens on the heart of the enemy base with ground to drop on, and stays there while the player aims. A lone building far from the base is off screen with no arrow pointing to it yet. |
 | Battle control | Level | Was behind: drop cards and watch. Now four spells are cast during the fight, once each, and the server fights them again (ADR-052). Theirs has more spells. |
-| Hero depth | Behind | We have levels, evolutions, skills and gear. Theirs adds talents and skill books (see the gap review). |
+| Hero depth | Level | Was behind: levels, evolutions, skills and gear only. Now every hero also has a technique rank (1 to 10, bought with Technique Manuals) and one talent rolled by the server (ADR-053). Theirs has more talents and a second passive layer; ours has six talents that each do a different thing, with stated odds. |
 | Modes | Level | Raids, campaign, siege waves, arena, trials, guild. Theirs has more modes; ours are all server-checked. |
 | Dungeons to farm | Behind | Ours pay only for new stars. Theirs can be replayed for materials. |
 | Trophies and "Next" | Behind | Rival raids exist, but there is no trophy ladder or skip-to-next rival. |
@@ -43,7 +43,7 @@ notice theirs is better. Each row says why.
 3. **Hero and troop art.** 12 heroes and every troop need real models. This needs Meshy, with the owner signed in
    and the credit cost shown first. It cannot be done from code.
 4. **Village life.** Ground detail, decorations, villagers with real figures, small animations on buildings.
-5. **Hero depth.** Talents and skill books.
+5. **Hero depth.** Fix: technique ranks and server-rolled talents (ADR-053).
 6. **Farmable dungeons, trophies and Next.**
 7. **Recorded sounds and music** in place of code-made ones.
 8. **Modern text rendering** (SDF) and a phone performance pass.

@@ -242,7 +242,7 @@ func (s *Server) siegeStacks(buildings []battleBuildingInput, level siegeLevel) 
 	for _, stack := range stacks {
 		troop := s.troops.byID[stack.TroopID]
 		for i := 0; i < stack.Count; i++ {
-			units = append(units, battleHeroInput{troop.ID, troop.Role, scaled(troop.Hp, level.StatPercent), scaled(troop.Attack, level.StatPercent), scaled(troop.Defense, level.StatPercent), stack.X, stack.Z, true, "", 0, 0, 0})
+			units = append(units, battleHeroInput{troop.ID, troop.Role, scaled(troop.Hp, level.StatPercent), scaled(troop.Attack, level.StatPercent), scaled(troop.Defense, level.StatPercent), stack.X, stack.Z, true, "", 0, 0, 0, 0, 0, 0})
 		}
 	}
 	return stacks, units
@@ -422,7 +422,7 @@ func (s *Server) rpcSiegeFight(ctx context.Context, logger runtime.Logger, db *s
 		stacks, units := s.siegeStacks(buildings, level)
 		inputs := make([]battleDefenderInput, 0, len(defenders))
 		for _, d := range defenders {
-			inputs = append(inputs, battleDefenderInput{d.ID, d.Role, d.Hp, d.Attack, d.Defense, d.X, d.Z, d.Special, d.EvolutionIndex, d.Power})
+			inputs = append(inputs, battleDefenderInput{d.ID, d.Role, d.Hp, d.Attack, d.Defense, d.X, d.Z, d.Special, d.EvolutionIndex, d.Power, d.StartCharge, d.SpeedPercent})
 		}
 		result, err := runDefendedBattle(buildings, units, inputs)
 		if err != nil {
@@ -602,6 +602,7 @@ func (s *Server) rpcArenaFight(ctx context.Context, logger runtime.Logger, db *s
 		var foeArchetype, foeName string
 		var foeEvolution, foeLevel int
 		var foeGear [3]int
+		foeDepth := heroDepth{Rank: 1}
 		foePoints := points
 		var found string
 		err = tx.QueryRowContext(ctx, `SELECT user_id::text, points FROM (
@@ -614,8 +615,8 @@ func (s *Server) rpcArenaFight(ctx context.Context, logger runtime.Logger, db *s
 			return err
 		}
 		if err == nil {
-			if err := tx.QueryRowContext(ctx, `SELECT archetype_id, evolution, level, gear_weapon, gear_armor, gear_charm FROM sd_hero WHERE user_id = $1 AND base_slot IS NOT NULL ORDER BY base_slot LIMIT 1`, found).
-				Scan(&foeArchetype, &foeEvolution, &foeLevel, &foeGear[0], &foeGear[1], &foeGear[2]); err != nil {
+			if err := tx.QueryRowContext(ctx, `SELECT archetype_id, evolution, level, gear_weapon, gear_armor, gear_charm, technique_rank, talent_id, talent_level FROM sd_hero WHERE user_id = $1 AND base_slot IS NOT NULL ORDER BY base_slot LIMIT 1`, found).
+				Scan(&foeArchetype, &foeEvolution, &foeLevel, &foeGear[0], &foeGear[1], &foeGear[2], &foeDepth.Rank, &foeDepth.Talent, &foeDepth.Level); err != nil {
 				return err
 			}
 			opponentID = &found
@@ -631,12 +632,13 @@ func (s *Server) rpcArenaFight(ctx context.Context, logger runtime.Logger, db *s
 			return err
 		}
 		defender.Hp, defender.Attack, defender.Defense = s.catalog.withGear(defender.Hp, defender.Attack, defender.Defense, foeGear)
+		s.defenderDepth(&defender, foeDepth)
 
 		shrine := s.buildings.byID["dojo_hq"]
 		buildings := []battleBuildingInput{{ID: 1, DefinitionID: shrine.ID, X: a.ShrineX, Z: a.ShrineZ, Width: shrine.Width, Depth: shrine.Depth, Level: 1, Hp: a.ShrineHp}}
 		placement := deployPlacement{InstanceID: hero.InstanceID, X: a.HeroX, Z: a.HeroZ}
-		units := []battleHeroInput{{hero.InstanceID, hero.Role, hero.Hp, hero.Attack, hero.Defense, placement.X, placement.Z, false, hero.Special, hero.EvolutionIndex, hero.Power, 0}}
-		result, err := runDefendedBattle(buildings, units, []battleDefenderInput{{defender.ID, defender.Role, defender.Hp, defender.Attack, defender.Defense, defender.X, defender.Z, defender.Special, defender.EvolutionIndex, defender.Power}})
+		units := []battleHeroInput{{hero.InstanceID, hero.Role, hero.Hp, hero.Attack, hero.Defense, placement.X, placement.Z, false, hero.Special, hero.EvolutionIndex, hero.Power, 0, hero.StartCharge, hero.SiegePercent, hero.SpeedPercent}}
+		result, err := runDefendedBattle(buildings, units, []battleDefenderInput{{defender.ID, defender.Role, defender.Hp, defender.Attack, defender.Defense, defender.X, defender.Z, defender.Special, defender.EvolutionIndex, defender.Power, defender.StartCharge, defender.SpeedPercent}})
 		if err != nil {
 			return err
 		}

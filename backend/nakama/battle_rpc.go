@@ -54,6 +54,13 @@ type raidTeamMember struct {
 	Speed          int    `json:"speed"`
 	Special        string `json:"special,omitempty"`
 	Power          int    `json:"power,omitempty"`
+	// The talent as the battle takes it, and the rank and talent for display (ADR-053).
+	StartCharge    int    `json:"startCharge,omitempty"`
+	SiegePercent   int    `json:"siegePercent,omitempty"`
+	SpeedPercent   int    `json:"speedPercent,omitempty"`
+	TechniqueRank  int    `json:"techniqueRank"`
+	TalentID       string `json:"talentId"`
+	TalentLevel    int    `json:"talentLevel"`
 }
 
 // raidDefender is a hero guarding the target, with the stats fixed when the raid started.
@@ -70,6 +77,8 @@ type raidDefender struct {
 	Z              int    `json:"z"`
 	Special        string `json:"special,omitempty"`
 	Power          int    `json:"power,omitempty"`
+	StartCharge    int    `json:"startCharge,omitempty"`
+	SpeedPercent   int    `json:"speedPercent,omitempty"`
 }
 
 type raidSummary struct {
@@ -132,6 +141,8 @@ type raidDeployResponse struct {
 	LevelsGained   int       `json:"levelsGained"`
 	CrystalsEarned int64     `json:"crystalsEarned"`
 	ItemEarned     string    `json:"itemEarned"`
+	// ItemsEarned is the Technique Manuals and Talent Tokens the win paid (ADR-053), by item id.
+	ItemsEarned    map[string]int64 `json:"itemsEarned"`
 }
 
 func bestStarsFor(ctx context.Context, tx *sql.Tx, userID, raidID string) (int, error) {
@@ -304,7 +315,14 @@ func (s *Server) makeDefender(id, archetypeID string, evolution, level, x, z int
 		return raidDefender{}, errHeroNotFound
 	}
 	hp, attack, defense := heroBattleStats(archetype, evolution, level)
-	return raidDefender{id, archetypeID, evolution, level, archetype.Role, hp, attack, defense, x, z, archetype.Special, powerFor(archetype.Rarity)}, nil
+	return raidDefender{id, archetypeID, evolution, level, archetype.Role, hp, attack, defense, x, z, archetype.Special, powerFor(archetype.Rarity), 0, 0}, nil
+}
+
+// defenderDepth puts a guard's technique rank and talent on top of its stats (ADR-053).
+func (s *Server) defenderDepth(defender *raidDefender, depth heroDepth) {
+	var edge battleEdge
+	defender.Hp, defender.Attack, defender.Defense, defender.Power, edge = s.catalog.withDepth(s.catalog.byID[defender.ArchetypeID].Rarity, defender.Hp, defender.Attack, defender.Defense, depth)
+	defender.StartCharge, defender.SpeedPercent = edge.StartCharge, edge.SpeedPercent
 }
 
 // rivalSnapshot copies a rival's village and guards as they stand now, in a fixed order.
@@ -340,7 +358,7 @@ func (s *Server) rivalSnapshot(ctx context.Context, tx *sql.Tx, rivalID string) 
 		}
 	}
 
-	rows, err := tx.QueryContext(ctx, `SELECT archetype_id, evolution, level, base_slot, gear_weapon, gear_armor, gear_charm FROM sd_hero WHERE user_id = $1 AND base_slot IS NOT NULL ORDER BY base_slot`, rivalID)
+	rows, err := tx.QueryContext(ctx, `SELECT archetype_id, evolution, level, base_slot, gear_weapon, gear_armor, gear_charm, technique_rank, talent_id, talent_level FROM sd_hero WHERE user_id = $1 AND base_slot IS NOT NULL ORDER BY base_slot`, rivalID)
 	if err != nil {
 		return nil, nil, 0, err
 	}
@@ -350,7 +368,8 @@ func (s *Server) rivalSnapshot(ctx context.Context, tx *sql.Tx, rivalID string) 
 		var archetypeID string
 		var evolution, level, slot int
 		var gear [3]int
-		if err := rows.Scan(&archetypeID, &evolution, &level, &slot, &gear[0], &gear[1], &gear[2]); err != nil {
+		var owned heroDepth
+		if err := rows.Scan(&archetypeID, &evolution, &level, &slot, &gear[0], &gear[1], &gear[2], &owned.Rank, &owned.Talent, &owned.Level); err != nil {
 			return nil, nil, 0, err
 		}
 		base, ok := v.byID[slot]
@@ -364,6 +383,7 @@ func (s *Server) rivalSnapshot(ctx context.Context, tx *sql.Tx, rivalID string) 
 			return nil, nil, 0, err
 		}
 		defender.Hp, defender.Attack, defender.Defense = s.catalog.withGear(defender.Hp, defender.Attack, defender.Defense, gear)
+		s.defenderDepth(&defender, owned)
 		defenders = append(defenders, defender)
 	}
 	return buildings, defenders, dojoLevel, rows.Err()
@@ -512,7 +532,7 @@ func grantItem(ctx context.Context, tx *sql.Tx, userID, itemID, ref string) erro
 
 // loadRaidTeam reads who stands on the player's Hero Bases. Only the server decides their stats.
 func (s *Server) loadRaidTeam(ctx context.Context, tx *sql.Tx, userID string) ([]raidTeamMember, error) {
-	rows, err := tx.QueryContext(ctx, `SELECT instance_id::text, archetype_id, evolution, level, gear_weapon, gear_armor, gear_charm FROM sd_hero WHERE user_id = $1 AND base_slot IS NOT NULL ORDER BY base_slot`, userID)
+	rows, err := tx.QueryContext(ctx, `SELECT instance_id::text, archetype_id, evolution, level, gear_weapon, gear_armor, gear_charm, technique_rank, talent_id, talent_level FROM sd_hero WHERE user_id = $1 AND base_slot IS NOT NULL ORDER BY base_slot`, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -521,7 +541,8 @@ func (s *Server) loadRaidTeam(ctx context.Context, tx *sql.Tx, userID string) ([
 	for rows.Next() {
 		var member raidTeamMember
 		var gear [3]int
-		if err := rows.Scan(&member.InstanceID, &member.ArchetypeID, &member.EvolutionIndex, &member.Level, &gear[0], &gear[1], &gear[2]); err != nil {
+		var depth heroDepth
+		if err := rows.Scan(&member.InstanceID, &member.ArchetypeID, &member.EvolutionIndex, &member.Level, &gear[0], &gear[1], &gear[2], &depth.Rank, &depth.Talent, &depth.Level); err != nil {
 			return nil, err
 		}
 		archetype, ok := s.catalog.byID[member.ArchetypeID]
@@ -538,6 +559,10 @@ func (s *Server) loadRaidTeam(ctx context.Context, tx *sql.Tx, userID string) ([
 		member.Speed = roleSpeeds[role]
 		member.Hp, member.Attack, member.Defense = heroBattleStats(archetype, member.EvolutionIndex, member.Level)
 		member.Hp, member.Attack, member.Defense = s.catalog.withGear(member.Hp, member.Attack, member.Defense, gear)
+		var edge battleEdge
+		member.Hp, member.Attack, member.Defense, member.Power, edge = s.catalog.withDepth(archetype.Rarity, member.Hp, member.Attack, member.Defense, depth)
+		member.StartCharge, member.SiegePercent, member.SpeedPercent = edge.StartCharge, edge.SiegePercent, edge.SpeedPercent
+		member.TechniqueRank, member.TalentID, member.TalentLevel = depth.Rank, depth.Talent, depth.Level
 		team = append(team, member)
 	}
 	return team, rows.Err()
@@ -628,7 +653,7 @@ func (s *Server) rpcRaidDeploy(ctx context.Context, logger runtime.Logger, db *s
 		}
 		defenders := make([]battleDefenderInput, 0, len(stored))
 		for _, d := range stored {
-			defenders = append(defenders, battleDefenderInput{d.ID, d.Role, d.Hp, d.Attack, d.Defense, d.X, d.Z, d.Special, d.EvolutionIndex, d.Power})
+			defenders = append(defenders, battleDefenderInput{d.ID, d.Role, d.Hp, d.Attack, d.Defense, d.X, d.Z, d.Special, d.EvolutionIndex, d.Power, d.StartCharge, d.SpeedPercent})
 		}
 		heroes := make([]battleHeroInput, 0, len(request.Placements))
 		for _, placement := range request.Placements {
@@ -641,7 +666,7 @@ func (s *Server) rpcRaidDeploy(ctx context.Context, logger runtime.Logger, db *s
 			if member == nil {
 				return errHeroNotInTeam
 			}
-			heroes = append(heroes, battleHeroInput{member.InstanceID, member.Role, member.Hp, member.Attack, member.Defense, placement.X, placement.Z, false, member.Special, member.EvolutionIndex, member.Power, placement.Tick})
+			heroes = append(heroes, battleHeroInput{member.InstanceID, member.Role, member.Hp, member.Attack, member.Defense, placement.X, placement.Z, false, member.Special, member.EvolutionIndex, member.Power, placement.Tick, member.StartCharge, member.SiegePercent, member.SpeedPercent})
 		}
 		// Troops come from the camps and are used up by landing, win or lose.
 		counts, err := loadTroopCounts(ctx, tx, userID)
@@ -674,7 +699,7 @@ func (s *Server) rpcRaidDeploy(ctx context.Context, logger runtime.Logger, db *s
 					level = entry.Level
 				}
 				hp, attack, defense := s.troops.boosted(troop, level)
-				heroes = append(heroes, battleHeroInput{troop.ID, troop.Role, hp, attack, defense, stack.X, stack.Z, true, "", 0, 0, stack.Tick})
+				heroes = append(heroes, battleHeroInput{troop.ID, troop.Role, hp, attack, defense, stack.X, stack.Z, true, "", 0, 0, stack.Tick, 0, 0, 0})
 			}
 		}
 		if refusal := deployError(buildings, heroes, request.EndTick); refusal != "" {
@@ -710,6 +735,7 @@ func (s *Server) rpcRaidDeploy(ctx context.Context, logger runtime.Logger, db *s
 		var earned, manaEarned, xpEarned, crystalsEarned int64
 		var levelsGained int
 		var itemEarned string
+		paidDungeonWin := false
 		best := result.Stars
 		if opponent.Valid {
 			// A raid on a rival never costs the rival anything. Limits stop one village being farmed.
@@ -740,6 +766,7 @@ func (s *Server) rpcRaidDeploy(ctx context.Context, logger runtime.Logger, db *s
 				}
 				if definition.XpPerWin > 0 && wins < dungeonXpWinsPerDay {
 					xpEarned = definition.XpPerWin
+					paidDungeonWin = true
 					for _, placement := range request.Placements {
 						gained, err := s.grantHeroXP(ctx, tx, userID, placement.InstanceID, xpEarned)
 						if err != nil {
@@ -772,6 +799,13 @@ func (s *Server) rpcRaidDeploy(ctx context.Context, logger runtime.Logger, db *s
 				return err
 			}
 		}
+		// Technique Manuals and Talent Tokens (ADR-053): a rival raid pays by its stars, a dungeon once per paid win.
+		itemsEarned := s.catalog.depthRewards(opponent.Valid, result.Stars, paidDungeonWin)
+		for _, item := range []string{s.catalog.Technique.Item, s.catalog.Talents.Item} {
+			if err := grantItems(ctx, tx, userID, item, itemsEarned[item], "raid_reward", request.AttackID); err != nil {
+				return err
+			}
+		}
 		if err := persistVillage(ctx, tx, userID, v, beforeGold, crystals, "raid_reward", request.AttackID); err != nil {
 			return err
 		}
@@ -784,7 +818,7 @@ func (s *Server) rpcRaidDeploy(ctx context.Context, logger runtime.Logger, db *s
 		if err != nil {
 			return err
 		}
-		output, err = marshal(raidDeployResponse{request.AttackID, result, earned, manaEarned, best, state, xpEarned, levelsGained, crystalsEarned, itemEarned})
+		output, err = marshal(raidDeployResponse{request.AttackID, result, earned, manaEarned, best, state, xpEarned, levelsGained, crystalsEarned, itemEarned, itemsEarned})
 		if err != nil {
 			return err
 		}

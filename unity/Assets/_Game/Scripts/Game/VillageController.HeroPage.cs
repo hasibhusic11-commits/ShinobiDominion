@@ -243,6 +243,7 @@ namespace ShinobiDominion.Game
             }
             var gearTotal = hero.Gear.Sum();
             Ui.Button(box, "GearButton", gearTotal == 0 ? "Gear" : $"Gear (W{hero.Gear[HeroMath.Weapon]} A{hero.Gear[HeroMath.Armor]} C{hero.Gear[HeroMath.Charm]})", () => ShowGear(instanceId), true, null, 19);
+            Ui.Button(box, "MasteryButton", MasteryLabel(hero), () => ShowMastery(instanceId), true, null, 19);
             Ui.Button(box, "LockButton", hero.Locked ? "Unlock" : "Lock", () =>
             {
                 if (IsOnline)
@@ -319,7 +320,7 @@ namespace ShinobiDominion.Game
             HudArt.DropShadow(panel);
 
             var header = HudArt.Picture(panel, "SkillsHeader", "hud_building_nameplate", new Vector2(0.5f, 1f), new Vector2(RightWidth - 40f, 46f), new Vector2(0f, -14f));
-            var heading = HudArt.Label(header.transform, "SKILLS", HudArt.Display, 22, TextAnchor.MiddleCenter, HudArt.BrassLight, HudArt.LacquerDeep);
+            var heading = HudArt.Label(header.transform, hero.TechniqueRank > 1 ? $"SKILLS - RANK {hero.TechniqueRank}" : "SKILLS", HudArt.Display, 22, TextAnchor.MiddleCenter, HudArt.BrassLight, HudArt.LacquerDeep);
             Ui.Stretch(heading.rectTransform);
 
             var skills = archetype.skills;

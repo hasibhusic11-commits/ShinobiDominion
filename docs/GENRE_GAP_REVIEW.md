@@ -34,7 +34,7 @@ Status: **Have** (built), **Partial** (built, but differs in a way that matters)
 | Several heroes fight together in raids and defend on several bases | Up to six (ADR-048) | Have | — |
 | Levels with Mana, from battle XP | Same (Mana training and battle XP) | Have | — |
 | Evolution / awakening with duplicates and catalysts | Evolution with one duplicate and a catalyst | Have | — |
-| Talents (a random passive per hero, rerollable) | None | Missing | One talent slot per hero, rolled on the server, rerolled with a currency |
+| Talents (a random passive per hero, rerollable) | One talent per hero, six kinds, levels 1 to 5, rolled on the server for a Talent Token (ADR-053) | Have | — |
 | Crests (socketed passive bonuses) | None | Missing | Could share the gear screen |
 | Skill levels raised with an item | Specials scale by rarity only | Missing | Skill books from dungeons and quests |
 | Hero gear / armory | Weapon, Armor, Charm, levels 0–10 | Have | — |

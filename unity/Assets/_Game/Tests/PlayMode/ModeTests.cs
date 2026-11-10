@@ -417,6 +417,34 @@ namespace ShinobiDominion.Tests
             yield return Await(_direct.GetStateAsync(), s => StringAssert.Contains("\"gear\":[1,0,0]", s.RosterJson.Replace(" ", "").Replace("\n", "").Replace("\r", "")));
         }
         [UnityTest]
+        public IEnumerator Mastery_FromTheHeroPage_RollsATalentAndBuysARankOnTheServer()
+        {
+            var hero = Controller.Roster.Heroes.First();
+            var tokens = Controller.Roster.ItemCount("talent_token");
+            var manuals = Controller.Roster.ItemCount("technique_manual");
+            Assert.GreaterOrEqual(tokens, 1, "A dev account starts with Talent Tokens");
+            Assert.GreaterOrEqual(manuals, 2, "A dev account starts with Technique Manuals");
+
+            Controller.ShowHeroDetail(hero.InstanceId);
+            yield return ClickWhenReady("MasteryButton");
+            yield return ClickWhenReady("TalentRollButton");
+            yield return WaitFor(() => Controller.Roster.Find(hero.InstanceId).TalentLevel > 0);
+            var rolled = Controller.Roster.Find(hero.InstanceId);
+            Assert.IsNotNull(Controller.Roster.Catalog.Talents.Find(rolled.TalentId), "The server gave a talent the catalog knows");
+            Assert.AreEqual(tokens - 1, Controller.Roster.ItemCount("talent_token"));
+            yield return WaitFor(() => Object.FindObjectsByType<Text>(FindObjectsSortMode.None).Any(t => t.name == "MasteryNote"));
+
+            // Rank 2 needs hero level 16.
+            Controller.ShowHeroDetail(hero.InstanceId);
+            yield return ClickWhenReady("DevLevelButton");
+            yield return WaitFor(() => Controller.Roster.Find(hero.InstanceId).Level == HeroMath.MaxLevel);
+            Controller.ShowMastery(hero.InstanceId);
+            yield return ClickWhenReady("RankUpButton");
+            yield return WaitFor(() => Controller.Roster.Find(hero.InstanceId).TechniqueRank == 2);
+            Assert.AreEqual(manuals - 2, Controller.Roster.ItemCount("technique_manual"));
+            yield return Await(_direct.GetStateAsync(), s => StringAssert.Contains("\"techniqueRank\":2", s.RosterJson.Replace(" ", "").Replace("\n", "").Replace("\r", "")));
+        }
+        [UnityTest]
         public IEnumerator TrialTower_FirstFloor_ThroughTheScreens()
         {
             yield return PutFirstHeroOnBase();

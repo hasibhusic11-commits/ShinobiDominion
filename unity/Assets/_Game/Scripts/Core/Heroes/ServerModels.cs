@@ -187,6 +187,10 @@ namespace ShinobiDominion.Core
                 case "BAD_GEAR_SLOT": return "That is not a gear slot.";
                 case "GEAR_AT_MAX": return "That gear is already at its best.";
                 case "HERO_LEVEL_TOO_LOW_FOR_GEAR": return "Level the hero up first.";
+                case "TECHNIQUE_AT_MAX": return "That technique is already at its highest rank.";
+                case "HERO_LEVEL_TOO_LOW_FOR_RANK": return "Level the hero up first.";
+                case "NOT_ENOUGH_MANUALS": return "You need more Technique Manuals.";
+                case "NO_TALENT_TOKEN": return "You need a Talent Token.";
                 case "CHEST_NOT_READY": return "The chest is still refilling.";
                 case "OFFER_NOT_FOUND": return "That offer is gone.";
                 case "TRIAL_LOCKED": return "Clear the floor below first.";

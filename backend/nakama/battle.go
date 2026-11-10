@@ -195,6 +195,11 @@ type battleHeroInput struct {
 	// DeployTick is when the card was dropped (ADR-050): the unit lands after this tick and acts from the next one.
 	// Only a timed battle (one with an end tick) uses it; elsewhere it must be 0.
 	DeployTick int `json:"deployTick,omitempty"`
+	// Talents (ADR-053), set by the server; all 0 for troops. StartCharge is the ability charge the hero lands with,
+	// SiegePercent its extra damage to buildings and SpeedPercent its extra walking speed.
+	StartCharge  int `json:"startCharge,omitempty"`
+	SiegePercent int `json:"siegePercent,omitempty"`
+	SpeedPercent int `json:"speedPercent,omitempty"`
 }
 
 // battleDefenderInput is a hero guarding the village, standing at a cell on or by its Hero Base.
@@ -211,6 +216,9 @@ type battleDefenderInput struct {
 	Evolution int `json:"evolution,omitempty"`
 	// Power is how strong the special is, in percent of a Legendary's: by rarity, set by the server. 0 means 100.
 	Power int `json:"power,omitempty"`
+	// Talents (ADR-053): the charge the defender starts with and its extra walking speed.
+	StartCharge  int `json:"startCharge,omitempty"`
+	SpeedPercent int `json:"speedPercent,omitempty"`
 }
 
 type battleBuildingInput struct {
@@ -263,6 +271,9 @@ type battleUnit struct {
 	rally       bool
 	evolution   int
 	power       int
+	// speed is the walking speed per tick: the role's, raised by Swift Feet. siege is extra damage to buildings (ADR-053).
+	speed       int
+	siege       int64
 	isTroop     bool
 	// stunTimer holds a unit in place after a Hero Trap: it does nothing until it runs out.
 	stunTimer   int
@@ -291,6 +302,7 @@ type battleDefender struct {
 	rally        bool
 	evolution    int
 	power        int
+	speed        int
 	// stunTimer is a freeze spell (ADR-052): the defender does nothing, and its own timers stand still, until it runs out.
 	stunTimer    int
 }
@@ -396,7 +408,13 @@ func runTimedBattle(buildings []battleBuildingInput, heroes []battleHeroInput, d
 			index: i, role: role, hp: d.Hp, maxHp: d.Hp, attack: d.Attack, defense: d.Defense,
 			px: px, pz: pz, tx: px, tz: pz, homeX: d.X, homeZ: d.Z,
 			rally: d.Special == specialRally, evolution: d.Evolution, power: powerOf(d.Power),
+			charge: startCharge(d.StartCharge), speed: speedWith(role, d.SpeedPercent),
 		})
+	}
+	for _, defender := range sim.defenders {
+		if defender.charge > 0 {
+			sim.log(eventCharge, int64(defender.index), int64(defender.charge), 1, 0)
+		}
 	}
 	if sim.timed {
 		sim.pending = landingOrder(heroes)
@@ -445,6 +463,16 @@ func (s *battleSim) land(h battleHeroInput) {
 		target: -1, blocker: -1, needsPlan: true, isTroop: h.IsTroop,
 		rally: !h.IsTroop && h.Special == specialRally, evolution: h.Evolution, power: powerOf(h.Power),
 	})
+	unit := s.units[len(s.units)-1]
+	unit.speed = speedWith(role, 0)
+	if !h.IsTroop {
+		unit.charge = startCharge(h.StartCharge)
+		unit.speed = speedWith(role, h.SpeedPercent)
+		unit.siege = int64(maxInt(0, h.SiegePercent))
+	}
+	if unit.charge > 0 {
+		s.log(eventCharge, int64(unit.index), int64(unit.charge), 0, 0)
+	}
 }
 
 func canDeployAt(buildings []battleBuildingInput, x, z int) bool {
@@ -804,6 +832,16 @@ func powerFor(rarity string) int {
 	return powerLegendary
 }
 
+// startCharge keeps a starting charge inside the bar.
+func startCharge(charge int) int {
+	return minInt(maxInt(charge, 0), chargeFull)
+}
+
+// speedWith is a role's walking speed with a talent's percent on top, never slower than the role.
+func speedWith(role, percent int) int {
+	return roleSpeeds[role] * (100 + maxInt(0, percent)) / 100
+}
+
 func powerOf(power int) int {
 	if power <= 0 {
 		return powerLegendary
@@ -918,7 +956,7 @@ func (s *battleSim) stepUnit(unit *battleUnit) {
 	next := unit.path[unit.pathAt]
 	tx := (next%battleGridSize)*cellUnits + cellUnits/2
 	tz := (next/battleGridSize)*cellUnits + cellUnits/2
-	speed := roleSpeeds[unit.role]
+	speed := unit.speed
 	if unit.px != tx {
 		step := minInt(absInt(tx-unit.px), speed)
 		if tx > unit.px {
@@ -1154,7 +1192,7 @@ func (s *battleSim) walkDefender(defender *battleDefender, goalX, goalZ int) {
 		defender.tz = z*cellUnits + cellUnits/2
 		s.log(eventDefenderMove, int64(defender.index), int64(x), int64(z), 0)
 	}
-	speed := roleSpeeds[defender.role]
+	speed := defender.speed
 	if s.isWallCell(defender.tz/cellUnits*battleGridSize + defender.tx/cellUnits) {
 		speed = maxInt(1, speed/hopSteps)
 	}
@@ -1242,7 +1280,7 @@ func (s *battleSim) selfAbility(unit *battleUnit) {
 }
 
 func (s *battleSim) strike(unit *battleUnit, focus int) {
-	base := s.attackOf(unit) * roleDamagePercents[unit.role] / 100
+	base := s.attackOf(unit) * roleDamagePercents[unit.role] / 100 * (100 + unit.siege) / 100
 	percent := int64(100)
 	splash := 0
 	if unit.charge >= chargeFull && !unit.isTroop && !unit.rally {
@@ -1385,9 +1423,9 @@ func (s *battleSim) findPath(unit *battleUnit) ([]int, bool) {
 	target := s.structures[unit.target].input
 	reach := roleRanges[unit.role]
 	start := minInt(unit.pz/cellUnits, battleGridSize-1)*battleGridSize + minInt(unit.px/cellUnits, battleGridSize-1)
-	speed := roleSpeeds[unit.role]
+	speed := unit.speed
 	s.pathStep = (cellUnits + speed - 1) / speed
-	s.pathPerHit = unit.attack * roleDamagePercents[unit.role] / 100
+	s.pathPerHit = unit.attack * roleDamagePercents[unit.role] / 100 * (100 + unit.siege) / 100
 	if s.pathPerHit < 1 {
 		s.pathPerHit = 1
 	}

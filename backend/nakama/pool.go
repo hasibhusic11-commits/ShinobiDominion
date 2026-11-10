@@ -62,6 +62,8 @@ type HeroCatalog struct {
 	ManaBase      int64       `json:"manaPerLevelBase"`
 	ManaStep      int64       `json:"manaPerLevelStep"`
 	Gear          gearConfig  `json:"gear"`
+	Technique     techniqueConfig `json:"technique"`
+	Talents       talentConfig `json:"talents"`
 	Heroes        []Archetype `json:"heroes"`
 	byID          map[string]Archetype
 }
@@ -86,6 +88,12 @@ func loadCatalog(data []byte) (*HeroCatalog, error) {
 	}
 	if !catalog.Gear.valid() {
 		return nil, errors.New("hero gear settings are missing or invalid")
+	}
+	if !catalog.Technique.valid() {
+		return nil, errors.New("hero technique settings are missing or invalid")
+	}
+	if !catalog.Talents.valid() {
+		return nil, errors.New("hero talent settings are missing or invalid")
 	}
 	catalog.byID = map[string]Archetype{}
 	for _, h := range catalog.Heroes {

@@ -45,7 +45,7 @@ The last one kills the server under load and briefly runs it in production mode.
 |---|---|
 | `sd_player` | Crystals and gold, one row per player, the lock every change takes |
 | `sd_building` | Every building and wall segment in every village |
-| `sd_hero` | Hero instances, with UUIDs separate from the hero they are |
+| `sd_hero` | Hero instances, with UUIDs separate from the hero they are. Also holds each hero's gear levels (ADR-044), technique rank and talent (ADR-053) |
 | `sd_item` | Catalysts and other items |
 | `sd_idempotency` | Completed request IDs and their stored answers |
 | `sd_currency_ledger`, `sd_item_ledger` | Every change, with its reason |

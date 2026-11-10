@@ -76,6 +76,8 @@ namespace ShinobiDominion.Core
         public long manaPerLevelBase;
         public long manaPerLevelStep;
         public GearSettings gear;
+        public TechniqueSettings technique;
+        public TalentSettings talents;
         public List<HeroArchetype> heroes = new List<HeroArchetype>();
     }
 
@@ -95,6 +97,62 @@ namespace ShinobiDominion.Core
         public int HeroLevel(int level) => (level - 1) * heroLevelsPerGearLevel + 1;
     }
 
+    /// <summary>
+    /// Technique ranks (ADR-053): a hero's special grows stronger with each rank, bought with Technique Manuals.
+    /// Rank 1 is where every hero starts. Test values.
+    /// </summary>
+    public sealed class TechniqueSettings
+    {
+        public int maxRank;
+        public int powerPerRank;
+        public string item;
+        public int manualsPerRank;
+        public int heroLevelsPerRank;
+        /// <summary>Manuals a win pays: a dungeon win inside the daily limit, and each star of a raid on a rival.</summary>
+        public int perDungeonWin;
+        public int perRaidStar;
+
+        /// <summary>Manuals to reach a rank from the one below it.</summary>
+        public long Manuals(int rank) => (long)manualsPerRank * (rank - 1);
+        /// <summary>The cumulative hero level a rank needs, the same way the server counts it.</summary>
+        public int HeroLevel(int rank) => (rank - 1) * heroLevelsPerRank + 1;
+        /// <summary>Special power at a rank, on top of the rarity's own.</summary>
+        public int Power(int rarityPower, int rank) => rarityPower + powerPerRank * (Math.Max(rank, 1) - 1);
+    }
+
+    /// <summary>One talent a hero can hold (ADR-053). kind is what it changes: hp, attack, defense, charge, siege or speed.</summary>
+    public sealed class TalentDefinition
+    {
+        public string id;
+        public string displayName;
+        public string description;
+        public string kind;
+        public int perLevel;
+    }
+
+    /// <summary>
+    /// Talents (ADR-053): one passive per hero, rolled by the server for one Talent Token. Every roll is an even
+    /// draw of one talent and one level; there are no guarantees and a roll can repeat what the hero had. Test values.
+    /// </summary>
+    public sealed class TalentSettings
+    {
+        public const string Hp = "hp";
+        public const string Attack = "attack";
+        public const string Defense = "defense";
+        public const string Charge = "charge";
+        public const string Siege = "siege";
+        public const string Speed = "speed";
+        public static readonly string[] Kinds = { Hp, Attack, Defense, Charge, Siege, Speed };
+
+        public int maxLevel;
+        public string item;
+        /// <summary>Stars a raid on a rival needs to pay one Talent Token; 0 pays none.</summary>
+        public int raidStars;
+        public List<TalentDefinition> list = new List<TalentDefinition>();
+
+        public TalentDefinition Find(string id) => string.IsNullOrEmpty(id) ? null : list.FirstOrDefault(t => t.id == id);
+    }
+
     public sealed class HeroCatalog
     {
         public const int SupportedSchemaVersion = 1;
@@ -107,6 +165,8 @@ namespace ShinobiDominion.Core
         public long ManaPerLevelBase { get; }
         public long ManaPerLevelStep { get; }
         public GearSettings Gear { get; }
+        public TechniqueSettings Technique { get; }
+        public TalentSettings Talents { get; }
         public string BalanceStatus { get; }
 
         private HeroCatalog(HeroCatalogFile file)
@@ -120,6 +180,15 @@ namespace ShinobiDominion.Core
             Gear = file.gear ?? throw new FormatException("Hero gear settings are missing.");
             if (Gear.slots.Count != 3 || Gear.maxLevel < 1 || Gear.maxLevel > 50 || Gear.percentPerLevel < 0)
                 throw new FormatException("Hero gear settings are invalid.");
+            Technique = file.technique ?? throw new FormatException("Hero technique settings are missing.");
+            if (Technique.maxRank < 1 || Technique.maxRank > 20 || Technique.powerPerRank < 0 || string.IsNullOrEmpty(Technique.item)
+                || Technique.manualsPerRank < 0 || Technique.heroLevelsPerRank < 0)
+                throw new FormatException("Hero technique settings are invalid.");
+            Talents = file.talents ?? throw new FormatException("Hero talent settings are missing.");
+            if (Talents.maxLevel < 1 || Talents.maxLevel > 10 || string.IsNullOrEmpty(Talents.item) || Talents.list.Count == 0
+                || Talents.list.Any(t => string.IsNullOrEmpty(t.id) || t.perLevel < 1 || !TalentSettings.Kinds.Contains(t.kind))
+                || Talents.list.Select(t => t.id).Distinct().Count() != Talents.list.Count)
+                throw new FormatException("Hero talent settings are invalid.");
             BalanceStatus = file.balanceStatus;
             _byId = file.heroes.ToDictionary(h => h.id);
         }
@@ -210,6 +279,24 @@ namespace ShinobiDominion.Core
                 stats.Defense * (100 + percentPerLevel * gear[Charm]) / 100);
         }
 
+        /// <summary>A stat talent on top of the stats; the other kinds change the battle, not the numbers. Mirrors withTalent on the server.</summary>
+        public static HeroStats WithTalent(HeroStats stats, TalentDefinition talent, int level)
+        {
+            if (talent == null || level <= 0) return stats;
+            var percent = 100 + (long)talent.perLevel * level;
+            switch (talent.kind)
+            {
+                case TalentSettings.Hp: return new HeroStats(stats.Hp * percent / 100, stats.Attack, stats.Defense);
+                case TalentSettings.Attack: return new HeroStats(stats.Hp, stats.Attack * percent / 100, stats.Defense);
+                case TalentSettings.Defense: return new HeroStats(stats.Hp, stats.Attack, stats.Defense * percent / 100);
+                default: return stats;
+            }
+        }
+
+        /// <summary>What a talent of a battle kind is worth at a level: charge to start with, or a percent. 0 for the other kinds.</summary>
+        public static int TalentAmount(TalentDefinition talent, int level, string kind) =>
+            talent == null || level <= 0 || talent.kind != kind ? 0 : talent.perLevel * level;
+
         public static HeroStats Stats(HeroArchetype hero, int evolutionIndex, int level)
         {
             long steps = Cumulative(evolutionIndex, level) - 1;
@@ -234,6 +321,11 @@ namespace ShinobiDominion.Core
         public bool Locked;
         /// <summary>Weapon, Armor and Charm levels (ADR-044). Set by the server.</summary>
         public int[] Gear = new int[3];
+        /// <summary>Technique rank, 1 and up (ADR-053). Set by the server.</summary>
+        public int TechniqueRank = 1;
+        /// <summary>The talent the hero holds and its level, or "" and 0 before its first roll (ADR-053). Set by the server.</summary>
+        public string TalentId = "";
+        public int TalentLevel;
     }
 
     public enum HeroError
@@ -321,7 +413,8 @@ namespace ShinobiDominion.Core
         public HeroArchetype ArchetypeOf(HeroInstance hero) => Catalog.Get(hero.ArchetypeId);
 
         public HeroStats StatsOf(HeroInstance hero) =>
-            HeroMath.WithGear(HeroMath.Stats(ArchetypeOf(hero), hero.EvolutionIndex, hero.Level), hero.Gear, Catalog.Gear.percentPerLevel);
+            HeroMath.WithTalent(HeroMath.WithGear(HeroMath.Stats(ArchetypeOf(hero), hero.EvolutionIndex, hero.Level), hero.Gear, Catalog.Gear.percentPerLevel),
+                Catalog.Talents.Find(hero.TalentId), hero.TalentLevel);
 
         /// <summary>Creates an owned instance. Phase 3 restricts minting to the server.</summary>
         public HeroInstance AddHero(string archetypeId, int evolutionIndex = 0, int level = 1)
@@ -507,7 +600,10 @@ namespace ShinobiDominion.Core
                     level = hero.Level,
                     experience = hero.Experience,
                     locked = hero.Locked,
-                    gear = (int[])hero.Gear.Clone()
+                    gear = (int[])hero.Gear.Clone(),
+                    techniqueRank = hero.TechniqueRank,
+                    talentId = hero.TalentId,
+                    talentLevel = hero.TalentLevel
                 });
             }
             foreach (var pair in _items) save.items[pair.Key] = pair.Value;
@@ -548,6 +644,13 @@ namespace ShinobiDominion.Core
                 var gear = entry.gear ?? new int[3];
                 if (gear.Length != 3 || gear.Any(g => g < 0 || g > catalog.Gear.maxLevel))
                     throw new VillageSaveException("Gear out of range.");
+                // A save from before ADR-053 has no rank or talent: rank 1, no talent.
+                var rank = entry.techniqueRank == 0 ? 1 : entry.techniqueRank;
+                if (rank < 1 || rank > catalog.Technique.maxRank)
+                    throw new VillageSaveException("Technique rank out of range.");
+                var talentId = entry.talentId ?? "";
+                if (talentId == "" ? entry.talentLevel != 0 : catalog.Talents.Find(talentId) == null || entry.talentLevel < 1 || entry.talentLevel > catalog.Talents.maxLevel)
+                    throw new VillageSaveException("Talent out of range.");
                 roster._heroes.Add(entry.instanceId, new HeroInstance
                 {
                     InstanceId = entry.instanceId,
@@ -556,7 +659,10 @@ namespace ShinobiDominion.Core
                     Level = entry.level,
                     Experience = entry.experience,
                     Locked = entry.locked,
-                    Gear = (int[])gear.Clone()
+                    Gear = (int[])gear.Clone(),
+                    TechniqueRank = rank,
+                    TalentId = talentId,
+                    TalentLevel = entry.talentLevel
                 });
             }
             foreach (var pair in save.items)
@@ -589,6 +695,9 @@ namespace ShinobiDominion.Core
         public long experience;
         public bool locked;
         public int[] gear;
+        public int techniqueRank;
+        public string talentId;
+        public int talentLevel;
     }
 
     /// <summary>

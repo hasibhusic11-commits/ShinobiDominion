@@ -25,6 +25,12 @@ namespace ShinobiDominion.Core
         /// before the first tick. Only a timed battle (one with an end tick) uses it; elsewhere it must be 0.
         /// </summary>
         public int deployTick;
+        /// <summary>Ability charge the hero lands with, 0 to ChargeFull (Ready Stance, ADR-053). Talents are set by the server; all 0 for troops.</summary>
+        public int startCharge;
+        /// <summary>Extra damage to buildings, in percent (Siege Breaker).</summary>
+        public int siegePercent;
+        /// <summary>Extra walking speed, in percent (Swift Feet).</summary>
+        public int speedPercent;
     }
 
     /// <summary>A hero guarding the village, standing at a cell on or by its Hero Base.</summary>
@@ -43,6 +49,10 @@ namespace ShinobiDominion.Core
         public int evolution;
         /// <summary>How strong the special is, in percent of a Legendary's: by rarity, set by the server. 0 means 100.</summary>
         public int power;
+        /// <summary>Ability charge the defender starts with, 0 to ChargeFull (Ready Stance, ADR-053).</summary>
+        public int startCharge;
+        /// <summary>Extra walking speed, in percent (Swift Feet, ADR-053).</summary>
+        public int speedPercent;
     }
 
     public sealed class BattleBuildingInput
@@ -251,6 +261,11 @@ namespace ShinobiDominion.Core
 
         private static int PowerOf(int power) => power <= 0 ? PowerLegendary : power;
 
+        private static int StartCharge(int charge) => Math.Min(Math.Max(charge, 0), ChargeFull);
+
+        /// <summary>A role's walking speed with a talent's percent on top, never slower than the role.</summary>
+        private static int SpeedWith(int role, int percent) => Speeds[role] * (100 + Math.Max(0, percent)) / 100;
+
         /// <summary>A burst percent with only its extra part scaled: 300 at power 50 is 200.</summary>
         private static long Boost(long percent, int power) => 100 + (percent - 100) * power / 100;
 
@@ -299,6 +314,10 @@ namespace ShinobiDominion.Core
             public bool Rally;
             public int Evolution;
             public int Power = 100;
+            /// <summary>Walking speed per tick: the role's, raised by Swift Feet (ADR-053).</summary>
+            public int Speed;
+            /// <summary>Extra damage to buildings in percent (Siege Breaker, ADR-053).</summary>
+            public long Siege;
             public bool IsTroop;
             /// <summary>Holds the unit in place after a Hero Trap: it does nothing until it runs out.</summary>
             public int StunTimer;
@@ -328,6 +347,8 @@ namespace ShinobiDominion.Core
             public bool Rally;
             public int Evolution;
             public int Power = 100;
+            /// <summary>Walking speed per tick: the role's, raised by Swift Feet (ADR-053).</summary>
+            public int Speed;
             /// <summary>Holds the defender in place under a freeze spell (ADR-052): it does nothing until it runs out.</summary>
             public int StunTimer;
         }
@@ -418,9 +439,13 @@ namespace ShinobiDominion.Core
                     HomeZ = d.z,
                     Rally = d.special == SpecialRally,
                     Evolution = d.evolution,
-                    Power = PowerOf(d.power)
+                    Power = PowerOf(d.power),
+                    Charge = StartCharge(d.startCharge),
+                    Speed = SpeedWith(role, d.speedPercent)
                 };
             }).ToArray();
+            foreach (var defender in _defenders)
+                if (defender.Charge > 0) Log(BattleEventKind.Charge, defender.Index, defender.Charge, 1);
         }
 
         /// <summary>The whole battle at once, everyone landed before the first tick, until one side is gone or time is up.</summary>
@@ -583,9 +608,14 @@ namespace ShinobiDominion.Core
                 IsTroop = h.isTroop,
                 Rally = !h.isTroop && h.special == SpecialRally,
                 Evolution = h.evolution,
-                Power = PowerOf(h.power)
+                Power = PowerOf(h.power),
+                Charge = h.isTroop ? 0 : StartCharge(h.startCharge),
+                Speed = SpeedWith(RoleNumber(h.role), h.isTroop ? 0 : h.speedPercent),
+                Siege = h.isTroop ? 0 : Math.Max(0, h.siegePercent)
             });
             _landed.Add(h);
+            var landed = _units[_units.Count - 1];
+            if (landed.Charge > 0) Log(BattleEventKind.Charge, landed.Index, landed.Charge, 0);
         }
 
         /// <summary>Plays one tick. False once the battle is over (then Finish gives the result).</summary>
@@ -882,7 +912,7 @@ namespace ShinobiDominion.Core
             var next = unit.Path[unit.PathAt];
             var tx = (next % GridSize) * CellUnits + CellUnits / 2;
             var tz = (next / GridSize) * CellUnits + CellUnits / 2;
-            var speed = Speeds[unit.Role];
+            var speed = unit.Speed;
             if (unit.Px != tx)
             {
                 var step = Math.Min(Math.Abs(tx - unit.Px), speed);
@@ -971,7 +1001,7 @@ namespace ShinobiDominion.Core
 
         private void Strike(Unit unit, int focus)
         {
-            var base_ = AttackOf(unit) * DamagePercents[unit.Role] / 100;
+            var base_ = AttackOf(unit) * DamagePercents[unit.Role] / 100 * (100 + unit.Siege) / 100;
             var percent = 100L;
             var splash = 0;
             if (unit.Charge >= ChargeFull && !unit.IsTroop && !unit.Rally)
@@ -1232,7 +1262,7 @@ namespace ShinobiDominion.Core
                 defender.Tz = z * CellUnits + CellUnits / 2;
                 Log(BattleEventKind.DefenderMove, defender.Index, x, z);
             }
-            var speed = Speeds[defender.Role];
+            var speed = defender.Speed;
             if (IsWallCell(defender.Tz / CellUnits * GridSize + defender.Tx / CellUnits)) speed = Math.Max(1, speed / HopSteps);
             if (defender.Px != defender.Tx)
             {
@@ -1307,9 +1337,9 @@ namespace ShinobiDominion.Core
             var target = _structures[unit.Target].Input;
             var range = Ranges[unit.Role];
             var start = Math.Min(unit.Pz / CellUnits, GridSize - 1) * GridSize + Math.Min(unit.Px / CellUnits, GridSize - 1);
-            var speed = Speeds[unit.Role];
+            var speed = unit.Speed;
             _pathStep = (CellUnits + speed - 1) / speed;
-            _pathPerHit = Math.Max(1, unit.Attack * DamagePercents[unit.Role] / 100);
+            _pathPerHit = Math.Max(1, unit.Attack * DamagePercents[unit.Role] / 100 * (100 + unit.Siege) / 100);
             _pathInterval = Intervals[unit.Role];
             for (var i = 0; i < _cost.Length; i++) _cost[i] = int.MaxValue;
             _heap.Clear();

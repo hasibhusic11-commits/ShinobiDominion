@@ -7,6 +7,18 @@
   "manaPerLevelBase": 20,
   "manaPerLevelStep": 5,
   "gear": { "slots": ["Weapon", "Armor", "Charm"], "maxLevel": 10, "percentPerLevel": 5, "manaPerLevel": 150, "goldPerLevel": 1500, "heroLevelsPerGearLevel": 20 },
+  "technique": { "maxRank": 10, "powerPerRank": 8, "item": "technique_manual", "manualsPerRank": 2, "heroLevelsPerRank": 15, "perDungeonWin": 1, "perRaidStar": 1 },
+  "talents": {
+    "maxLevel": 5, "item": "talent_token", "raidStars": 3,
+    "list": [
+      { "id": "iron_body", "displayName": "Iron Body", "description": "More health.", "kind": "hp", "perLevel": 4 },
+      { "id": "keen_edge", "displayName": "Keen Edge", "description": "Hits harder.", "kind": "attack", "perLevel": 4 },
+      { "id": "stone_skin", "displayName": "Stone Skin", "description": "Takes less from every hit.", "kind": "defense", "perLevel": 6 },
+      { "id": "ready_stance", "displayName": "Ready Stance", "description": "Lands with the special already part charged.", "kind": "charge", "perLevel": 1 },
+      { "id": "siege_breaker", "displayName": "Siege Breaker", "description": "Deals more damage to buildings when attacking.", "kind": "siege", "perLevel": 8 },
+      { "id": "swift_feet", "displayName": "Swift Feet", "description": "Walks faster.", "kind": "speed", "perLevel": 6 }
+    ]
+  },
   "heroes": [
     {
       "id": "river_scout", "displayName": "River Scout", "rarity": "Common", "role": "Assassin", "affinity": "Water", "contentComplete": true, "retired": true,
