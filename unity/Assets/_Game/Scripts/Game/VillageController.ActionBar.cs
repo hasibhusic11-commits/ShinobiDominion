@@ -174,7 +174,9 @@ namespace ShinobiDominion.Game
             const float bottom = 34f;
 
             var plate = Ui.Rect("NamePlate", bar);
-            Ui.Anchor(plate, new Vector2(1f, 0f), new Vector2(Mathf.Max(width, 420f), 54f), new Vector2(-right - (width - Mathf.Max(width, 420f)) / 2f, bottom + ActionSize + 44f));
+            // Its right edge lines up with the buttons' right edge. Centred over a short row of buttons, the wider plate
+            // ran off the screen.
+            Ui.Anchor(plate, new Vector2(1f, 0f), new Vector2(Mathf.Max(width, 420f), 54f), new Vector2(-right, bottom + ActionSize + 44f));
             var plateImage = plate.gameObject.AddComponent<Image>();
             plateImage.sprite = HudArt.Sprite("hud_building_nameplate");
             plateImage.raycastTarget = false;

@@ -63,14 +63,14 @@ namespace ShinobiDominion.Game
 
                 // The odds stay on screen, as the rules require, with every hero one tap away.
                 var rates = Ui.Rect("GateRates", scene);
-                Ui.Anchor(rates, new Vector2(0f, 1f), new Vector2(300f, 220f), new Vector2(16f, -84f));
+                Ui.Anchor(rates, new Vector2(0f, 1f), new Vector2(300f, 272f), new Vector2(16f, -84f));
                 HudArt.Plate(rates).pixelsPerUnitMultiplier = 1.1f;
                 HudArt.DropShadow(rates);
                 var lines = $"{odds.status}\n\n";
                 foreach (var rarity in new[] { "Legendary", "Elite", "Common" })
                     if (odds.rarityChance.TryGetValue(rarity, out var chance))
                         lines += $"{rarity}:  {chance}\n";
-                var text = Ui.Label(rates, lines.TrimEnd(), 18, TextAnchor.UpperLeft);
+                var text = Ui.Label(rates, lines.TrimEnd(), 16, TextAnchor.UpperLeft);
                 Ui.Stretch(text.rectTransform, 16f, 60f, 16f, 14f);
                 var ratesButton = Ui.Button(rates, "RatesButton", "All rates", ShowSummonRates, true, null, 17);
                 Ui.Anchor((RectTransform)ratesButton.transform, new Vector2(0.5f, 0f), new Vector2(200f, 44f), new Vector2(0f, 10f));

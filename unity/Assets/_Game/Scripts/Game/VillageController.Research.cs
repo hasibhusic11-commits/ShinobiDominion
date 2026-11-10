@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using ShinobiDominion.Core;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace ShinobiDominion.Game
 {
@@ -34,7 +35,7 @@ namespace ShinobiDominion.Game
                 var name = $"Research_{troop.id}";
                 if (level >= TroopData.Research.maxLevel)
                 {
-                    panel.Action(name, $"{troop.displayName}  level {level} (+{boost}%)   Fully studied", null, false, null, 18);
+                    TwoLine(panel.Action(name, $"{troop.displayName}  level {level} (+{boost}%)\nFully studied", null, false, null, 18));
                     continue;
                 }
                 var next = level + 1;
@@ -42,9 +43,16 @@ namespace ShinobiDominion.Game
                 var time = FormatDuration(TroopResearch.Seconds(TroopData, next) * TimeSpan.TicksPerSecond);
                 var error = Research.Check(Village, TroopData, troop.id);
                 var why = error == VillageError.ResearchHutTooLow ? $"   needs hut level {next}" : "";
-                panel.Action(name, $"{troop.displayName}  level {level} (+{boost}%)   Study level {next}: {cost:N0} Mana, {time}{why}",
-                    () => StartResearch(troop.id), error == VillageError.None, null, 18);
+                TwoLine(panel.Action(name, $"{troop.displayName}  level {level} (+{boost}%)\nStudy level {next}: {cost:N0} Mana, {time}{why}",
+                    () => StartResearch(troop.id), error == VillageError.None, null, 18));
             }
+        }
+
+        /// <summary>A button tall enough for its two lines, so the text never squeezes against the edges.</summary>
+        private static void TwoLine(Button button)
+        {
+            var layout = button.GetComponent<LayoutElement>();
+            layout.minHeight = layout.preferredHeight = 70f;
         }
 
         public void StartResearch(string troopId)

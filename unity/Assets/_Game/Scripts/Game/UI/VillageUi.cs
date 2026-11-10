@@ -746,8 +746,9 @@ namespace ShinobiDominion.Game
             _card.anchorMin = new Vector2(0f, 0f);
             _card.anchorMax = new Vector2(0f, 1f);
             _card.pivot = new Vector2(0f, 0.5f);
-            _card.sizeDelta = new Vector2(450f, -104f);
-            _card.anchoredPosition = new Vector2(16f, -44f);
+            // Starts below the HUD's player plate (it used to cover the level badge) and ends just above the bottom.
+            _card.sizeDelta = new Vector2(450f, -160f);
+            _card.anchoredPosition = new Vector2(16f, -72f);
             Ui.Framed(_card, HudArt.Sprite("frame_s80")).pixelsPerUnitMultiplier = 1.3f;
 
             var header = HudArt.Label(_card, title, HudArt.Display, 25, TextAnchor.MiddleLeft, HudArt.BrassLight, HudArt.LacquerDeep);
@@ -768,7 +769,8 @@ namespace ShinobiDominion.Game
             var close = Medal.Create(_card, "CloseButton", MedalKind.Destructive, "close", null, onClose, true, 54f);
             Ui.Anchor((RectTransform)close.transform, new Vector2(1f, 1f), new Vector2(54f, 54f), new Vector2(-12f, -10f));
 
-            BuildScrollArea(14f, 16f, 14f, 78f);
+            // Side insets clear the brass frame's inner edge, so text never touches or hides under it.
+            BuildScrollArea(28f, 18f, 28f, 78f);
             fill(this);
             if (opening)
             {
@@ -803,10 +805,12 @@ namespace ShinobiDominion.Game
                 info.rectTransform.anchorMax = new Vector2(1f, 1f);
                 info.rectTransform.pivot = new Vector2(1f, 1f);
                 info.rectTransform.sizeDelta = new Vector2(-24f, 72f);
-                info.rectTransform.anchoredPosition = new Vector2(-20f, -4f);
+                // As far in from the right frame as the Back button is from the left.
+                info.rectTransform.anchoredPosition = new Vector2(-44f, -4f);
             }
 
-            BuildScrollArea(24f, 20f, 24f, 82f);
+            // Side insets clear the brass frame's inner edge; the bottom clears its corner pieces.
+            BuildScrollArea(44f, 30f, 44f, 82f);
             fill(this);
             if (opening)
             {
@@ -914,6 +918,8 @@ namespace ShinobiDominion.Game
         {
             var layout = rect.gameObject.AddComponent<VerticalLayoutGroup>();
             layout.spacing = 8f;
+            // A little room at the bottom so the last row never sits on the frame or under the scroll fade.
+            layout.padding = new RectOffset(0, 0, 0, 12);
             layout.childControlWidth = true;
             layout.childControlHeight = true;
             layout.childForceExpandWidth = true;

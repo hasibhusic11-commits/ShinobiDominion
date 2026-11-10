@@ -98,12 +98,23 @@ namespace ShinobiDominion.Game
             shade.SetSiblingIndex(artRect.GetSiblingIndex() + 1);
 
             var title = HudArt.Label(rect, tile.Title, HudArt.Display, 30, TextAnchor.UpperCenter, HudArt.BrassLight, HudArt.LacquerDeep);
-            Ui.Anchor(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(280f, 52f), new Vector2(0f, -16f));
+            // Stretched with a margin on each side, so a long title shrinks inside the card instead of touching its edges.
+            title.rectTransform.anchorMin = new Vector2(0f, 1f);
+            title.rectTransform.anchorMax = new Vector2(1f, 1f);
+            title.rectTransform.pivot = new Vector2(0.5f, 1f);
+            title.rectTransform.sizeDelta = new Vector2(-48f, 52f);
+            title.rectTransform.anchoredPosition = new Vector2(0f, -16f);
+            title.horizontalOverflow = HorizontalWrapMode.Wrap;
+            title.verticalOverflow = VerticalWrapMode.Truncate;
             title.resizeTextForBestFit = true;
             title.resizeTextMinSize = 18;
             title.resizeTextMaxSize = 30;
             var blurb = HudArt.Label(rect, tile.Blurb, HudArt.Numbers, 18, TextAnchor.UpperCenter, HudArt.Ivory, HudArt.LacquerDeep);
-            Ui.Anchor(blurb.rectTransform, new Vector2(0.5f, 1f), new Vector2(220f, 160f), new Vector2(0f, -86f));
+            blurb.rectTransform.anchorMin = new Vector2(0f, 1f);
+            blurb.rectTransform.anchorMax = new Vector2(1f, 1f);
+            blurb.rectTransform.pivot = new Vector2(0.5f, 1f);
+            blurb.rectTransform.sizeDelta = new Vector2(-64f, 160f);
+            blurb.rectTransform.anchoredPosition = new Vector2(0f, -86f);
             blurb.horizontalOverflow = HorizontalWrapMode.Wrap;
 
             var go = Ui.Button(rect, tile.Button, tile.Go, tile.Action, tile.Open, tile.Open ? Ui.AttackColor : (Color?)null, 21);
@@ -339,10 +350,33 @@ namespace ShinobiDominion.Game
                 foreach (var entry in board.top)
                 {
                     var hero = !string.IsNullOrEmpty(entry.archetypeId) && Roster.Catalog.TryGet(entry.archetypeId, out var archetype) ? $"{archetype.displayName}, level {entry.level}" : "no hero on guard";
-                    var line = panel.Line($"#{entry.rank}   {entry.name}   {entry.points:N0} points   ({hero})", entry.isMe ? 23 : 20, entry.isMe ? Ui.AccentColor : (entry.rank <= 3 ? new Color(1f, 0.87f, 0.45f) : (Color?)null));
-                    if (entry.isMe) UiMotion.Shine(line, Color.white, 2.4f, 0.3f);
+                    // Fixed columns, so rank, name, points and hero line up from row to row.
+                    var size = entry.isMe ? 23 : 20;
+                    var color = entry.isMe ? Ui.AccentColor : (entry.rank <= 3 ? new Color(1f, 0.87f, 0.45f) : Ui.MutedText);
+                    var row = panel.Row();
+                    row.GetComponent<HorizontalLayoutGroup>().childForceExpandWidth = false;
+                    RankCell(row, $"#{entry.rank}", 80f, size, color);
+                    var name = RankCell(row, entry.name, 300f, size, color);
+                    RankCell(row, $"{entry.points:N0} points", 180f, size, color);
+                    RankCell(row, hero, 0f, size, color);
+                    if (entry.isMe) UiMotion.Shine(name, Color.white, 2.4f, 0.3f);
                 }
             });
+        }
+
+        private static Text RankCell(RectTransform row, string text, float width, int size, Color color)
+        {
+            var label = Ui.Label(row, text, size, TextAnchor.MiddleLeft, color);
+            label.horizontalOverflow = HorizontalWrapMode.Wrap;
+            label.verticalOverflow = VerticalWrapMode.Truncate;
+            label.resizeTextForBestFit = true;
+            label.resizeTextMinSize = 14;
+            label.resizeTextMaxSize = size;
+            var cell = label.gameObject.AddComponent<LayoutElement>();
+            cell.minHeight = cell.preferredHeight = size + 12f;
+            if (width > 0f) cell.minWidth = cell.preferredWidth = width;
+            else cell.flexibleWidth = 1f;
+            return label;
         }
 
         public void OpenQuests()
@@ -373,7 +407,8 @@ namespace ShinobiDominion.Game
                     else if (quest.Done)
                     {
                         var button = panel.Action("Quest_" + id, $"{quest.title}   {progress}   Claim {quest.crystals:N0} gems", () => ClaimQuest(id), true, Ui.AccentColor, 19);
-                        UiMotion.Pulse(button.transform, 0.04f, 1.2f);
+                        // The caption pulses, not the button: a growing button broke out of the list's straight edges.
+                        UiMotion.Pulse(button.GetComponentInChildren<Text>().transform, 0.05f, 1.2f);
                     }
                     else
                         panel.Action("Quest_" + id, $"{quest.title}   {progress}   {quest.crystals:N0} gems", null, false, null, 19);

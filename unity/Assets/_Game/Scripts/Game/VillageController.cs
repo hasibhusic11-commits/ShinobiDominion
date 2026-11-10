@@ -654,7 +654,8 @@ namespace ShinobiDominion.Game
         }
 
         private static readonly Vector2 CatalogWindow = new Vector2(1180f, 510f);
-        private static readonly Vector2 CatalogCardSize = new Vector2(208f, 318f);
+        // Five cards (the most any tab has) fit one row of the window: 5 x 204 + 4 x 14 = 1076 of the 1092 inside.
+        private static readonly Vector2 CatalogCardSize = new Vector2(204f, 318f);
 
         /// <summary>The build catalog as a framed window over the village (docs/ui/CATALOG_SPEC.md).</summary>
         private void ShowCatalog()
@@ -689,7 +690,7 @@ namespace ShinobiDominion.Game
                 var grid = cards.gameObject.AddComponent<GridLayoutGroup>();
                 grid.cellSize = CatalogCardSize;
                 grid.spacing = new Vector2(14f, 14f);
-                grid.childAlignment = TextAnchor.UpperLeft;
+                grid.childAlignment = TextAnchor.UpperCenter;
                 var index = 0;
                 foreach (var definition in Village.Catalog.InCategory(_catalogCategory))
                     if (definition.removable && !definition.switchOnly)

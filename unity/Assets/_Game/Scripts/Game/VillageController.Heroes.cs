@@ -224,6 +224,11 @@ namespace ShinobiDominion.Game
 
             var title = HudArt.Label(rect, archetype.displayName, HudArt.Display, 15, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.LacquerDeep);
             Ui.Anchor(title.rectTransform, new Vector2(0.5f, 0f), new Vector2(166f, 26f), new Vector2(0f, 36f));
+            title.horizontalOverflow = HorizontalWrapMode.Wrap;
+            title.verticalOverflow = VerticalWrapMode.Truncate;
+            title.resizeTextForBestFit = true;
+            title.resizeTextMinSize = 10;
+            title.resizeTextMaxSize = 15;
             var rarity = Ui.Strong(Ui.Label(rect, string.IsNullOrEmpty(tag) ? archetype.rarity.ToString() : tag, 14, TextAnchor.MiddleCenter, RarityColor(archetype.rarity)));
             Ui.Anchor(rarity.rectTransform, new Vector2(0.5f, 0f), new Vector2(166f, 22f), new Vector2(0f, 14f));
 
@@ -437,7 +442,8 @@ namespace ShinobiDominion.Game
                     return;
                 }
 
-                panel.Line("Choose the copy to sacrifice:", 22, Ui.TextColor);
+                // Centred like the requirement rows above and the cards below.
+                panel.Line("Choose the copy to sacrifice:", 22, Ui.TextColor).alignment = TextAnchor.UpperCenter;
                 var grid = panel.Grid(HeroCardSize);
                 foreach (var duplicate in duplicates)
                     HeroCard(grid, "Sacrifice_" + duplicate.InstanceId, duplicate, "Sacrifice", () => ShowEvolutionConfirm(instanceId, duplicate.InstanceId), true);
@@ -449,7 +455,7 @@ namespace ShinobiDominion.Game
         {
             var row = panel.Block(50f);
             var plate = Ui.Rect("Requirement", row);
-            Ui.Stretch(plate, 0f, 0f, 380f, 0f);
+            Ui.Anchor(plate, new Vector2(0.5f, 0.5f), new Vector2(760f, 50f), Vector2.zero);
             HudArt.Plate(plate);
             HudArt.Picture(plate, met ? "Met" : "NotMet", met ? "icon_check" : "icon_cross", new Vector2(0f, 0.5f), new Vector2(30f, 30f), new Vector2(16f, 1f));
             var label = HudArt.Label(plate, text, HudArt.Numbers, 18, TextAnchor.MiddleLeft, met ? HudArt.Ivory : HudArt.IvoryMuted, HudArt.LacquerDeep);

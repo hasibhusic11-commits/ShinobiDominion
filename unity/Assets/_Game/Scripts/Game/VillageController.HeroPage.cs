@@ -104,11 +104,13 @@ namespace ShinobiDominion.Game
             {
                 var holder = Ui.Rect("HeroFigure", scene);
                 Ui.Anchor(holder, new Vector2(PageCentre, 0f), new Vector2(420f, 420f), new Vector2(0f, 132f));
+                CentreOnPage(holder);
                 HeroPicture(holder, archetype, hero.EvolutionIndex, 420f, 0f);
             }
 
             // Name plate: the hero's real name, on the crimson ribbon.
             var plate = HudArt.Picture(scene, "NamePlate", "ribbon", new Vector2(PageCentre, 0f), new Vector2(440f, 74f), new Vector2(0f, 70f));
+            CentreOnPage(plate.rectTransform);
             var name = HudArt.Label(plate.transform, archetype.displayName.ToUpperInvariant(), HudArt.Display, 26, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.CrimsonDark);
             Ui.Stretch(name.rectTransform, 44f, 6f, 44f, 2f);
             name.resizeTextForBestFit = true;
@@ -122,8 +124,15 @@ namespace ShinobiDominion.Game
                 var final = hero.EvolutionIndex >= HeroMath.MaxEvolution;
                 var evolve = Ui.Button(scene, "EvolveButton", final ? "Final Form" : "Evolve", () => ShowEvolution(hero.InstanceId), true, Ui.AccentColor, 24);
                 Ui.Anchor((RectTransform)evolve.transform, new Vector2(PageCentre, 0f), new Vector2(230f, 58f), new Vector2(0f, 10f));
+                CentreOnPage((RectTransform)evolve.transform);
             }
         }
+
+        /// <summary>
+        /// Ui.Anchor puts the pivot where the anchor is, so at PageCentre each element would shift by its own width.
+        /// Pivoting on its middle puts the figure, stars, ribbon and Evolve button on one centre line.
+        /// </summary>
+        private static void CentreOnPage(RectTransform rect) => rect.pivot = new Vector2(0.5f, rect.pivot.y);
 
         /// <summary>
         /// One glowing blue star per evolution, centred just above the name plate; nothing at all before the first
@@ -134,6 +143,7 @@ namespace ShinobiDominion.Game
             if (evolutions <= 0) return;
             var row = Ui.Rect("EvolutionStars", scene);
             Ui.Anchor(row, new Vector2(PageCentre, 0f), new Vector2(evolutions * 54f, 54f), new Vector2(0f, 126f));
+            CentreOnPage(row);
             for (var i = 0; i < evolutions; i++)
             {
                 var x = (i - (evolutions - 1) * 0.5f) * 54f;
@@ -357,8 +367,11 @@ namespace ShinobiDominion.Game
                 medal.GetComponent<Button>().enabled = false;
 
                 var title = HudArt.Label(row, skill.displayName, HudArt.Display, 20, TextAnchor.LowerLeft, open ? HudArt.Ivory : HudArt.IvoryMuted, HudArt.LacquerDeep);
-                Ui.Stretch(title.rectTransform, 84f, rowHeight * 0.46f, 56f, 6f);
+                // One line, kept clear of the lock on a locked row: a long name gets a smaller size to fit the space.
+                var titleRoom = RightWidth - 36f - 84f - (open ? 12f : 52f);
+                Ui.Stretch(title.rectTransform, 84f, rowHeight * 0.46f, open ? 12f : 52f, 6f);
                 title.horizontalOverflow = HorizontalWrapMode.Overflow;
+                title.fontSize = Mathf.Clamp((int)(titleRoom / (skill.displayName.Length * 0.7f)), 13, 20);
                 var kind = SkillKind(skill, i, skills.Count);
                 var sub = HudArt.Label(row, kind, HudArt.Numbers, 16, TextAnchor.UpperLeft, open ? HudArt.BrassLight : new Color(0.6f, 0.8f, 1f), HudArt.LacquerDeep);
                 Ui.Stretch(sub.rectTransform, 84f, 6f, 8f, rowHeight * 0.56f);
@@ -367,7 +380,8 @@ namespace ShinobiDominion.Game
                     // A lock, and beside it the blue stars this skill needs, matching the evolution stars under the hero.
                     for (var s = 0; s < skill.unlockEvolution; s++)
                     {
-                        var need = Ui.Icon(row, HeroArt.Star, new Vector2(1f, 0f), new Vector2(18f, 18f), new Vector2(-52f - s * 19f, 22f));
+                        // On the lower line, beside the skill kind, so the name above has the width.
+                        var need = Ui.Icon(row, HeroArt.Star, new Vector2(1f, 0f), new Vector2(18f, 18f), new Vector2(-52f - s * 19f, 8f));
                         need.name = "NeedStar";
                         need.color = EvolutionBlue;
                         need.raycastTarget = false;

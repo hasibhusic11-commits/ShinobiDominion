@@ -44,13 +44,20 @@ namespace ShinobiDominion.Game
                 : LastMessage;
             var hintLabel = HudArt.Label(screen, hint, HudArt.Numbers, 20, TextAnchor.MiddleCenter, string.IsNullOrEmpty(LastMessage) ? HudArt.Ivory : Ui.AccentColor, HudArt.LacquerDeep);
             hintLabel.raycastTarget = false;
-            Ui.Anchor(hintLabel.rectTransform, new Vector2(0.5f, 1f), new Vector2(760f, 30f), new Vector2(0f, -226f));
+            // Narrow enough to stay clear of the loot panel at the top right; two lines at most.
+            Ui.Anchor(hintLabel.rectTransform, new Vector2(0.5f, 1f), new Vector2(600f, 54f), new Vector2(0f, -224f));
+            hintLabel.horizontalOverflow = HorizontalWrapMode.Wrap;
+            hintLabel.verticalOverflow = VerticalWrapMode.Truncate;
+            hintLabel.resizeTextForBestFit = true;
+            hintLabel.resizeTextMinSize = 15;
+            hintLabel.resizeTextMaxSize = 20;
 
             // Above the cards, at the left: drop everything left at once.
             if (!NothingLeftToDrop)
             {
                 var auto = Ui.Button(screen, "AutoPlaceButton", "Auto", AutoPlaceHeroes, true, null, 22);
-                Ui.Anchor((RectTransform)auto.transform, new Vector2(0f, 0f), new Vector2(130f, 52f), new Vector2(16f, CardHeight + 28f));
+                // Its middle on the same line as the damage box's at the bottom right (70 tall, 32 above the cards).
+                Ui.Anchor((RectTransform)auto.transform, new Vector2(0f, 0f), new Vector2(130f, 52f), new Vector2(16f, CardHeight + 41f));
             }
 
             BuildCardRow(true);
