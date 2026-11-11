@@ -177,7 +177,10 @@ namespace ShinobiDominion.Game
                 var east = (mask & Village.WallEast) != 0;
                 if (east) Piece($"wall_seg_x_{art:00}", art, post, BuildingSprites.Order(center + new Vector3(0.5f, 0f, 0f)));
                 if (north) Piece($"wall_seg_z_{art:00}", art, post, BuildingSprites.Order(center + new Vector3(0f, 0f, 0.5f)));
-                if (mask == 0) Piece($"wall_post_v2_{art:00}", art, post, BuildingSprites.Order(center) + 1);
+                // Every wall cell is a structural post, including ends, corners and
+                // intersections. Previously posts were omitted whenever a connection
+                // existed, leaving gaps at turns and at the ends of a continuous wall.
+                Piece($"wall_post_v2_{art:00}", art, post, BuildingSprites.Order(center) + 1);
             }
 
             for (var i = _used; i < _pieces.Count; i++) _pieces[i].gameObject.SetActive(false);
@@ -190,9 +193,11 @@ namespace ShinobiDominion.Game
         /// </summary>
         private void Piece(string name, int art, Vector3 foot, int order)
         {
-            var sprite = BuildingSprites.Load(name);
-            if (sprite == null) return;
-            var step = BuildingSprites.MetaPixels($"wall_seg_x_{art:00}");
+            // An incomplete upgrade art pack must not make a real wall invisible.
+            // Keep the same direction/type and use the closest available lower tier.
+            var sprite = FindAvailableSprite(name, art, BuildingSprites.Load, out var picturedTier);
+            if (sprite == null) return; // Requires missing source art; never fabricate a wall.
+            var step = BuildingSprites.MetaPixels($"wall_seg_x_{picturedTier:00}");
             if (step <= 0f) step = 184f;
             var screenWidth = sprite.rect.width / step * 0.70710678f;
             if (_used < _pieces.Count)
@@ -210,6 +215,40 @@ namespace ShinobiDominion.Game
                 _pieces.Add(BuildingSprites.Stand(_root, "WallPiece", sprite, foot, screenWidth, order, Color.white));
             }
             _used++;
+        }
+
+        /// <summary>
+        /// Keep the requested wall direction/type while walking backwards through
+        /// its visual upgrade tiers. Exposed to Unity tests with an injected loader.
+        /// This never changes the wall's actual village/gameplay level.
+        /// </summary>
+        public static Sprite FindAvailableSprite(string name, int art, System.Func<string, Sprite> load, out int picturedTier)
+        {
+            picturedTier = art;
+            if (string.IsNullOrEmpty(name) || load == null || art < 1) return null;
+
+            var sprite = load(name);
+            if (sprite != null) return sprite;
+
+            var suffix = name.LastIndexOf('_');
+            var prefix = suffix >= 0 ? name.Substring(0, suffix + 1) : name + "_";
+            for (var tier = art - 1; tier >= 1; tier--)
+            {
+                sprite = load(prefix + tier.ToString("00"));
+                if (sprite == null) continue;
+                picturedTier = tier;
+                return sprite;
+            }
+            // A partial pack might contain only later tiers; keep a real wall
+            // visible rather than leaving a gap even on level-one villages.
+            for (var tier = art + 1; tier <= BuildingSprites.ArtLevels; tier++)
+            {
+                sprite = load(prefix + tier.ToString("00"));
+                if (sprite == null) continue;
+                picturedTier = tier;
+                return sprite;
+            }
+            return null;
         }
 
         private void Shadow(Vector3 center)

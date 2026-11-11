@@ -49,6 +49,30 @@ namespace ShinobiDominion.Tests
         private static void Click(Button button) => button.onClick.Invoke();
 
         [Test]
+        public void HeroCardCrop_StaysInsideSquareAndWideArt()
+        {
+            foreach (var dimensions in new[] {
+                new Vector2Int(390, 390), new Vector2Int(800, 1400),
+                new Vector2Int(800, 250)
+            })
+            {
+                var crop = HeroConcepts.CardCropRect(dimensions.x, dimensions.y);
+                Assert.GreaterOrEqual(crop.xMin, 0f);
+                Assert.GreaterOrEqual(crop.yMin, 0f);
+                Assert.LessOrEqual(crop.xMax, dimensions.x);
+                Assert.LessOrEqual(crop.yMax, dimensions.y);
+                Assert.Greater(crop.height, 0f);
+            }
+
+            var square = HeroConcepts.CardCropRect(390, 390);
+            Assert.Less(square.yMin, 30f,
+                "Square character cards should retain the top of the portrait");
+            var tall = HeroConcepts.CardCropRect(800, 1400);
+            Assert.AreEqual(800f * HeroConcepts.CardWidthShare, tall.width, 0.01f,
+                "Existing taller Legendary paintings keep their original crop width");
+        }
+
+        [Test]
         public void Altar_ColumnCount_AdaptsToWindowWidth()
         {
             Assert.AreEqual(5, SdKit.RosterColumns(972f), "Reference-width Altar keeps five busts");
@@ -67,6 +91,52 @@ namespace ShinobiDominion.Tests
             var rows = Buttons().Count(b => b.name.StartsWith("Hero_"));
             Assert.Greater(Controller.Roster.HeroCount, 0);
             Assert.AreEqual(Controller.Roster.HeroCount, rows);
+        }
+
+        [UnityTest]
+        public IEnumerator Altar_HasThinShelfAndIndividualFramedLevelPlates()
+        {
+            Controller.Select(First("hero_altar").Id);
+            Controller.ShowAltarRoster();
+            yield return null;
+
+            var shelf = _root.GetComponentsInChildren<RectTransform>(false)
+                .FirstOrDefault(t => t.name == "Shelf0");
+            Assert.IsNotNull(shelf);
+            Assert.LessOrEqual(shelf.sizeDelta.y, 12f,
+                "The shelf must not become a 40-pixel brown banner over the cards");
+
+            var card = Buttons().First(b => b.name.StartsWith("Hero_"));
+            var lip = card.GetComponentsInChildren<RectTransform>(false)
+                .FirstOrDefault(t => t.name == "Lip");
+            Assert.IsNotNull(lip);
+            var plate = lip.GetComponent<Image>();
+            Assert.IsNotNull(plate, "Each hero level needs its own framed plate");
+            Assert.IsNotNull(plate.sprite, "Level plate must use the painted UI sprite");
+        }
+
+        [UnityTest]
+        public IEnumerator Altar_PortraitsShowRealHeroNames()
+        {
+            Controller.Select(First("hero_altar").Id);
+            Controller.ShowAltarRoster();
+            yield return null;
+
+            var hero = Controller.Roster.Heroes.First();
+            var card = Find("Hero_" + hero.InstanceId);
+            Assert.IsNotNull(card);
+            var name = card.GetComponentsInChildren<Text>(false)
+                .FirstOrDefault(t => t.name == "HeroName");
+            Assert.IsNotNull(name, "Every hero bust should have a nameplate");
+            Assert.AreEqual(Controller.Roster.ArchetypeOf(hero).displayName, name.text,
+                "Hero names must come from the live roster, not hardcoded art labels");
+            var namePlate = (RectTransform)name.transform.parent;
+            var levelPlate = card.GetComponentsInChildren<RectTransform>(false)
+                .FirstOrDefault(t => t.name == "Lip");
+            Assert.IsNotNull(levelPlate);
+            Assert.GreaterOrEqual(namePlate.anchoredPosition.y,
+                levelPlate.anchoredPosition.y + levelPlate.rect.height,
+                "Hero nameplate must not cover the level or guard/lock indicators");
         }
 
         [UnityTest]

@@ -5,7 +5,8 @@ namespace ShinobiDominion.Game
 {
     /// <summary>
     /// The owner's concept paintings of each hero's base form, from Resources/HeroConcepts/{heroId}.png.
-    /// Heroes without one keep their made-in-code picture.
+    /// Heroes without paintings use a baked portrait of their own model where available;
+    /// procedural fallback remains only until that portrait has been authored/baked.
     /// </summary>
     public static class HeroConcepts
     {
@@ -31,15 +32,38 @@ namespace ShinobiDominion.Game
 
         private static Texture2D Texture(string heroId)
         {
-            if (!Textures.TryGetValue(heroId, out var texture))
+            if (!Textures.TryGetValue(heroId, out var texture) || texture == null)
             {
                 texture = Resources.Load<Texture2D>("HeroConcepts/" + heroId);
+                // Authored concept art takes precedence. If an original painting is not
+                // available, use a baked portrait of this hero's own existing 3D prefab.
+                // The Editor baker writes these to Resources/HeroPortraits/{id}.png.
+                // Evolution-specific paintings always retain priority over the base bake.
+                if (texture == null && !heroId.Contains("_evo_"))
+                    texture = Resources.Load<Texture2D>("HeroPortraits/" + heroId);
                 Textures[heroId] = texture;
             }
             return texture;
         }
 
         public static bool Has(string heroId) => Texture(heroId) != null;
+
+        /// <summary>
+        /// Crops head-and-shoulder card paintings while preserving the head in
+        /// square portrait images. Tall original paintings keep the legacy 72%
+        /// width crop; square images use 82% for less aggressive clipping.
+        /// The rectangle never extends outside the source texture.
+        /// </summary>
+        public static Rect CardCropRect(int textureWidth, int textureHeight)
+        {
+            if (textureWidth <= 0 || textureHeight <= 0) return Rect.zero;
+            var squareLike = textureWidth >= textureHeight * 0.9f;
+            var width = textureWidth * (squareLike ? 0.82f : CardWidthShare);
+            var usableHeight = textureHeight * (1f - TopMargin);
+            var height = Mathf.Min(width * CardAspect, usableHeight);
+            return new Rect((textureWidth - width) * 0.5f,
+                usableHeight - height, width, height);
+        }
 
         /// <summary>The upper body, for hero cards in lists.</summary>
         public static Sprite Card(string heroId) => Card(heroId, 0);
@@ -50,9 +74,7 @@ namespace ShinobiDominion.Game
             if (Cards.TryGetValue(heroId, out var sprite) && sprite != null) return sprite;
             var texture = Texture(heroId);
             if (texture == null) return null;
-            var width = texture.width * CardWidthShare;
-            var height = Mathf.Min(width * CardAspect, texture.height);
-            var rect = new Rect((texture.width - width) * 0.5f, texture.height * (1f - TopMargin) - height, width, height);
+            var rect = CardCropRect(texture.width, texture.height);
             sprite = Sprite.Create(texture, rect, new Vector2(0.5f, 0f));
             sprite.name = heroId + "_card";
             Cards[heroId] = sprite;

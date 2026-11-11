@@ -38,10 +38,37 @@ namespace ShinobiDominion.Game
         /// </summary>
         public static Sprite For(string id, int level)
         {
-            var own = Load($"{id}_{ArtLevel(level):00}");
+            var tier = ArtLevel(level);
+            var own = NearestAvailableArt(id, tier, Load);
             if (own != null) return own;
             if (id == "bomb_trap" || id == "hero_trap") return TrapMarker(id == "hero_trap");
-            return StandIns.TryGetValue(id, out var standIn) ? Load($"{standIn}_{ArtLevel(level):00}") : null;
+            return StandIns.TryGetValue(id, out var standIn) ? NearestAvailableArt(standIn, tier, Load) : null;
+        }
+
+        /// <summary>
+        /// Missing artwork in one upgrade tier must never make a building
+        /// disappear when its own earlier or later artwork exists. Search the
+        /// requested sprite first, then earlier tiers, then later tiers.
+        /// The village's true level, size and stats are not changed.
+        /// An injected loader makes the selection independently testable.
+        /// </summary>
+        public static Sprite NearestAvailableArt(string id, int tier, System.Func<string, Sprite> load)
+        {
+            if (string.IsNullOrEmpty(id) || load == null) return null;
+            tier = Mathf.Clamp(tier, 1, ArtLevels);
+            var sprite = load($"{id}_{tier:00}");
+            if (sprite != null) return sprite;
+            for (var candidate = tier - 1; candidate >= 1; candidate--)
+            {
+                sprite = load($"{id}_{candidate:00}");
+                if (sprite != null) return sprite;
+            }
+            for (var candidate = tier + 1; candidate <= ArtLevels; candidate++)
+            {
+                sprite = load($"{id}_{candidate:00}");
+                if (sprite != null) return sprite;
+            }
+            return null;
         }
 
         private static readonly Dictionary<string, string> StandIns = new Dictionary<string, string>
