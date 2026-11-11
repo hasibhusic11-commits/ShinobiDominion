@@ -428,6 +428,21 @@ namespace ShinobiDominion.Game
             }
             UiMotion.Pressable(button);
 
+            // The screenshot's anonymous portraits are hard to distinguish,
+            // especially duplicate heroes. Put the real archetype name on the
+            // bottom edge of each portrait without obscuring the level plate.
+            var heroName = Ui.Rect("HeroNamePlate", root);
+            Ui.Anchor(heroName, new Vector2(0.5f, 0f), new Vector2(154f, 28f), new Vector2(0f, 39f));
+            var nameFace = Ui.Framed(heroName, HudArt.Sprite(SdTheme.PlateDark), false);
+            nameFace.pixelsPerUnitMultiplier = SdTheme.ArtScale;
+            var nameText = HudArt.Label(heroName, Roster.ArchetypeOf(hero).displayName,
+                HudArt.Numbers, 16, TextAnchor.MiddleCenter, SdTheme.Ivory, SdTheme.Ink);
+            nameText.name = "HeroName";
+            Ui.Stretch(nameText.rectTransform, 10f, 2f, 10f, 2f);
+            nameText.resizeTextForBestFit = true;
+            nameText.resizeTextMinSize = 10;
+            nameText.resizeTextMaxSize = 16;
+
             var lip = Ui.Rect("Lip", root);
             Ui.Anchor(lip, new Vector2(0.5f, 0f), new Vector2(154f, 34f), new Vector2(0f, 2f));
             lip.pivot = new Vector2(0.5f, 0f);
