@@ -100,6 +100,25 @@ namespace ShinobiDominion.Tests
         }
 
         [UnityTest]
+        public IEnumerator HeroBase_AnAssignedEliteWithoutA3DPrefab_RemainsVisible()
+        {
+            // Elites do not yet have the same authored 3D coverage as the Legendaries.
+            // The Hero Base must show a development fallback, not an empty pedestal.
+            var hero = Controller.Roster.Heroes.FirstOrDefault(h => h.ArchetypeId == "lantern_warden");
+            if (hero == null) hero = Controller.Roster.AddHero("lantern_warden");
+            var heroBase = Controller.Village.Buildings.First(b => b.Definition.function == BuildingFunction.HeroBase);
+            Assert.AreEqual(VillageError.None, Controller.AssignHero(heroBase.Id, hero.InstanceId));
+            yield return null;
+            var root = _root.GetComponentsInChildren<Transform>(true)
+                .FirstOrDefault(t => t.name == $"hero_base_{heroBase.Id}");
+            Assert.IsNotNull(root, "The Hero Base object must exist");
+            Assert.IsTrue(root.GetComponentsInChildren<Transform>(true).Any(t => t.name == "HeroFallback"),
+                "An Elite without a production prefab must still be drawn on its Hero Base");
+            Assert.IsNotNull(root.GetComponentsInChildren<MeshRenderer>(true)
+                .FirstOrDefault(x => x.transform.name == "HeroFallback"));
+        }
+
+        [UnityTest]
         public IEnumerator Altar_ShowsConceptPaintings_ForBaseFormHeroesThatHaveThem()
         {
             Controller.Select(First("hero_altar").Id);
