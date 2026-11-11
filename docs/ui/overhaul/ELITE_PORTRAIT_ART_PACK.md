@@ -31,3 +31,17 @@ Every file is an individual ~390x390 PNG crop from the original 5×2 illustratio
 
 ## Copyright, gameplay and signoff
 All images were originally created for Shinobi Dominion's named characters; do not use existing franchise symbols, UI assets or licensed characters. Portraits do not change hero ownership, rarity, summon odds, abilities or economy. These are **first-pass** paintings, not finished 10/10 approval. Owner inspection in the actual Unity scene is the release gate.
+
+## Validated installation command
+
+Download the `shinobi_elite_portrait_pack.zip` attachment and run the installer from the repository root:
+
+```powershell
+python tools/art/install_elite_portraits.py --zip "$HOME\\Downloads\\shinobi_elite_portrait_pack.zip"
+```
+
+The installer checks the ten canonical hero IDs, ZIP CRC, manifest, PNG headers and minimum image dimensions, rejects unexpected images, and **refuses to overwrite** an existing file without `--overwrite`. It installs all ten or fails before copying any images when validation fails. These new first-pass illustrations have a painted background rather than transparent cutout alpha; HeroConcepts treats them as full card paintings.
+
+GitHub Actions runs four standalone installer tests plus two art-inventory tests on the pull request. This validates the packaging logic, **not** the Unity image quality. After extraction, Unity should generate `.meta` files; inspect the actual UI before committing both the PNG and meta files.
+
+The downloadable archive is supplied in the ChatGPT conversation, not by the GitHub repository. GitHub connector access does not currently support binary-asset upload; this branch contains the installer code and mapping but **not** the ten final PNGs.
