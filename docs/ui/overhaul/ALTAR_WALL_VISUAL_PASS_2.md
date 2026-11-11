@@ -47,3 +47,11 @@ The old wall renderer only drew `wall_post_v2_*` when `mask == 0` (an isolated t
 - Names use the existing body font with text-best-fit rather than baked label pixels; the actual roster remains the source of truth.
 - Added a PlayMode test asserting that the card's name matches the corresponding hero archetype.
 - The portrait baker now imports readable/uncompressed PNGs (required by the existing runtime `Sprite.Create` crop path) and rejects transparent/opaque failed captures instead of silently adding broken art.
+
+## Automatic Unity execution (follow-up)
+- `Assets/_Game/Scripts/Editor/HeroPortraitAutoBake.cs` schedules one non-destructive missing-portrait bake **per normal Unity Editor session**, after compilation/imports settle. It skips batch builds and PlayMode, preserves concept paintings and existing baked portraits, and uses SessionState to prevent repeated recursive imports.
+- The baker now exposes `ShinobiDominion.Editor.HeroPortraitBaker.BakeForCI`. If an eligible hero model cannot be rendered, batch execution returns a nonzero result instead of silently succeeding.
+- `tools/art/bake_hero_portraits.ps1` invokes the exact Unity 6000.3.28f1 editor expected by this project on Windows, saves `artifacts/hero-portrait-bake.log`, and fails with useful logs on an unsuccessful exit. The editor must be installed locally; there is no Unity binary in the assistant environment.
+- Portrait framing is now head-to-hips to improve character readability in the Altar, rather than rendering an undersized full-body figure. Actual poses may still need adjustment after reviewing captured PNGs.
+- Hero-name and level plaques are separated. Regression coverage checks that their vertical extents do not overlap.
+- **Verification remains open:** actual PNGs, generated Unity `.meta` files and editor rendering have not been produced in this chat; the generated-art files only exist after Unity executes the baker. A successful code commit does not equal 10/10 asset approval.
