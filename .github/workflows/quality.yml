@@ -1,0 +1,50 @@
+name: Quality gates
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  configs:
+    name: Gameplay config and security hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python tools/qa/audit_configs.py
+
+  core:
+    name: Shared game-rule tests (.NET 10)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet test tools/core-tests/ShinobiDominion.Core.Tests.csproj --configuration Release --logger 'console;verbosity=normal'
+
+  backend:
+    name: Nakama Go static checks and unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/nakama/go.mod
+          cache-dependency-path: backend/nakama/go.sum
+      - name: Go vet
+        working-directory: backend/nakama
+        run: go vet ./...
+      - name: Go tests
+        working-directory: backend/nakama
+        run: go test -count=1 ./...
+
+# Unity PlayMode, UI screenshots and live Nakama integration require a Unity-capable
+# runner, license, and test database. They are mandatory manual merge gates for visual PRs.
