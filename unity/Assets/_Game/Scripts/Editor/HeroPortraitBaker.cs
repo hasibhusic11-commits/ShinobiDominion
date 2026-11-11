@@ -73,7 +73,8 @@ namespace ShinobiDominion.Editor
                 return 1;
             }
 
-            Directory.CreateDirectory(OutputDirectory);
+            var absoluteDirectory = Path.Combine(Application.dataPath, "_Game", "Resources", "HeroPortraits");
+            Directory.CreateDirectory(absoluteDirectory);
             var processed = new HashSet<string>();
             int created = 0, skipped = 0, missing = 0;
             foreach (var entry in registry.sprites)
@@ -99,7 +100,8 @@ namespace ShinobiDominion.Editor
                 }
 
                 var output = OutputDirectory + "/" + entry.heroId + ".png";
-                if (!overwrite && File.Exists(output))
+                var absoluteOutput = Path.Combine(absoluteDirectory, entry.heroId + ".png");
+                if (!overwrite && File.Exists(absoluteOutput))
                 {
                     skipped++;
                     continue;
@@ -116,7 +118,7 @@ namespace ShinobiDominion.Editor
                 try
                 {
                     var bytes = Capture(prefab);
-                    File.WriteAllBytes(output, bytes);
+                    File.WriteAllBytes(absoluteOutput, bytes);
                     AssetDatabase.ImportAsset(output, ImportAssetOptions.ForceUpdate);
                     var importer = AssetImporter.GetAtPath(output) as TextureImporter;
                     if (importer != null)
