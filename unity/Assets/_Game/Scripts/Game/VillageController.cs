@@ -440,8 +440,8 @@ namespace ShinobiDominion.Game
             var definition = building.Definition;
             _panel.Show(definition.displayName, ShowContextPanel, panel =>
             {
-                panel.Line(definition.description);
-                panel.Line($"Level {building.Level} of {definition.maxLevel}");
+                panel.Line(definition.description, 18);
+                ScreenKit.Heading(panel, $"Level {building.Level} of {definition.maxLevel}");
                 StatLines(panel, building);
                 FunctionActions(panel, building);
                 UpgradeAction(panel, building);
@@ -503,7 +503,7 @@ namespace ShinobiDominion.Game
                     break;
                 case BuildingFunction.Collector:
                     var pending = Village.PendingCollection(building, Now);
-                    panel.Action("CollectButton", $"Collect {pending:N0} {building.Definition.produces}", () => Collect(building.Id), pending > 0, Ui.AccentColor);
+                    ScreenKit.CostButton(panel, "CollectButton", "Collect", building.Definition.produces.ToString().ToLowerInvariant().Contains("gold") ? "icon_gold" : building.Definition.produces.ToString().ToLowerInvariant().Contains("crystal") ? "icon_crystals" : "icon_chakra", pending.ToString("N0"), () => Collect(building.Id), pending > 0, Ui.AccentColor);
                     break;
                 case BuildingFunction.Storage:
                     panel.Line($"Total gold capacity: {Village.GoldCapacity:N0}");
@@ -527,7 +527,7 @@ namespace ShinobiDominion.Game
             var needsDojo = building.Definition.At(building.Level + 1).requiredHq;
             if (Village.HqLevel < needsDojo) panel.Line($"Next level needs Town Hall level {needsDojo}.", 20, Ui.AccentColor);
             var builderFree = Village.Catalog.UpgradeSeconds(building.Definition, building.Level + 1) == 0 || Village.BusyBuilders < Village.Builders;
-            panel.Action("UpgradeButton", $"Upgrade ({cost:N0} gold)", () => Upgrade(building.Id, false), Village.CanAfford(cost, 0) && Village.HqLevel >= needsDojo && builderFree);
+            ScreenKit.CostButton(panel, "UpgradeButton", "Upgrade", "icon_gold", cost.ToString("N0"), () => Upgrade(building.Id, false), Village.CanAfford(cost, 0) && Village.HqLevel >= needsDojo && builderFree, Ui.AccentColor);
         }
 
         /// <summary>Each stat this building has, as now -> next level. Stats a building lacks stay hidden.</summary>
@@ -540,9 +540,7 @@ namespace ShinobiDominion.Game
             void Stat(string name, long current, long upcoming, string unit = "")
             {
                 if (current == 0 && upcoming == 0) return;
-                panel.Line(next == null || upcoming == current
-                    ? $"{name}: {current:N0}{unit}"
-                    : $"{name}: {current:N0}{unit}  ->  {upcoming:N0}{unit}");
+                ScreenKit.StatLine(panel, name, $"{current:N0}{unit}", next == null || upcoming == current ? null : $"{upcoming:N0}{unit}");
             }
 
             Stat("HP", now.hp, next?.hp ?? now.hp);
@@ -593,26 +591,31 @@ namespace ShinobiDominion.Game
             CloseAll();
             _panel.Show("Menu", CloseAll, panel =>
             {
-                panel.Line(IsOnline ? "Connected. Your village is saved on the server." : "Not connected to the server.");
-                panel.Line(Village.Catalog.BalanceStatus, 18);
-                if (IsOnline) panel.Action("NameButton", $"Name: {PlayerName} (tap to change)", ShowNameWindow);
+                panel.Line(IsOnline ? "Connected. Your village is saved on the server." : "Not connected to the server.", 18);
+                if (IsOnline)
+                {
+                    var who = ScreenKit.AddRow(panel, "NameRow", null, PlayerName, "Your name");
+                    // A name is something the player typed: shown as written, never obeyed.
+                    who.Title.supportRichText = false;
+                    who.Button("NameButton", "Change", ShowNameWindow, true, null, 116f);
+                }
                 var high = GameQuality.Current == VisualQuality.High;
-                panel.Line("Fewer trees at Low take effect after a restart.", 17);
-                panel.Action("SoundButton", GameSounds.Muted ? "Sound: Off (tap for On)" : "Sound: On (tap for Off)", () =>
+                ScreenKit.AddRow(panel, "SoundRow", null, "Sound").Button("SoundButton", GameSounds.Muted ? "Off" : "On", () =>
                 {
                     GameSounds.Muted = !GameSounds.Muted;
                     OpenSettings();
-                });
-                panel.Action("MusicButton", GameMusic.Muted ? "Music: Off (tap for On)" : "Music: On (tap for Off)", () =>
+                }, true, GameSounds.Muted ? (Color?)null : Ui.AccentColor, 116f);
+                ScreenKit.AddRow(panel, "MusicRow", null, "Music").Button("MusicButton", GameMusic.Muted ? "Off" : "On", () =>
                 {
                     GameMusic.Muted = !GameMusic.Muted;
                     OpenSettings();
-                });
-                panel.Action("QualityButton", high ? "Graphics: High (tap for Low)" : "Graphics: Low (tap for High)", () =>
+                }, true, GameMusic.Muted ? (Color?)null : Ui.AccentColor, 116f);
+                ScreenKit.AddRow(panel, "QualityRow", null, "Graphics", "Fewer trees at Low, after a restart").Button("QualityButton", high ? "High" : "Low", () =>
                 {
                     GameQuality.Set(high ? VisualQuality.Low : VisualQuality.High);
                     OpenSettings();
-                });
+                }, true, high ? Ui.AccentColor : (Color?)null, 116f);
+                panel.Line(Village.Catalog.BalanceStatus, 14);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
                 panel.Action("ResetButton", "Reset village (development)", ConfirmReset);
 #endif

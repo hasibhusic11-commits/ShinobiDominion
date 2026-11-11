@@ -357,6 +357,71 @@ namespace ShinobiDominion.Game
             return button;
         }
 
+        /// <summary>A short line in the display face, to lead what follows: a building's level.</summary>
+        public static Text Heading(PanelView panel, string words)
+        {
+            var block = panel.Block(32f);
+            block.name = "Heading";
+            var label = HudArt.Label(block, words, HudArt.Display, 22, TextAnchor.MiddleLeft, Gold, HudArt.LacquerDeep);
+            label.name = "HeadingText";
+            Ui.Stretch(label.rectTransform);
+            return label;
+        }
+
+        /// <summary>One stat: its name on the left, its value on the right, and after an arrow what the next level makes it.</summary>
+        public static void StatLine(PanelView panel, string name, string now, string next)
+        {
+            var block = panel.Block(28f);
+            block.name = "Stat_" + name;
+            var label = Ui.Label(block, name, 18, TextAnchor.MiddleLeft, HudArt.IvoryMuted);
+            label.rectTransform.anchorMin = Vector2.zero;
+            label.rectTransform.anchorMax = new Vector2(0.52f, 1f);
+            label.rectTransform.offsetMin = Vector2.zero;
+            label.rectTransform.offsetMax = Vector2.zero;
+            label.horizontalOverflow = HorizontalWrapMode.Overflow;
+            label.resizeTextForBestFit = true;
+            label.resizeTextMinSize = 12;
+            label.resizeTextMaxSize = 18;
+            var hasNext = !string.IsNullOrEmpty(next);
+            var value = HudArt.Label(block, now, HudArt.Numbers, 19, TextAnchor.MiddleRight, HudArt.Ivory, HudArt.LacquerDeep);
+            value.name = "Now";
+            value.rectTransform.anchorMin = new Vector2(0.52f, 0f);
+            value.rectTransform.anchorMax = new Vector2(hasNext ? 0.74f : 1f, 1f);
+            value.rectTransform.offsetMin = Vector2.zero;
+            value.rectTransform.offsetMax = Vector2.zero;
+            value.horizontalOverflow = HorizontalWrapMode.Overflow;
+            if (!hasNext) return;
+            var arrow = HudArt.Picture(block, "Arrow", "icon_next", new Vector2(0.79f, 0.5f), new Vector2(15f, 15f), Vector2.zero);
+            arrow.preserveAspect = true;
+            arrow.color = new Color(0.55f, 0.92f, 0.45f);
+            var after = HudArt.Label(block, next, HudArt.Numbers, 19, TextAnchor.MiddleRight, new Color(0.62f, 0.95f, 0.5f), HudArt.LacquerDeep);
+            after.name = "Next";
+            after.rectTransform.anchorMin = new Vector2(0.82f, 0f);
+            after.rectTransform.anchorMax = Vector2.one;
+            after.rectTransform.offsetMin = Vector2.zero;
+            after.rectTransform.offsetMax = Vector2.zero;
+            after.horizontalOverflow = HorizontalWrapMode.Overflow;
+        }
+
+        /// <summary>A button that carries what it costs or gives as a picture and an amount on its right, not in its words.</summary>
+        public static Button CostButton(PanelView panel, string name, string caption, string icon, string amount, Action onClick, bool enabled, Color? color = null)
+        {
+            var button = panel.Action(name, caption, onClick, enabled, color, 22);
+            AttachCost(button, icon, amount);
+            return button;
+        }
+
+        /// <summary>Puts a picture and an amount on the right of a button, and centres its word in the room that leaves.</summary>
+        public static void AttachCost(Button button, string icon, string amount)
+        {
+            var wide = 54f + amount.Length * 11f;
+            var chip = Ui.Rect("Cost", button.transform);
+            Ui.Anchor(chip, new Vector2(1f, 0.5f), new Vector2(wide, 38f), new Vector2(-12f, 2f));
+            Chip(chip, icon, amount);
+            var word = button.GetComponentInChildren<Text>();
+            if (word != null) word.rectTransform.offsetMax = new Vector2(-(wide + 18f), word.rectTransform.offsetMax.y);
+        }
+
         /// <summary>A message the player has to see, such as why the last tap was refused: one framed line, not a paragraph.</summary>
         public static void Notice(PanelView panel, string words)
         {

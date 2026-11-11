@@ -23,10 +23,11 @@ namespace ShinobiDominion.Game
                 var entry = Research.Entries[running];
                 var left = entry.DoneUtcTicks - Now;
                 var gems = Village.FinishCost(left);
-                panel.Line($"Studying {TroopData.Find(running)?.displayName}, level {entry.Level + 1}: {FormatDuration(left)} left", 21, Ui.AccentColor);
-                panel.Action("FinishResearchButton", $"Finish now ({gems:N0} gems)", () => FinishResearch(running), Village.Crystals >= gems, Ui.AccentColor);
+                var study = ScreenKit.AddRow(panel, "ResearchRunning", null, $"{TroopData.Find(running)?.displayName}, level {entry.Level + 1}", $"Studying: {FormatDuration(left)} left", true, 78f);
+                study.Button("FinishResearchButton", "Finish", () => FinishResearch(running), Village.Crystals >= gems, Ui.AccentColor, 104f);
+                study.Reward("icon_crystals", gems.ToString("N0"));
             }
-            else panel.Line($"Each study makes one kind of troop {TroopData.Research.percentPerLevel}% stronger in HP and attack. Hut level {hut} allows studies up to level {Math.Min(hut, TroopData.Research.maxLevel)}.", 19);
+            else panel.Line($"Each study makes one kind of troop {TroopData.Research.percentPerLevel}% stronger in HP and attack. Hall level {hut} allows studies up to level {Math.Min(hut, TroopData.Research.maxLevel)}.", 17);
 
             foreach (var troop in TroopData.All)
             {
@@ -35,16 +36,17 @@ namespace ShinobiDominion.Game
                 var name = $"Research_{troop.id}";
                 if (level >= TroopData.Research.maxLevel)
                 {
-                    TwoLine(panel.Action(name, $"{troop.displayName}  level {level} (+{boost}%)\nFully studied", null, false, null, 18));
+                    ScreenKit.AddRow(panel, "ResearchRow_" + troop.id, null, troop.displayName, $"Level {level}, +{boost}%").Note("Fully studied");
                     continue;
                 }
                 var next = level + 1;
                 var cost = TroopResearch.Cost(TroopData, troop, next);
                 var time = FormatDuration(TroopResearch.Seconds(TroopData, next) * TimeSpan.TicksPerSecond);
                 var error = Research.Check(Village, TroopData, troop.id);
-                var why = error == VillageError.ResearchHutTooLow ? $"   needs hut level {next}" : "";
-                TwoLine(panel.Action(name, $"{troop.displayName}  level {level} (+{boost}%)\nStudy level {next}: {cost:N0} Mana, {time}{why}",
-                    () => StartResearch(troop.id), error == VillageError.None, null, 18));
+                var why = error == VillageError.ResearchHutTooLow ? $"Needs hall level {next}" : $"Level {level}, +{boost}%     {time}";
+                var row = ScreenKit.AddRow(panel, "ResearchRow_" + troop.id, null, troop.displayName, why, error == VillageError.None, 78f);
+                row.Button(name, "Study", () => StartResearch(troop.id), error == VillageError.None, Ui.AccentColor, 104f);
+                row.Reward("icon_chakra", cost.ToString("N0"));
             }
         }
 

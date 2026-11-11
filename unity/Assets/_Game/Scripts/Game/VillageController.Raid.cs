@@ -117,11 +117,15 @@ namespace ShinobiDominion.Game
                 var name = $"Train{troop.id}Button";
                 if (hall < troop.requiredHall)
                 {
-                    panel.Line($"{troop.displayName}: needs a level {troop.requiredHall} Training Hall", 19, Ui.MutedText);
+                    ScreenKit.AddRow(panel, "TrainRow_" + troop.id, null, troop.displayName, $"Needs a level {troop.requiredHall} Training Center").Mark("icon_lock").Dim();
                     continue;
                 }
                 var error = Army.CheckTrain(Village, TroopData, troop.id, 1);
-                panel.Action(name, $"{troop.displayName} ({Army.CountOf(troop.id)})   {troop.goldCost:N0} gold, {troop.manaCost:N0} Mana, {troop.space} space", () => TrainTroop(troop.id, 1), error == VillageError.None, null, 18);
+                var can = error == VillageError.None;
+                var row = ScreenKit.AddRow(panel, "TrainRow_" + troop.id, null, troop.displayName, $"You have {Army.CountOf(troop.id)}     {troop.space} space", can, 78f);
+                row.Button(name, "Train", () => TrainTroop(troop.id, 1), can, Ui.AccentColor, 96f);
+                row.Reward("icon_chakra", troop.manaCost.ToString("N0"));
+                row.Reward("icon_gold", troop.goldCost.ToString("N0"));
             }
         }
 

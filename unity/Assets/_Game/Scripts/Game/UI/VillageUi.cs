@@ -811,30 +811,26 @@ namespace ShinobiDominion.Game
             _card.anchorMax = new Vector2(0f, 1f);
             _card.pivot = new Vector2(0f, 0.5f);
             // Starts below the HUD's player plate (it used to cover the level badge) and ends just above the bottom.
-            _card.sizeDelta = new Vector2(450f, -160f);
+            _card.sizeDelta = new Vector2(500f, -160f);
             _card.anchoredPosition = new Vector2(16f, -72f);
             Ui.Framed(_card, HudArt.Sprite("frame_s80")).pixelsPerUnitMultiplier = 1.3f;
 
-            var header = HudArt.Label(_card, title, HudArt.Display, 25, TextAnchor.MiddleLeft, HudArt.BrassLight, HudArt.LacquerDeep);
-            header.rectTransform.anchorMin = new Vector2(0f, 1f);
-            header.rectTransform.anchorMax = new Vector2(1f, 1f);
-            header.rectTransform.pivot = new Vector2(0f, 1f);
-            header.rectTransform.sizeDelta = new Vector2(-92f, 60f);
-            header.rectTransform.anchoredPosition = new Vector2(20f, -8f);
+            // The title stands on a crimson plaque over the panel's top edge, as on every other screen (ADR-056).
+            var plaque = HudArt.Picture(_card, "Plaque", "ribbon", new Vector2(0.5f, 1f), new Vector2(Mathf.Clamp(title.Length * 17f + 130f, 250f, 400f), 54f), new Vector2(-14f, 24f));
+            var header = HudArt.Label(plaque.transform, title, HudArt.Display, 24, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.CrimsonDark);
+            header.name = "PanelTitle";
+            Ui.Stretch(header.rectTransform, 26f, 4f, 26f, 2f);
+            header.horizontalOverflow = HorizontalWrapMode.Overflow;
+            header.verticalOverflow = VerticalWrapMode.Truncate;
+            header.resizeTextForBestFit = true;
+            header.resizeTextMinSize = 13;
+            header.resizeTextMaxSize = 24;
 
-            var divider = Ui.Rect("HeaderDivider", _card);
-            divider.anchorMin = new Vector2(0f, 1f);
-            divider.anchorMax = new Vector2(1f, 1f);
-            divider.pivot = new Vector2(0.5f, 1f);
-            divider.sizeDelta = new Vector2(-28f, 4f);
-            divider.anchoredPosition = new Vector2(0f, -68f);
-            Ui.Background(divider, Color.white, false).sprite = UiSkin.Divider;
-
-            var close = Medal.Create(_card, "CloseButton", MedalKind.Destructive, "close", null, onClose, true, 54f);
-            Ui.Anchor((RectTransform)close.transform, new Vector2(1f, 1f), new Vector2(54f, 54f), new Vector2(-12f, -10f));
+            var close = Medal.Create(_card, "CloseButton", MedalKind.Destructive, "close", null, onClose, true, 56f);
+            Ui.Anchor((RectTransform)close.transform, new Vector2(1f, 1f), new Vector2(56f, 56f), new Vector2(18f, 18f));
 
             // Side insets clear the brass frame's inner edge, so text never touches or hides under it.
-            BuildScrollArea(28f, 18f, 28f, 78f);
+            BuildScrollArea(30f, 20f, 30f, 46f);
             fill(this);
             if (opening)
             {
@@ -845,42 +841,8 @@ namespace ShinobiDominion.Game
 
         public void ShowScreen(string title, string headerInfo, Action onBack, Action<PanelView> fill)
         {
-            var opening = !IsOpen;
-            Hide();
-            IsFullScreen = true;
-            _card = Ui.Rect("Screen", _parent);
-            Ui.Stretch(_card);
-            Ui.Framed(_card, HudArt.Sprite("frame_s80")).pixelsPerUnitMultiplier = 1.1f;
-
-            var back = Medal.Create(_card, "CloseButton", MedalKind.IconOnly, "back", null, onBack, true, 60f);
-            Ui.Anchor((RectTransform)back.transform, new Vector2(0f, 1f), new Vector2(60f, 60f), new Vector2(20f, -10f));
-
-            var header = HudArt.Label(_card, title, HudArt.Display, 30, TextAnchor.MiddleLeft, HudArt.BrassLight, HudArt.LacquerDeep);
-            header.rectTransform.anchorMin = new Vector2(0f, 1f);
-            header.rectTransform.anchorMax = new Vector2(1f, 1f);
-            header.rectTransform.pivot = new Vector2(0f, 1f);
-            header.rectTransform.sizeDelta = new Vector2(-132f, 72f);
-            header.rectTransform.anchoredPosition = new Vector2(132f, -4f);
-
-            if (!string.IsNullOrEmpty(headerInfo))
-            {
-                var info = HudArt.Label(_card, headerInfo, HudArt.Numbers, 19, TextAnchor.MiddleRight, HudArt.Ivory, HudArt.LacquerDeep);
-                info.rectTransform.anchorMin = new Vector2(0.5f, 1f);
-                info.rectTransform.anchorMax = new Vector2(1f, 1f);
-                info.rectTransform.pivot = new Vector2(1f, 1f);
-                info.rectTransform.sizeDelta = new Vector2(-24f, 72f);
-                // As far in from the right frame as the Back button is from the left.
-                info.rectTransform.anchoredPosition = new Vector2(-44f, -4f);
-            }
-
-            // Side insets clear the brass frame's inner edge; the bottom clears its corner pieces.
-            BuildScrollArea(44f, 30f, 44f, 82f);
-            fill(this);
-            if (opening)
-            {
-                UiMotion.FadeIn(_card.gameObject, 0.2f);
-                UiMotion.PopIn(_card, 0f, 0.96f, 0.24f);
-            }
+            // The same framed panel and plaque as a stage, without scenery (ADR-056).
+            ShowStage(title, headerInfo, null, null, false, 0f, onBack, fill);
         }
 
         /// <summary>

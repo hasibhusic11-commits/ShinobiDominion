@@ -315,6 +315,11 @@ namespace ShinobiDominion.Tests
             var gate = Controller.Village.Buildings.First(b => b.Definition.id == "summoning_gate").Id;
             Controller.Select(gate);
             Controller.ShowSummoningGate();
+            yield return WaitFor(() => Find("SummonOneButton") != null);
+            yield return shot("55_summon_gate");
+            Controller.ShowSummonRates();
+            yield return shot("56_summon_rates");
+            Controller.ShowSummoningGate();
             yield return ClickWhenReady("SummonOneButton");
             yield return WaitFor(() => Controller.RevealShowing);
             yield return new WaitForSecondsRealtime(1.2f);

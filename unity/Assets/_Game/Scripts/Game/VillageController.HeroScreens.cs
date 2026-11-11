@@ -83,10 +83,12 @@ namespace ShinobiDominion.Game
                 var fair = Ui.Strong(Ui.Label(scene, "Every roll is independent. Nothing is guaranteed, and past results do not change these rates.", 16, TextAnchor.MiddleCenter, Ui.MutedText));
                 Ui.Anchor(fair.rectTransform, new Vector2(0.5f, 0f), new Vector2(900f, 26f), new Vector2(0f, 100f));
 
-                var oneButton = Ui.Button(scene, "SummonOneButton", $"Summon x1\n{one:N0} gems", () => Summon(1), crystals >= one, new Color(0.35f, 0.45f, 0.85f), 21);
-                Ui.Anchor((RectTransform)oneButton.transform, new Vector2(0.5f, 0f), new Vector2(260f, 76f), new Vector2(-150f, 14f));
-                var tenButton = Ui.Button(scene, "SummonTenButton", $"Summon x10\n{one * 10:N0} gems", () => Summon(10), crystals >= one * 10, new Color(0.95f, 0.5f, 0.16f), 21);
-                Ui.Anchor((RectTransform)tenButton.transform, new Vector2(0.5f, 0f), new Vector2(260f, 76f), new Vector2(150f, 14f));
+                var oneButton = Ui.Button(scene, "SummonOneButton", "Summon x1", () => Summon(1), crystals >= one, new Color(0.35f, 0.45f, 0.85f), 23);
+                Ui.Anchor((RectTransform)oneButton.transform, new Vector2(0.5f, 0f), new Vector2(300f, 68f), new Vector2(-164f, 18f));
+                ScreenKit.AttachCost(oneButton, "icon_crystals", one.ToString("N0"));
+                var tenButton = Ui.Button(scene, "SummonTenButton", "Summon x10", () => Summon(10), crystals >= one * 10, Ui.AccentColor, 23);
+                Ui.Anchor((RectTransform)tenButton.transform, new Vector2(0.5f, 0f), new Vector2(300f, 68f), new Vector2(164f, 18f));
+                ScreenKit.AttachCost(tenButton, "icon_crystals", (one * 10).ToString("N0"));
             });
         }
 
@@ -96,15 +98,15 @@ namespace ShinobiDominion.Game
             var odds = _odds;
             _panel.ShowScreen("Summon Rates", odds.bannerName, () => DrawSummoningGate(null), panel =>
             {
-                panel.Line(odds.status, 19, Ui.AccentColor);
-                panel.Line("Every roll is independent. Nothing is guaranteed, and past results do not change these rates.", 19, Ui.MutedText);
-                panel.Line("Rates by rarity", 23, Ui.TextColor);
+                panel.Line(odds.status, 17, Ui.AccentColor);
+                panel.Line("Every roll is independent. Nothing is guaranteed, and past results do not change these rates.", 17, Ui.MutedText);
+                ScreenKit.Heading(panel, "By rarity");
                 foreach (var rarity in new[] { "Legendary", "Elite", "Common" })
                     if (odds.rarityChance.TryGetValue(rarity, out var chance))
-                        panel.Line($"{rarity}:  {chance}", 20, Ui.TextColor);
-                panel.Line("Rates by hero", 23, Ui.TextColor);
+                        ScreenKit.AddRow(panel, "RarityRate_" + rarity, "icon_rarity_" + rarity.ToLowerInvariant(), rarity, null, false, 58f).Note(chance, HudArt.Ivory);
+                ScreenKit.Heading(panel, "By hero");
                 foreach (var item in odds.items.OrderBy(i => i.weight))
-                    panel.Line($"{item.displayName}  ({item.rarity}):  {item.chance}", 19);
+                    ScreenKit.AddRow(panel, "HeroRate_" + item.archetypeId, "icon_rarity_" + item.rarity.ToLowerInvariant(), item.displayName, item.rarity, false, 58f).Note(item.chance, HudArt.Ivory);
             });
         }
     }

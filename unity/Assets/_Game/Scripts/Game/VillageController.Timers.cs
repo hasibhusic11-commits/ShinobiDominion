@@ -80,7 +80,7 @@ namespace ShinobiDominion.Game
                 var left = building.UpgradeDoneUtcTicks - Now;
                 var gems = Village.FinishCost(left);
                 panel.Line($"Upgrading to level {building.Level + 1}: {FormatDuration(left)} left", 21, Ui.AccentColor);
-                panel.Action("FinishUpgradeButton", $"Finish now ({gems:N0} gems)", () => FinishUpgrade(building.Id), Village.Crystals >= gems, Ui.AccentColor);
+                ScreenKit.CostButton(panel, "FinishUpgradeButton", "Finish now", "icon_crystals", gems.ToString("N0"), () => FinishUpgrade(building.Id), Village.Crystals >= gems, Ui.AccentColor);
                 return;
             }
             var seconds = Village.Catalog.UpgradeSeconds(building.Definition, building.Level + 1);

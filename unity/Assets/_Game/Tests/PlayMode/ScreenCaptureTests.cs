@@ -50,6 +50,9 @@ namespace ShinobiDominion.Tests
 
             controller.Select(First("builder_hall").Id);
             yield return shot("02_builder_hall_panel");
+            controller.ShowBuildingDetails(First("builder_hall").Id);
+            yield return shot("02b_building_info");
+            controller.Select(First("builder_hall").Id);
 
             controller.OpenCatalog();
             yield return shot("03_build_catalog");
@@ -129,6 +132,9 @@ namespace ShinobiDominion.Tests
             for (var i = 0; i < 12; i++) controller.TrainTroop("militia", 1);
             controller.Select(hallId);
             yield return shot("18_training_hall");
+            controller.ShowBuildingDetails(hallId);
+            yield return shot("18b_training_info");
+            controller.Select(hallId);
             controller.Select(campId);
             yield return shot("19_troop_camp");
             controller.CloseAll();

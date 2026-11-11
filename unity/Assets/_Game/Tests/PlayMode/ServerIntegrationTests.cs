@@ -103,8 +103,16 @@ namespace ShinobiDominion.Tests
             StringAssert.Contains("NOT APPROVED", gateText);
             yield return ClickWhenReady("RatesButton");
             var text = string.Join("\n", _root.GetComponentsInChildren<Text>().Select(t => t.text));
+            // Each hero has its own row: its name, its rarity and its chance exactly as the server reports it.
             foreach (var item in oddsTask.Result.items)
-                StringAssert.Contains($"{item.displayName}  ({item.rarity}):  {item.chance}", text);
+            {
+                var row = _root.GetComponentsInChildren<RectTransform>(true).FirstOrDefault(r => r.name == "HeroRate_" + item.archetypeId);
+                Assert.IsNotNull(row, item.displayName + " has a row");
+                var words = string.Join("|", row.GetComponentsInChildren<Text>(true).Select(t => t.text));
+                StringAssert.Contains(item.displayName, words);
+                StringAssert.Contains(item.rarity, words);
+                StringAssert.Contains(item.chance, words);
+            }
             StringAssert.Contains("NOT APPROVED", text);
             StringAssert.DoesNotContain("pity", text.ToLowerInvariant());
         }
