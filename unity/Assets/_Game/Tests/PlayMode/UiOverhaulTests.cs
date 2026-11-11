@@ -104,7 +104,7 @@ namespace ShinobiDominion.Tests
             }
             var paintings = _root.GetComponentsInChildren<Image>(false).Where(i => i.sprite != null && i.sprite.name.StartsWith("mode_")).Select(i => i.sprite.name).ToList();
             CollectionAssert.AreEquivalent(new[] { "mode_raid", "mode_dungeons", "mode_siege", "mode_arena", "mode_trials" }, paintings, "Each mode shows its own painting");
-            StringAssert.Contains("1 hero from your Hero Bases fights with you.", AllText);
+            Assert.IsNull(_root.GetComponentsInChildren<Text>(false).FirstOrDefault(t => t.name == "BattleNote"), "No caption over the cards while all is well");
             StringAssert.Contains("0 / 45", AllText, "Dungeons shows the real star count (15 stages, CampaignTests)");
 
             // The routes: the button and the whole card both open the mode, and each way back returns here.

@@ -30,6 +30,11 @@ These scores are my subjective review of those screenshots (rubric in `02_UI_DES
 6. **Gallery label wrap.** A gallery label wrapped; it was widened.
 7. **Route test.** The test waited for "Rankings" while the Arena shows "RANKINGS" in capitals. It now waits for the real `ArenaRankingsButton` and `TrialFloor1` buttons.
 
+## Owner review, round 1 (2026-11-11)
+- The owner did not want the caption under the title ("1 hero from your Hero Bases fights with you"). It is gone. A line now appears only for a server error or when offline, and when it does the cards move down to make room.
+- The owner asked for the cards to move up. They now start just under the title ribbon, and the space freed goes to taller paintings.
+- The owner rejected the Trial Tower picture, a darkened lantern scene with a building sprite pasted in. It is replaced by a real painting from the owner's own Summon Reveal mockup: a lit pagoda on a waterfall cliff under a purple spirit swirl. It is cut to the card's shape so the pagoda stays in view.
+
 ## Known issues, not fixed in M2
 - **4:3 HUD overlap.** At 1600×1200 the gold counter overlaps the player name plate. The HUD was like this before the overhaul (`before/15_aspect_1600x1200.jpg`), and it is outside the Battle menu.
 - **Gallery underlay.** On the gallery capture only, a dark strip from the home HUD shows behind the title ribbon.

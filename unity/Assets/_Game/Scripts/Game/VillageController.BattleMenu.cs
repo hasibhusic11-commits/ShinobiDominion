@@ -30,6 +30,10 @@ namespace ShinobiDominion.Game
 
         private const float ModeCardWidth = 196f;
         private const float ModeCardMinWidth = 184f;
+        /// <summary>How far a card sits below the top of its row: room for the name ribbon that rises above it.</summary>
+        private const float CardDrop = 20f;
+        /// <summary>How far the row reaches up past the window's content area, into the space beside the title ribbon.</summary>
+        private const float RowLift = 26f;
 
         private void ShowBattleHub()
         {
@@ -39,16 +43,19 @@ namespace ShinobiDominion.Game
             var noServer = "Needs the server";
             _panel.ShowThemedWindow("Battle", new Vector2(1180f, 600f), CloseAll, content =>
             {
-                // One line under the title: what the player brings, or what stops them.
-                string note;
-                var noteColour = SdTheme.IvoryMuted;
-                if (!string.IsNullOrEmpty(LastMessage)) { note = LastMessage; noteColour = SdTheme.BrassLight; }
-                else if (!IsOnline) { note = AllowOfflinePlay ? "Practice battles only: not connected, so nothing pays." : "Battles need the server."; noteColour = SdTheme.BrassLight; }
-                else if (team == 0) note = "Raids, the Arena and the Trial Tower need a hero on a Hero Base.";
-                else note = team == 1 ? "1 hero from your Hero Bases fights with you." : $"{team} heroes from your Hero Bases fight with you.";
-                var noteLabel = HudArt.Label(content, note, HudArt.Numbers, SdTheme.NoteSize, TextAnchor.MiddleCenter, noteColour, SdTheme.Ink);
-                noteLabel.name = "BattleNote";
-                Ui.Anchor(noteLabel.rectTransform, new Vector2(0.5f, 1f), new Vector2(content.rect.width, 30f), Vector2.zero);
+                // No standing caption: the cards say everything. A line appears only when something went wrong or the
+                // game is offline, and then the cards move down to make room for it.
+                string note = null;
+                if (!string.IsNullOrEmpty(LastMessage)) note = LastMessage;
+                else if (!IsOnline) note = AllowOfflinePlay ? "Practice battles only: not connected, so nothing pays." : "Battles need the server.";
+                var top = 0f;
+                if (note != null)
+                {
+                    var noteLabel = HudArt.Label(content, note, HudArt.Numbers, SdTheme.NoteSize, TextAnchor.MiddleCenter, SdTheme.BrassLight, SdTheme.Ink);
+                    noteLabel.name = "BattleNote";
+                    Ui.Anchor(noteLabel.rectTransform, new Vector2(0.5f, 1f), new Vector2(content.rect.width, 30f), Vector2.zero);
+                    top = 34f;
+                }
 
                 if (IsOnline && _raidList == null)
                 {
@@ -72,11 +79,11 @@ namespace ShinobiDominion.Game
                         Open = ModesOnline && team > 0, Locked = !ModesOnline ? noServer : noHero, Action = OpenTrials }
                 };
 
-                // The row of cards under the note. Five fit side by side on a wide screen; where they would be squeezed
+                // The row of cards. Five fit side by side on a wide screen; where they would be squeezed
                 // narrower than they read well (a 4:3 tablet), the row scrolls sideways with the next card in view.
                 var row = Ui.Rect("ModeCards", content);
-                Ui.Stretch(row, 0f, 0f, 0f, 34f);
-                var height = Mathf.Max(300f, content.rect.height - 34f);
+                Ui.Stretch(row, 0f, 0f, 0f, top - RowLift);
+                var height = Mathf.Max(300f, content.rect.height - top + RowLift - CardDrop);
                 var width = (content.rect.width - (cards.Length - 1) * SdTheme.Gap) / cards.Length;
                 var scrolls = width < ModeCardMinWidth;
                 if (scrolls) width = ModeCardWidth;
@@ -115,7 +122,7 @@ namespace ShinobiDominion.Game
             rect.anchorMin = rect.anchorMax = new Vector2(0f, 1f);
             rect.pivot = new Vector2(0f, 1f);
             rect.sizeDelta = new Vector2(width, height);
-            rect.anchoredPosition = new Vector2(x, -18f);
+            rect.anchoredPosition = new Vector2(x, -CardDrop);
 
             // The painting and its frame, above the button zone.
             var picture = Ui.Rect("PictureArea", rect);
