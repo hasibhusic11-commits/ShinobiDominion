@@ -1,5 +1,7 @@
 using ShinobiDominion.Core;
 using UnityEngine;
+using UnityEngine.UI;
+using Text = ShinobiDominion.Game.GameText;
 
 namespace ShinobiDominion.Game
 {
@@ -12,7 +14,7 @@ namespace ShinobiDominion.Game
     {
         private static readonly Color MasteryGold = new Color(1f, 0.87f, 0.4f);
 
-        /// <summary>What the last roll or rank-up gave, shown once at the top of the mastery panel.</summary>
+        /// <summary>What the last roll or rank-up gave, shown once at the top of the mastery window.</summary>
         private string _masteryNote;
 
         /// <summary>What a talent does at a level, as one short line.</summary>
@@ -39,6 +41,26 @@ namespace ShinobiDominion.Game
             return talent == null ? $"Mastery (rank {hero.TechniqueRank})" : $"Mastery (rank {hero.TechniqueRank}, {talent.displayName} {hero.TalentLevel})";
         }
 
+        /// <summary>True for a message that says why a tap was refused; the idle status word is not one.</summary>
+        private static bool IsRefusal(string message) => !string.IsNullOrEmpty(message) && message != "Ready";
+
+        /// <summary>One line of words across a window, a given way down from its top.</summary>
+        private static Text WindowLine(RectTransform content, string name, string words, float y, int size, Color color, float height = 26f)
+        {
+            var label = Ui.Label(content, words, size, TextAnchor.MiddleLeft, color);
+            label.name = name;
+            label.rectTransform.anchorMin = new Vector2(0f, 1f);
+            label.rectTransform.anchorMax = new Vector2(1f, 1f);
+            label.rectTransform.pivot = new Vector2(0.5f, 1f);
+            label.rectTransform.sizeDelta = new Vector2(-12f, height);
+            label.rectTransform.anchoredPosition = new Vector2(0f, y);
+            label.verticalOverflow = VerticalWrapMode.Truncate;
+            label.resizeTextForBestFit = true;
+            label.resizeTextMinSize = 12;
+            label.resizeTextMaxSize = size;
+            return label;
+        }
+
         public void ShowMastery(string instanceId)
         {
             var hero = Roster.Find(instanceId);
@@ -51,48 +73,76 @@ namespace ShinobiDominion.Game
             var tokens = Roster.ItemCount(talents.item);
             var note = _masteryNote;
             _masteryNote = null;
-            _panel.Show($"{archetype.displayName}: mastery", () => ShowHeroDetail(instanceId), panel =>
+            _panel.ShowWindow("Mastery", new Vector2(880f, 540f), () => ShowHeroDetail(instanceId), content =>
             {
-                if (!string.IsNullOrEmpty(LastMessage)) panel.Line(LastMessage, 20, Ui.AccentColor);
+                // Whose mastery this is, then what the last tap did or why it was refused.
+                var y = 2f;
+                var who = HudArt.Label(content, archetype.displayName, HudArt.Display, 24, TextAnchor.MiddleLeft, HudArt.BrassLight, HudArt.LacquerDeep);
+                who.name = "MasteryHero";
+                who.rectTransform.anchorMin = new Vector2(0f, 1f);
+                who.rectTransform.anchorMax = new Vector2(1f, 1f);
+                who.rectTransform.pivot = new Vector2(0.5f, 1f);
+                who.rectTransform.sizeDelta = new Vector2(-12f, 32f);
+                who.rectTransform.anchoredPosition = new Vector2(0f, y);
+                y -= 34f;
                 if (!string.IsNullOrEmpty(note))
                 {
-                    var rolled = panel.Line(note, 24, MasteryGold);
-                    rolled.name = "MasteryNote";
+                    var rolled = WindowLine(content, "MasteryNote", note, y, 20, MasteryGold);
                     UiMotion.Shine(rolled, Color.white, 2f, 0.3f);
+                    y -= 28f;
                 }
-                if (!ModesOnline) panel.Line("Mastery needs the server.", 19, Ui.AccentColor);
+                if (IsRefusal(LastMessage))
+                {
+                    WindowLine(content, "MasteryRefusal", LastMessage, y, 18, Ui.AccentColor);
+                    y -= 28f;
+                }
+                if (!ModesOnline)
+                {
+                    WindowLine(content, "MasteryOffline", "Mastery needs the server.", y, 18, Ui.AccentColor);
+                    y -= 28f;
+                }
 
                 // Technique rank.
                 var power = technique.Power(BattleSim.PowerFor(archetype.rarity.ToString()), hero.TechniqueRank);
-                panel.Line($"Technique rank {hero.TechniqueRank} of {technique.maxRank}. Special power {power}%, +{technique.powerPerRank}% a rank.", 21, HudArt.BrassLight).name = "RankLine";
-                if (hero.TechniqueRank >= technique.maxRank)
-                {
-                    panel.Action("RankUpButton", "Technique at its highest rank", null, false, null, 19);
-                }
+                var top = hero.TechniqueRank >= technique.maxRank;
+                var next = hero.TechniqueRank + 1;
+                var cost = top ? 0 : technique.Manuals(next);
+                var needs = top ? 0 : technique.HeroLevel(next);
+                var canRank = !top && ModesOnline && manuals >= cost && cumulative >= needs;
+                var rank = ScreenKit.AddRowAt(content, y, "TechniqueRow", "icon_skill", $"Technique rank {hero.TechniqueRank} of {technique.maxRank}",
+                    $"Special power {power}%, +{technique.powerPerRank}% a rank" + (!top && cumulative < needs ? $"     Needs hero level {needs}" : ""), canRank);
+                rank.Title.name = "RankLine";
+                rank.Detail.name = "RankDetail";
+                if (top) rank.Note("Highest rank");
                 else
                 {
-                    var next = hero.TechniqueRank + 1;
-                    var cost = technique.Manuals(next);
-                    var needs = technique.HeroLevel(next);
-                    var why = cumulative < needs ? $"   needs hero level {needs}" : "";
-                    panel.Action("RankUpButton", $"Rank up: {cost:N0} manuals (have {manuals:N0}){why}",
-                        () => RankUpTechnique(instanceId), ModesOnline && manuals >= cost && cumulative >= needs, Ui.AccentColor, 18);
+                    rank.Button("RankUpButton", "Rank up", () => RankUpTechnique(instanceId), canRank, Ui.AccentColor, 150f);
+                    rank.Reward("icon_scroll", cost.ToString("N0"));
                 }
+                y -= rank.Root.sizeDelta.y + 10f;
 
                 // Talent.
                 var talent = talents.Find(hero.TalentId);
-                var line = talent == null
-                    ? "No talent yet."
-                    : $"Talent: {talent.displayName}, level {hero.TalentLevel} of {talents.maxLevel} ({TalentEffect(talent, hero.TalentLevel)}). {talent.description}";
-                panel.Line(line, 21, HudArt.BrassLight).name = "TalentLine";
-                panel.Action("TalentRollButton", $"Roll a talent: 1 token (have {tokens:N0})",
-                    () =>
-                    {
-                        if (hero.TalentLevel > 0) ConfirmTalentRoll(instanceId);
-                        else RollTalent(instanceId);
-                    }, ModesOnline && tokens >= 1, Ui.AccentColor, 18);
-                panel.Line($"A roll is an even draw of one of the {talents.list.Count} talents at a level from 1 to {talents.maxLevel}. It replaces the talent the hero has, and can come up the same or lower.", 17);
-                panel.Line("Manuals come from dungeon wins and from stars on rival raids. A Talent Token comes from a 3-star raid on a rival. Rank and talent stay with this hero.", 17);
+                var canRoll = ModesOnline && tokens >= 1;
+                var gift = ScreenKit.AddRowAt(content, y, "TalentRow", "icon_star", talent == null ? "No talent yet" : $"{talent.displayName}, level {hero.TalentLevel} of {talents.maxLevel}",
+                    talent == null ? "A roll gives this hero one" : $"{TalentEffect(talent, hero.TalentLevel)}. {talent.description}", canRoll);
+                gift.Title.name = "TalentLine";
+                gift.Detail.name = "TalentDetail";
+                gift.Button("TalentRollButton", "Roll", () =>
+                {
+                    if (hero.TalentLevel > 0) ConfirmTalentRoll(instanceId);
+                    else RollTalent(instanceId);
+                }, canRoll, Ui.AccentColor, 150f);
+                gift.Reward("icon_reward", "1");
+                y -= gift.Root.sizeDelta.y + 12f;
+
+                WindowLine(content, "MasteryOwned", $"You have {manuals:N0} Technique Manuals and {tokens:N0} Talent Tokens.", y, 18, HudArt.Ivory);
+                y -= 30f;
+                var odds = WindowLine(content, "MasteryOdds", $"A roll is an even draw of one of the {talents.list.Count} talents at a level from 1 to {talents.maxLevel}. It replaces the talent the hero has, and can come up the same or lower.", y, 17, HudArt.IvoryMuted, 46f);
+                odds.alignment = TextAnchor.UpperLeft;
+                y -= 50f;
+                var sources = WindowLine(content, "MasterySources", "Manuals come from dungeon wins and from stars on rival raids. A Talent Token comes from a 3-star raid on a rival. Rank and talent stay with this hero.", y, 17, HudArt.IvoryMuted, 46f);
+                sources.alignment = TextAnchor.UpperLeft;
             });
         }
 
@@ -102,11 +152,18 @@ namespace ShinobiDominion.Game
             var hero = Roster.Find(instanceId);
             if (hero == null) return;
             var talent = Roster.Catalog.Talents.Find(hero.TalentId);
-            _panel.Show("Replace this talent?", () => ShowMastery(instanceId), panel =>
+            _panel.ShowWindow("Replace Talent", new Vector2(700f, 330f), () => ShowMastery(instanceId), content =>
             {
-                panel.Line($"{talent?.displayName ?? "The talent"}, level {hero.TalentLevel}, will be replaced by whatever the roll gives. It can be weaker.", 21);
-                panel.Action("TalentRollConfirm", "Roll", () => RollTalent(instanceId), ModesOnline, Ui.AccentColor, 20);
-                panel.Action("TalentRollKeep", "Keep it", () => ShowMastery(instanceId), true, null, 20);
+                var words = HudArt.Label(content, $"{talent?.displayName ?? "The talent"}, level {hero.TalentLevel}, will be replaced by whatever the roll gives. It can be weaker.", HudArt.Numbers, 22, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.LacquerDeep);
+                words.name = "ReplaceWords";
+                words.rectTransform.anchorMin = new Vector2(0f, 0.4f);
+                words.rectTransform.anchorMax = Vector2.one;
+                words.rectTransform.offsetMin = new Vector2(10f, 0f);
+                words.rectTransform.offsetMax = new Vector2(-10f, 0f);
+                var roll = Ui.Button(content, "TalentRollConfirm", "Roll", () => RollTalent(instanceId), ModesOnline, Ui.AttackColor, 22);
+                Ui.Anchor((RectTransform)roll.transform, new Vector2(0.5f, 0f), new Vector2(250f, 60f), new Vector2(-134f, 0f));
+                var keep = Ui.Button(content, "TalentRollKeep", "Keep it", () => ShowMastery(instanceId), true, null, 22);
+                Ui.Anchor((RectTransform)keep.transform, new Vector2(0.5f, 0f), new Vector2(250f, 60f), new Vector2(134f, 0f));
             });
         }
 

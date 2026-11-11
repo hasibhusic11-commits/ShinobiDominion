@@ -180,7 +180,24 @@ namespace ShinobiDominion.Game
         public static Row AddRow(PanelView panel, string name, string lead, string title, string detail = null, bool lit = false, float height = 0f)
         {
             if (height <= 0f) height = lit ? LitRowHeight : RowHeight;
-            var root = panel.Block(height);
+            return Fill(panel.Block(height), name, lead, title, detail, lit);
+        }
+
+        /// <summary>The same row, placed by hand in a window: across its full width, a given way down from its top.</summary>
+        public static Row AddRowAt(RectTransform parent, float y, string name, string lead, string title, string detail = null, bool lit = false, float height = 0f)
+        {
+            if (height <= 0f) height = lit ? LitRowHeight : RowHeight;
+            var root = Ui.Rect(name, parent);
+            root.anchorMin = new Vector2(0f, 1f);
+            root.anchorMax = new Vector2(1f, 1f);
+            root.pivot = new Vector2(0.5f, 1f);
+            root.sizeDelta = new Vector2(0f, height);
+            root.anchoredPosition = new Vector2(0f, y);
+            return Fill(root, name, lead, title, detail, lit);
+        }
+
+        private static Row Fill(RectTransform root, string name, string lead, string title, string detail, bool lit)
+        {
             root.name = name;
             var plate = root.gameObject.AddComponent<Image>();
             plate.sprite = HudArt.Sprite(lit ? "parchment_s40" : "plate_s30");

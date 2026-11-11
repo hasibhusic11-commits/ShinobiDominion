@@ -109,6 +109,8 @@ namespace ShinobiDominion.Tests
             evolving.TalentLevel = 3;
             controller.ShowMastery(evolving.InstanceId);
             yield return shot("13b_hero_mastery");
+            controller.ShowGear(evolving.InstanceId);
+            yield return shot("13c_hero_gear");
             evolving.TechniqueRank = 1;
             evolving.TalentId = "";
             evolving.TalentLevel = 0;

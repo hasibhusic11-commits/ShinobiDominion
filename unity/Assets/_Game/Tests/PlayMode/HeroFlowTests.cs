@@ -208,12 +208,14 @@ namespace ShinobiDominion.Tests
             Click(Find("MasteryButton"));
             yield return null;
             var texts = Object.FindObjectsByType<Text>(FindObjectsSortMode.None).ToList();
-            Assert.AreEqual("Technique rank 3 of 10. Special power 116%, +8% a rank.", texts.First(t => t.name == "RankLine").text);
-            StringAssert.StartsWith("Talent: Keen Edge, level 3 of 5 (+12% attack).", texts.First(t => t.name == "TalentLine").text);
+            Assert.AreEqual("Technique rank 3 of 10", texts.First(t => t.name == "RankLine").text);
+            StringAssert.StartsWith("Special power 116%, +8% a rank", texts.First(t => t.name == "RankDetail").text);
+            Assert.AreEqual("Keen Edge, level 3 of 5", texts.First(t => t.name == "TalentLine").text);
+            StringAssert.StartsWith("+12% attack.", texts.First(t => t.name == "TalentDetail").text);
             Assert.IsTrue(texts.Any(t => t.text == "Mastery needs the server."), "Offline, the panel says why nothing can be bought");
             Assert.IsFalse(Find("RankUpButton").interactable, "Ranks are bought on the server");
             Assert.IsFalse(Find("TalentRollButton").interactable, "Talents are rolled on the server, never on the device");
-            StringAssert.Contains("6 manuals", Find("RankUpButton").GetComponentInChildren<Text>().text, "Rank 4 costs 6 manuals");
+            Assert.AreEqual("6", Find("RankUpButton").transform.parent.Find("Reward_icon_scroll").GetComponentInChildren<Text>().text, "Rank 4 costs 6 manuals");
             Assert.IsTrue(texts.Any(t => t.text.Contains("even draw of one of the 6 talents at a level from 1 to 5")), "The odds are stated");
 
             // Nothing was rolled or bought.
