@@ -432,7 +432,7 @@ namespace ShinobiDominion.Game
             // especially duplicate heroes. Put the real archetype name on the
             // bottom edge of each portrait without obscuring the level plate.
             var heroName = Ui.Rect("HeroNamePlate", root);
-            Ui.Anchor(heroName, new Vector2(0.5f, 0f), new Vector2(154f, 28f), new Vector2(0f, 39f));
+            Ui.Anchor(heroName, new Vector2(0.5f, 0f), new Vector2(154f, 28f), new Vector2(0f, 51f));
             var nameFace = Ui.Framed(heroName, HudArt.Sprite(SdTheme.PlateDark), false);
             nameFace.pixelsPerUnitMultiplier = SdTheme.ArtScale;
             var nameText = HudArt.Label(heroName, Roster.ArchetypeOf(hero).displayName,
