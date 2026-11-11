@@ -615,26 +615,97 @@ namespace ShinobiDominion.Game
             var outcome = _raid.Outcome;
             var result = outcome.Result;
             if (outcome.State != null) ApplyServerState(outcome.State);
-            var title = result.stars > 0 ? "Victory" : "Defeat";
-            GameSounds.Play(result.stars > 0 ? GameSound.Victory : GameSound.Defeat);
-            _panel.Show(title, FinishRaid, panel =>
+            var won = result.stars > 0;
+            GameSounds.Play(won ? GameSound.Victory : GameSound.Defeat);
+            // The same window as the Arena and Siege results (ADR-056): the outcome, the stars, the facts on
+            // parchment, what the raid paid, and one way out.
+            _panel.ShowWindow("Raid Result", new Vector2(820f, 570f), FinishRaid, content =>
             {
-                DrawResultStars(panel, result.stars);
-                panel.Line($"{result.stars} of 3 stars", 30, Ui.AccentColor);
-                panel.Line($"Damage dealt: {result.damagePercent}%");
-                panel.Line(result.dojoDestroyed ? "The enemy Town Hall fell." : "The enemy Town Hall still stands.");
+                var word = HudArt.Label(content, won ? "VICTORY" : "DEFEAT", HudArt.Display, 58, TextAnchor.MiddleCenter,
+                    won ? new Color(1f, 0.86f, 0.42f) : HudArt.CrimsonLight, HudArt.LacquerDeep);
+                word.name = "Outcome";
+                word.fontStyle = FontStyle.BoldAndItalic;
+                Ui.Anchor(word.rectTransform, new Vector2(0.5f, 1f), new Vector2(700f, 74f), new Vector2(0f, 8f));
+                UiMotion.PopIn(word.transform, 0.05f, 0.4f, 0.4f);
+
+                DrawWindowStars(content, result.stars, -104f);
+
+                var hall = HudArt.Label(content, result.dojoDestroyed ? "The enemy Town Hall fell" : "The enemy Town Hall still stands", HudArt.Display, 23, TextAnchor.MiddleCenter, HudArt.BrassLight, HudArt.LacquerDeep);
+                hall.name = "Subject";
+                Ui.Anchor(hall.rectTransform, new Vector2(0.5f, 1f), new Vector2(690f, 34f), new Vector2(0f, -150f));
+
                 var landed = _raid.Placements.Count + _raid.Stacks.Sum(s => s.count);
-                panel.Line($"Still standing: {result.heroesAlive} of {landed}");
+                var strip = ScreenKit.Parchment(content, new Vector2(0.5f, 1f), new Vector2(700f, 74f), new Vector2(0f, -192f));
+                ScreenKit.Fact(strip, 0f, 0.31f, "icon_attack", "Damage", $"{result.damagePercent}%");
+                ScreenKit.Fact(strip, 0.31f, 0.69f, "icon_troops", "Still standing", $"{result.heroesAlive} of {landed}");
+                ScreenKit.Fact(strip, 0.69f, 1f, "icon_timer", "Time", $"{result.endTick / BattleSim.TicksPerSecond}s");
+
+                // The smaller facts, side by side under the parchment.
+                var details = Ui.Rect("Details", content);
+                Ui.Anchor(details, new Vector2(0.5f, 1f), new Vector2(690f, 26f), new Vector2(0f, -274f));
+                var across = details.gameObject.AddComponent<HorizontalLayoutGroup>();
+                across.spacing = 36f;
+                across.childAlignment = TextAnchor.MiddleCenter;
+                across.childControlWidth = true;
+                across.childControlHeight = true;
+                across.childForceExpandWidth = false;
+                across.childForceExpandHeight = true;
                 var guards = _raid.Session.defenders.Count;
-                if (guards > 0) panel.Line($"Enemy heroes beaten: {guards - result.defendersAlive} of {guards}");
-                panel.Line($"Time: {result.endTick / BattleSim.TicksPerSecond} seconds");
-                if (_raid.Casts.Count > 0) panel.Line($"Spells cast: {_raid.Casts.Count}");
-                if (_raid.Session.attackId == "practice") panel.Line("Practice battle: no reward.", 20, Ui.AccentColor);
-                else if (outcome.GoldEarned + outcome.ManaEarned > 0) panel.Line(outcome.ManaEarned > 0 ? $"Earned {outcome.GoldEarned:N0} gold and {outcome.ManaEarned:N0} Mana" : $"Earned {outcome.GoldEarned:N0} gold");
-                else if (_raid.Session.raid.id == "rival") panel.Line(result.stars == 0 ? "No gold: earn a star to get paid." : "No gold: this rival already paid today, you reached today's limit, or your vault is full.");
-                else panel.Line("No gold: only new stars pay, or your vault is full.");
-                DrawRewardLines(panel, outcome);
-                panel.Action("ReturnHomeButton", "Return to village", FinishRaid, true, Ui.AccentColor);
+                if (guards > 0) Ui.Label(details, $"Enemy heroes beaten: {guards - result.defendersAlive} of {guards}", 17, TextAnchor.MiddleCenter, HudArt.IvoryMuted).horizontalOverflow = HorizontalWrapMode.Overflow;
+                if (_raid.Casts.Count > 0) Ui.Label(details, $"Spells cast: {_raid.Casts.Count}", 17, TextAnchor.MiddleCenter, HudArt.IvoryMuted).horizontalOverflow = HorizontalWrapMode.Overflow;
+
+                // What the raid paid, as chips in a row, or one line saying why it paid nothing.
+                var earned = new List<(string icon, long amount)>();
+                var practice = _raid.Session.attackId == "practice";
+                if (!practice && outcome.GoldEarned > 0) earned.Add(("icon_gold", outcome.GoldEarned));
+                if (!practice && outcome.ManaEarned > 0) earned.Add(("icon_chakra", outcome.ManaEarned));
+                if (outcome.CrystalsEarned > 0) earned.Add(("icon_crystals", outcome.CrystalsEarned));
+                var rewards = Ui.Rect("Rewards", content);
+                Ui.Anchor(rewards, new Vector2(0.5f, 1f), new Vector2(690f, 44f), new Vector2(0f, -308f));
+                if (earned.Count == 0)
+                {
+                    var none = practice ? "Practice battle: no reward."
+                        : _raid.Session.raid.id == "rival" ? (result.stars == 0 ? "No gold: earn a star to get paid." : "No gold: this rival already paid today, you reached today's limit, or your vault is full.")
+                        : "No gold: only new stars pay, or your vault is full.";
+                    var note = Ui.Label(rewards, none, 18, TextAnchor.MiddleCenter, practice ? Ui.AccentColor : HudArt.IvoryMuted);
+                    note.name = "NoReward";
+                    Ui.Stretch(note.rectTransform);
+                }
+                else
+                {
+                    const float gap = 12f;
+                    var widths = earned.Select(e => 62f + e.amount.ToString("N0").Length * 11f).ToList();
+                    var x = -(widths.Sum() + gap * (earned.Count - 1)) * 0.5f;
+                    for (var i = 0; i < earned.Count; i++)
+                    {
+                        var chip = Ui.Rect("Earned_" + earned[i].icon, rewards);
+                        Ui.Anchor(chip, new Vector2(0.5f, 0.5f), new Vector2(widths[i], 42f), new Vector2(x + widths[i] * 0.5f, 0f));
+                        ScreenKit.Chip(chip, earned[i].icon, earned[i].amount.ToString("N0"));
+                        UiMotion.PopIn(chip, 0.9f + i * 0.2f, 0.3f, 0.3f);
+                        x += widths[i] + gap;
+                    }
+                }
+
+                // Hero experience and anything found, in one line.
+                var found = new List<string>();
+                if (outcome.XpEarned > 0) found.Add($"Your hero gained {outcome.XpEarned:N0} XP" + (outcome.LevelsGained > 0 ? $" and {outcome.LevelsGained} levels" : ""));
+                if (!string.IsNullOrEmpty(outcome.ItemEarned)) found.Add($"Found: {ItemName(outcome.ItemEarned)}");
+                foreach (var pair in outcome.ItemsEarned.OrderBy(p => p.Key, System.StringComparer.Ordinal))
+                    found.Add($"Found: {pair.Value:N0} {ItemName(pair.Key)}{(pair.Value == 1 ? "" : "s")}");
+                if (found.Count > 0)
+                {
+                    var extra = Ui.Label(content, string.Join("     ", found), 18, TextAnchor.MiddleCenter, new Color(1f, 0.87f, 0.4f));
+                    extra.name = "Found";
+                    Ui.Anchor(extra.rectTransform, new Vector2(0.5f, 1f), new Vector2(700f, 28f), new Vector2(0f, -356f));
+                    extra.verticalOverflow = VerticalWrapMode.Truncate;
+                    extra.resizeTextForBestFit = true;
+                    extra.resizeTextMinSize = 12;
+                    extra.resizeTextMaxSize = 18;
+                    UiMotion.FadeIn(extra.gameObject, 0.3f, 1.2f);
+                }
+
+                var home = Ui.Button(content, "ReturnHomeButton", "Return to village", FinishRaid, true, Ui.AccentColor, 23);
+                Ui.Anchor((RectTransform)home.transform, new Vector2(0.5f, 0f), new Vector2(330f, 62f), new Vector2(0f, 0f));
             });
         }
 

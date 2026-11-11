@@ -6,18 +6,29 @@ using Text = ShinobiDominion.Game.GameText;
 namespace ShinobiDominion.Game
 {
     /// <summary>
-    /// The parts every list screen is built from (ADR-055): a framed row with a lead picture, a title, one line of
-    /// detail and, on its right, reward chips, stars, a progress bar and at most one button. A screen says what each
-    /// row holds; how a row looks is decided here, once, so every screen reads as the same game.
+    /// The parts every list screen is built from (ADR-055, restyled to the owner's mockups in ADR-056): a framed row
+    /// with a lead picture or a numbered banner, a title, one line of detail and, on its right, square reward tiles,
+    /// stars, a progress bar and at most one button. The row that is open to the player lies on parchment with dark
+    /// words; the others are dark plates. A screen says what each row holds; how a row looks is decided here, once.
     /// </summary>
     public static class ScreenKit
     {
-        public const float RowHeight = 74f;
-        private const float Edge = 14f;
-        private const float Gap = 10f;
+        public const float RowHeight = 72f;
+        public const float LitRowHeight = 86f;
+        private const float Edge = 18f;
+        private const float Gap = 8f;
 
         private static readonly Color Dimmed = new Color(0.62f, 0.62f, 0.68f, 1f);
         private static readonly Color Gold = new Color(1f, 0.87f, 0.45f);
+        /// <summary>Words on parchment.</summary>
+        public static readonly Color InkBrown = new Color32(0x38, 0x22, 0x10, 0xFF);
+        public static readonly Color InkBrownSoft = new Color32(0x5E, 0x46, 0x2A, 0xFF);
+        public static readonly Color ParchmentEdge = new Color(1f, 0.95f, 0.8f, 0.55f);
+
+        private static readonly Color PennantTop = new Color(0.8f, 0.22f, 0.16f);
+        private static readonly Color PennantBottom = new Color(0.5f, 0.1f, 0.08f);
+        private static readonly Color PennantOffTop = new Color(0.36f, 0.38f, 0.45f);
+        private static readonly Color PennantOffBottom = new Color(0.2f, 0.21f, 0.27f);
 
         /// <summary>One row of a list. Parts are added from the right edge inward, in the order they are called.</summary>
         public sealed class Row
@@ -26,14 +37,15 @@ namespace ShinobiDominion.Game
             public Image Plate;
             public Text Title;
             public Text Detail;
+            public bool Lit;
+            internal Image Banner;
             private float _right = Edge;
-            private float _left;
 
-            internal Row(RectTransform root, Image plate, float left)
+            internal Row(RectTransform root, Image plate, bool lit)
             {
                 Root = root;
                 Plate = plate;
-                _left = left;
+                Lit = lit;
             }
 
             private RectTransform Slot(string name, float width, float height)
@@ -53,69 +65,84 @@ namespace ShinobiDominion.Game
             }
 
             /// <summary>The row's one action. Its name is what tests and the guide look for.</summary>
-            public Row Button(string name, string caption, Action onClick, bool enabled = true, Color? color = null, float width = 168f)
+            public Row Button(string name, string caption, Action onClick, bool enabled = true, Color? color = null, float width = 160f)
             {
-                var button = Ui.Button(Root, name, caption, onClick, enabled, color, 19);
+                var button = Ui.Button(Root, name, caption, onClick, enabled, color, 20);
                 var rect = (RectTransform)button.transform;
                 var layout = button.GetComponent<LayoutElement>();
                 if (layout != null) layout.ignoreLayout = true;
                 Ui.Anchor(rect, new Vector2(1f, 0.5f), new Vector2(width, 54f), new Vector2(-_right, 0f));
-                _right += width + Gap;
+                _right += width + Gap + 4f;
                 FitText();
                 return this;
             }
 
-            /// <summary>An amount of something with its picture: 300 gold, 40 gems.</summary>
+            /// <summary>The button of a row that is not open yet: it cannot be pressed, and carries a lock in place of a word.</summary>
+            public Row Locked(string name, float width = 160f)
+            {
+                Button(name, "", null, false, null, width);
+                var button = Root.Find(name);
+                var word = button.GetComponentInChildren<Text>();
+                if (word != null) word.gameObject.SetActive(false);
+                var locked = HudArt.Picture(button, "Lock", "icon_lock", new Vector2(0.5f, 0.5f), new Vector2(30f, 30f), new Vector2(0f, 2f));
+                locked.preserveAspect = true;
+                locked.color = new Color(0.72f, 0.7f, 0.66f);
+                return this;
+            }
+
+            /// <summary>An amount of something as a square tile: its picture, with the amount across the foot.</summary>
             public Row Reward(string icon, string amount)
             {
-                Chip(Slot("Reward_" + icon, ChipWidth(amount), 40f), icon, amount);
+                Tile(Slot("Reward_" + icon, 54f, 54f), icon, amount);
                 return this;
             }
 
             /// <summary>Three stars, the earned ones lit.</summary>
             public Row Stars(int earned)
             {
-                var slot = Slot("Stars", 96f, 30f);
+                var slot = Slot("Stars", 110f, 34f);
                 for (var i = 0; i < 3; i++)
                 {
-                    var star = HudArt.Picture(slot, "Star" + (i + 1), "icon_star", new Vector2(0f, 0.5f), new Vector2(28f, 28f), new Vector2(i * 32f + 2f, 0f));
+                    var star = HudArt.Picture(slot, "Star" + (i + 1), "icon_star", new Vector2(0f, 0.5f), new Vector2(32f, 32f), new Vector2(i * 37f + 2f, 0f));
                     star.preserveAspect = true;
-                    star.color = i < earned ? Color.white : new Color(0.18f, 0.17f, 0.2f, 0.9f);
+                    star.color = i < earned ? Color.white : (Lit ? new Color(0.36f, 0.27f, 0.16f, 0.85f) : new Color(0.16f, 0.16f, 0.2f, 0.95f));
                 }
+                // A little air between the stars and what stands to their right.
+                _right += 10f;
                 return this;
             }
 
-            /// <summary>A bar with its count: 3 of 5.</summary>
+            /// <summary>A bar with its count written on it: 3 / 5.</summary>
             public Row Progress(long value, long target)
             {
-                var slot = Slot("Progress", 190f, 40f);
-                var track = Ui.Rect("Track", slot);
-                Ui.Anchor(track, new Vector2(0f, 0.5f), new Vector2(120f, 16f), Vector2.zero);
-                var back = track.gameObject.AddComponent<Image>();
+                var slot = Slot("Progress", 190f, 26f);
+                var back = slot.gameObject.AddComponent<Image>();
                 back.sprite = HudArt.Sprite("track_s8");
                 back.type = Image.Type.Sliced;
+                back.color = new Color(0.1f, 0.11f, 0.18f, 1f);
                 back.raycastTarget = false;
                 var share = target <= 0 ? 1f : Mathf.Clamp01((float)value / target);
                 if (share > 0f)
                 {
-                    var fill = Ui.Rect("Fill", track);
+                    var fill = Ui.Rect("Fill", slot);
                     fill.anchorMin = Vector2.zero;
-                    fill.anchorMax = new Vector2(Mathf.Max(share, 0.08f), 1f);
-                    fill.offsetMin = new Vector2(1f, 1f);
-                    fill.offsetMax = new Vector2(-1f, -1f);
+                    fill.anchorMax = new Vector2(Mathf.Max(share, 0.06f), 1f);
+                    fill.offsetMin = new Vector2(2f, 2f);
+                    fill.offsetMax = new Vector2(-2f, -2f);
                     var image = fill.gameObject.AddComponent<Image>();
                     image.sprite = HudArt.Sprite("fill_s8");
                     image.type = Image.Type.Sliced;
-                    image.color = share >= 1f ? new Color(0.45f, 0.9f, 0.35f) : new Color(0.95f, 0.72f, 0.25f);
+                    image.color = share >= 1f ? new Color(1f, 0.8f, 0.25f) : new Color(0.95f, 0.7f, 0.22f);
                     image.raycastTarget = false;
                 }
-                var count = HudArt.Label(slot, $"{Math.Min(value, target):N0}/{target:N0}", HudArt.Numbers, 18, TextAnchor.MiddleRight, HudArt.Ivory, HudArt.LacquerDeep);
+                var count = HudArt.Label(slot, $"{Math.Min(value, target):N0} / {target:N0}", HudArt.Numbers, 17, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.LacquerDeep);
                 count.name = "ProgressCount";
-                Ui.Stretch(count.rectTransform, 124f, 0f, 0f, 0f);
+                Ui.Stretch(count.rectTransform);
+                _right += 8f;
                 return this;
             }
 
-            /// <summary>A small picture that says the row's state at a glance: a lock, a tick.</summary>
+            /// <summary>A small picture that says the row's state at a glance: a tick.</summary>
             public Row Mark(string icon, Color? tint = null)
             {
                 var slot = Slot("Mark_" + icon, 40f, 40f);
@@ -125,11 +152,13 @@ namespace ShinobiDominion.Game
                 return this;
             }
 
-            /// <summary>A few words on the right where a button would be: Claimed, Full.</summary>
+            /// <summary>A few words on the right where a button would be: Claimed, All stars won.</summary>
             public Row Note(string words, Color? color = null)
             {
                 var slot = Slot("Note", Mathf.Max(96f, words.Length * 11f + 16f), 40f);
-                var label = HudArt.Label(slot, words, HudArt.Numbers, 18, TextAnchor.MiddleRight, color ?? HudArt.IvoryMuted, HudArt.LacquerDeep);
+                var label = Lit
+                    ? HudArt.Label(slot, words, HudArt.Numbers, 18, TextAnchor.MiddleRight, color ?? InkBrownSoft, ParchmentEdge)
+                    : HudArt.Label(slot, words, HudArt.Numbers, 18, TextAnchor.MiddleRight, color ?? HudArt.IvoryMuted, HudArt.LacquerDeep);
                 Ui.Stretch(label.rectTransform);
                 return this;
             }
@@ -138,50 +167,57 @@ namespace ShinobiDominion.Game
             public Row Dim()
             {
                 Plate.color = Dimmed;
-                if (Title != null) Title.color = HudArt.IvoryMuted;
+                if (Title != null && !Lit) Title.color = HudArt.IvoryMuted;
+                if (Banner != null) Banner.sprite = UiSkin.Pennant(PennantOffTop, PennantOffBottom, new Color(0.62f, 0.6f, 0.56f));
                 return this;
             }
         }
 
         /// <summary>
-        /// A row whose lead is one of the kit's pictures, or a number when <paramref name="lead"/> is digits (a level,
-        /// a floor, a rank). <paramref name="lit"/> draws the brighter plate, for the row that wants the player's eye.
+        /// A row whose lead is one of the kit's pictures, or a numbered banner when <paramref name="lead"/> is digits
+        /// (a level, a floor). <paramref name="lit"/> lays the row on parchment: the row that is open to the player.
         /// </summary>
-        public static Row AddRow(PanelView panel, string name, string lead, string title, string detail = null, bool lit = false, float height = RowHeight)
+        public static Row AddRow(PanelView panel, string name, string lead, string title, string detail = null, bool lit = false, float height = 0f)
         {
+            if (height <= 0f) height = lit ? LitRowHeight : RowHeight;
             var root = panel.Block(height);
             root.name = name;
             var plate = root.gameObject.AddComponent<Image>();
-            plate.sprite = HudArt.Sprite(lit ? "counter_s30" : "plate_s30");
+            plate.sprite = HudArt.Sprite(lit ? "parchment_s40" : "plate_s30");
             plate.type = Image.Type.Sliced;
-            plate.pixelsPerUnitMultiplier = 1.5f;
+            plate.pixelsPerUnitMultiplier = lit ? 1.7f : 1.5f;
             plate.raycastTarget = false;
+            var row = new Row(root, plate, lit);
 
-            const float medal = 54f;
-            var left = Edge + medal + 14f;
-            if (!string.IsNullOrEmpty(lead))
+            const float medal = 52f;
+            var left = Edge + medal + 16f;
+            if (string.IsNullOrEmpty(lead)) left = Edge + 8f;
+            else if (int.TryParse(lead, out _))
+            {
+                // A banner that hangs from the top of the row and ends a little below its middle.
+                var banner = Ui.Rect("Lead", root);
+                Ui.Anchor(banner, new Vector2(0f, 1f), new Vector2(50f, 62f), new Vector2(Edge + 4f, 4f));
+                row.Banner = banner.gameObject.AddComponent<Image>();
+                row.Banner.sprite = UiSkin.Pennant(PennantTop, PennantBottom, new Color(0.86f, 0.68f, 0.3f));
+                row.Banner.raycastTarget = false;
+                var number = HudArt.Label(banner, lead, HudArt.Display, 25, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.CrimsonDark);
+                Ui.Stretch(number.rectTransform, 6f, 16f, 6f, 6f);
+                number.resizeTextForBestFit = true;
+                number.resizeTextMinSize = 13;
+                number.resizeTextMaxSize = 25;
+            }
+            else
             {
                 var disc = HudArt.Picture(root, "Lead", "medal_face_lacquer", new Vector2(0f, 0.5f), new Vector2(medal, medal), new Vector2(Edge, 0f));
                 disc.preserveAspect = true;
-                if (int.TryParse(lead, out _))
-                {
-                    var number = HudArt.Label(disc.transform, lead, HudArt.Display, 24, TextAnchor.MiddleCenter, HudArt.BrassLight, HudArt.LacquerDeep);
-                    Ui.Stretch(number.rectTransform, 4f, 4f, 4f, 4f);
-                    number.resizeTextForBestFit = true;
-                    number.resizeTextMinSize = 13;
-                    number.resizeTextMaxSize = 24;
-                }
-                else
-                {
-                    var icon = HudArt.Picture(disc.transform, "Icon", lead, new Vector2(0.5f, 0.5f), new Vector2(medal * 0.6f, medal * 0.6f), Vector2.zero);
-                    icon.preserveAspect = true;
-                }
+                var icon = HudArt.Picture(disc.transform, "Icon", lead, new Vector2(0.5f, 0.5f), new Vector2(medal * 0.6f, medal * 0.6f), Vector2.zero);
+                icon.preserveAspect = true;
             }
-            else left = Edge + 6f;
 
-            var row = new Row(root, plate, left);
             var hasDetail = !string.IsNullOrEmpty(detail);
-            row.Title = HudArt.Label(root, title, HudArt.Display, 21, TextAnchor.MiddleLeft, lit ? Gold : HudArt.BrassLight, HudArt.LacquerDeep);
+            row.Title = lit
+                ? HudArt.Label(root, title, HudArt.Display, 23, TextAnchor.MiddleLeft, InkBrown, ParchmentEdge)
+                : HudArt.Label(root, title, HudArt.Display, 21, TextAnchor.MiddleLeft, HudArt.BrassLight, HudArt.LacquerDeep);
             row.Title.name = "RowTitle";
             // With a line of detail under it the title sits just above the middle, and the two read as one block.
             row.Title.rectTransform.anchorMin = new Vector2(0f, hasDetail ? 0.44f : 0f);
@@ -192,10 +228,10 @@ namespace ShinobiDominion.Game
             row.Title.verticalOverflow = VerticalWrapMode.Truncate;
             row.Title.resizeTextForBestFit = true;
             row.Title.resizeTextMinSize = 14;
-            row.Title.resizeTextMaxSize = 21;
+            row.Title.resizeTextMaxSize = lit ? 23 : 21;
             if (hasDetail)
             {
-                row.Detail = Ui.Label(root, detail, 16, TextAnchor.MiddleLeft, HudArt.IvoryMuted);
+                row.Detail = Ui.Label(root, detail, 16, TextAnchor.MiddleLeft, lit ? InkBrownSoft : HudArt.IvoryMuted);
                 row.Detail.name = "RowDetail";
                 row.Detail.rectTransform.anchorMin = Vector2.zero;
                 row.Detail.rectTransform.anchorMax = new Vector2(1f, 0.44f);
@@ -210,9 +246,26 @@ namespace ShinobiDominion.Game
             return row;
         }
 
-        private static float ChipWidth(string amount) => 50f + amount.Length * 11f;
+        /// <summary>A square reward tile: the picture, with the amount across its foot.</summary>
+        public static void Tile(RectTransform rect, string icon, string amount)
+        {
+            var well = rect.gameObject.AddComponent<Image>();
+            well.sprite = HudArt.Sprite("well_s18");
+            well.type = Image.Type.Sliced;
+            well.pixelsPerUnitMultiplier = 1.5f;
+            well.raycastTarget = false;
+            var picture = HudArt.Picture(rect, "Icon", icon, new Vector2(0.5f, 1f), new Vector2(34f, 34f), new Vector2(0f, -4f));
+            picture.preserveAspect = true;
+            var label = HudArt.Label(rect, amount, HudArt.Numbers, 15, TextAnchor.LowerRight, HudArt.Ivory, HudArt.LacquerDeep);
+            label.name = "Amount";
+            Ui.Stretch(label.rectTransform, 2f, 1f, 5f, 0f);
+            label.horizontalOverflow = HorizontalWrapMode.Overflow;
+            label.resizeTextForBestFit = true;
+            label.resizeTextMinSize = 10;
+            label.resizeTextMaxSize = 15;
+        }
 
-        /// <summary>A picture and an amount in a dark well.</summary>
+        /// <summary>A picture and an amount side by side in a dark well, for a result or a gift.</summary>
         public static void Chip(RectTransform rect, string icon, string amount)
         {
             var well = rect.gameObject.AddComponent<Image>();
@@ -264,12 +317,26 @@ namespace ShinobiDominion.Game
             return band;
         }
 
-        /// <summary>One wide button in the middle of the screen, for a screen's main action: Fight.</summary>
-        public static Button Feature(PanelView panel, string name, string caption, Action onClick, bool enabled, Color color, float width = 340f)
+        /// <summary>
+        /// One wide button in the middle of the screen, for a screen's main action: Fight. Its word is in the display
+        /// face, with a picture before it when one is given.
+        /// </summary>
+        public static Button Feature(PanelView panel, string name, string caption, Action onClick, bool enabled, Color? color, float width = 340f, float height = 70f, string icon = null)
         {
-            var block = panel.Block(86f);
+            var block = panel.Block(height + 14f);
             var button = Ui.Button(block, name, caption, onClick, enabled, color, 28);
-            Ui.Anchor((RectTransform)button.transform, new Vector2(0.5f, 0.5f), new Vector2(width, 70f), Vector2.zero);
+            Ui.Anchor((RectTransform)button.transform, new Vector2(0.5f, 0.5f), new Vector2(width, height), Vector2.zero);
+            var word = button.GetComponentInChildren<Text>();
+            if (word != null)
+            {
+                word.font = HudArt.Display;
+                word.fontSize = Mathf.RoundToInt(height * 0.42f);
+            }
+            if (!string.IsNullOrEmpty(icon))
+            {
+                var picture = HudArt.Picture(button.transform, "Icon", icon, new Vector2(0.5f, 0.5f), new Vector2(height * 0.5f, height * 0.5f), new Vector2(-(caption.Length * height * 0.15f + height * 0.4f), 3f));
+                picture.preserveAspect = true;
+            }
             return button;
         }
 
@@ -293,6 +360,51 @@ namespace ShinobiDominion.Game
             label.resizeTextForBestFit = true;
             label.resizeTextMinSize = 13;
             label.resizeTextMaxSize = 18;
+        }
+
+        /// <summary>A strip of parchment across a window, for the few facts a result or a gift is about.</summary>
+        public static RectTransform Parchment(RectTransform parent, Vector2 anchor, Vector2 size, Vector2 offset)
+        {
+            var strip = Ui.Rect("Parchment", parent);
+            Ui.Anchor(strip, anchor, size, offset);
+            var image = strip.gameObject.AddComponent<Image>();
+            image.sprite = HudArt.Sprite("parchment_s40");
+            image.type = Image.Type.Sliced;
+            image.pixelsPerUnitMultiplier = 1.6f;
+            image.raycastTarget = false;
+            return strip;
+        }
+
+        /// <summary>One fact on parchment: a picture, a small name and a large value, in dark ink.</summary>
+        public static void Fact(RectTransform strip, float fromLeft, float toRight, string icon, string name, string value, Color? valueColor = null)
+        {
+            var cell = Ui.Rect("Fact_" + name, strip);
+            cell.anchorMin = new Vector2(fromLeft, 0f);
+            cell.anchorMax = new Vector2(toRight, 1f);
+            cell.offsetMin = new Vector2(20f, 8f);
+            cell.offsetMax = new Vector2(-24f, -8f);
+            var picture = HudArt.Picture(cell, "Icon", icon, new Vector2(0f, 0.5f), new Vector2(36f, 36f), Vector2.zero);
+            picture.preserveAspect = true;
+            picture.color = InkBrown;
+            var label = Ui.Label(cell, name, 17, TextAnchor.MiddleLeft, InkBrownSoft);
+            label.rectTransform.anchorMin = Vector2.zero;
+            label.rectTransform.anchorMax = new Vector2(0.5f, 1f);
+            label.rectTransform.offsetMin = new Vector2(46f, 0f);
+            label.rectTransform.offsetMax = Vector2.zero;
+            label.horizontalOverflow = HorizontalWrapMode.Overflow;
+            label.resizeTextForBestFit = true;
+            label.resizeTextMinSize = 12;
+            label.resizeTextMaxSize = 17;
+            var number = HudArt.Label(cell, value, HudArt.Display, 28, TextAnchor.MiddleRight, valueColor ?? InkBrown, ParchmentEdge);
+            number.name = "FactValue";
+            number.rectTransform.anchorMin = new Vector2(0.5f, 0f);
+            number.rectTransform.anchorMax = Vector2.one;
+            number.rectTransform.offsetMin = Vector2.zero;
+            number.rectTransform.offsetMax = Vector2.zero;
+            number.horizontalOverflow = HorizontalWrapMode.Overflow;
+            number.resizeTextForBestFit = true;
+            number.resizeTextMinSize = 14;
+            number.resizeTextMaxSize = 28;
         }
     }
 }

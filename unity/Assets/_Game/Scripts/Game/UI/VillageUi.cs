@@ -151,6 +151,47 @@ namespace ShinobiDominion.Game
         }
 
         /// <summary>A cut gem, with a lighter facet on the upper left and a dark edge.</summary>
+        /// <summary>
+        /// A small hanging banner with a pointed foot and a metal rim, for the number that leads a row: a level, a
+        /// floor. Crimson for a row that is open, grey for one that is locked.
+        /// </summary>
+        public static Sprite Pennant(Color top, Color bottom, Color rim)
+        {
+            var key = $"pennant{top}{bottom}{rim}";
+            if (Cache.TryGetValue(key, out var cached) && cached != null) return cached;
+            const int width = 96;
+            const int height = 120;
+            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
+            var pixels = new Color[width * height];
+            var centre = (width - 1) * 0.5f;
+            var half = width * 0.5f - 1f;
+            // The foot is a shallow V: lowest in the middle.
+            const float slope = 0.5f;
+            for (var y = 0; y < height; y++)
+            for (var x = 0; x < width; x++)
+            {
+                var across = Mathf.Abs(x - centre);
+                var foot = 2f + (half - across) * 0f + across * slope;
+                // How far inside the shape this pixel is, measured to the nearest of its three kinds of edge.
+                var depth = Mathf.Min(half - across, Mathf.Min((y - foot) * 0.9f, height - 2f - y));
+                var lift = (float)y / (height - 1);
+                var metal = Shade(rim, Mathf.Lerp(0.7f, 1.25f, lift));
+                var fill = Color.Lerp(bottom, top, lift);
+                // A soft sheen across the upper half.
+                fill = Color.Lerp(fill, Color.white, Mathf.Clamp01((lift - 0.55f) * 2f) * 0.12f);
+                var color = Band(Ink, metal, depth, 2.5f);
+                color = Band(color, Ink, depth, 9f);
+                color = Band(color, fill, depth, 11f);
+                color.a *= Mathf.Clamp01(depth + 0.5f);
+                pixels[y * width + x] = color;
+            }
+            texture.SetPixels(pixels);
+            texture.Apply();
+            var sprite = Sprite.Create(texture, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f), PixelsPerUnit);
+            Cache[key] = sprite;
+            return sprite;
+        }
+
         public static Sprite Diamond(Color top, Color bottom)
         {
             var key = $"diamond{top}{bottom}";
@@ -839,6 +880,106 @@ namespace ShinobiDominion.Game
             {
                 UiMotion.FadeIn(_card.gameObject, 0.2f);
                 UiMotion.PopIn(_card, 0f, 0.96f, 0.24f);
+            }
+        }
+
+        /// <summary>
+        /// A full screen as the owner's mockups draw one (ADR-056): painted scenery down one side, an inset framed
+        /// panel holding a scrolling list, the title on a crimson plaque over the panel's top edge, and one fact about
+        /// the screen (stars won, rank) in a pill at its top right. <paramref name="sceneWidth"/> is how much of the
+        /// screen's width the scenery takes, in canvas units; the panel takes the rest.
+        /// </summary>
+        public void ShowStage(string title, string info, string infoIcon, string scene, bool sceneOnRight, float sceneWidth, Action onBack, Action<PanelView> fill, string note = null)
+        {
+            var opening = !IsOpen;
+            Hide();
+            IsFullScreen = true;
+            _card = Ui.Rect("Screen", _parent);
+            Ui.Stretch(_card);
+            Ui.Background(_card, new Color(0.035f, 0.045f, 0.09f, 1f));
+
+            // The scenery fills its side from top to bottom, cropped to fit and never squashed.
+            var art = Ui.Rect("Scenery", _card);
+            art.anchorMin = new Vector2(sceneOnRight ? 1f : 0f, 0f);
+            art.anchorMax = new Vector2(sceneOnRight ? 1f : 0f, 1f);
+            art.pivot = new Vector2(sceneOnRight ? 1f : 0f, 0.5f);
+            art.sizeDelta = new Vector2(sceneWidth, 0f);
+            art.gameObject.AddComponent<RectMask2D>();
+            var picture = Ui.Rect("Picture", art);
+            var sprite = HudArt.Sprite(scene);
+            var image = picture.gameObject.AddComponent<Image>();
+            image.sprite = sprite;
+            image.raycastTarget = false;
+            picture.anchorMin = picture.anchorMax = picture.pivot = new Vector2(sceneOnRight ? 1f : 0f, 1f);
+            var shape = sprite.rect.width / sprite.rect.height;
+            // Tall enough to cover the side at the 16:9 the canvas is laid out for, and at anything taller.
+            var tall = Mathf.Max(760f, sceneWidth / shape);
+            picture.sizeDelta = new Vector2(tall * shape, tall);
+
+            var overlap = 34f;
+            var left = sceneOnRight ? 14f : sceneWidth - overlap;
+            var right = sceneOnRight ? sceneWidth - overlap : 14f;
+            const float top = 46f;
+            const float bottom = 12f;
+            var frame = Ui.Rect("Frame", _card);
+            Ui.Stretch(frame, left, bottom, right, top);
+            Ui.Framed(frame, HudArt.Sprite("frame_s80")).pixelsPerUnitMultiplier = 1.15f;
+            HudArt.DropShadow(frame, 10f, 18f, 0.6f);
+
+            var plaque = HudArt.Picture(frame, "Plaque", "ribbon", new Vector2(0.5f, 1f), new Vector2(Mathf.Max(340f, title.Length * 22f + 150f), 62f), new Vector2(0f, 30f));
+            var heading = HudArt.Label(plaque.transform, title, HudArt.Display, 29, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.CrimsonDark);
+            heading.name = "ScreenTitle";
+            Ui.Stretch(heading.rectTransform, 30f, 4f, 30f, 2f);
+            heading.resizeTextForBestFit = true;
+            heading.resizeTextMinSize = 18;
+            heading.resizeTextMaxSize = 29;
+
+            var back = Medal.Create(_card, "CloseButton", MedalKind.IconOnly, "back", null, onBack, true, 60f);
+            Ui.Anchor((RectTransform)back.transform, new Vector2(0f, 1f), new Vector2(60f, 60f), new Vector2(14f, -8f));
+
+            if (!string.IsNullOrEmpty(info))
+            {
+                var pill = Ui.Rect("InfoPill", frame);
+                var wide = info.Length * 11.5f + (string.IsNullOrEmpty(infoIcon) ? 36f : 74f);
+                Ui.Anchor(pill, new Vector2(1f, 1f), new Vector2(wide, 42f), new Vector2(-34f, -22f));
+                var well = pill.gameObject.AddComponent<Image>();
+                well.sprite = HudArt.Sprite("well_s18");
+                well.type = Image.Type.Sliced;
+                well.pixelsPerUnitMultiplier = 1.3f;
+                well.raycastTarget = false;
+                if (!string.IsNullOrEmpty(infoIcon))
+                {
+                    var icon = HudArt.Picture(pill, "Icon", infoIcon, new Vector2(0f, 0.5f), new Vector2(28f, 28f), new Vector2(12f, 0f));
+                    icon.preserveAspect = true;
+                }
+                var words = HudArt.Label(pill, info, HudArt.Numbers, 19, TextAnchor.MiddleRight, HudArt.BrassLight, HudArt.LacquerDeep);
+                words.name = "ScreenInfo";
+                Ui.Stretch(words.rectTransform, string.IsNullOrEmpty(infoIcon) ? 12f : 46f, 0f, 14f, 0f);
+            }
+
+            if (!string.IsNullOrEmpty(note))
+            {
+                // One line about the screen, level with the pill and clear of it.
+                var aside = Ui.Label(frame, note, 17, TextAnchor.MiddleLeft, HudArt.IvoryMuted);
+                aside.name = "ScreenNote";
+                aside.rectTransform.anchorMin = new Vector2(0f, 1f);
+                aside.rectTransform.anchorMax = new Vector2(1f, 1f);
+                aside.rectTransform.pivot = new Vector2(0f, 1f);
+                aside.rectTransform.offsetMin = new Vector2(44f, -64f);
+                aside.rectTransform.offsetMax = new Vector2(-(string.IsNullOrEmpty(info) ? 44f : info.Length * 11.5f + 130f), -22f);
+                aside.verticalOverflow = VerticalWrapMode.Truncate;
+                aside.resizeTextForBestFit = true;
+                aside.resizeTextMinSize = 12;
+                aside.resizeTextMaxSize = 17;
+            }
+
+            // Inside the frame's brass edge, and below the plaque and the pill.
+            BuildScrollArea(left + 40f, bottom + 30f, right + 40f, top + 74f);
+            fill(this);
+            if (opening)
+            {
+                UiMotion.FadeIn(_card.gameObject, 0.2f);
+                UiMotion.PopIn(frame, 0f, 0.96f, 0.24f);
             }
         }
 

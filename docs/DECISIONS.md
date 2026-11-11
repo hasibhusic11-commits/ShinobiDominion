@@ -88,6 +88,21 @@ Follows the owner's ADR-021. Up to four Troop Camps, gated by Dojo level, and a 
 - A raid still needs at least one hero. At most 200 troops can land in one raid, to bound the server's work.
 - Troop names and all numbers are test values. Offline practice troops aren't saved.
 
+## ADR-056: Screens rebuilt to the owner's mockups, 2026-11-10
+The owner supplied eight mockups as the target for the screens (Village Siege, Arena, Arena result, Rankings, Daily Quests, Daily Gift, Summon reveal, Summon results). They are flat concept pictures, not layered art. This batch rebuilds the screens toward them in Unity UI, with the game's own kit and with scenery cut out of the mockups themselves.
+
+- **The stage.** `PanelView.ShowStage` is a full screen as the mockups draw one: painted scenery down one side, an inset brass-framed panel with a scrolling list, the title on a crimson plaque over the panel's top edge, one fact about the screen in a pill at its top right, and one line of note beside it. Village Siege, Daily Quests, Rankings, the Arena and the Trial Tower use it.
+- **Rows.** The row that is open to the player lies on parchment with dark ink; the others are dark plates. A level or a floor is a number on a small hanging banner (`UiSkin.Pennant`, drawn in code), crimson when open and grey when locked. Rewards are square tiles, a picture over its amount. A locked row's button carries a lock in place of a word. Stars are larger, and a progress bar carries its count.
+- **Rankings** is a table: a crimson heading, the first three places on gold, silver and bronze by where they stand in the list (ties share a rank number), and each player's guarding hero with its painting.
+- **Arena** has the scene on the right, the record and what a win pays on parchment, the hero who will fight, and Fight and Rankings as the two large buttons.
+- **Results** (raid, Village Siege, Arena, Trial Tower) are one centred window in place of a side panel: the outcome in large letters, the stars, the facts on a strip of parchment, what the fight paid as chips, and the way out.
+- **Daily Gift** shows the gift, the three amounts on parchment and one Open button. **Summon results** ends in one Done button in the middle.
+- **Art.** `tools/art/crop_owner_mockups.ps1` cuts four pieces out of the mockups into `Resources/UI`: `scene_castle`, `scene_arena`, `scene_lantern` and `art_gift`.
+- **Left out on purpose.** The mockups show things the game does not have: Duel Charges in the Arena, Go buttons on quests, scroll and speed-up rewards, wood and stone, player portraits and a level bar in the rankings. None was added to match a picture. Their README says the same: the numbers and icons in them are conceptual.
+- **Not matched yet.** The plaque is the kit's ribbon, not the mockups' ornate one, and the frame is the kit's brass frame. Titles are in Cinzel, not the mockups' italic serif. The summon reveal and its results have no painted backdrop. The gift picture is a cut from a flat image and its edge can be seen against the window. Clean, separate art pieces from the owner would lift all of these.
+- **Still on the old look.** The Battle hub and guild list use the kit but not the stage. The side panels that are lists of plain lines (Relic Hall research, gear, mastery, the menu, building info), the dungeon map, evolution, the shop, mail, the inside of a guild and the chest window are not rebuilt.
+- **Tests.** The whole Unity suite ran against the local server: 152 tests, all passed, none skipped.
+
 ## ADR-055: One kit for every list screen, and the first screens rebuilt on it, 2026-11-10
 The owner's verdict on the screens a player opens: many "scream AI slop", and the game should feel prestigious. An audit of every one of them (38 places a panel is opened) found one cause behind most of it. Nearly every screen was the same navy box holding a stack of full-width buttons, each button one long sentence with the name, the state, the numbers and the reward run together. There were no pictures, no columns and nothing to tell a row's state at a glance, and a short screen left most of the display empty. The art to do better was already in the project and unused: 100 icons, plates, wells, medals and the building paintings.
 

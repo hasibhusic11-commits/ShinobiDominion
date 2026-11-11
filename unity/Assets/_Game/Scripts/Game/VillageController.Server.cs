@@ -275,7 +275,7 @@ namespace ShinobiDominion.Game
                     // Cards turn up one after another, like a reveal.
                     UiMotion.PopIn(card.transform, 0.12f * shown++, 0.2f, 0.36f);
                 }
-                panel.Action("SummonDoneButton", "Done", ShowSummoningGate, true, Ui.AccentColor);
+                ScreenKit.Feature(panel, "SummonDoneButton", "DONE", ShowSummoningGate, true, Ui.AttackColor, 320f, 70f);
             });
         }
 

@@ -161,9 +161,11 @@ namespace ShinobiDominion.Game
         {
             var stars = _siegeList?.Sum(l => l.bestStars) ?? 0;
             var total = (_siegeList?.Count ?? 0) * 3;
-            _panel.ShowScreen("Village Siege", _siegeList == null ? "" : $"{stars} of {total} stars", ShowBattleHub, panel =>
+            _panel.ShowStage("Village Siege", _siegeList == null ? "" : $"{stars} / {total} Stars", "icon_star", "scene_castle", false, 236f, ShowBattleHub, panel =>
             {
                 ScreenKit.Notice(panel, LastMessage);
+                panel.Line("Rogue bands storm your own village. Your towers, walls and the heroes on their bases hold them off. Nothing in your village is lost, win or lose.", 18, HudArt.Ivory);
+                panel.Line("Three stars: under 10% damage      Two stars: under 30% damage      New stars pay once", 17, Ui.AccentColor);
                 if (_siegeList == null)
                 {
                     panel.Line("Scouting the hills...");
@@ -172,23 +174,29 @@ namespace ShinobiDominion.Game
                 foreach (var level in _siegeList)
                 {
                     var chosen = level.level;
-                    var first = level.open && level.bestStars == 0;
-                    var row = ScreenKit.AddRow(panel, "SiegeRow" + level.level, level.level.ToString(), level.name,
-                        level.open ? $"{level.attackers} attackers" : $"Hold level {level.level - 1} first", first);
-                    row.Button("SiegeLevel" + level.level, level.open ? "Defend" : "Locked", () => FightSiege(chosen), level.open, level.open ? Ui.AttackColor : (Color?)null, 150f);
-                    if (!level.open)
+                    var name = "SiegeLevel" + level.level;
+                    ScreenKit.Row row;
+                    if (level.open)
                     {
-                        row.Dim();
-                        continue;
+                        row = ScreenKit.AddRow(panel, "SiegeRow" + level.level, level.level.ToString(), level.name, $"{level.attackers} attackers", true);
+                        row.Button(name, "Fight", () => FightSiege(chosen), true, Ui.AttackColor);
+                    }
+                    else
+                    {
+                        row = ScreenKit.AddRow(panel, "SiegeRow" + level.level, level.level.ToString(), level.name, $"Locked: hold level {level.level - 1} first");
+                        row.Locked(name);
+                    }
+                    // What each new star pays, and what the first win adds.
+                    if (level.bestStars >= 3) row.Note("All stars won");
+                    else
+                    {
+                        if (level.bestStars == 0 && level.firstClearCrystals > 0) row.Reward("icon_crystals", level.firstClearCrystals.ToString("N0"));
+                        row.Reward("icon_chakra", level.manaPerStar.ToString("N0"));
+                        row.Reward("icon_gold", level.goldPerStar.ToString("N0"));
                     }
                     row.Stars(level.bestStars);
-                    if (level.bestStars >= 3) continue;
-                    // What each new star pays, and what the first win adds.
-                    if (first && level.firstClearCrystals > 0) row.Reward("icon_crystals", level.firstClearCrystals.ToString("N0"));
-                    row.Reward("icon_chakra", level.manaPerStar.ToString("N0"));
-                    row.Reward("icon_gold", level.goldPerStar.ToString("N0"));
+                    if (!level.open) row.Dim();
                 }
-                panel.Line("Three stars under 10% damage, two under 30%. Gold and Mana are paid for each new star. Nothing in your village is lost.", 17);
             });
         }
 
@@ -225,7 +233,7 @@ namespace ShinobiDominion.Game
         private void ShowArena()
         {
             var board = _arenaBoard;
-            _panel.ShowScreen("Arena", board == null ? "" : $"{board.points:N0} points   Rank #{board.rank:N0}", ShowBattleHub, panel =>
+            _panel.ShowStage("Arena", board == null ? "" : $"{board.points:N0} points    Rank #{board.rank:N0}", "icon_rank", "scene_arena", true, 560f, ShowBattleHub, panel =>
             {
                 ScreenKit.Notice(panel, LastMessage);
                 if (board == null)
@@ -233,31 +241,24 @@ namespace ShinobiDominion.Game
                     panel.Line("Finding the Arena...");
                     return;
                 }
-                ScreenKit.Stats(panel,
-                    ("icon_rank", $"#{board.rank:N0}", "Rank"),
-                    ("icon_trophy", board.points.ToString("N0"), "Points"),
-                    ("icon_victory", board.wins.ToString("N0"), "Wins"),
-                    ("icon_retreat", board.losses.ToString("N0"), "Losses"));
-                ScreenKit.Feature(panel, "ArenaFightButton", "Fight", FightArena, true, Ui.AttackColor);
+                panel.Line("Your hero charges the shrine of another hero, who guards it. Topple the shrine to win. Defending costs nothing: only your own duels move your points.", 18, HudArt.Ivory);
                 var paid = board.paidWinsLeft > 0;
-                var pay = ScreenKit.AddRow(panel, "ArenaPayRow", "icon_reward", paid ? "A win pays" : "Today's paid wins are used up",
-                    paid ? $"{board.paidWinsLeft} paid wins left today" : "Wins still earn points");
+                var record = ScreenKit.AddRow(panel, "ArenaRecordRow", "icon_victory", $"Wins {board.wins:N0}      Losses {board.losses:N0}",
+                    paid ? $"A win today pays this. {board.paidWinsLeft} paid wins left." : "Today's paid wins are used up. Wins still earn points.", true, 94f);
                 if (paid)
                 {
-                    pay.Reward("icon_chakra", board.winMana.ToString("N0"));
-                    pay.Reward("icon_gold", board.winGold.ToString("N0"));
+                    record.Reward("icon_chakra", board.winMana.ToString("N0"));
+                    record.Reward("icon_gold", board.winGold.ToString("N0"));
                 }
-                ScreenKit.AddRow(panel, "ArenaRankRow", "icon_trophy", "Rankings", board.top.Count == 0 ? "No one has fought yet" : null)
-                    .Button("ArenaRankingsButton", "View all", ShowRankingsFromArena, true, null, 150f);
-                // The three on top, so the screen shows who there is to beat.
-                foreach (var entry in board.top.Take(3))
-                {
-                    var hero = !string.IsNullOrEmpty(entry.archetypeId) && Roster.Catalog.TryGet(entry.archetypeId, out var archetype) ? $"{archetype.displayName}, level {entry.level}" : "No hero on guard";
-                    var row = ScreenKit.AddRow(panel, "ArenaTop" + entry.rank, entry.rank.ToString(), entry.name, hero, entry.isMe, 62f);
-                    row.Title.supportRichText = false;
-                    row.Reward("icon_trophy", entry.points.ToString("N0"));
-                }
-                panel.Line("Your hero charges another hero's shrine and must topple it. Only your own duels move your points.", 17);
+                // Who fights for the player here: the hero on the first Hero Base.
+                var guardId = Village.Buildings.Where(b => b.AssignedHeroInstanceId != null).OrderBy(b => b.Id).Select(b => b.AssignedHeroInstanceId).FirstOrDefault();
+                var guard = guardId == null ? null : Roster.Find(guardId);
+                if (guard != null)
+                    ScreenKit.AddRow(panel, "ArenaHeroRow", "icon_hero", Roster.ArchetypeOf(guard).displayName, $"Your hero in the Arena, level {guard.Level}");
+                panel.Block(14f);
+                ScreenKit.Feature(panel, "ArenaFightButton", "FIGHT", FightArena, true, Ui.AttackColor, 520f, 92f, "icon_attack");
+                panel.Block(4f);
+                ScreenKit.Feature(panel, "ArenaRankingsButton", "RANKINGS", ShowRankingsFromArena, true, null, 520f, 74f, "icon_trophy");
             });
         }
 
@@ -307,49 +308,102 @@ namespace ShinobiDominion.Game
             var result = fight.Result;
             if (fight.State != null) ApplyServerState(fight.State);
             GameSounds.Play(fight.Won ? GameSound.Victory : GameSound.Defeat);
-            var title = fight.IsSiege ? (fight.Won ? "Village held!" : "The village fell") : fight.IsTrial ? (fight.Won ? $"Floor {fight.Level} cleared!" : "The guardian stands") : (fight.Won ? "Victory" : "Defeat");
-            _panel.Show(title, FinishModeFight, panel =>
+            var plaque = fight.IsSiege ? "Village Siege" : fight.IsTrial ? "Trial Tower" : "Arena Result";
+            var outcome = fight.IsSiege ? (fight.Won ? "Village Held" : "Village Fell") : fight.IsTrial ? (fight.Won ? "Floor Cleared" : "Defeat") : (fight.Won ? "Victory" : "Defeat");
+            _panel.ShowWindow(plaque, new Vector2(820f, 540f), FinishModeFight, content =>
             {
-                DrawResultStars(panel, fight.Stars);
+                var word = HudArt.Label(content, outcome.ToUpperInvariant(), HudArt.Display, 58, TextAnchor.MiddleCenter,
+                    fight.Won ? new Color(1f, 0.86f, 0.42f) : HudArt.CrimsonLight, HudArt.LacquerDeep);
+                word.name = "Outcome";
+                word.fontStyle = FontStyle.BoldAndItalic;
+                Ui.Anchor(word.rectTransform, new Vector2(0.5f, 1f), new Vector2(700f, 74f), new Vector2(0f, 8f));
+                UiMotion.PopIn(word.transform, 0.05f, 0.4f, 0.4f);
+
+                DrawWindowStars(content, fight.Stars, -104f);
+
+                var subject = fight.IsSiege ? $"Siege {fight.Level}: {fight.Title}" : fight.IsTrial ? $"{fight.Title}: {fight.OpponentName}" : $"Against {fight.OpponentName}";
+                var against = HudArt.Label(content, subject, HudArt.Display, 24, TextAnchor.MiddleCenter, HudArt.BrassLight, HudArt.LacquerDeep);
+                against.name = "Subject";
+                // A rival's name is something a player typed: shown as written, never obeyed.
+                against.supportRichText = false;
+                Ui.Anchor(against.rectTransform, new Vector2(0.5f, 1f), new Vector2(690f, 34f), new Vector2(0f, -150f));
+
+                var strip = ScreenKit.Parchment(content, new Vector2(0.5f, 1f), new Vector2(690f, 74f), new Vector2(0f, -192f));
                 if (fight.IsSiege)
                 {
-                    panel.Line($"Siege {fight.Level}: {fight.Title}", 24, new Color(1f, 0.9f, 0.66f));
-                    panel.Line($"{result.damagePercent}% of your village was damaged. " + (result.dojoDestroyed ? "The Town Hall fell." : "The Town Hall stands."));
                     var landed = fight.Troops.Sum(s => s.count);
-                    panel.Line($"Attackers beaten: {landed - result.heroesAlive} of {landed}");
+                    ScreenKit.Fact(strip, 0f, 0.5f, "icon_shield", "Village damaged", $"{result.damagePercent}%");
+                    ScreenKit.Fact(strip, 0.5f, 1f, "icon_troops", "Attackers beaten", $"{landed - result.heroesAlive} of {landed}");
                 }
                 else if (fight.IsTrial)
-                {
-                    panel.Line($"{fight.Title}: {fight.OpponentName}", 24, new Color(1f, 0.9f, 0.66f));
-                    panel.Line(result.dojoDestroyed ? "The guardian's shrine fell." : "The guardian's shrine still stands. Strengthen your hero and try again.");
-                }
+                    ScreenKit.Fact(strip, 0f, 1f, "icon_gate", "The guardian's shrine", result.dojoDestroyed ? "Fell" : "Still stands");
                 else
                 {
-                    panel.Line($"Against {fight.OpponentName} ({fight.OpponentPoints:N0} points)", 24, new Color(1f, 0.9f, 0.66f));
-                    panel.Line(result.dojoDestroyed ? "Their shrine fell." : "Their shrine still stands.");
                     var sign = fight.PointsDelta >= 0 ? "+" : "";
-                    var points = panel.Line($"{sign}{fight.PointsDelta} points.   Now {fight.Points:N0}, rank #{fight.Rank:N0}", 24, fight.PointsDelta >= 0 ? Ui.AccentColor : new Color(1f, 0.55f, 0.45f));
-                    UiMotion.Punch(points.transform, 0.25f, 0.45f);
+                    ScreenKit.Fact(strip, 0f, 0.5f, "icon_trophy", "Arena points", $"{sign}{fight.PointsDelta}", fight.PointsDelta >= 0 ? ScreenKit.InkBrown : new Color(0.62f, 0.12f, 0.08f));
+                    ScreenKit.Fact(strip, 0.5f, 1f, "icon_stats", "Current rank", $"#{fight.Rank:N0}");
                 }
-                var delay = 1.0f;
-                void Reveal(Text line)
+
+                // What the fight paid, as chips in a row, or one line saying why it paid nothing.
+                var earned = new List<(string icon, long amount)>();
+                if (fight.GoldEarned > 0) earned.Add(("icon_gold", fight.GoldEarned));
+                if (fight.ManaEarned > 0) earned.Add(("icon_chakra", fight.ManaEarned));
+                if (fight.CrystalsEarned > 0) earned.Add(("icon_crystals", fight.CrystalsEarned));
+                var rewards = Ui.Rect("Rewards", content);
+                Ui.Anchor(rewards, new Vector2(0.5f, 1f), new Vector2(690f, 44f), new Vector2(0f, -280f));
+                if (earned.Count == 0)
                 {
-                    UiMotion.FadeIn(line.gameObject, 0.3f, delay);
-                    delay += 0.25f;
+                    var none = fight.IsSiege || fight.IsTrial ? (fight.Won ? "No reward: only the first clear pays." : "No reward this time.") : (fight.Won ? "No reward: today's paid wins are used up, or your vault is full." : "No reward this time.");
+                    var note = Ui.Label(rewards, none, 18, TextAnchor.MiddleCenter, HudArt.IvoryMuted);
+                    note.name = "NoReward";
+                    Ui.Stretch(note.rectTransform);
                 }
-                if (fight.GoldEarned > 0) Reveal(panel.Line($"Earned {fight.GoldEarned:N0} gold", 21, Ui.AccentColor));
-                if (fight.ManaEarned > 0) Reveal(panel.Line($"Earned {fight.ManaEarned:N0} Mana", 21, Ui.AccentColor));
-                if (fight.CrystalsEarned > 0) Reveal(panel.Line($"Earned {fight.CrystalsEarned:N0} gems", 21, Ui.AccentColor));
-                if (fight.GoldEarned + fight.ManaEarned + fight.CrystalsEarned == 0)
-                    panel.Line(fight.IsSiege || fight.IsTrial ? (fight.Won ? "No reward: only the first clear pays." : "No reward this time.") : (fight.Won ? "No reward: today's paid wins are used up, or your vault is full." : "No reward this time."), 19);
-                if (fight.IsTrial)
-                    panel.Action("TrialAgainButton", fight.Won ? "Back to the tower" : "Try again", () => { EndRaid(); OpenTrials(); }, true, Ui.AccentColor);
-                else                 if (fight.IsSiege)
-                    panel.Action("SiegeAgainButton", fight.Won ? "Back to the Siege" : "Try again", () => { EndRaid(); OpenSiege(); }, true, Ui.AccentColor);
                 else
-                    panel.Action("ArenaAgainButton", "Fight again", () => { EndRaid(); OpenArena(); }, true, Ui.AccentColor);
-                panel.Action("ReturnHomeButton", "Return to village", FinishModeFight);
+                {
+                    const float gap = 12f;
+                    var widths = earned.Select(e => 62f + e.amount.ToString("N0").Length * 11f).ToList();
+                    var x = -(widths.Sum() + gap * (earned.Count - 1)) * 0.5f;
+                    for (var i = 0; i < earned.Count; i++)
+                    {
+                        var chip = Ui.Rect("Earned_" + earned[i].icon, rewards);
+                        Ui.Anchor(chip, new Vector2(0.5f, 0.5f), new Vector2(widths[i], 42f), new Vector2(x + widths[i] * 0.5f, 0f));
+                        ScreenKit.Chip(chip, earned[i].icon, earned[i].amount.ToString("N0"));
+                        UiMotion.PopIn(chip, 0.9f + i * 0.2f, 0.3f, 0.3f);
+                        x += widths[i] + gap;
+                    }
+                }
+
+                Button again;
+                if (fight.IsTrial)
+                    again = Ui.Button(content, "TrialAgainButton", fight.Won ? "Back to the tower" : "Try again", () => { EndRaid(); OpenTrials(); }, true, Ui.AttackColor, 22);
+                else if (fight.IsSiege)
+                    again = Ui.Button(content, "SiegeAgainButton", fight.Won ? "Back to the Siege" : "Try again", () => { EndRaid(); OpenSiege(); }, true, Ui.AttackColor, 22);
+                else
+                    again = Ui.Button(content, "ArenaAgainButton", "Fight again", () => { EndRaid(); OpenArena(); }, true, Ui.AttackColor, 22);
+                Ui.Anchor((RectTransform)again.transform, new Vector2(0.5f, 0f), new Vector2(310f, 62f), new Vector2(-166f, 0f));
+                var home = Ui.Button(content, "ReturnHomeButton", "Return to village", FinishModeFight, true, null, 22);
+                Ui.Anchor((RectTransform)home.transform, new Vector2(0.5f, 0f), new Vector2(310f, 62f), new Vector2(166f, 0f));
             });
+        }
+
+        /// <summary>The three stars of a result window: the middle one a little taller, the earned ones landing one at a time.</summary>
+        private static void DrawWindowStars(RectTransform parent, int stars, float y)
+        {
+            for (var i = 0; i < 3; i++)
+            {
+                var size = i == 1 ? 66f : 54f;
+                var icon = Ui.Icon(parent, HudArt.Sprite("icon_star"), new Vector2(0.5f, 1f), new Vector2(size, size), new Vector2((i - 1) * 74f, y + (i == 1 ? 6f : 0f)));
+                icon.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+                icon.name = "ResultStar" + (i + 1);
+                icon.preserveAspect = true;
+                if (i >= stars)
+                {
+                    icon.color = UnlitStar;
+                    continue;
+                }
+                UiMotion.PopIn(icon.transform, 0.2f + i * 0.28f, 0.1f, 0.42f);
+                UiMotion.Shine(icon, new Color(1f, 0.95f, 0.75f, 0.9f), 2.6f, 0.35f);
+            }
         }
 
         public void FinishModeFight()
@@ -388,22 +442,112 @@ namespace ShinobiDominion.Game
         private void ShowRankings(System.Action back)
         {
             var board = _arenaBoard;
-            _panel.ShowScreen("Rankings", board == null ? "" : $"You: rank #{board.rank:N0}, {board.points:N0} points", back, panel =>
+            _panel.ShowStage("Rankings", board == null ? "" : $"Your rank #{board.rank:N0}    {board.points:N0} points", "icon_trophy", "scene_lantern", false, 230f, back, panel =>
             {
                 ScreenKit.Notice(panel, LastMessage);
                 if (board == null) return;
-                if (board.top.Count == 0) panel.Line("No one has fought in the Arena yet.", 21);
+                if (board.top.Count == 0)
+                {
+                    panel.Line("No one has fought in the Arena yet.", 21);
+                    return;
+                }
+                // The four columns, at the same places in the heading and in every row.
+                const float nameFrom = 0.12f, pointsFrom = 0.42f, heroFrom = 0.62f;
+                var heading = panel.Block(38f);
+                heading.name = "RankHeading";
+                var band = heading.gameObject.AddComponent<Image>();
+                band.sprite = HudArt.Sprite("btn_crimson_s24");
+                band.type = Image.Type.Sliced;
+                band.pixelsPerUnitMultiplier = 2.2f;
+                band.raycastTarget = false;
+                RankCell(heading, 0f, nameFrom, "Rank", HudArt.Display, 18, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.CrimsonDark);
+                RankCell(heading, nameFrom, pointsFrom, "Player", HudArt.Display, 18, TextAnchor.MiddleLeft, HudArt.Ivory, HudArt.CrimsonDark);
+                RankCell(heading, pointsFrom, heroFrom, "Points", HudArt.Display, 18, TextAnchor.MiddleLeft, HudArt.Ivory, HudArt.CrimsonDark);
+                RankCell(heading, heroFrom, 1f, "Featured Hero", HudArt.Display, 18, TextAnchor.MiddleLeft, HudArt.Ivory, HudArt.CrimsonDark);
+
+                var place = 0;
                 foreach (var entry in board.top)
                 {
-                    var hero = !string.IsNullOrEmpty(entry.archetypeId) && Roster.Catalog.TryGet(entry.archetypeId, out var archetype) ? $"{archetype.displayName}, level {entry.level}" : "No hero on guard";
-                    var row = ScreenKit.AddRow(panel, "RankRow" + entry.rank, entry.rank.ToString(), entry.name, hero, entry.isMe, 66f);
+                    place++;
+                    var podium = place <= 3;
+                    // The first three lie on gold, silver and bronze; the player's own row on plain parchment.
+                    var light = podium || entry.isMe;
+                    var row = panel.Block(podium ? 62f : 52f);
+                    row.name = "RankRow" + place;
+                    var plate = row.gameObject.AddComponent<Image>();
+                    plate.sprite = HudArt.Sprite(light ? "parchment_s40" : "plate_s30");
+                    plate.type = Image.Type.Sliced;
+                    plate.pixelsPerUnitMultiplier = light ? 1.9f : 1.7f;
+                    plate.raycastTarget = false;
+                    if (podium) plate.color = place == 1 ? new Color(1f, 0.84f, 0.42f) : place == 2 ? new Color(0.82f, 0.86f, 0.93f) : new Color(0.93f, 0.66f, 0.45f);
+                    var ink = light ? ScreenKit.InkBrown : HudArt.Ivory;
+                    var edge = light ? ScreenKit.ParchmentEdge : HudArt.LacquerDeep;
+
+                    if (podium)
+                    {
+                        var medal = HudArt.Picture(row, "Medal", "medal_face_gold", new Vector2(nameFrom * 0.5f, 0.5f), new Vector2(50f, 50f), Vector2.zero);
+                        medal.preserveAspect = true;
+                        medal.color = plate.color;
+                        var number = HudArt.Label(medal.transform, entry.rank.ToString(), HudArt.Display, 26, TextAnchor.MiddleCenter, ScreenKit.InkBrown, ScreenKit.ParchmentEdge);
+                        Ui.Stretch(number.rectTransform, 4f, 4f, 4f, 4f);
+                    }
+                    else RankCell(row, 0f, nameFrom, $"#{entry.rank}", HudArt.Display, 21, TextAnchor.MiddleCenter, ink, edge);
+
+                    var name = RankCell(row, nameFrom, pointsFrom, entry.name, HudArt.Display, podium ? 22 : 20, TextAnchor.MiddleLeft, ink, edge);
                     // A name is something a player typed: shown as written, never obeyed.
-                    row.Title.supportRichText = false;
-                    row.Reward("icon_trophy", entry.points.ToString("N0"));
-                    if (entry.rank <= 3 && !entry.isMe) row.Title.color = new Color(1f, 0.87f, 0.45f);
-                    if (entry.isMe) UiMotion.Shine(row.Title, Color.white, 2.4f, 0.3f);
+                    name.supportRichText = false;
+                    if (entry.isMe) UiMotion.Shine(name, Color.white, 2.4f, 0.3f);
+
+                    var trophy = HudArt.Picture(row, "Trophy", "icon_trophy", new Vector2(pointsFrom, 0.5f), new Vector2(26f, 26f), Vector2.zero);
+                    trophy.rectTransform.pivot = new Vector2(0f, 0.5f);
+                    trophy.preserveAspect = true;
+                    var points = RankCell(row, pointsFrom, heroFrom, $"{entry.points:N0} points", HudArt.Numbers, 19, TextAnchor.MiddleLeft, ink, edge);
+                    points.rectTransform.offsetMin = new Vector2(34f, 0f);
+
+                    var known = !string.IsNullOrEmpty(entry.archetypeId) && Roster.Catalog.TryGet(entry.archetypeId, out var archetype);
+                    var hero = known ? Roster.Catalog.Get(entry.archetypeId).displayName : "No hero on guard";
+                    if (known && HeroConcepts.Has(entry.archetypeId))
+                    {
+                        // The hero's painting, in a small framed window.
+                        var window = Ui.Rect("Portrait", row);
+                        window.anchorMin = window.anchorMax = new Vector2(heroFrom, 0.5f);
+                        window.pivot = new Vector2(0f, 0.5f);
+                        window.sizeDelta = new Vector2(44f, podium ? 50f : 44f);
+                        window.gameObject.AddComponent<RectMask2D>();
+                        var painting = Ui.Rect("Painting", window);
+                        Ui.Stretch(painting, 0f, -14f, 0f, -2f);
+                        var picture = painting.gameObject.AddComponent<Image>();
+                        picture.sprite = HeroConcepts.Card(entry.archetypeId);
+                        picture.preserveAspect = false;
+                        picture.raycastTarget = false;
+                    }
+                    else
+                    {
+                        var figure = HudArt.Picture(row, "Portrait", "icon_hero", new Vector2(heroFrom, 0.5f), new Vector2(34f, 34f), new Vector2(5f, 0f));
+                        figure.rectTransform.pivot = new Vector2(0f, 0.5f);
+                        figure.preserveAspect = true;
+                        if (light) figure.color = ScreenKit.InkBrown;
+                    }
+                    var who = RankCell(row, heroFrom, 1f, known ? $"{hero}   Lv. {entry.level}" : hero, HudArt.Numbers, 18, TextAnchor.MiddleLeft, ink, edge);
+                    who.rectTransform.offsetMin = new Vector2(54f, 0f);
                 }
-            });
+            }, "The Arena's best. Points rise with each duel won.");
+        }
+
+        /// <summary>One cell of the rankings table, between two shares of the row's width.</summary>
+        private static Text RankCell(RectTransform row, float from, float to, string words, Font font, int size, TextAnchor anchor, Color color, Color edge)
+        {
+            var label = HudArt.Label(row, words, font, size, anchor, color, edge);
+            label.rectTransform.anchorMin = new Vector2(from, 0f);
+            label.rectTransform.anchorMax = new Vector2(to, 1f);
+            label.rectTransform.offsetMin = Vector2.zero;
+            label.rectTransform.offsetMax = new Vector2(-8f, 0f);
+            label.horizontalOverflow = HorizontalWrapMode.Overflow;
+            label.verticalOverflow = VerticalWrapMode.Truncate;
+            label.resizeTextForBestFit = true;
+            label.resizeTextMinSize = 12;
+            label.resizeTextMaxSize = size;
+            return label;
         }
 
         public void OpenQuests()
@@ -420,7 +564,7 @@ namespace ShinobiDominion.Game
         {
             var board = _questBoard;
             var done = board?.Quests.Count(q => q.claimed) ?? 0;
-            _panel.ShowScreen("Daily Quests", board == null ? "" : $"{done} of {board.Quests.Count} claimed today", CloseAll, panel =>
+            _panel.ShowStage("Daily Quests", board == null ? "" : $"Today's claims  {done} / {board.Quests.Count}", "icon_calendar", "scene_castle", false, 236f, CloseAll, panel =>
             {
                 ScreenKit.Notice(panel, LastMessage);
                 if (board == null) return;
@@ -428,14 +572,14 @@ namespace ShinobiDominion.Game
                 {
                     var id = quest.id;
                     var ready = quest.Done && !quest.claimed;
-                    var row = ScreenKit.AddRow(panel, "QuestRow_" + id, QuestIcon(id), quest.title, null, ready);
-                    if (ready) row.Button("Quest_" + id, "Claim", () => ClaimQuest(id), true, Ui.AccentColor, 140f);
+                    // Every quest still open lies on parchment; a claimed one is put away.
+                    var row = ScreenKit.AddRow(panel, "QuestRow_" + id, QuestIcon(id), quest.title, null, !quest.claimed, 70f);
+                    if (ready) row.Button("Quest_" + id, "Claim", () => ClaimQuest(id), true, Ui.AccentColor, 150f);
                     if (quest.claimed) row.Note("Claimed").Mark("icon_check").Dim();
                     else row.Reward("icon_crystals", quest.crystals.ToString("N0"));
                     row.Progress(quest.progress, quest.target);
                 }
-                panel.Line("New quests every day at midnight UTC.", 17);
-            });
+            }, "Refreshes daily at midnight UTC.");
         }
 
         /// <summary>The picture for a quest, by what it asks for.</summary>
@@ -483,18 +627,60 @@ namespace ShinobiDominion.Game
         private void ShowGift()
         {
             var board = _questBoard;
-            _panel.ShowWindow("Daily Gift", new Vector2(640f, 360f), CloseAll, content =>
+            _panel.ShowWindow("Daily Gift", new Vector2(760f, 560f), CloseAll, content =>
             {
-                var text = board == null ? (LastMessage ?? "The gift cannot be reached right now.")
-                    : board.GiftReady ? $"A gift for logging in today:\n{board.GiftGold:N0} gold, {board.GiftMana:N0} Mana and {board.GiftCrystals:N0} gems."
-                    : "Today's gift is opened. A new one arrives at midnight UTC.";
-                var label = HudArt.Label(content, text, HudArt.Numbers, 24, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.LacquerDeep);
-                Ui.Anchor(label.rectTransform, new Vector2(0.5f, 1f), new Vector2(520f, 150f), new Vector2(0f, -10f));
-                if (board == null || !board.GiftReady) return;
-                var open = Ui.Button(content, "OpenGiftButton", "Open", OpenGiftNow, true, Ui.AccentColor, 26);
-                Ui.Anchor((RectTransform)open.transform, new Vector2(0.5f, 0f), new Vector2(220f, 64f), new Vector2(0f, 6f));
-                UiMotion.Pulse(open.transform, 0.06f, 1.1f);
+                var ready = board != null && board.GiftReady;
+                // A warm light behind the gift, wider than the picture, so the picture has no edge of its own.
+                var light = HudArt.Picture(content, "GiftLight", "glow", new Vector2(0.5f, 1f), new Vector2(560f, 330f), new Vector2(0f, 62f));
+                light.color = new Color(1f, 0.78f, 0.36f, 0.5f);
+                var gift = HudArt.Picture(content, "GiftArt", "art_gift", new Vector2(0.5f, 1f), new Vector2(378f, 224f), new Vector2(0f, 16f));
+                gift.preserveAspect = true;
+                if (ready) UiMotion.Pulse(gift.transform, 0.03f, 1.6f);
+                else gift.color = new Color(0.5f, 0.5f, 0.56f);
+
+                var strip = ScreenKit.Parchment(content, new Vector2(0.5f, 1f), new Vector2(660f, 126f), new Vector2(0f, -214f));
+                var words = board == null ? (LastMessage ?? "The gift cannot be reached right now.")
+                    : ready ? "A gift for logging in today" : "Today's gift is opened. A new one arrives at midnight UTC.";
+                var line = HudArt.Label(strip, words, HudArt.Display, 22, TextAnchor.MiddleCenter, ScreenKit.InkBrown, ScreenKit.ParchmentEdge);
+                line.name = "GiftWords";
+                line.fontStyle = FontStyle.BoldAndItalic;
+                line.horizontalOverflow = HorizontalWrapMode.Wrap;
+                if (!ready)
+                {
+                    Ui.Stretch(line.rectTransform, 30f, 12f, 30f, 12f);
+                    return;
+                }
+                line.rectTransform.anchorMin = new Vector2(0f, 0.56f);
+                line.rectTransform.anchorMax = Vector2.one;
+                line.rectTransform.offsetMin = new Vector2(24f, 0f);
+                line.rectTransform.offsetMax = new Vector2(-24f, -8f);
+                GiftAmount(strip, 0f, "icon_gold", $"{board.GiftGold:N0} Gold");
+                GiftAmount(strip, 1f / 3f, "icon_chakra", $"{board.GiftMana:N0} Mana");
+                GiftAmount(strip, 2f / 3f, "icon_crystals", $"{board.GiftCrystals:N0} Gems");
+
+                var open = Ui.Button(content, "OpenGiftButton", "Open", OpenGiftNow, true, Ui.AccentColor, 28);
+                Ui.Anchor((RectTransform)open.transform, new Vector2(0.5f, 0f), new Vector2(290f, 66f), new Vector2(0f, 2f));
+                UiMotion.Pulse(open.transform, 0.05f, 1.1f);
             });
+        }
+
+        /// <summary>One of the gift's three amounts on its parchment: the picture, then the amount in dark ink.</summary>
+        private static void GiftAmount(RectTransform strip, float from, string icon, string words)
+        {
+            var cell = Ui.Rect("Gift_" + icon, strip);
+            cell.anchorMin = new Vector2(from, 0f);
+            cell.anchorMax = new Vector2(from + 1f / 3f, 0.56f);
+            cell.offsetMin = new Vector2(from <= 0f ? 26f : 8f, 12f);
+            cell.offsetMax = new Vector2(-8f, 0f);
+            var picture = HudArt.Picture(cell, "Icon", icon, new Vector2(0f, 0.5f), new Vector2(38f, 38f), new Vector2(6f, 0f));
+            picture.preserveAspect = true;
+            var label = HudArt.Label(cell, words, HudArt.Display, 22, TextAnchor.MiddleLeft, ScreenKit.InkBrown, ScreenKit.ParchmentEdge);
+            label.name = "GiftAmount";
+            Ui.Stretch(label.rectTransform, 52f, 0f, 0f, 0f);
+            label.horizontalOverflow = HorizontalWrapMode.Overflow;
+            label.resizeTextForBestFit = true;
+            label.resizeTextMinSize = 13;
+            label.resizeTextMaxSize = 22;
         }
 
         public void OpenGiftNow()

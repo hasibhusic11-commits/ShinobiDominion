@@ -30,9 +30,10 @@ namespace ShinobiDominion.Game
         {
             var floors = _trialFloors;
             var cleared = floors?.Count(f => f.cleared) ?? 0;
-            _panel.ShowScreen("Trial Tower", floors == null ? "" : $"{cleared} of {floors.Count} floors cleared", ShowBattleHub, panel =>
+            _panel.ShowStage("Trial Tower", floors == null ? "" : $"{cleared} / {floors.Count} floors", "icon_star", "scene_castle", false, 236f, ShowBattleHub, panel =>
             {
                 ScreenKit.Notice(panel, LastMessage);
+                panel.Line("Climb one guardian at a time. Your hero must topple each guardian's shrine. A floor pays once, the first time it is cleared.", 18, HudArt.Ivory);
                 if (floors == null)
                 {
                     panel.Line("Climbing the stairs...");
@@ -49,7 +50,8 @@ namespace ShinobiDominion.Game
                     var usable = floor.open || floor.cleared;
                     var row = ScreenKit.AddRow(panel, "TrialRow" + number, number.ToString(), usable ? name : "Locked",
                         usable ? $"Guardian level {floor.level}{evolution}" : $"Clear floor {number - 1} first", floor.open && !floor.cleared);
-                    row.Button("TrialFloor" + number, floor.cleared ? "Again" : floor.open ? "Climb" : "Locked", () => FightTrial(number), floor.open, floor.open && !floor.cleared ? Ui.AttackColor : (Color?)null, 140f);
+                    if (floor.open) row.Button("TrialFloor" + number, floor.cleared ? "Again" : "Climb", () => FightTrial(number), true, floor.cleared ? (Color?)null : Ui.AttackColor, 150f);
+                    else row.Locked("TrialFloor" + number, 150f);
                     if (floor.cleared) row.Mark("icon_check");
                     else if (floor.open)
                     {
@@ -58,7 +60,6 @@ namespace ShinobiDominion.Game
                     }
                     else row.Dim();
                 }
-                panel.Line("Your hero must topple each guardian's shrine. A floor pays once, the first time it is cleared.", 17);
             });
         }
 
