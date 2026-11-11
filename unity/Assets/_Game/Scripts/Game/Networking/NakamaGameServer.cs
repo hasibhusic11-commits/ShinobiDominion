@@ -93,7 +93,16 @@ namespace ShinobiDominion.Game
             var asset = Resources.Load<TextAsset>("Config/server.local");
             if (asset == null) return null;
             var config = JsonUtility.FromJson<ServerConfig>(asset.text);
-            return string.IsNullOrEmpty(config?.serverKey) ? null : config;
+            if (string.IsNullOrEmpty(config?.serverKey)) return null;
+#if !UNITY_EDITOR && !DEVELOPMENT_BUILD
+            // Public builds must never send authentication sessions or progression over HTTP.
+            if (!string.Equals(config.scheme, "https", StringComparison.OrdinalIgnoreCase))
+            {
+                Debug.LogError("Production server config requires HTTPS. Refusing insecure connection.");
+                return null;
+            }
+#endif
+            return config;
         }
     }
 
