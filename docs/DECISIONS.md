@@ -88,6 +88,22 @@ Follows the owner's ADR-021. Up to four Troop Camps, gated by Dojo level, and a 
 - A raid still needs at least one hero. At most 200 troops can land in one raid, to bound the server's work.
 - Troop names and all numbers are test values. Offline practice troops aren't saved.
 
+## ADR-058: UI overhaul, UI kit v3 and the Battle menu as its first screen, 2026-11-11
+The owner handed over the UI art direction with a pack in `docs/ui/overhaul/` (`01_CLAUDE_CODE_MASTER_PROMPT.md` and the rest). Work goes one screen at a time: audit first, then a shared kit, then one screen. Each screen is screenshot-reviewed at four shapes before the next one starts.
+
+- **Kit.** `SdTheme` holds the colour, type, spacing and motion tokens in one place. `SdKit` holds Window, Title ribbon, Button (War, Gold, Navy, plus locked and disabled states), Badge, Plate and FramedPicture. The art is drawn by `tools/art/sd_ui_kit.js` (`Resources/UI/sd_*`). The token diff against UI_TOKENS v2 is in `DESIGN_SYSTEM_v3.md`. Nothing global was recoloured.
+- **Battle menu.** It is a window over the dimmed village that leaves the HUD row visible. It has five cards. Each card shows:
+  - its mode's own painting (`mode_*`, cut from the owner's art);
+  - the mode name on a ribbon;
+  - a live fact, where the game has one;
+  - a short line;
+  - one verb.
+  A locked card says why it is locked. The routes, the open rules and the button names are unchanged. This replaces the ADR-057 Battle window.
+- **Conflict left as it is.** The pack predates ADR-048 and asks to keep one hero. The code keeps up to six; only the wording was corrected.
+- **Two window kits for now.** ADR-057's `OpenFrame` windows and v3's `SdKit.Window` both exist. They should become one kit once the owner approves the v3 look.
+- **Tests.** New: `UiOverhaulTests`. PlayMode: 155 of 155 passed. EditMode: 214 passed, 2 skipped. Both ran against the local server.
+- **Not verified.** A phone, frame time and safe-area notches. The art still needed is listed in `ART_REQUIRED.md`.
+
 ## ADR-057: Classic windows: the Altar's shelves, the hero window, and every list in a window, 2026-11-11
 The owner compared the game with the classic-era layout of the genre's reference game and found many screens did not match, the Heroes Altar most of all, and asked for the same pass on every building and every game mode. They then said which era they meant: the old one, not the current one. The reference was studied from public gameplay footage of that era. What is matched is how a screen is arranged and how a player moves through it. No art, names, characters, numbers or text were taken; every picture is this game's own kit.
 

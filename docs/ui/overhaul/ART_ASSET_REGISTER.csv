@@ -1,0 +1,16 @@
+file,size_px,alpha,nine_slice_border_px,draw_multiplier,source,provenance_and_rights,used_by,qa_status
+sd_frame_window_s96.png,256x256,yes,96,1.5,tools/art/sd_ui_kit.js windowFrame(),Original; drawn in code for this project,SdKit.Window (Battle menu; every v3 window),reviewed in Unity at 4 shapes
+sd_frame_card_s48.png,192x256,yes,48,2,tools/art/sd_ui_kit.js,Original; drawn in code,SdKit.FramedPicture (mode cards),reviewed in Unity
+sd_ribbon_title_s80x40.png,512x112,yes,80 LR x 40 TB,2 (window) / 2.6 (cards),tools/art/sd_ui_kit.js,Original; drawn in code,SdKit.Title; mode card names,reviewed in Unity
+sd_btn_war_s40.png,192x96,yes,40,2,tools/art/sd_ui_kit.js,Original; drawn in code,SdKit.Button War (Find a Rival / Defend / Enter / Climb / Open the Map),reviewed in Unity
+sd_btn_gold_s40.png,192x96,yes,40,2,tools/art/sd_ui_kit.js,Original; drawn in code,SdKit.Button Gold,gallery only
+sd_btn_navy_s40.png,192x96,yes,40,2,tools/art/sd_ui_kit.js,Original; drawn in code,SdKit.Button Navy,gallery only
+sd_btn_slate_s40.png,192x96,yes,40,2,tools/art/sd_ui_kit.js,Original; drawn in code,SdKit.Button disabled/locked,reviewed in Unity (no-hero shots)
+sd_plate_dark_s24.png,128x64,yes,24,2,tools/art/sd_ui_kit.js,Original; drawn in code,SdKit.Plate (card lines),reviewed in Unity
+sd_badge_s26.png,128x56,yes,26,2,tools/art/sd_ui_kit.js,Original; drawn in code,SdKit.Badge (dungeon stars),reviewed in Unity
+sd_pattern_lacquer.png,128x128,yes,none (tiled),n/a,tools/art/sd_ui_kit.js,Original; drawn in code,SdKit.Window face pattern,reviewed in Unity
+mode_raid.png,400x500,no,none,n/a,"Crop of Resources/Map/village_map.png box (20,560) 360x450 scaled to 400x500",Owner's own painted village map,Battle menu Raid card,reviewed in Unity
+mode_dungeons.png,400x500,no,none,n/a,"Crop of Resources/Map/village_map.png box (1170,0) 360x450 scaled to 400x500",Owner's own painted village map,Battle menu Dungeons card,reviewed in Unity; placeholder-grade (see ART_REQUIRED.md)
+mode_siege.png,400x500,yes,none,n/a,"Crop of Resources/UI/scene_castle.png box (0,30) 300x375 scaled to 400x500",Owner-supplied screen mockup (THIRD_PARTY_NOTICES),Battle menu Village Siege card,reviewed in Unity
+mode_arena.png,400x500,yes,none,n/a,"Crop of Resources/UI/scene_arena.png box (51,30) 520x650 scaled to 400x500",Owner-supplied screen mockup (THIRD_PARTY_NOTICES),Battle menu Arena card,reviewed in Unity
+mode_trials.png,400x500,yes,none,n/a,"Composite: Resources/UI/scene_lantern.png darkened and tinted to moonlight + drawn moon and shadow + Resources/Buildings/spirit_turret_10.png as the tower",Owner art (scene mockup + owner building pack); composite made in a one-off sharp script that was not kept,Battle menu Trial Tower card,reviewed in Unity; placeholder-grade (see ART_REQUIRED.md)

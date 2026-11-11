@@ -1110,6 +1110,22 @@ namespace ShinobiDominion.Game
             fill(OpenFrame(title, size, onClose, tabs, onBack, out _));
         }
 
+        /// <summary>
+        /// A window in UI kit v3 (docs/ui/overhaul, SdKit): the authored brass frame and ribbon, below the HUD row so
+        /// the player's resources stay in view, as large as the screen allows up to <paramref name="maxSize"/>.
+        /// Counts as full screen: the world is blocked.
+        /// </summary>
+        public void ShowThemedWindow(string title, Vector2 maxSize, Action onClose, Action<RectTransform> fill, Action onBack = null)
+        {
+            var opening = !IsOpen;
+            Hide();
+            IsFullScreen = true;
+            _card = Ui.Rect("Window", _parent);
+            Ui.Stretch(_card);
+            fill(SdKit.Window(_card, title, maxSize, onClose, onBack, out _));
+            if (opening) UiMotion.FadeIn(_card.gameObject, SdTheme.OpenSeconds);
+        }
+
         private static readonly Color TabTop = new Color(0.8f, 0.22f, 0.16f);
         private static readonly Color TabBottom = new Color(0.52f, 0.1f, 0.08f);
         private static readonly Color TabOffTop = new Color(0.5f, 0.15f, 0.12f);

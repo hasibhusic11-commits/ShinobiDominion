@@ -18,10 +18,12 @@ namespace ShinobiDominion.EditorTools
     /// </summary>
     public sealed class UiSpriteImporter : AssetPostprocessor
     {
-        private static readonly Regex Border = new Regex(@"_s(\d+)$");
+        // "_s24" slices 24 px on every side; "_s80x40" slices 80 on the left and right and 40 on the top and bottom
+        // (a ribbon with wide ends and a short height, UI kit v3, docs/ui/overhaul).
+        private static readonly Regex Border = new Regex(@"_s(\d+)(?:x(\d+))?$");
 
         /// <summary>Raising this reimports every texture the rules apply to.</summary>
-        public override uint GetVersion() => 4;
+        public override uint GetVersion() => 5;
 
         private static readonly string[] Phones = { "Android", "iPhone" };
 
@@ -106,7 +108,8 @@ namespace ShinobiDominion.EditorTools
                 if (match.Success)
                 {
                     var border = float.Parse(match.Groups[1].Value);
-                    settings.spriteBorder = new Vector4(border, border, border, border);
+                    var vertical = match.Groups[2].Success ? float.Parse(match.Groups[2].Value) : border;
+                    settings.spriteBorder = new Vector4(border, vertical, border, vertical);
                 }
             }
             else
