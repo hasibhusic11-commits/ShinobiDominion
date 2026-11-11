@@ -106,11 +106,10 @@ namespace ShinobiDominion.Game
 
         private void HeroPicture(RectTransform parent, HeroArchetype archetype, int evolution, float size, float feet)
         {
-            // A hero with a concept painting always shows it. Evolved forms have no paintings of their own yet, and the
-            // small built-in figure looked far worse (owner, 2026-11-09), so they show their base painting until they do.
+            // Use a form-specific painting if present, retaining the original base artwork as fallback.
             if (HeroConcepts.Has(archetype.id))
             {
-                ConceptPicture(parent, archetype.id, size, feet);
+                ConceptPicture(parent, archetype.id, evolution, size, feet);
                 return;
             }
             _portraits = _portraits ?? new HeroPortraits(_worldRoot);
@@ -124,10 +123,11 @@ namespace ShinobiDominion.Game
             image.raycastTarget = false;
         }
 
-        private static void ConceptPicture(RectTransform parent, string heroId, float size, float feet)
+        private static void ConceptPicture(RectTransform parent, string heroId, int evolution, float size, float feet)
         {
             var full = size >= FullPictureSize;
-            var sprite = full ? HeroConcepts.Full(heroId) : HeroConcepts.Card(heroId);
+            var form = HeroConcepts.AvailableForm(heroId, evolution);
+            var sprite = full ? HeroConcepts.Full(heroId, form) : HeroConcepts.Card(heroId, form);
             var picture = Ui.Rect("HeroConcept", parent);
             picture.anchorMin = picture.anchorMax = new Vector2(0.5f, 0f);
             picture.pivot = new Vector2(0.5f, 0f);
@@ -334,10 +334,11 @@ namespace ShinobiDominion.Game
                     pool.Count(h => Roster.ArchetypeOf(h).rarity == value).ToString()));
             }
 
-            _panel.ShowWindow("Heroes Altar", new Vector2(1060f, 610f), CloseAll, content =>
+            _panel.ShowThemedWindow("Heroes Altar", new Vector2(1100f, 620f), CloseAll, content =>
             {
+                SdKit.Tabs(content, tabs);
                 var shelves = Ui.Rect("Shelves", content);
-                Ui.Stretch(shelves, 0f, 54f, 0f, 0f);
+                Ui.Stretch(shelves, 0f, 54f, 0f, 62f);
                 var list = PanelView.ScrollIn(shelves);
                 var rows = Mathf.Max(2, Mathf.CeilToInt(shown.Count / (float)ShelfColumns));
                 list.sizeDelta = new Vector2(0f, rows * ShelfHeight + 6f);
@@ -392,7 +393,7 @@ namespace ShinobiDominion.Game
                 foot.sizeDelta = new Vector2(0f, 46f);
                 CycleTab(foot, "FilterRole", $"Role: {(_roleFilter?.ToString() ?? "All")}", -124f, () => _roleFilter = Next(_roleFilter));
                 CycleTab(foot, "FilterAffinity", $"Affinity: {(_affinityFilter?.ToString() ?? "All")}", 124f, () => _affinityFilter = Next(_affinityFilter));
-            }, tabs);
+            });
         }
 
         private void SetRarityFilter(HeroRarity? rarity)
@@ -464,7 +465,7 @@ namespace ShinobiDominion.Game
             if (HeroConcepts.Has(archetype.id))
             {
                 // The painting covers the frame: scaled to fill it, centred, and cut by its edge.
-                var sprite = HeroConcepts.Card(archetype.id);
+                var sprite = HeroConcepts.Card(archetype.id, HeroConcepts.AvailableForm(archetype.id, hero.EvolutionIndex));
                 var box = size - new Vector2(12f, 12f);
                 var scale = Mathf.Max(box.x / sprite.rect.width, box.y / sprite.rect.height);
                 var painting = Ui.Rect("HeroConcept", art);
@@ -486,13 +487,7 @@ namespace ShinobiDominion.Game
             var badge = HudArt.Picture(rect, "RarityBadge", "badge_" + archetype.rarity.ToString().ToLowerInvariant(), new Vector2(0f, 1f), new Vector2(40f, 40f), new Vector2(-8f, 8f));
             badge.preserveAspect = true;
 
-            if (hero.EvolutionIndex > 0)
-            {
-                var stage = Ui.Icon(rect, UiSkin.Diamond(new Color(1f, 0.87f, 0.4f), new Color(0.9f, 0.55f, 0.12f)), new Vector2(1f, 1f), new Vector2(34f, 34f), new Vector2(8f, 8f));
-                stage.name = "Stage";
-                var numeral = HudArt.Label(stage.transform, new string('I', hero.EvolutionIndex), HudArt.Display, 13, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.CrimsonDark);
-                Ui.Stretch(numeral.rectTransform);
-            }
+            SdKit.EvolutionStars(rect, hero.EvolutionIndex, new Vector2(1f, 1f), new Vector2(-52f, -18f), 18f);
             return back;
         }
 
