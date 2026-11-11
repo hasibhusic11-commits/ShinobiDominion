@@ -188,11 +188,14 @@ namespace ShinobiDominion.Game
             var art = Ui.Rect("Art", rect);
             Ui.Stretch(art, 6f, 6f, 6f, 6f);
             art.gameObject.AddComponent<RectMask2D>();
-            if (hero.EvolutionIndex == 0 && HeroConcepts.Has(archetype.id))
+            if (HeroConcepts.Has(archetype.id))
             {
+                // Match Hero Detail: use the owned evolution's painting when authored,
+                // otherwise retain this same hero's base artwork until the new form ships.
+                var visualForm = HeroConcepts.AvailableForm(archetype.id, hero.EvolutionIndex);
                 var painting = Ui.Rect("HeroConcept", art);
                 Ui.Stretch(painting);
-                var image = Ui.Framed(painting, HeroConcepts.Card(archetype.id), false);
+                var image = Ui.Framed(painting, HeroConcepts.Card(archetype.id, visualForm), false);
                 image.type = Image.Type.Simple;
             }
             else HeroPicture(art, archetype, hero.EvolutionIndex, 170f, 46f);
@@ -233,13 +236,9 @@ namespace ShinobiDominion.Game
             var rarity = Ui.Strong(Ui.Label(rect, string.IsNullOrEmpty(tag) ? archetype.rarity.ToString() : tag, 14, TextAnchor.MiddleCenter, RarityColor(archetype.rarity)));
             Ui.Anchor(rarity.rectTransform, new Vector2(0.5f, 0f), new Vector2(166f, 22f), new Vector2(0f, 14f));
 
-            // Evolved heroes wear their stage on a badge at the bottom edge.
-            if (hero.EvolutionIndex > 0)
-            {
-                var badge = Ui.Icon(rect, UiSkin.Diamond(new Color(1f, 0.87f, 0.4f), new Color(0.9f, 0.55f, 0.12f)), new Vector2(0.5f, 0f), new Vector2(36f, 36f), new Vector2(0f, -14f));
-                var stage = HudArt.Label(badge.transform, new string('I', hero.EvolutionIndex), HudArt.Display, 14, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.CrimsonDark);
-                Ui.Stretch(stage.rectTransform);
-            }
+            // Three earned cyan stars (never placeholder stars or a Roman numeral badge),
+            // consistent with Hero Detail and the approved v3 progression language.
+            SdKit.EvolutionStars(rect, hero.EvolutionIndex, new Vector2(0.5f, 0f), new Vector2(0f, 105f), 19f);
             return button;
         }
 
