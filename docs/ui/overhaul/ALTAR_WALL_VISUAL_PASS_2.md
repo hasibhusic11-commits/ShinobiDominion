@@ -21,3 +21,17 @@ This is an unverified source pass, not 10/10 certification. Before approval, cap
 
 ## Original visual direction
 Feudal ninja shrine identity, gold/brass metalwork, dark lacquer, controlled crimson accents, painting-first character/architecture art, high legibility. Castle Clash is a reference for tactile mobile strategy presentation only; do not duplicate its protected assets.
+
+## Hero art correction — same real character, consistent portrait presentation
+The shipped `hero_sprites.json` registry declares 18 enabled Heroes3D prefabs, including Common heroes. Yet roster screens without concept art previously rendered the old procedural `HeroPortraits` proxy, which explains the mismatched blocky characters in the owner's screenshot.
+
+- Added `HeroPortraitBaker.cs` with Unity Editor menu **Tools > Shinobi Dominion > Art > Bake Missing Hero Portraits**. It renders each available **existing real hero model** to a 512×640 transparent PNG under `Assets/_Game/Resources/HeroPortraits/{heroId}.png`. Source concept paintings are never overwritten.
+- `HeroConcepts` now loads those baked hero-specific images when no `HeroConcepts/{heroId}` authored painting exists; Hero Altar and Hero Detail then share the same real character artwork rather than a procedural impostor. Dedicated evolution paintings still take precedence.
+- If the 3D prefab is missing, the model has no renderer, or the hero is absent from the current 3D registry, the fallback remains; the baker reports the case rather than fabricating a hero identity.
+- **These PNGs are not yet created or committed**. Open the actual Unity project, execute the menu action, visually inspect each baked Common/Elite portrait, and commit the generated PNGs (and Unity .meta files) before claiming the screenshot defect fixed in a build. Reopen the Altar after baking.
+- Run **Tools > Shinobi Dominion > Art > Rebake 3D Hero Portraits** if the underlying authored model changes. This overwrites only earlier baked portraits, never original character concept paintings.
+
+## Structural wall corrections
+The old wall renderer only drew `wall_post_v2_*` when `mask == 0` (an isolated tile). Connected endcaps, bends, and intersections could therefore lose their corner posts. A post is now drawn for **every** wall cell; the north/east spans still use the same connectivity rules. Missing tier images fall back to the nearest older tier, then to a newer tier if **no** earlier matching piece exists. This retains the requested wall type/direction and scales by the actual art tier. Tests cover forward/backward fallback. Full authentic ten-tier wall sprite packs still require authoring.
+
+**Verification remaining:** Unity Editor compilation; actual portrait bake output and transparency check; portrait framing and legibility at mobile/tablet sizes; post/segment seam rendering at corners, T-junctions and straight runs; device PlayMode tests. Do not mark 10/10 or production ready without these screenshots and tests.
