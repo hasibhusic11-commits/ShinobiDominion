@@ -1,0 +1,33 @@
+name: Visual art inventory
+
+on:
+  pull_request:
+    paths:
+      - "tools/art/**"
+      - "unity/Assets/_Game/Resources/Config/**"
+      - "unity/Assets/_Game/Resources/Buildings/**"
+      - "unity/Assets/_Game/Resources/HeroConcepts/**"
+      - "unity/Assets/_Game/Resources/HeroPortraits/**"
+      - "unity/Assets/_Game/Scripts/Editor/HeroPortrait*.cs"
+      - ".github/workflows/visual-art-audit.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Inventory production art (nonblocking during development)
+        run: python tools/art/audit_visual_assets.py
+      - name: Upload missing-art report
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-art-inventory
+          path: artifacts/visual_art_inventory.json
+          if-no-files-found: error
