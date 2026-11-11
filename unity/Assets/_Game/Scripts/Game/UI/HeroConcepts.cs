@@ -5,7 +5,8 @@ namespace ShinobiDominion.Game
 {
     /// <summary>
     /// The owner's concept paintings of each hero's base form, from Resources/HeroConcepts/{heroId}.png.
-    /// Heroes without one keep their made-in-code picture.
+    /// Heroes without paintings use a baked portrait of their own model where available;
+    /// procedural fallback remains only until that portrait has been authored/baked.
     /// </summary>
     public static class HeroConcepts
     {
@@ -34,6 +35,12 @@ namespace ShinobiDominion.Game
             if (!Textures.TryGetValue(heroId, out var texture))
             {
                 texture = Resources.Load<Texture2D>("HeroConcepts/" + heroId);
+                // Authored concept art takes precedence. If an original painting is not
+                // available, use a baked portrait of this hero's own existing 3D prefab.
+                // The Editor baker writes these to Resources/HeroPortraits/{id}.png.
+                // Evolution-specific paintings always retain priority over the base bake.
+                if (texture == null && !heroId.Contains("_evo_"))
+                    texture = Resources.Load<Texture2D>("HeroPortraits/" + heroId);
                 Textures[heroId] = texture;
             }
             return texture;
