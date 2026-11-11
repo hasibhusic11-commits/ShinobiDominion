@@ -55,6 +55,7 @@ namespace ShinobiDominion.Tests
             Assert.AreEqual(4, SdKit.RosterColumns(780f), "Tablet width uses four busts");
             Assert.AreEqual(3, SdKit.RosterColumns(600f), "Narrow window uses three busts");
             Assert.AreEqual(2, SdKit.RosterColumns(430f), "Very narrow window uses two busts");
+            Assert.AreEqual(1, SdKit.RosterColumns(300f), "Tiny windows avoid overlapping busts");
         }
 
         [UnityTest]
