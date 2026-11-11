@@ -19,6 +19,15 @@ func TestCleanName(t *testing.T) {
 	}
 }
 
+func TestValidGuildReportReason(t *testing.T) {
+	for _, reason := range []string{"harassment", "hate", "spam", "other"} {
+		if !validGuildReportReason(reason) { t.Fatalf("valid reason rejected: %s", reason) }
+	}
+	for _, reason := range []string{"", "HATE", "fraud", "other;DROP TABLE sd_guild", "self"} {
+		if validGuildReportReason(reason) { t.Fatalf("invalid reason accepted: %s", reason) }
+	}
+}
+
 func TestCleanChat(t *testing.T) {
 	if got, ok := cleanChat("  hello\n\tworld  "); !ok || got != "hello world" {
 		t.Fatalf("got %q", got)

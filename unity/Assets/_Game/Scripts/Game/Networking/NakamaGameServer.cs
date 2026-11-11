@@ -59,6 +59,7 @@ namespace ShinobiDominion.Game
         Task<GuildView> GuildJoinAsync(string key, string guildId);
         Task<GuildView> GuildLeaveAsync(string key);
         Task<GuildView> GuildChatAsync(string key, string text);
+        Task<bool> GuildReportAsync(long messageId, string reason);
         Task<ChestView> ChestViewAsync();
         Task<ChestView> ChestOpenAsync(string key);
         Task<ChestView> ShopBuyAsync(string key, string offerId);
@@ -93,7 +94,16 @@ namespace ShinobiDominion.Game
             var asset = Resources.Load<TextAsset>("Config/server.local");
             if (asset == null) return null;
             var config = JsonUtility.FromJson<ServerConfig>(asset.text);
-            return string.IsNullOrEmpty(config?.serverKey) ? null : config;
+            if (string.IsNullOrEmpty(config?.serverKey)) return null;
+#if !UNITY_EDITOR && !DEVELOPMENT_BUILD
+            // Public builds must never send authentication sessions or progression over HTTP.
+            if (!string.Equals(config.scheme, "https", StringComparison.OrdinalIgnoreCase))
+            {
+                Debug.LogError("Production server config requires HTTPS. Refusing insecure connection.");
+                return null;
+            }
+#endif
+            return config;
         }
     }
 
@@ -217,6 +227,9 @@ namespace ShinobiDominion.Game
         public async Task<GuildView> GuildLeaveAsync(string key) => GuildView.Parse(await CallAsync("sd_guild_leave", new { key }));
 
         public async Task<GuildView> GuildChatAsync(string key, string text) => GuildView.Parse(await CallAsync("sd_guild_chat", new { key, text }));
+
+        public async Task<bool> GuildReportAsync(long messageId, string reason) =>
+            Newtonsoft.Json.Linq.JObject.Parse(await CallAsync("sd_guild_report", new { messageId, reason })).Value<bool>("reported");
 
         public async Task<ChestView> ChestViewAsync() => ChestView.Parse(await CallAsync("sd_chest_view", null));
 

@@ -470,6 +470,22 @@ namespace ShinobiDominion.Game
                     HeroGuard.Attach(actor, go.transform, PedestalOffset + Vector3.up * PedestalTop, GuardOffset, look != null ? look.Color : Color.white);
                     hero = actor.GetComponentsInChildren<Renderer>(true);
                 }
+                else if (look != null)
+                {
+                    // Heroes without an authored animated prefab (currently most Elites) must not be invisible
+                    // when assigned to defense. Use the battle's existing temporary mesh as a clear fallback.
+                    var fallback = new GameObject("HeroTemporaryFallback");
+                    fallback.transform.SetParent(go.transform, false);
+                    fallback.transform.localScale = Vector3.one * BaseHeroScale3D;
+                    var builder = BuildingMeshes.Figure(look);
+                    var mesh = builder.Build("HeroBaseFallback");
+                    fallback.AddComponent<MeshFilter>().sharedMesh = mesh;
+                    fallback.AddComponent<MeshRenderer>().sharedMaterials = builder.LitMaterials();
+                    fallback.AddComponent<HeroFallbackMeshLifetime>().Own(mesh);
+                    HeroGuard.AttachFallback(fallback.transform, go.transform,
+                        PedestalOffset + Vector3.up * PedestalTop, GuardOffset, look.Color);
+                    hero = fallback.GetComponentsInChildren<Renderer>(true);
+                }
             }
             return new Entry { Go = go, Signature = signature, Stand = stand, Hero = hero };
         }

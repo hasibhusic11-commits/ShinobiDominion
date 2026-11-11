@@ -201,7 +201,19 @@ namespace ShinobiDominion.Game
                     if (!string.IsNullOrEmpty(view.guild.description)) panel.Line(view.guild.description, 18, HudArt.BrassLight).supportRichText = false;
                     if (view.chat.Count == 0) panel.Line("No messages yet.", 19);
                     foreach (var line in view.chat.Skip(Math.Max(0, view.chat.Count - 9)))
-                        panel.Line($"{line.name}: {line.text}", 18, line.isMe ? Ui.AccentColor : (Color?)null).supportRichText = false;
+                    {
+                        // Short rows keep each report action attached to an exact server-issued message ID.
+                        var chatRow = ScreenKit.AddRow(panel, "ChatMessage_" + line.messageId, null,
+                            line.name, line.text, false, 66f);
+                        chatRow.Title.supportRichText = false;
+                        if (chatRow.Detail != null) chatRow.Detail.supportRichText = false;
+                        if (!line.isMe && line.messageId > 0)
+                        {
+                            var messageId = line.messageId;
+                            chatRow.Button("ReportChat_" + messageId, "Report",
+                                () => ShowGuildReport(messageId), true, null, 92f);
+                        }
+                    }
                     _guildInput = TextBox(panel.Row(), "GuildChatInput", "Write a message", 200);
                     var input = _guildInput;
                     panel.Action("SendChatButton", "Send", () => GuildCall(key => Modes.GuildChatAsync(key, input.text), $"guild-chat|{input.text}|{DateTime.UtcNow.Ticks}"), true, Ui.AccentColor, 20);
@@ -219,6 +231,34 @@ namespace ShinobiDominion.Game
                     }, true, _leaveArmed ? UiSkin.Vermilion : (Color?)null, 18);
                 });
             });
+        }
+
+        private void ShowGuildReport(long messageId)
+        {
+            _panel.Show("Report message", ShowGuild, panel =>
+            {
+                panel.Line("Report this guild message to the moderation queue. Select a reason:", 19);
+                foreach (var reason in new[] { "harassment", "hate", "spam", "other" })
+                {
+                    var selected = reason;
+                    panel.Action("ReportReason_" + selected, char.ToUpperInvariant(selected[0]) + selected.Substring(1),
+                        () => SubmitGuildReport(messageId, selected), true, Ui.AccentColor);
+                }
+                panel.Action("CancelReportButton", "Cancel", ShowGuild);
+            });
+        }
+
+        private void SubmitGuildReport(long messageId, string reason)
+        {
+            if (!ModesOnline) return;
+            Run(async () =>
+            {
+                if (!await Modes.GuildReportAsync(messageId, reason))
+                    throw new GameServerException("REPORT_FAILED");
+                LastMessage = "Message reported for review.";
+                _guild = await Modes.GuildViewAsync();
+                ShowGuild();
+            }, ShowGuild);
         }
 
         /// <summary>While the guild screen is open, new chat arrives every few seconds, unless the player is typing.</summary>

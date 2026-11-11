@@ -77,6 +77,22 @@ namespace ShinobiDominion.Tests
         private static readonly string[] AllHeroes = Legendaries.Concat(Commons).ToArray();
 
         [UnityTest]
+        public IEnumerator EliteWithout3DArt_StillAppearsOnHeroBase()
+        {
+            // No authored Elite prefab yet; this is a visibility regression test, not an art approval.
+            var baseAt = AssignSage();
+            var elite = Controller.Roster.AddHero("frost_lake_monk", 0, 1);
+            Assert.AreEqual(VillageError.None, Controller.AssignHero(baseAt.Id, elite.InstanceId));
+            yield return null;
+            yield return null;
+            var fallback = Object.FindObjectsByType<HeroFallbackMeshLifetime>(FindObjectsSortMode.None).FirstOrDefault();
+            Assert.IsNotNull(fallback, "An assigned Elite must not disappear simply because its art is unfinished.");
+            Assert.IsNotNull(fallback.GetComponent<HeroGuard>());
+            Assert.IsNotEmpty(fallback.GetComponentsInChildren<MeshRenderer>(),
+                "The temporary Elite representation must actually render.");
+        }
+
+        [UnityTest]
         public IEnumerator Hero3D_AppearsOnHeroBase_AndPlaysAllThreeAnimations()
         {
             AssignSage();

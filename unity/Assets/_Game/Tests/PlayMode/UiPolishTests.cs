@@ -90,6 +90,22 @@ namespace ShinobiDominion.Tests
         }
 
         [Test]
+        public void MobileSafeArea_NormalizesCutoutsAndClampsToScreen()
+        {
+            var safe = UiRoot.NormalizedSafeArea(new Rect(80f, 0f, 1120f, 690f), 1280, 720);
+            Assert.AreEqual(0.0625f, safe.xMin, 0.0001f);
+            Assert.AreEqual(0.9375f, safe.xMax, 0.0001f);
+            Assert.AreEqual(0f, safe.yMin, 0.0001f);
+            Assert.AreEqual(690f / 720f, safe.yMax, 0.0001f);
+
+            var invalid = UiRoot.NormalizedSafeArea(new Rect(-50f, -50f, 2000f, 1800f), 1280, 720);
+            Assert.GreaterOrEqual(invalid.xMin, 0f);
+            Assert.GreaterOrEqual(invalid.yMin, 0f);
+            Assert.LessOrEqual(invalid.xMax, 1f);
+            Assert.LessOrEqual(invalid.yMax, 1f);
+        }
+
+        [Test]
         public void EveryButton_SinksWhenPressed()
         {
             var button = Ui.Button(_root.transform, "Test", "Test", null);

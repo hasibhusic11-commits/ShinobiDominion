@@ -1,6 +1,6 @@
 # Hero designs
 
-Proposed for your review. Every name, costume and story here is original, and all names are provisional. Designs take the broad feel of a shinobi series (elements, headbands, masks, capes, spirit companions), and no character, symbol or name from any existing series.
+Proposed for your review. Every name, costume and story here is original, and all names are provisional. Designs take the broad feel of a shinobi series (elements, headbands, masks, capes, symbolic elemental auras). **No separate pets, spirit animals, or companions are permitted in hero visuals or gameplay**, and no character, symbol or name from any existing series.
 
 Only Legendaries have more than one look: their four forms are the four evolutions, with the same face and build throughout.
 
@@ -9,12 +9,12 @@ Heroes not yet in the summon pool are marked **not summonable yet**. Their numbe
 ## Legendary
 
 ### Solar Beast Sage
-Fighter, Solar. A wandering teacher who befriended a spirit-beast of the sun. Warm, loud, and far stronger than he lets on.
+Fighter, Solar. A wandering teacher who mastered an ancient sun-beast martial-arts tradition; the beast is represented by symbolic armor and solar energy, never a companion. Warm, loud, and far stronger than he lets on.
 
 - **Base, Wandering Sage:** Plain orange and grey training clothes, rope belt, a modest outline.
 - **Evo I, Dawn Disciple:** A layered robe over the gi and a faint warm glow at the hands.
-- **Evo II, Beast-Bound Master:** Bronze bracers, clan sash, and a small sun-beast spirit at his heel.
-- **Evo III, Celestial Guardian:** A radiant armoured mantle and sun disc behind the same weathered face, with the spirit-beast grown large.
+- **Evo II, Beast-Bound Master:** Bronze bracers, clan sash, and a stylized sun-beast emblem on his gauntlet.
+- **Evo III, Celestial Guardian:** A radiant armoured mantle and sun disc behind the same weathered face, with a much brighter solar aura around the hero, not a separate creature.
 
 ### Thunder Empress
 Control, Lightning. A storm-court apprentice who rose to rule the sky over her mountain. Icy, precise, and always the last to raise her voice.
@@ -33,12 +33,12 @@ Tank, Earth. A quarry labourer who stood his ground in a landslide, and the moun
 - **Evo III, Stone Titan:** Towering living-rock armour around the same weathered face.
 
 ### Moonfang Oracle
-Support, Lunar. A shrine orphan raised by a white wolf-spirit. She mends the living and speaks for the moon.
+Support, Lunar. A shrine orphan trained in a moonlit sanctuary that honors the wolf as a protective emblem. She mends the living and speaks for the moon.
 
 - **Base, Shrine Novice:** Plain grey shrine robes and a wooden charm.
 - **Evo I, Night Seer:** Layered silver-trim robes and a dim lunar halo.
-- **Evo II, Fang Priestess:** Crescent fang jewellery, floating ward talismans and a small spirit wolf.
-- **Evo III, Moonfang Oracle:** A sweeping crescent mantle, full moonlight, and the wolf-spirit standing beside her.
+- **Evo II, Fang Priestess:** Crescent fang jewellery, floating ward talismans and luminous wolf-fang patterns on her mantle.
+- **Evo III, Moonfang Oracle:** A sweeping crescent mantle, full moonlight, and crescent-shaped protective wards surrounding her.
 
 ### Crimson Eye Prodigy (**not summonable yet**)
 Assassin, Fire. A prodigy who sealed her own sight, and carries a floating glass eye that shows her the path of a blade. It holds illusions rather than bloodline power.

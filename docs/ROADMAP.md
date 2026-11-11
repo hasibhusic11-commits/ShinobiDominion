@@ -1,5 +1,7 @@
 # Roadmap
 
+> **Historical development log (not a current feature inventory).** Entries below describe the state at the time each phase was recorded. For the current prototype (main as of 2026-11-11): server-authoritative combat, building timers, research, guilds, gifts, summon reveals, 30 hero archetypes, 18 authored 3D hero prefabs, and many UI screens exist. Four Legendary archetypes remain marked content-incomplete and are not in the current summon pool. Final artwork, mobile QA, account recovery, content moderation operations, and a complete v3 UI migration remain unfinished. See `docs/RELEASE_READINESS.md` before making a production build.
+
 "Verified" means run on this machine with results recorded in this file.
 
 ## Phase 0: audit — done

@@ -1,5 +1,6 @@
 # Local development environment only. Ports bind to this machine, never the network.
 # Secrets come from backend/.env, which is gitignored. See .env.example.
+# Never use shell -x here: expanded credentials can appear in Docker container logs.
 name: shinobi-dominion
 
 services:
@@ -26,7 +27,7 @@ services:
         condition: service_healthy
     entrypoint:
       - /bin/sh
-      - -ecx
+      - -ec
       - >
         /nakama/nakama migrate up --database.address postgres:${POSTGRES_PASSWORD}@postgres:5432/nakama &&
         exec /nakama/nakama --name sd1

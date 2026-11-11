@@ -32,14 +32,26 @@ namespace ShinobiDominion.Game
 
         public static HeroGuard Attach(HeroSpriteActor actor, Transform baseRoot, Vector3 pedestal, Vector3 guard, Color color)
         {
-            var guardian = actor.gameObject.AddComponent<HeroGuard>();
+            return AttachVisual(actor.transform, actor, baseRoot, pedestal, guard, color);
+        }
+
+        /// <summary>Shares the same pedestal, guard ring and positioning with temporary mesh fallbacks.
+        /// This does not claim a missing Elite has finished original artwork.</summary>
+        public static HeroGuard AttachFallback(Transform fallback, Transform baseRoot, Vector3 pedestal, Vector3 guard, Color color)
+        {
+            return AttachVisual(fallback, null, baseRoot, pedestal, guard, color);
+        }
+
+        private static HeroGuard AttachVisual(Transform root, HeroSpriteActor actor, Transform baseRoot, Vector3 pedestal, Vector3 guard, Color color)
+        {
+            var guardian = root.gameObject.AddComponent<HeroGuard>();
             guardian._actor = actor;
             guardian._base = baseRoot;
             guardian._from = pedestal;
             guardian._to = guard;
             Color.RGBToHSV(color, out var hue, out var saturation, out _);
             guardian._ringColor = Color.HSVToRGB(hue, Mathf.Max(saturation, 0.75f), 1f);
-            guardian._ring = Ring(actor.transform, guardian._ringColor);
+            guardian._ring = Ring(root, guardian._ringColor);
             guardian._halo = Halo(guardian._ring.transform);
             // Standing where it appears means no hop: it is on guard from the start.
             if ((pedestal - guard).sqrMagnitude < 0.0001f) guardian._clock = HopDelay + HopTime;
@@ -96,12 +108,12 @@ namespace ShinobiDominion.Game
             if (_stage == 0 && t > 0f)
             {
                 _stage = 1;
-                _actor.Face(_to - _from);
+                if (_actor != null) _actor.Face(_to - _from);
             }
             if (_stage == 1 && t >= 1f)
             {
                 _stage = 2;
-                _actor.Face(Outward);
+                if (_actor != null) _actor.Face(Outward);
             }
 
             if (_ring == null) return;
@@ -116,6 +128,20 @@ namespace ShinobiDominion.Game
                 _halo.sortingOrder = _ring.sortingOrder - 1;
                 _halo.color = new Color(_ringColor.r, _ringColor.g, _ringColor.b, landed * breathe * 0.45f);
             }
+        }
+    }
+
+    /// <summary>Destroys the one-off procedural mesh when its temporary Elite hero stand is removed.
+    /// Production art replaces this component with a prefab and authored animations.</summary>
+    public sealed class HeroFallbackMeshLifetime : MonoBehaviour
+    {
+        private Mesh _mesh;
+
+        public void Own(Mesh mesh) { _mesh = mesh; }
+
+        private void OnDestroy()
+        {
+            if (_mesh != null) Destroy(_mesh);
         }
     }
 }
