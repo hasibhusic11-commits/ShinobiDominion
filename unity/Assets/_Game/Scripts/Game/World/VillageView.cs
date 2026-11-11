@@ -239,6 +239,15 @@ namespace ShinobiDominion.Game
                 picturedTier = tier;
                 return sprite;
             }
+            // A partial pack might contain only later tiers; keep a real wall
+            // visible rather than leaving a gap even on level-one villages.
+            for (var tier = art + 1; tier <= BuildingSprites.ArtLevels; tier++)
+            {
+                sprite = load(prefix + tier.ToString("00"));
+                if (sprite == null) continue;
+                picturedTier = tier;
+                return sprite;
+            }
             return null;
         }
 
