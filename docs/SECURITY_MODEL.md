@@ -7,10 +7,10 @@ The client keeps a copy of the rules only for instant green and red previews. Mi
 
 Release builds refuse to change anything without a server and never read a local save. Editor and development builds can still play offline from a local file, for testing only.
 
-## What the server does NOT control yet
-- Battle results, because battles do not exist yet
-- Buildings have no build timers, so construction is instant
-- Training Grounds and Research Hut have no features yet
+## Server-owned gameplay as of the current prototype
+The Go/Nakama server now checks battle outcomes for scripted dungeons, rival raids, Siege, Arena, and Trial Tower. It also owns timed building upgrades, hero progression, training, gear, talents, and research. See backend battle RPCs and tests for the implemented modes.
+
+The client produces a visual replay of the server's authoritative battle log. It must not be trusted for currency, inventory, damage, placement, or combat results.
 
 ## How a request stays safe
 Each summon and evolution is one Postgres transaction:
@@ -48,12 +48,14 @@ Rolls use Go's `crypto/rand` with integer weights. The roll function takes only 
 | Removing the database locks (deliberately) | Tests failed, proving they can detect it |
 
 ## Known gaps before any public release
-- Traffic is plain HTTP on localhost. Production needs TLS.
+- Local development runs HTTP on localhost. Release client builds now reject non-HTTPS configuration, but deployment still needs an audited TLS terminator and secure production routing.
 - Rate limiting is per server process, so it is not shared across several servers.
 - The development server key sits in a gitignored local file. Production needs its own keys. Nakama's client key is designed to ship in clients, so it does not protect anything by itself.
 - There is no anomaly telemetry yet, and no independent security review has been done.
-- Device-ID sign-in means losing the device loses the account. Account linking is not built.
+- Device-ID sign-in means losing the device loses the account. Account linking, verified recovery, and an account migration flow are not built; **do not launch with real-money purchases or nonrecoverable player progression until resolved**.
+- Guild chat now allows authenticated per-message reports stored in `sd_guild_chat_report` (migration 019). Operator review, enforcement policy, user blocking, evidence retention/deletion and appeals are still required.
+- The CI pipeline checks Go, shared C# rules and configuration hygiene. It cannot replace real Unity PlayMode, live Nakama integration, device QA or independent penetration testing.
 - Paid summoning needs platform, age and regional law review first. Nothing here charges real money.
 
 ## Raids
-The client sends only a raid id and where its heroes stand. The server reads the team from the bases, stores the defender and team as a snapshot, validates each placement, runs the battle itself, and pays gold once per attack inside one transaction with a ledger entry. Strict decoding refuses claimed results. Retries with the same key return the stored result, and a second key is refused. This covers scripted raids only. Player-versus-player raids are not built and not claimed as secure.
+The client sends only a raid id and where its heroes stand. The server reads the team from the bases, stores the defender and team as a snapshot, validates each placement, runs the battle itself, and pays gold once per attack inside one transaction with a ledger entry. Strict decoding refuses claimed results. Retries with the same key return the stored result, and a second key is refused. Rival-village raids and revenge now also execute through server-authoritative attack snapshots and validated deployment logs. Verify the current implementation and integration suite before any public release; this statement is not an independent penetration-test certification.
