@@ -310,9 +310,10 @@ namespace ShinobiDominion.Game
         /// <summary>One bust and its lip, where busts stand in a grid and not on the Altar's shelves.</summary>
         private static readonly Vector2 BustCell = new Vector2(186f, 214f);
 
-        private static readonly Color PlankTop = new Color(0.47f, 0.31f, 0.17f);
-        private static readonly Color PlankFace = new Color(0.33f, 0.21f, 0.12f);
-        private static readonly Color PlankShade = new Color(0.13f, 0.08f, 0.05f);
+        // A slim lacquer-and-brass shelf line, not the 40px brown banner that covered the cards.
+        private static readonly Color ShelfEdge = SdTheme.Brass;
+        private static readonly Color ShelfFace = SdTheme.LacquerDeep;
+        private static readonly Color ShelfShadow = SdTheme.Ink;
 
         /// <summary>
         /// The Heroes Altar (ADR-057): a window over the village with one banner for all heroes and one for each
@@ -351,21 +352,21 @@ namespace ShinobiDominion.Game
                     plank.anchorMin = new Vector2(0f, 1f);
                     plank.anchorMax = new Vector2(1f, 1f);
                     plank.pivot = new Vector2(0.5f, 0f);
-                    plank.sizeDelta = new Vector2(0f, 40f);
+                    plank.sizeDelta = new Vector2(0f, 12f);
                     plank.anchoredPosition = new Vector2(0f, -(r + 1) * ShelfHeight + 6f);
-                    Ui.Background(plank, PlankFace, false);
+                    Ui.Background(plank, ShelfFace, false);
                     var top = Ui.Rect("Top", plank);
                     top.anchorMin = new Vector2(0f, 1f);
                     top.anchorMax = new Vector2(1f, 1f);
                     top.pivot = new Vector2(0.5f, 1f);
-                    top.sizeDelta = new Vector2(0f, 7f);
-                    Ui.Background(top, PlankTop, false);
+                    top.sizeDelta = new Vector2(0f, 3f);
+                    Ui.Background(top, ShelfEdge, false);
                     var shade = Ui.Rect("Shade", plank);
                     shade.anchorMin = Vector2.zero;
                     shade.anchorMax = new Vector2(1f, 0f);
                     shade.pivot = new Vector2(0.5f, 1f);
-                    shade.sizeDelta = new Vector2(0f, 8f);
-                    Ui.Background(shade, new Color(PlankShade.r, PlankShade.g, PlankShade.b, 0.8f), false);
+                    shade.sizeDelta = new Vector2(0f, 4f);
+                    Ui.Background(shade, new Color(ShelfShadow.r, ShelfShadow.g, ShelfShadow.b, 0.8f), false);
                 }
 
                 for (var i = 0; i < shown.Count; i++)
@@ -430,6 +431,8 @@ namespace ShinobiDominion.Game
             var lip = Ui.Rect("Lip", root);
             Ui.Anchor(lip, new Vector2(0.5f, 0f), new Vector2(154f, 34f), new Vector2(0f, 2f));
             lip.pivot = new Vector2(0.5f, 0f);
+            var lipFace = Ui.Framed(lip, HudArt.Sprite(SdTheme.PlateDark), false);
+            lipFace.pixelsPerUnitMultiplier = SdTheme.ArtScale;
             var words = HudArt.Label(lip, string.IsNullOrEmpty(tag) ? $"Lv {hero.Level}" : tag, HudArt.Numbers, 19, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.LacquerDeep);
             words.name = "BustLevel";
             Ui.Stretch(words.rectTransform, 30f, 0f, 30f, 0f);
