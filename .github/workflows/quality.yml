@@ -19,6 +19,8 @@ jobs:
         with:
           python-version: '3.12'
       - run: python tools/qa/audit_configs.py
+      - name: Validate complete catalog references
+        run: python tools/ci/validate_catalog.py
 
   core:
     name: Shared game-rule tests (.NET 10)
