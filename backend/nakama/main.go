@@ -289,7 +289,10 @@ func decodeStrict(payload string, target interface{}) error {
 	if err := decoder.Decode(target); err != nil {
 		return errBadRequest
 	}
-	if decoder.More() {
+	// More() only answers whether an array/object has another element. At the
+	// top level use a second decode to reject trailing JSON values or garbage.
+	var trailing interface{}
+	if err := decoder.Decode(&trailing); err != io.EOF {
 		return errBadRequest
 	}
 	return nil
