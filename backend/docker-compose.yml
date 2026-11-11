@@ -24,9 +24,10 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    # Do not enable shell xtrace (-x): expanded DB and Nakama credentials must not reach Docker logs.
     entrypoint:
       - /bin/sh
-      - -ecx
+      - -ec
       - >
         /nakama/nakama migrate up --database.address postgres:${POSTGRES_PASSWORD}@postgres:5432/nakama &&
         exec /nakama/nakama --name sd1
