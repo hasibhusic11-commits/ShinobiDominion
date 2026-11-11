@@ -55,12 +55,13 @@ namespace ShinobiDominion.Game
                 new WindowTab("GearButton", "Gear", _heroTab == HeroTab.Gear, () => OpenHeroTab(instanceId, HeroTab.Gear)),
                 new WindowTab("MasteryButton", "Mastery", _heroTab == HeroTab.Mastery, () => OpenHeroTab(instanceId, HeroTab.Mastery))
             };
-            _panel.ShowWindow(archetype.displayName, HeroWindowSize, CloseAll, content =>
+            _panel.ShowThemedWindow(archetype.displayName, HeroWindowSize, CloseAll, content =>
             {
                 DrawHeroColumn(content, hero, archetype);
                 DrawHeroBrowse(content, hero.InstanceId);
+                SdKit.Tabs(content, tabs, HeroRightInset, 0f);
                 var area = Ui.Rect("HeroTabArea", content);
-                Ui.Stretch(area, HeroRightInset, 0f, 0f, 0f);
+                Ui.Stretch(area, HeroRightInset, 0f, 0f, 62f);
                 switch (_heroTab)
                 {
                     case HeroTab.Attributes:
@@ -76,7 +77,7 @@ namespace ShinobiDominion.Game
                         DrawSkillsTab(area, hero, archetype);
                         break;
                 }
-            }, tabs, ShowAltarRoster);
+            }, ShowAltarRoster);
         }
 
         private void OpenHeroTab(string instanceId, HeroTab tab)
@@ -113,7 +114,7 @@ namespace ShinobiDominion.Game
             if (HeroConcepts.Has(archetype.id))
             {
                 // The whole painting, standing on the frame's foot.
-                var sprite = HeroConcepts.Full(archetype.id);
+                var sprite = HeroConcepts.Full(archetype.id, HeroConcepts.AvailableForm(archetype.id, hero.EvolutionIndex));
                 const float height = 284f;
                 var figure = Ui.Rect("HeroConcept", art);
                 Ui.Anchor(figure, new Vector2(0.5f, 0f), new Vector2(height * sprite.rect.width / sprite.rect.height, height), Vector2.zero);
@@ -140,24 +141,14 @@ namespace ShinobiDominion.Game
             // Rarity badge, then one glowing blue star per evolution; none before the first.
             var badge = HudArt.Picture(portrait, "RarityBadge", "badge_" + archetype.rarity.ToString().ToLowerInvariant(), new Vector2(0f, 1f), new Vector2(52f, 52f), new Vector2(-10f, 10f));
             badge.preserveAspect = true;
-            for (var i = 0; i < hero.EvolutionIndex; i++)
-            {
-                var glow = Ui.Icon(portrait, HeroArt.Glow, new Vector2(0f, 1f), new Vector2(52f, 52f), new Vector2(34f + i * 30f, -6f));
-                glow.color = new Color(EvolutionBlue.r, EvolutionBlue.g, EvolutionBlue.b, 0.6f);
-                glow.raycastTarget = false;
-                UiMotion.Breathe(glow, 0.4f, 1.8f + i * 0.2f);
-                var star = Ui.Icon(portrait, HeroArt.Star, new Vector2(0f, 1f), new Vector2(28f, 28f), new Vector2(46f + i * 30f, -18f));
-                star.name = "EvolutionStar";
-                star.color = new Color(0.55f, 0.92f, 1f);
-                star.raycastTarget = false;
-                UiMotion.PopIn(star.transform, 0.08f * i, 0.4f, 0.35f);
-            }
+            SdKit.EvolutionStars(portrait, hero.EvolutionIndex, new Vector2(0f, 1f), new Vector2(100f, -25f), 25f);
 
             if (archetype.CanEvolve)
             {
                 var final = hero.EvolutionIndex >= HeroMath.MaxEvolution;
-                var evolve = Ui.Button(portrait, "EvolveButton", final ? "Final Form" : "Evolve", () => ShowEvolution(instanceId), true, new Color(0.35f, 0.45f, 0.85f), 19);
-                Ui.Anchor((RectTransform)evolve.transform, new Vector2(0.5f, 0f), new Vector2(150f, 40f), new Vector2(0f, 34f));
+                var evolve = SdKit.Button(portrait, "EvolveButton", final ? "Final Form" : "Evolve",
+                    SdButtonKind.Gold, () => ShowEvolution(instanceId), !final);
+                Ui.Anchor((RectTransform)evolve.transform, new Vector2(0.5f, 0f), new Vector2(168f, 44f), new Vector2(0f, 70f));
             }
 
             // Name plate across the frame's foot, with the padlock on its left end.
@@ -289,10 +280,11 @@ namespace ShinobiDominion.Game
             if (list.Count < 2 || index < 0) return;
             var previous = list[(index - 1 + list.Count) % list.Count].InstanceId;
             var next = list[(index + 1) % list.Count].InstanceId;
-            var left = Medal.Create(content, "PreviousHeroButton", MedalKind.Primary, "back", null, () => OpenHeroWindow(previous), true, 62f);
-            Ui.Anchor((RectTransform)left.transform, new Vector2(0f, 0.5f), new Vector2(62f, 62f), new Vector2(-114f, 0f));
-            var right = Medal.Create(content, "NextHeroButton", MedalKind.Primary, "next", null, () => OpenHeroWindow(next), true, 62f);
-            Ui.Anchor((RectTransform)right.transform, new Vector2(1f, 0.5f), new Vector2(62f, 62f), new Vector2(114f, 0f));
+            // Keep hero navigation within the display bay so it never escapes the frame.
+            var left = Medal.Create(content, "PreviousHeroButton", MedalKind.Primary, "back", null, () => OpenHeroWindow(previous), true, 52f);
+            Ui.Anchor((RectTransform)left.transform, new Vector2(0f, 0.55f), new Vector2(52f, 52f), new Vector2(28f, 0f));
+            var right = Medal.Create(content, "NextHeroButton", MedalKind.Primary, "next", null, () => OpenHeroWindow(next), true, 52f);
+            Ui.Anchor((RectTransform)right.transform, new Vector2(0f, 0.55f), new Vector2(52f, 52f), new Vector2(HeroLeftWidth - 28f, 0f));
         }
 
         // ---------- Right: Hero (skills and talent) ----------
@@ -465,7 +457,9 @@ namespace ShinobiDominion.Game
             var special = !onTalent && skills[_selectedSkill].special && skills[_selectedSkill].unlockEvolution <= hero.EvolutionIndex;
             if (onTalent || special)
             {
-                var act = Ui.Button(paper, onTalent ? "TalentChangeButton" : "SkillRankButton", onTalent ? (talent == null ? "Roll" : "Change") : "Rank up", () => OpenHeroTab(instanceId, HeroTab.Mastery), true, new Color(0.35f, 0.45f, 0.85f), 21);
+                var act = SdKit.Button(paper, onTalent ? "TalentChangeButton" : "SkillRankButton",
+                    onTalent ? (talent == null ? "Roll" : "Change") : "Rank up", SdButtonKind.Gold,
+                    () => OpenHeroTab(instanceId, HeroTab.Mastery), true);
                 Ui.Anchor((RectTransform)act.transform, new Vector2(0.5f, 0f), new Vector2(210f, 50f), new Vector2(0f, 24f));
             }
         }

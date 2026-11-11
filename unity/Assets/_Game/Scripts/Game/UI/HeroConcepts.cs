@@ -18,6 +18,17 @@ namespace ShinobiDominion.Game
         private static readonly Dictionary<string, Sprite> Cards = new Dictionary<string, Sprite>();
         private static readonly Dictionary<string, Sprite> Fulls = new Dictionary<string, Sprite>();
 
+        // Name convention: {id}.png (base), {id}_evo_1.png, {id}_evo_2.png, {id}_evo_3.png.
+        // Missing evolved art falls back to the original painted base form; never synthesize an unrelated character.
+        private static string FormKey(string heroId, int evolution) =>
+            evolution <= 0 ? heroId : heroId + "_evo_" + Mathf.Clamp(evolution, 1, 3);
+
+        public static bool HasForm(string heroId, int evolution) =>
+            Texture(FormKey(heroId, evolution)) != null;
+
+        public static int AvailableForm(string heroId, int evolution) =>
+            evolution > 0 && HasForm(heroId, evolution) ? evolution : 0;
+
         private static Texture2D Texture(string heroId)
         {
             if (!Textures.TryGetValue(heroId, out var texture))
@@ -31,8 +42,11 @@ namespace ShinobiDominion.Game
         public static bool Has(string heroId) => Texture(heroId) != null;
 
         /// <summary>The upper body, for hero cards in lists.</summary>
-        public static Sprite Card(string heroId)
+        public static Sprite Card(string heroId) => Card(heroId, 0);
+
+        public static Sprite Card(string heroId, int evolution)
         {
+            heroId = FormKey(heroId, evolution);
             if (Cards.TryGetValue(heroId, out var sprite) && sprite != null) return sprite;
             var texture = Texture(heroId);
             if (texture == null) return null;
@@ -46,8 +60,11 @@ namespace ShinobiDominion.Game
         }
 
         /// <summary>The whole painting, for the large hero view.</summary>
-        public static Sprite Full(string heroId)
+        public static Sprite Full(string heroId) => Full(heroId, 0);
+
+        public static Sprite Full(string heroId, int evolution)
         {
+            heroId = FormKey(heroId, evolution);
             if (Fulls.TryGetValue(heroId, out var sprite) && sprite != null) return sprite;
             var texture = Texture(heroId);
             if (texture == null) return null;
