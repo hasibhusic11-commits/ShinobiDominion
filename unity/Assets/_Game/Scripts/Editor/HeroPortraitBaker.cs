@@ -49,20 +49,28 @@ namespace ShinobiDominion.Editor
                 Bake(true);
         }
 
-        private static void Bake(bool overwrite)
+        /// <summary>Unity batch entrypoint: fail the job if an eligible model cannot be baked.</summary>
+        public static void BakeForCI()
+        {
+            var failures = Bake(false);
+            if (Application.isBatchMode && failures > 0)
+                EditorApplication.Exit(1);
+        }
+
+        private static int Bake(bool overwrite)
         {
             var json = Resources.Load<TextAsset>("Config/hero_sprites");
             if (json == null)
             {
                 Debug.LogError("Hero portrait baker: Config/hero_sprites.json is missing.");
-                return;
+                return 1;
             }
 
             var registry = JsonUtility.FromJson<Registry>(json.text);
             if (registry == null || registry.sprites == null)
             {
                 Debug.LogError("Hero portrait baker: hero_sprites.json could not be read.");
-                return;
+                return 1;
             }
 
             Directory.CreateDirectory(OutputDirectory);
@@ -75,6 +83,12 @@ namespace ShinobiDominion.Editor
                     string.IsNullOrEmpty(entry.path) ||
                     !entry.path.StartsWith("Heroes3D/", StringComparison.Ordinal))
                     continue;
+                if (entry.heroId.IndexOfAny(new[] { '/', '\\', ':' }) >= 0 || entry.heroId.Contains(".."))
+                {
+                    Debug.LogError("Hero portrait baker: invalid hero ID " + entry.heroId);
+                    missing++;
+                    continue;
+                }
                 if (!processed.Add(entry.heroId)) continue;
 
                 // An actual artist painting always takes priority. Never overwrite it.
@@ -131,6 +145,7 @@ namespace ShinobiDominion.Editor
             AssetDatabase.SaveAssets();
             Debug.Log($"Hero portrait bake complete: {created} rendered, {skipped} skipped, {missing} missing/failed. " +
                       "Open the Heroes Altar and inspect the results before approving the art.");
+            return missing;
         }
 
         // Also supports: Unity -batchmode -projectPath unity -executeMethod
@@ -178,9 +193,13 @@ namespace ShinobiDominion.Editor
 
                 // Cover the entire character, framed identically regardless of model size.
                 var extents = bounds.extents;
-                camera.orthographicSize = Mathf.Max(0.5f,
-                    Mathf.Max(extents.y * 1.15f, extents.x * PortraitHeight / PortraitWidth * 1.3f));
-                var focus = bounds.center + Vector3.up * (extents.y * 0.06f);
+                // Frame head to hips like the illustrated Legendary cards, rather
+                // than a full-body miniature surrounded by empty card space.
+                camera.orthographicSize = Mathf.Max(0.45f,
+                    Mathf.Max(bounds.size.y * 0.46f,
+                        extents.x * PortraitHeight / PortraitWidth * 1.15f));
+                var focus = new Vector3(bounds.center.x,
+                    bounds.min.y + bounds.size.y * 0.64f, bounds.center.z);
                 var distance = Mathf.Max(5f, bounds.size.magnitude * 3f);
                 camera.transform.position = focus + new Vector3(0f, extents.y * 0.1f, distance);
                 camera.transform.LookAt(focus);
