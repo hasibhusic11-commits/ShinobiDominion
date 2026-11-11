@@ -1,59 +1,61 @@
-# Security model
+# Security model — current prototype assessment
 
-## What the server controls today
-Crystals, gold, heroes, catalysts, summon rolls, evolution, hero locks, hero base assignments, village layout, building limits, placement, walls, moves, upgrades, removals and mine collection. While connected, the game sends requests and replaces its copy with the answer. It writes no hero or village file to the device.
+Last reconciled: 2026-11-11. This document is a design/code review, **not a penetration test or certification**.
 
-The client keeps a copy of the rules only for instant green and red previews. Mine income uses the server's clock, so changing the device's date earns nothing.
+## Server-authoritative operations
 
-Release builds refuse to change anything without a server and never read a local save. Editor and development builds can still play offline from a local file, for testing only.
+Nakama's Go backend authenticates requests using the session user ID. Hero ownership,
+summon odds, resource balances, items, catalysts, evolution, assignments, placement,
+upgrade timers, resource collection, research, troop training, and rewards are decided
+by the server. Campaign raids, asynchronous rival raids, Siege, Arena and Trial Tower
+battles are adjudicated server-side; the client renders a simulation/playback but
+cannot submit a forged result or invented payout.
 
-## What the server does NOT control yet
-- Battle results, because battles do not exist yet
-- Buildings have no build timers, so construction is instant
-- Training Grounds and Research Hut have no features yet
+Critical value-changing RPCs use a Postgres transaction, player-row lock,
+request idempotency key, and request hash. Summoning uses cryptographic random
+draws with no pity, first-time guarantee or client-supplied random seed. There are
+C#/Go shared rules and battle-vector tests. See `backend/nakama/main.go`,
+`battle_rpc.go`, `modes.go` and `backend/tests/`.
 
-## How a request stays safe
-Each summon and evolution is one Postgres transaction:
-1. Lock the player's row, so one player's requests run strictly one at a time.
-2. If the request ID was already completed, return its stored answer. A retry can never charge twice. Reusing an ID for a different request is refused.
-3. Run the rules, write everything, then commit. Any failure rolls all of it back.
+## Request hardening
 
-Requests with unknown fields are refused, so a client cannot supply results, seeds or prices. Hero lookups are scoped to the player, so another player's hero is simply "not found". Database `CHECK` constraints stop negative balances even if code is wrong.
+- `decodeStrict` rejects unknown fields, oversized payloads, and **trailing
+  JSON data/values** (fixed by the audit branch, with unit test cases).
+- Guild chat text is bounded, sanitized for control characters and rate-limited;
+  the UI disables Unity rich-text interpretation for user-generated chat.
+- Guild chat now supports member-initiated **reports**. The server checks that
+  the reported message belongs to the member's current guild, forbids
+  self-reporting, limits new reports to 10 per 24 hours, and persists a private
+  snapshot even after chat history is trimmed. It never exposes reports to
+  players. Schema: `019_guild_chat_reports.sql`.
+- Local Docker startup no longer enables shell `-x` tracing of expanded
+  credentials. Local development credentials should still never be reused in
+  production.
 
-Rolls use Go's `crypto/rand` with integer weights. The roll function takes only a random source, so there is nowhere for pity, streak or duplicate logic to read from.
+## Production blockers (not solved by the code audit)
 
-## Proven by test (`backend/tests`)
-| Attack | Result |
-|---|---|
-| No token, or server key with no player | Refused |
-| Forged results, seed, price, or bad count | Refused, nothing changes |
-| Replay, including 40 simultaneous same-ID requests | One charge, identical results |
-| 40 simultaneous summons with money for 7 | Exactly 7 succeed, balance never negative |
-| Sacrificing one duplicate twice at once | Exactly one succeeds |
-| Assigning a duplicate while sacrificing it | Never both |
-| Using another player's heroes | Refused, victim unchanged |
-| Hard-killing the server under load | 2,400 retried rolls: totals and ledger agree exactly |
-| Development mode off | Dev calls do not exist, no free heroes |
-| Forged cost, gold, level or collect amount | Refused, nothing changes |
-| Enormous or negative coordinates, huge wall runs | Refused without crashing |
-| 25 simultaneous collects from one mine | Paid once |
-| 20 simultaneous wall builds with gold for 3 | Exactly 3 succeed |
-| 16 simultaneous Hero Bases | Stops at six |
-| Same cell built 25 times at once | One succeeds |
-| Touching another player's village | Not found, victim unchanged |
-| Assigning a hero to a Dojo or an invented base | Refused |
-| Forged local save, online | Ignored, server's village shown |
-| Forged local save, release mode with no server | Never loaded, nothing can change |
-| Client and server rules drifting apart | The same scenario file runs in C# and Go |
-| Removing the database locks (deliberately) | Tests failed, proving they can detect it |
+1. **Account recovery:** device-ID-only sign-in (locally stored random ID in
+   PlayerPrefs) does not survive loss or reinstall. Add verified account linking
+   and recovery (platform identity, email verification, or equivalent).
+2. **TLS and deployment:** the checked-in Compose file is **localhost-only** and
+   uses HTTP. Production needs HTTPS/WSS, correctly scoped keys/secrets, DB
+   backups, regional hosting, migration/rollback strategy and rotation.
+3. **Moderation operations:** reporting alone is not moderation. Before public
+   guild chat, staff need a protected review console, queue monitoring,
+   moderation actions, anti-harassment/abuse rules, escalation and retention
+   policies. Do not ship an unmonitored queue.
+4. **Rate limiting:** the in-memory token bucket is per process; it is not a
+   coordinated multi-node limiter and does not enforce per-IP abuse controls.
+5. **Abuse telemetry:** no comprehensive alerting, bot detection, login security
+   monitoring or independent external security review.
+6. **Paid features:** no money is charged today. Monetizing random rewards
+   requires platform/region/age/legal review; don't assume a compliant design.
 
-## Known gaps before any public release
-- Traffic is plain HTTP on localhost. Production needs TLS.
-- Rate limiting is per server process, so it is not shared across several servers.
-- The development server key sits in a gitignored local file. Production needs its own keys. Nakama's client key is designed to ship in clients, so it does not protect anything by itself.
-- There is no anomaly telemetry yet, and no independent security review has been done.
-- Device-ID sign-in means losing the device loses the account. Account linking is not built.
-- Paid summoning needs platform, age and regional law review first. Nothing here charges real money.
+## Release-safety defaults
 
-## Raids
-The client sends only a raid id and where its heroes stand. The server reads the team from the bases, stores the defender and team as a snapshot, validates each placement, runs the battle itself, and pays gold once per attack inside one transaction with a ledger entry. Strict decoding refuses claimed results. Retries with the same key return the stored result, and a second key is refused. This covers scripted raids only. Player-versus-player raids are not built and not claimed as secure.
+- `SD_DEV_MODE` must be **false** in any nonlocal deployment. Development RPC
+  grants are registered only when exactly `true`.
+- `server.local.json`, `.env`, secrets and private keys are Git-ignored.
+- Release Unity builds do not load or mutate offline saved currencies/heroes.
+- No pull request is automatically deployed from this branch. Unity PlayMode,
+  backend integration tests and real-device testing remain required.
