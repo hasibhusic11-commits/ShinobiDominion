@@ -110,7 +110,7 @@ namespace ShinobiDominion.Game
             _guildInput = null;
             if (view?.guild == null)
             {
-                _panel.ShowStage("Guilds", view == null ? "" : $"You: {view.myName}", "icon_friends", "scene_lantern", false, 230f, CloseAll, panel =>
+                _panel.ShowStage("Guilds", view == null ? "" : $"You: {view.myName}", "icon_friends", null, false, 0f, CloseAll, panel =>
                 {
                     ScreenKit.Notice(panel, LastMessage);
                     if (view == null) return;
@@ -137,7 +137,7 @@ namespace ShinobiDominion.Game
                 return;
             }
 
-            _panel.ShowStage(view.guild.name, $"{view.guild.members}/{GuildView.MaxMembers} members    {view.guild.points:N0} points", "icon_friends", "scene_lantern", false, 230f, CloseAll, panel =>
+            _panel.ShowStage(view.guild.name, $"{view.guild.members}/{GuildView.MaxMembers} members    {view.guild.points:N0} points", "icon_friends", null, false, 0f, CloseAll, panel =>
             {
                 ScreenKit.Notice(panel, LastMessage);
                 panel.Columns(470f, left =>

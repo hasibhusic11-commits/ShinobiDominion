@@ -30,7 +30,7 @@ namespace ShinobiDominion.Game
         {
             var floors = _trialFloors;
             var cleared = floors?.Count(f => f.cleared) ?? 0;
-            _panel.ShowStage("Trial Tower", floors == null ? "" : $"{cleared} / {floors.Count} floors", "icon_star", "scene_castle", false, 236f, ShowBattleHub, panel =>
+            _panel.ShowStage("Trial Tower", floors == null ? "" : $"{cleared} / {floors.Count} floors", "icon_star", null, false, 0f, ShowBattleHub, panel =>
             {
                 ScreenKit.Notice(panel, LastMessage);
                 panel.Line("Climb one guardian at a time. Your hero must topple each guardian's shrine. A floor pays once, the first time it is cleared.", 18, HudArt.Ivory);

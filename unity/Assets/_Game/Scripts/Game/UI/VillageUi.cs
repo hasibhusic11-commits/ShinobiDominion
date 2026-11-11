@@ -155,18 +155,22 @@ namespace ShinobiDominion.Game
         /// A small hanging banner with a pointed foot and a metal rim, for the number that leads a row: a level, a
         /// floor. Crimson for a row that is open, grey for one that is locked.
         /// </summary>
-        public static Sprite Pennant(Color top, Color bottom, Color rim)
+        public static Sprite Pennant(Color top, Color bottom, Color rim) => Banner(96, 120, 24f, top, bottom, rim);
+
+        /// <summary>
+        /// A hanging banner of a given size in pixels: straight sides, a metal rim and a shallow V foot
+        /// <paramref name="footDepth"/> pixels deep. Drawn at its real size, so the rim keeps its width.
+        /// </summary>
+        public static Sprite Banner(int width, int height, float footDepth, Color top, Color bottom, Color rim)
         {
-            var key = $"pennant{top}{bottom}{rim}";
+            var key = $"banner{width}x{height}/{footDepth}{top}{bottom}{rim}";
             if (Cache.TryGetValue(key, out var cached) && cached != null) return cached;
-            const int width = 96;
-            const int height = 120;
             var texture = new Texture2D(width, height, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
             var pixels = new Color[width * height];
             var centre = (width - 1) * 0.5f;
             var half = width * 0.5f - 1f;
             // The foot is a shallow V: lowest in the middle.
-            const float slope = 0.5f;
+            var slope = footDepth / half;
             for (var y = 0; y < height; y++)
             for (var x = 0; x < width; x++)
             {
@@ -786,6 +790,25 @@ namespace ShinobiDominion.Game
     /// for quick actions. ShowScreen fills the display for catalog, roster and hero screens, and
     /// is still opened only from a building and fully removed on exit.
     /// </summary>
+    /// <summary>One hanging banner on a window's top edge. The active one hangs lower and is lit.</summary>
+    public struct WindowTab
+    {
+        public string Name;
+        public string Caption;
+        public string Count;
+        public bool Active;
+        public Action OnClick;
+
+        public WindowTab(string name, string caption, bool active, Action onClick, string count = null)
+        {
+            Name = name;
+            Caption = caption;
+            Active = active;
+            OnClick = onClick;
+            Count = count;
+        }
+    }
+
     public sealed class PanelView
     {
         private readonly RectTransform _parent;
@@ -801,48 +824,141 @@ namespace ShinobiDominion.Game
             _parent = parent;
         }
 
+        /// <summary>
+        /// A small window in the middle of the screen for a few lines and buttons (ADR-057): the same frame, ribbon
+        /// and cross as every other window, as tall as what it holds. It does not count as full screen.
+        /// </summary>
         public void Show(string title, Action onClose, Action<PanelView> fill)
+        {
+            var content = OpenFrame(title, new Vector2(620f, 520f), onClose, null, null, out var frame, false);
+            BuildScrollIn(content);
+            fill(this);
+            // Twice: wrapped lines only know their height once their width is set.
+            LayoutRebuilder.ForceRebuildLayoutImmediate(_content);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(_content);
+            var needed = LayoutUtility.GetPreferredHeight(_content) + 108f;
+            frame.sizeDelta = new Vector2(frame.sizeDelta.x, Mathf.Clamp(needed, 250f, 600f));
+        }
+
+        /// <summary>A list in a window over the village (ADR-057), with banners along its top edge when it has several sides.</summary>
+        public void ShowScreen(string title, string headerInfo, Action onBack, Action<PanelView> fill, IList<WindowTab> tabs = null)
+        {
+            ShowStage(title, headerInfo, null, null, false, 0f, onBack, fill, null, tabs);
+        }
+
+        public static readonly Vector2 ListWindow = new Vector2(1100f, 620f);
+
+        /// <summary>
+        /// The frame every window shares: the village dimmed behind it, a brass frame in the middle, the title on a
+        /// crimson ribbon or a row of hanging banners over the top edge, the cross on the top right corner and, for
+        /// a window reached from another, a Back arrow on the top left. Returns the area the caller fills.
+        /// </summary>
+        private RectTransform OpenFrame(string title, Vector2 size, Action onClose, IList<WindowTab> tabs, Action onBack, out RectTransform frame, bool fullScreen = true)
         {
             var opening = !IsOpen;
             Hide();
-            IsFullScreen = false;
-            _card = Ui.Rect("Panel", _parent);
-            _card.anchorMin = new Vector2(0f, 0f);
-            _card.anchorMax = new Vector2(0f, 1f);
-            _card.pivot = new Vector2(0f, 0.5f);
-            // Starts below the HUD's player plate (it used to cover the level badge) and ends just above the bottom.
-            _card.sizeDelta = new Vector2(500f, -160f);
-            _card.anchoredPosition = new Vector2(16f, -72f);
-            Ui.Framed(_card, HudArt.Sprite("frame_s80")).pixelsPerUnitMultiplier = 1.3f;
+            IsFullScreen = fullScreen;
+            var tabbed = tabs != null && tabs.Count > 0;
+            _card = Ui.Rect("Window", _parent);
+            Ui.Stretch(_card);
+            Ui.Background(_card, new Color(0f, 0f, 0f, 0.7f));
 
-            // The title stands on a crimson plaque over the panel's top edge, as on every other screen (ADR-056).
-            var plaque = HudArt.Picture(_card, "Plaque", "ribbon", new Vector2(0.5f, 1f), new Vector2(Mathf.Clamp(title.Length * 17f + 130f, 250f, 400f), 54f), new Vector2(-14f, 24f));
-            var header = HudArt.Label(plaque.transform, title, HudArt.Display, 24, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.CrimsonDark);
-            header.name = "PanelTitle";
-            Ui.Stretch(header.rectTransform, 26f, 4f, 26f, 2f);
-            header.horizontalOverflow = HorizontalWrapMode.Overflow;
-            header.verticalOverflow = VerticalWrapMode.Truncate;
-            header.resizeTextForBestFit = true;
-            header.resizeTextMinSize = 13;
-            header.resizeTextMaxSize = 24;
+            frame = Ui.Rect("Frame", _card);
+            Ui.Anchor(frame, new Vector2(0.5f, 0.5f), size, new Vector2(0f, -24f));
+            Ui.Framed(frame, HudArt.Sprite("frame_s80"));
+            HudArt.DropShadow(frame, 12f, 22f, 0.65f);
+            var fret = Ui.Rect("Fret", frame);
+            Ui.Stretch(fret, 34f, 34f, 34f, 34f);
+            var fretImage = fret.gameObject.AddComponent<Image>();
+            fretImage.sprite = HudArt.Sprite("kenney_fret_s16");
+            fretImage.type = Image.Type.Sliced;
+            fretImage.pixelsPerUnitMultiplier = 1.4f;
+            fretImage.color = new Color(HudArt.Brass.r, HudArt.Brass.g, HudArt.Brass.b, 0.45f);
+            fretImage.raycastTarget = false;
 
-            var close = Medal.Create(_card, "CloseButton", MedalKind.Destructive, "close", null, onClose, true, 56f);
-            Ui.Anchor((RectTransform)close.transform, new Vector2(1f, 1f), new Vector2(56f, 56f), new Vector2(18f, 18f));
+            var content = Ui.Rect("Content", frame);
+            Ui.Stretch(content, 44f, 40f, 44f, tabbed ? 84f : 56f);
 
-            // Side insets clear the brass frame's inner edge, so text never touches or hides under it.
-            BuildScrollArea(30f, 20f, 30f, 46f);
-            fill(this);
+            if (tabbed) HangTabs(frame, tabs);
+            else
+            {
+                var ribbon = HudArt.Picture(frame, "Ribbon", "ribbon", new Vector2(0.5f, 1f), new Vector2(Mathf.Clamp(title.Length * 20f + 150f, 340f, size.x - 190f), 70f), new Vector2(0f, 34f));
+                var heading = HudArt.Label(ribbon.transform, title.ToUpperInvariant(), HudArt.Display, 28, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.CrimsonDark);
+                heading.name = "WindowTitle";
+                Ui.Stretch(heading.rectTransform, 34f, 4f, 34f, 2f);
+                heading.resizeTextForBestFit = true;
+                heading.resizeTextMinSize = 14;
+                heading.resizeTextMaxSize = 28;
+            }
+            var close = Medal.Create(frame, "CloseButton", MedalKind.Destructive, "close", null, onClose, true, 70f);
+            Ui.Anchor((RectTransform)close.transform, new Vector2(1f, 1f), new Vector2(70f, 70f), new Vector2(24f, 24f));
+            if (onBack != null)
+            {
+                var back = Medal.Create(frame, "BackButton", MedalKind.IconOnly, "back", null, onBack, true, 64f);
+                Ui.Anchor((RectTransform)back.transform, new Vector2(0f, 1f), new Vector2(64f, 64f), new Vector2(-22f, 22f));
+            }
+
             if (opening)
             {
-                UiMotion.SlideIn(_card, new Vector2(-70f, 0f));
-                UiMotion.FadeIn(_card.gameObject);
+                UiMotion.FadeIn(_card.gameObject, 0.18f);
+                UiMotion.PopIn(frame, 0f, 0.92f, 0.24f);
             }
+            return content;
         }
 
-        public void ShowScreen(string title, string headerInfo, Action onBack, Action<PanelView> fill)
+        /// <summary>A window holding a scrolling list, with one fact about it in a pill at its top right and a line of note beside that.</summary>
+        private void ShowListWindow(string title, string info, string infoIcon, Action onClose, Action<PanelView> fill, string note, IList<WindowTab> tabs)
         {
-            // The same framed panel and plaque as a stage, without scenery (ADR-056).
-            ShowStage(title, headerInfo, null, null, false, 0f, onBack, fill);
+            var content = OpenFrame(title, ListWindow, onClose, tabs, null, out _);
+            var top = 0f;
+            var pillWidth = 0f;
+            if (!string.IsNullOrEmpty(info))
+            {
+                var pill = Ui.Rect("InfoPill", content);
+                pillWidth = info.Length * 11.5f + (string.IsNullOrEmpty(infoIcon) ? 36f : 74f);
+                Ui.Anchor(pill, new Vector2(1f, 1f), new Vector2(pillWidth, 40f), new Vector2(0f, 0f));
+                var well = pill.gameObject.AddComponent<Image>();
+                well.sprite = HudArt.Sprite("well_s18");
+                well.type = Image.Type.Sliced;
+                well.pixelsPerUnitMultiplier = 1.3f;
+                well.raycastTarget = false;
+                if (!string.IsNullOrEmpty(infoIcon))
+                {
+                    var icon = HudArt.Picture(pill, "Icon", infoIcon, new Vector2(0f, 0.5f), new Vector2(28f, 28f), new Vector2(12f, 0f));
+                    icon.preserveAspect = true;
+                }
+                var words = HudArt.Label(pill, info, HudArt.Numbers, 19, TextAnchor.MiddleRight, HudArt.BrassLight, HudArt.LacquerDeep);
+                words.name = "ScreenInfo";
+                Ui.Stretch(words.rectTransform, string.IsNullOrEmpty(infoIcon) ? 12f : 46f, 0f, 14f, 0f);
+                top = 48f;
+            }
+            if (!string.IsNullOrEmpty(note))
+            {
+                var aside = Ui.Label(content, note, 17, TextAnchor.MiddleLeft, HudArt.IvoryMuted);
+                aside.name = "ScreenNote";
+                aside.rectTransform.anchorMin = new Vector2(0f, 1f);
+                aside.rectTransform.anchorMax = new Vector2(1f, 1f);
+                aside.rectTransform.pivot = new Vector2(0f, 1f);
+                aside.rectTransform.offsetMin = new Vector2(4f, -40f);
+                aside.rectTransform.offsetMax = new Vector2(-(pillWidth + 16f), 0f);
+                aside.verticalOverflow = VerticalWrapMode.Truncate;
+                aside.resizeTextForBestFit = true;
+                aside.resizeTextMinSize = 12;
+                aside.resizeTextMaxSize = 17;
+                top = 48f;
+            }
+            var area = Ui.Rect("List", content);
+            Ui.Stretch(area, 0f, 0f, 0f, top);
+            BuildScrollIn(area);
+            fill(this);
+        }
+
+        /// <summary>Makes part of a window the scrolling list that Line, Action, Grid and the rest add to.</summary>
+        private void BuildScrollIn(RectTransform area)
+        {
+            _content = ScrollIn(area);
+            VerticalList(_content);
+            _content.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         }
 
         /// <summary>
@@ -851,8 +967,14 @@ namespace ShinobiDominion.Game
         /// the screen (stars won, rank) in a pill at its top right. <paramref name="sceneWidth"/> is how much of the
         /// screen's width the scenery takes, in canvas units; the panel takes the rest.
         /// </summary>
-        public void ShowStage(string title, string info, string infoIcon, string scene, bool sceneOnRight, float sceneWidth, Action onBack, Action<PanelView> fill, string note = null)
+        public void ShowStage(string title, string info, string infoIcon, string scene, bool sceneOnRight, float sceneWidth, Action onBack, Action<PanelView> fill, string note = null, IList<WindowTab> tabs = null)
         {
+            // Without scenery this is a window over the village, like every other (ADR-057).
+            if (string.IsNullOrEmpty(scene))
+            {
+                ShowListWindow(title, info, infoIcon, onBack, fill, note, tabs);
+                return;
+            }
             var opening = !IsOpen;
             Hide();
             IsFullScreen = true;
@@ -983,43 +1105,83 @@ namespace ShinobiDominion.Game
         /// A modal window framed in brass over the dimmed village, with a crimson title ribbon and a Close medallion.
         /// The caller lays out its contents inside the returned area. Counts as full screen: the world is blocked.
         /// </summary>
-        public void ShowWindow(string title, Vector2 size, Action onClose, Action<RectTransform> fill)
+        public void ShowWindow(string title, Vector2 size, Action onClose, Action<RectTransform> fill, IList<WindowTab> tabs = null, Action onBack = null)
         {
-            var opening = !IsOpen;
-            Hide();
-            IsFullScreen = true;
-            _card = Ui.Rect("Window", _parent);
-            Ui.Stretch(_card);
-            Ui.Background(_card, new Color(0f, 0f, 0f, 0.45f));
+            fill(OpenFrame(title, size, onClose, tabs, onBack, out _));
+        }
 
-            var frame = Ui.Rect("Frame", _card);
-            Ui.Anchor(frame, new Vector2(0.5f, 0.5f), size, new Vector2(0f, -24f));
-            Ui.Framed(frame, HudArt.Sprite("frame_s80"));
-            HudArt.DropShadow(frame, 12f, 22f, 0.65f);
-            var fret = Ui.Rect("Fret", frame);
-            Ui.Stretch(fret, 34f, 34f, 34f, 34f);
-            var fretImage = fret.gameObject.AddComponent<Image>();
-            fretImage.sprite = HudArt.Sprite("kenney_fret_s16");
-            fretImage.type = Image.Type.Sliced;
-            fretImage.pixelsPerUnitMultiplier = 1.4f;
-            fretImage.color = new Color(HudArt.Brass.r, HudArt.Brass.g, HudArt.Brass.b, 0.45f);
-            fretImage.raycastTarget = false;
+        private static readonly Color TabTop = new Color(0.8f, 0.22f, 0.16f);
+        private static readonly Color TabBottom = new Color(0.52f, 0.1f, 0.08f);
+        private static readonly Color TabOffTop = new Color(0.5f, 0.15f, 0.12f);
+        private static readonly Color TabOffBottom = new Color(0.3f, 0.07f, 0.06f);
+        private static readonly Color TabRim = new Color(0.86f, 0.68f, 0.3f);
 
-            var content = Ui.Rect("Content", frame);
-            Ui.Stretch(content, 44f, 40f, 44f, 56f);
-            fill(content);
-
-            var ribbon = HudArt.Picture(frame, "Ribbon", "ribbon", new Vector2(0.5f, 1f), new Vector2(400f, 70f), new Vector2(0f, 34f));
-            var heading = HudArt.Label(ribbon.transform, title.ToUpperInvariant(), HudArt.Display, 28, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.CrimsonDark);
-            Ui.Stretch(heading.rectTransform, 30f, 4f, 30f, 2f);
-            var close = Medal.Create(frame, "CloseButton", MedalKind.Destructive, "close", null, onClose, true, 70f);
-            Ui.Anchor((RectTransform)close.transform, new Vector2(1f, 1f), new Vector2(70f, 70f), new Vector2(24f, 24f));
-
-            if (opening)
+        /// <summary>
+        /// Banners hung in a row from the window's top edge, centred. The one that is open hangs lower and is
+        /// brighter; the rest are darker and shorter. A banner may carry a count under its word.
+        /// </summary>
+        private static void HangTabs(RectTransform frame, IList<WindowTab> tabs)
+        {
+            const float gap = 10f;
+            var room = frame.sizeDelta.x - 200f;
+            var width = Mathf.Min(176f, (room - gap * (tabs.Count - 1)) / tabs.Count);
+            var total = width * tabs.Count + gap * (tabs.Count - 1);
+            for (var i = 0; i < tabs.Count; i++)
             {
-                UiMotion.FadeIn(_card.gameObject, 0.18f);
-                UiMotion.PopIn(frame, 0f, 0.92f, 0.24f);
+                var tab = tabs[i];
+                var height = tab.Active ? 86f : 68f;
+                var rect = Ui.Rect(tab.Name, frame);
+                rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 1f);
+                rect.pivot = new Vector2(0.5f, 1f);
+                rect.sizeDelta = new Vector2(width, height);
+                rect.anchoredPosition = new Vector2(-total * 0.5f + width * 0.5f + i * (width + gap), 16f);
+                var image = rect.gameObject.AddComponent<Image>();
+                image.sprite = tab.Active
+                    ? UiSkin.Banner(Mathf.RoundToInt(width * 2f), Mathf.RoundToInt(height * 2f), 22f, TabTop, TabBottom, TabRim)
+                    : UiSkin.Banner(Mathf.RoundToInt(width * 2f), Mathf.RoundToInt(height * 2f), 22f, TabOffTop, TabOffBottom, Color.Lerp(TabRim, Color.black, 0.35f));
+                var button = rect.gameObject.AddComponent<Button>();
+                button.targetGraphic = image;
+                var click = tab.OnClick;
+                if (click != null)
+                {
+                    button.onClick.AddListener(() => GameSounds.Play(GameSound.Click));
+                    button.onClick.AddListener(() => click());
+                }
+                UiMotion.Pressable(button);
+
+                var counted = !string.IsNullOrEmpty(tab.Count);
+                var word = HudArt.Label(rect, tab.Caption, HudArt.Display, tab.Active ? 21 : 19, TextAnchor.MiddleCenter, tab.Active ? HudArt.Ivory : HudArt.IvoryMuted, HudArt.CrimsonDark);
+                word.name = "TabWord";
+                Ui.Stretch(word.rectTransform, 10f, counted ? height * 0.42f : 18f, 10f, 14f);
+                word.resizeTextForBestFit = true;
+                word.resizeTextMinSize = 12;
+                word.resizeTextMaxSize = tab.Active ? 21 : 19;
+                if (counted)
+                {
+                    var count = HudArt.Label(rect, tab.Count, HudArt.Numbers, tab.Active ? 17 : 15, TextAnchor.MiddleCenter, tab.Active ? HudArt.BrassLight : HudArt.IvoryMuted, HudArt.CrimsonDark);
+                    count.name = "TabCount";
+                    Ui.Stretch(count.rectTransform, 8f, 16f, 8f, height * 0.5f);
+                }
             }
+        }
+
+        /// <summary>A scrolling list inside part of a window: returns where the rows go.</summary>
+        public static RectTransform ScrollIn(RectTransform area)
+        {
+            Ui.Background(area, new Color(0f, 0f, 0f, 0f));
+            area.gameObject.AddComponent<RectMask2D>().softness = new Vector2Int(0, 14);
+            var content = Ui.Rect("Content", area);
+            content.anchorMin = new Vector2(0f, 1f);
+            content.anchorMax = new Vector2(1f, 1f);
+            content.pivot = new Vector2(0.5f, 1f);
+            content.sizeDelta = Vector2.zero;
+            var scroll = area.gameObject.AddComponent<ScrollRect>();
+            scroll.viewport = area;
+            scroll.content = content;
+            scroll.horizontal = false;
+            scroll.movementType = ScrollRect.MovementType.Clamped;
+            scroll.scrollSensitivity = 30f;
+            return content;
         }
 
         private void BuildScrollArea(float left, float bottom, float right, float top)

@@ -5,7 +5,7 @@ using UnityEngine;
 namespace ShinobiDominion.Game
 {
     /// <summary>
-    /// Hero gear (ADR-044), from the hero page: Weapon, Armor and Charm, each upgraded with gold and Mana.
+    /// Hero gear (ADR-044), the hero window's Gear banner: Weapon, Armor and Charm, each upgraded with gold and Mana.
     /// Online only, because gear changes battle stats and the server decides those.
     /// </summary>
     public sealed partial class VillageController
@@ -15,21 +15,18 @@ namespace ShinobiDominion.Game
 
         public void ShowGear(string instanceId)
         {
-            var hero = Roster.Find(instanceId);
-            if (hero == null) return;
+            if (Roster.Find(instanceId) == null) return;
+            _heroTab = HeroTab.Gear;
+            OpenHeroWindow(instanceId);
+        }
+
+        private void DrawGearTab(RectTransform content, HeroInstance hero)
+        {
+            var instanceId = hero.InstanceId;
             var gear = Roster.Catalog.Gear;
             var cumulative = HeroMath.Cumulative(hero.EvolutionIndex, hero.Level);
-            _panel.ShowWindow("Gear", new Vector2(880f, 500f), () => ShowHeroDetail(instanceId), content =>
             {
-                var y = 2f;
-                var who = HudArt.Label(content, Roster.ArchetypeOf(hero).displayName, HudArt.Display, 24, TextAnchor.MiddleLeft, HudArt.BrassLight, HudArt.LacquerDeep);
-                who.name = "GearHero";
-                who.rectTransform.anchorMin = new Vector2(0f, 1f);
-                who.rectTransform.anchorMax = new Vector2(1f, 1f);
-                who.rectTransform.pivot = new Vector2(0.5f, 1f);
-                who.rectTransform.sizeDelta = new Vector2(-12f, 32f);
-                who.rectTransform.anchoredPosition = new Vector2(0f, y);
-                y -= 34f;
+                var y = 0f;
                 if (IsRefusal(LastMessage))
                 {
                     WindowLine(content, "GearRefusal", LastMessage, y, 18, Ui.AccentColor);
@@ -55,14 +52,14 @@ namespace ShinobiDominion.Game
                     if (best) row.Note("At its best");
                     else
                     {
-                        row.Button("Gear_" + slot, "Upgrade", () => UpgradeGear(instanceId, chosen), can, Ui.AccentColor, 150f);
+                        row.Button("Gear_" + slot, "Upgrade", () => UpgradeGear(instanceId, chosen), can, Ui.AccentColor, 124f);
                         row.Reward("icon_chakra", gear.Mana(next).ToString("N0"));
                         row.Reward("icon_gold", gear.Gold(next).ToString("N0"));
                     }
                     y -= row.Root.sizeDelta.y + 10f;
                 }
-                WindowLine(content, "GearRule", $"Each level adds {gear.percentPerLevel}% to its stat. Higher gear needs a stronger hero. Gear stays with this hero.", y - 2f, 17, HudArt.IvoryMuted);
-            });
+                WindowLine(content, "GearRule", $"Each level adds {gear.percentPerLevel}% to its stat. Higher gear needs a stronger hero. Gear stays with this hero.", y - 2f, 17, HudArt.IvoryMuted, 44f).alignment = TextAnchor.UpperLeft;
+            }
         }
 
         public void UpgradeGear(string instanceId, int slot)

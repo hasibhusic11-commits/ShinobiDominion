@@ -1,250 +1,180 @@
+using System.Collections.Generic;
 using System.Linq;
-using LitMotion;
 using ShinobiDominion.Core;
 using UnityEngine;
 using UnityEngine.UI;
+using Text = ShinobiDominion.Game.GameText;
 
 namespace ShinobiDominion.Game
 {
     /// <summary>
-    /// The hero page (owner's brief, 2026-11-08): a three-column hero profile. Left, a compact framed stat panel;
-    /// centre, the hero on a ceremonial dais in a shrine hall, with the name plate, blue evolution stars and the
-    /// Evolve button under them; right, all four skills in a list with the chosen one explained below.
-    /// Evolution shows only as glowing blue stars, one per evolution, none before the first.
+    /// The hero window (ADR-057): one window over the village with a banner for each side of a hero. On the left,
+    /// always, the hero in its frame with its level, evolution stars, name plate, padlock and experience. On the
+    /// right, the banner that is open: Hero (skills and talent, one explained at a time on parchment), Attributes,
+    /// Gear or Mastery. The Back arrow returns to the Altar's shelves and the cross closes everything.
     /// </summary>
     public sealed partial class VillageController
     {
-        // Columns, as shares of the screen width.
-        private const float PageCentre = 0.465f;
-        private const float LeftWidth = 272f;
-        private const float RightWidth = 372f;
+        private enum HeroTab
+        {
+            Hero,
+            Attributes,
+            Gear,
+            Mastery
+        }
+
+        private static readonly Vector2 HeroWindowSize = new Vector2(1060f, 610f);
+        private const float HeroLeftWidth = 300f;
+        private const float HeroRightInset = 322f;
 
         private static readonly Color EvolutionBlue = new Color(0.42f, 0.86f, 1f);
 
-        private void DrawHeroPage(RectTransform scene, HeroInstance hero, HeroArchetype archetype)
-        {
-            var aura = HeroColor(archetype, hero.EvolutionIndex);
-            var backdrop = Ui.Framed(scene, HeroArt.Shrine(aura, PageCentre), false);
-            backdrop.type = Image.Type.Simple;
-            backdrop.name = "ShrineBackdrop";
+        private HeroTab _heroTab;
 
-            DrawShrineDressing(scene, aura);
-            DrawHeroShowcase(scene, hero, archetype, aura);
-            DrawHeroBrowse(scene, hero.InstanceId);
-            DrawHeroStats(scene, hero, archetype, aura);
-            DrawSkillPanel(scene, hero, archetype);
-        }
-
-        /// <summary>Banners on the pillars, stone lanterns beside the dais, and slow motes rising in the hero's colour.</summary>
-        private void DrawShrineDressing(RectTransform scene, Color aura)
+        /// <summary>Opens the hero window on the banner it was last showing.</summary>
+        private void OpenHeroWindow(string instanceId)
         {
-            foreach (var side in new[] { -1f, 1f })
+            var hero = Roster.Find(instanceId);
+            if (hero == null)
             {
-                var x = PageCentre + side * 0.205f;
-                var banner = HudArt.Picture(scene, "Banner", "banner_tomoe", new Vector2(x, 1f), new Vector2(62f, 100f), new Vector2(0f, -96f));
-                banner.preserveAspect = true;
-                var lantern = Resources.Load<Sprite>("Props/stone_lantern");
-                if (lantern != null)
+                ShowAltarRoster();
+                return;
+            }
+            if (_skillHeroId != instanceId)
+            {
+                _skillHeroId = instanceId;
+                _selectedSkill = 0;
+            }
+
+            var archetype = Roster.ArchetypeOf(hero);
+            var note = _masteryNote;
+            if (_heroTab == HeroTab.Mastery) _masteryNote = null;
+            var tabs = new List<WindowTab>
+            {
+                new WindowTab("HeroTab", "Hero", _heroTab == HeroTab.Hero, () => OpenHeroTab(instanceId, HeroTab.Hero)),
+                new WindowTab("AttributesTab", "Attributes", _heroTab == HeroTab.Attributes, () => OpenHeroTab(instanceId, HeroTab.Attributes)),
+                new WindowTab("GearButton", "Gear", _heroTab == HeroTab.Gear, () => OpenHeroTab(instanceId, HeroTab.Gear)),
+                new WindowTab("MasteryButton", "Mastery", _heroTab == HeroTab.Mastery, () => OpenHeroTab(instanceId, HeroTab.Mastery))
+            };
+            _panel.ShowWindow(archetype.displayName, HeroWindowSize, CloseAll, content =>
+            {
+                DrawHeroColumn(content, hero, archetype);
+                DrawHeroBrowse(content, hero.InstanceId);
+                var area = Ui.Rect("HeroTabArea", content);
+                Ui.Stretch(area, HeroRightInset, 0f, 0f, 0f);
+                switch (_heroTab)
                 {
-                    var image = Ui.Icon(scene, lantern, new Vector2(PageCentre, 0f), new Vector2(58f, 102f), new Vector2(side * 262f, 112f));
-                    image.name = "Lantern";
-                    image.preserveAspect = true;
-                    image.raycastTarget = false;
+                    case HeroTab.Attributes:
+                        DrawAttributesTab(area, hero, archetype);
+                        break;
+                    case HeroTab.Gear:
+                        DrawGearTab(area, hero);
+                        break;
+                    case HeroTab.Mastery:
+                        DrawMasteryTab(area, hero, archetype, note);
+                        break;
+                    default:
+                        DrawSkillsTab(area, hero, archetype);
+                        break;
                 }
-            }
-
-            // Motes drift up from the dais and fade, each on its own slow loop.
-            var random = new System.Random(7);
-            for (var i = 0; i < 14; i++)
-            {
-                var mote = Ui.Icon(scene, HeroArt.Glow, new Vector2(PageCentre, 0f), Vector2.one * (6f + (float)random.NextDouble() * 8f), Vector2.zero);
-                mote.name = "Mote";
-                mote.raycastTarget = false;
-                var x = ((float)random.NextDouble() - 0.5f) * 360f;
-                var rect = mote.rectTransform;
-                var duration = 4f + (float)random.NextDouble() * 3f;
-                var tint = Color.Lerp(aura, Color.white, 0.5f);
-                LMotion.Create(0f, 1f, duration).WithLoops(-1).WithDelay((float)random.NextDouble() * duration)
-                    .WithScheduler(MotionScheduler.UpdateIgnoreTimeScale)
-                    .Bind(t =>
-                    {
-                        if (rect == null) return;
-                        rect.anchoredPosition = new Vector2(x + Mathf.Sin(t * 6.28f + x) * 14f, 130f + t * 420f);
-                        mote.color = new Color(tint.r, tint.g, tint.b, Mathf.Sin(t * Mathf.PI) * 0.8f);
-                    }).AddTo(mote.gameObject);
-            }
+            }, tabs, ShowAltarRoster);
         }
 
-        /// <summary>The hero on a ceremonial dais, with an aura behind them, the name plate, evolution stars and Evolve.</summary>
-        private void DrawHeroShowcase(RectTransform scene, HeroInstance hero, HeroArchetype archetype, Color aura)
+        private void OpenHeroTab(string instanceId, HeroTab tab)
         {
-            // The dais: a shadow, a stone disc with a gold rim, and a glowing affinity ring on top.
-            Ui.Icon(scene, UiSkin.Disc(new Color(0f, 0f, 0f, 0.55f), new Color(0f, 0f, 0f, 0.55f), new Color(0f, 0f, 0f, 0f), 0f), new Vector2(PageCentre, 0f), new Vector2(470f, 110f), new Vector2(0f, 98f)).raycastTarget = false;
-            Ui.Icon(scene, UiSkin.Disc(new Color(0.42f, 0.38f, 0.40f), new Color(0.2f, 0.18f, 0.22f), new Color(0.93f, 0.73f, 0.33f), 0.07f), new Vector2(PageCentre, 0f), new Vector2(430f, 96f), new Vector2(0f, 110f)).raycastTarget = false;
-            var ring = Ui.Icon(scene, UiSkin.Disc(new Color(0f, 0f, 0f, 0f), new Color(0f, 0f, 0f, 0f), Color.Lerp(aura, Color.white, 0.35f), 0.1f), new Vector2(PageCentre, 0f), new Vector2(330f, 70f), new Vector2(0f, 124f));
-            ring.raycastTarget = false;
-            UiMotion.Breathe(ring, 0.9f, 2.6f);
+            _heroTab = tab;
+            OpenHeroWindow(instanceId);
+        }
 
-            var halo = HudArt.Picture(scene, "Aura", "glow", new Vector2(PageCentre, 0f), new Vector2(520f, 520f), new Vector2(0f, 150f));
-            halo.color = new Color(aura.r, aura.g, aura.b, 0.45f);
-            UiMotion.Breathe(halo, 0.55f, 3.2f);
+        /// <summary>Draws the window again after something about the hero changed, on the banner already open.</summary>
+        private void RefreshHeroWindow(string instanceId) => OpenHeroWindow(instanceId);
 
-            const float height = 470f;
+        // ---------- Left: the hero ----------
+
+        /// <summary>The hero in its frame, with level, evolution stars, Evolve, the name plate, the padlock and experience.</summary>
+        private void DrawHeroColumn(RectTransform content, HeroInstance hero, HeroArchetype archetype)
+        {
+            var instanceId = hero.InstanceId;
+            var column = Ui.Rect("HeroColumn", content);
+            column.anchorMin = new Vector2(0f, 0f);
+            column.anchorMax = new Vector2(0f, 1f);
+            column.pivot = new Vector2(0f, 0.5f);
+            column.sizeDelta = new Vector2(HeroLeftWidth, 0f);
+            column.anchoredPosition = Vector2.zero;
+
+            // The portrait.
+            var portrait = Ui.Rect("Portrait", column);
+            Ui.Anchor(portrait, new Vector2(0.5f, 1f), new Vector2(286f, 300f), Vector2.zero);
+            Ui.Framed(portrait, HeroArt.CardBackdrop(archetype.rarity), false).type = Image.Type.Simple;
+            var art = Ui.Rect("Art", portrait);
+            Ui.Stretch(art, 8f, 8f, 8f, 8f);
+            art.gameObject.AddComponent<RectMask2D>();
             if (HeroConcepts.Has(archetype.id))
             {
+                // The whole painting, standing on the frame's foot.
                 var sprite = HeroConcepts.Full(archetype.id);
-                var figure = Ui.Rect("HeroConcept", scene);
-                Ui.Anchor(figure, new Vector2(PageCentre, 0f), new Vector2(height * sprite.rect.width / sprite.rect.height, height), new Vector2(0f, 132f));
-                var image = Ui.Framed(figure, sprite, false);
-                image.type = Image.Type.Simple;
-                image.name = "HeroConcept";
-                UiMotion.PopIn(figure, 0f, 0.92f, 0.3f);
+                const float height = 284f;
+                var figure = Ui.Rect("HeroConcept", art);
+                Ui.Anchor(figure, new Vector2(0.5f, 0f), new Vector2(height * sprite.rect.width / sprite.rect.height, height), Vector2.zero);
+                var image = figure.gameObject.AddComponent<Image>();
+                image.sprite = sprite;
+                image.raycastTarget = false;
+                UiMotion.PopIn(figure, 0f, 0.94f, 0.26f);
             }
-            else
+            else HeroPicture(art, archetype, hero.EvolutionIndex, 270f, 4f);
+
+            var frameRect = Ui.Rect("Frame", portrait);
+            Ui.Stretch(frameRect);
+            var frame = Ui.Framed(frameRect, HudArt.Sprite(archetype.rarity == HeroRarity.Legendary ? "heroframe_gold_s30" : archetype.rarity == HeroRarity.Elite ? "heroframe_silver_s30" : "heroframe_bronze_s30"), false);
+            frame.pixelsPerUnitMultiplier = 0.8f;
+            if (archetype.rarity == HeroRarity.Legendary) UiMotion.Shine(frame, new Color(1f, 0.95f, 0.75f, 0.9f), 3.6f);
+
+            // Level in the top right corner, over the hero's full level.
+            var level = HudArt.Label(portrait, $"Lv {hero.Level}", HudArt.Display, 24, TextAnchor.UpperRight, HudArt.Ivory, HudArt.LacquerDeep);
+            level.name = "HeroLevel";
+            Ui.Anchor(level.rectTransform, new Vector2(1f, 1f), new Vector2(140f, 32f), new Vector2(-18f, -14f));
+            var cap = HudArt.Label(portrait, HeroMath.MaxLevel.ToString(), HudArt.Numbers, 16, TextAnchor.UpperRight, HudArt.IvoryMuted, HudArt.LacquerDeep);
+            Ui.Anchor(cap.rectTransform, new Vector2(1f, 1f), new Vector2(140f, 22f), new Vector2(-18f, -44f));
+
+            // Rarity badge, then one glowing blue star per evolution; none before the first.
+            var badge = HudArt.Picture(portrait, "RarityBadge", "badge_" + archetype.rarity.ToString().ToLowerInvariant(), new Vector2(0f, 1f), new Vector2(52f, 52f), new Vector2(-10f, 10f));
+            badge.preserveAspect = true;
+            for (var i = 0; i < hero.EvolutionIndex; i++)
             {
-                var holder = Ui.Rect("HeroFigure", scene);
-                Ui.Anchor(holder, new Vector2(PageCentre, 0f), new Vector2(420f, 420f), new Vector2(0f, 132f));
-                CentreOnPage(holder);
-                HeroPicture(holder, archetype, hero.EvolutionIndex, 420f, 0f);
+                var glow = Ui.Icon(portrait, HeroArt.Glow, new Vector2(0f, 1f), new Vector2(52f, 52f), new Vector2(34f + i * 30f, -6f));
+                glow.color = new Color(EvolutionBlue.r, EvolutionBlue.g, EvolutionBlue.b, 0.6f);
+                glow.raycastTarget = false;
+                UiMotion.Breathe(glow, 0.4f, 1.8f + i * 0.2f);
+                var star = Ui.Icon(portrait, HeroArt.Star, new Vector2(0f, 1f), new Vector2(28f, 28f), new Vector2(46f + i * 30f, -18f));
+                star.name = "EvolutionStar";
+                star.color = new Color(0.55f, 0.92f, 1f);
+                star.raycastTarget = false;
+                UiMotion.PopIn(star.transform, 0.08f * i, 0.4f, 0.35f);
             }
-
-            // Name plate: the hero's real name, on the crimson ribbon.
-            var plate = HudArt.Picture(scene, "NamePlate", "ribbon", new Vector2(PageCentre, 0f), new Vector2(440f, 74f), new Vector2(0f, 70f));
-            CentreOnPage(plate.rectTransform);
-            var name = HudArt.Label(plate.transform, archetype.displayName.ToUpperInvariant(), HudArt.Display, 26, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.CrimsonDark);
-            Ui.Stretch(name.rectTransform, 44f, 6f, 44f, 2f);
-            name.resizeTextForBestFit = true;
-            name.resizeTextMinSize = 16;
-            name.resizeTextMaxSize = 26;
-
-            DrawEvolutionStars(scene, hero.EvolutionIndex);
 
             if (archetype.CanEvolve)
             {
                 var final = hero.EvolutionIndex >= HeroMath.MaxEvolution;
-                var evolve = Ui.Button(scene, "EvolveButton", final ? "Final Form" : "Evolve", () => ShowEvolution(hero.InstanceId), true, Ui.AccentColor, 24);
-                Ui.Anchor((RectTransform)evolve.transform, new Vector2(PageCentre, 0f), new Vector2(230f, 58f), new Vector2(0f, 10f));
-                CentreOnPage((RectTransform)evolve.transform);
-            }
-        }
-
-        /// <summary>
-        /// Ui.Anchor puts the pivot where the anchor is, so at PageCentre each element would shift by its own width.
-        /// Pivoting on its middle puts the figure, stars, ribbon and Evolve button on one centre line.
-        /// </summary>
-        private static void CentreOnPage(RectTransform rect) => rect.pivot = new Vector2(0.5f, rect.pivot.y);
-
-        /// <summary>
-        /// One glowing blue star per evolution, centred just above the name plate; nothing at all before the first
-        /// evolution. Replaces the old Ready / Evo I / Evo II / Evo III row.
-        /// </summary>
-        private void DrawEvolutionStars(RectTransform scene, int evolutions)
-        {
-            if (evolutions <= 0) return;
-            var row = Ui.Rect("EvolutionStars", scene);
-            Ui.Anchor(row, new Vector2(PageCentre, 0f), new Vector2(evolutions * 54f, 54f), new Vector2(0f, 126f));
-            CentreOnPage(row);
-            for (var i = 0; i < evolutions; i++)
-            {
-                var x = (i - (evolutions - 1) * 0.5f) * 54f;
-                var glow = Ui.Icon(row, HeroArt.Glow, new Vector2(0.5f, 0.5f), new Vector2(96f, 96f), new Vector2(x, 0f));
-                glow.color = new Color(EvolutionBlue.r, EvolutionBlue.g, EvolutionBlue.b, 0.7f);
-                glow.raycastTarget = false;
-                UiMotion.Breathe(glow, 0.45f, 1.8f + i * 0.2f);
-                var star = Ui.Icon(row, HeroArt.Star, new Vector2(0.5f, 0.5f), new Vector2(48f, 48f), new Vector2(x, 0f));
-                star.name = "EvolutionStar";
-                star.color = new Color(0.55f, 0.92f, 1f);
-                star.raycastTarget = false;
-                var outline = star.gameObject.AddComponent<Outline>();
-                outline.effectColor = new Color(0.05f, 0.15f, 0.35f, 0.9f);
-                outline.effectDistance = new Vector2(1.5f, -1.5f);
-                UiMotion.PopIn(star.transform, 0.08f * i, 0.4f, 0.35f);
-            }
-        }
-
-        /// <summary>Arrows either side of the hero, clear of the painting, step through the heroes the Altar is showing.</summary>
-        private void DrawHeroBrowse(RectTransform scene, string instanceId)
-        {
-            var list = SortedHeroes(Roster.Heroes.Where(MatchesFilters)).ToList();
-            var index = list.FindIndex(h => h.InstanceId == instanceId);
-            if (list.Count < 2 || index < 0) return;
-            var previous = list[(index - 1 + list.Count) % list.Count].InstanceId;
-            var next = list[(index + 1) % list.Count].InstanceId;
-            var left = Medal.Create(scene, "PreviousHeroButton", MedalKind.Primary, "back", null, () => ShowHeroDetail(previous), true, 70f);
-            Ui.Anchor((RectTransform)left.transform, new Vector2(PageCentre, 0.5f), new Vector2(70f, 70f), new Vector2(-262f, 10f));
-            var right = Medal.Create(scene, "NextHeroButton", MedalKind.Primary, "next", null, () => ShowHeroDetail(next), true, 70f);
-            Ui.Anchor((RectTransform)right.transform, new Vector2(PageCentre, 0.5f), new Vector2(70f, 70f), new Vector2(262f, 10f));
-        }
-
-        /// <summary>A compact framed panel: rarity, level and experience, the main stats with icons, role and affinity, Lock.</summary>
-        private void DrawHeroStats(RectTransform scene, HeroInstance hero, HeroArchetype archetype, Color aura)
-        {
-            var box = Ui.Rect("HeroStats", scene);
-            Ui.Anchor(box, new Vector2(0f, 1f), new Vector2(LeftWidth, 0f), new Vector2(14f, -82f));
-            box.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-            HudArt.Plate(box).pixelsPerUnitMultiplier = 1.1f;
-            HudArt.DropShadow(box);
-            var layout = box.gameObject.AddComponent<VerticalLayoutGroup>();
-            layout.padding = new RectOffset(22, 22, 18, 20);
-            layout.spacing = 6f;
-            layout.childControlWidth = true;
-            layout.childControlHeight = true;
-            layout.childForceExpandWidth = true;
-            layout.childForceExpandHeight = false;
-
-            // Rarity badge and name.
-            var top = StatRow(box, 40f);
-            var badge = HudArt.Picture(top, "RarityBadge", "badge_" + archetype.rarity.ToString().ToLowerInvariant(), new Vector2(0f, 0.5f), new Vector2(38f, 38f), Vector2.zero);
-            badge.preserveAspect = true;
-            var rarity = HudArt.Label(top, archetype.rarity.ToString().ToUpperInvariant(), HudArt.Display, 21, TextAnchor.MiddleLeft, RarityColor(archetype.rarity), HudArt.LacquerDeep);
-            Ui.Stretch(rarity.rectTransform, 46f, 0f, 0f, 0f);
-
-            // Level and the experience bar.
-            var level = HudArt.Label(box, $"Lv {hero.Level}/{HeroMath.MaxLevel}", HudArt.Display, 25, TextAnchor.MiddleLeft, HudArt.BrassLight, HudArt.LacquerDeep);
-            level.gameObject.AddComponent<LayoutElement>().preferredHeight = 32f;
-            var bar = Ui.Rect("LevelBar", box);
-            bar.gameObject.AddComponent<LayoutElement>().preferredHeight = 12f;
-            var track = bar.gameObject.AddComponent<Image>();
-            track.sprite = HudArt.Sprite("track_s8");
-            track.type = Image.Type.Sliced;
-            track.raycastTarget = false;
-            var fill = Ui.Rect("Fill", bar);
-            fill.anchorMin = Vector2.zero;
-            fill.anchorMax = new Vector2((float)hero.Level / HeroMath.MaxLevel, 1f);
-            fill.offsetMin = new Vector2(1f, 1f);
-            fill.offsetMax = new Vector2(-1f, -1f);
-            var fillImage = fill.gameObject.AddComponent<Image>();
-            fillImage.sprite = HudArt.Sprite("fill_s8");
-            fillImage.type = Image.Type.Sliced;
-            fillImage.color = new Color(0.45f, 0.9f, 0.35f);
-            fillImage.raycastTarget = false;
-            Divider(box);
-
-            var stats = Roster.StatsOf(hero);
-            StatLine(box, "health", "HP", stats.Hp.ToString("N0"), new Color(0.6f, 1f, 0.6f));
-            StatLine(box, "attack_stat", "Attack", stats.Attack.ToString("N0"), new Color(1f, 0.72f, 0.55f));
-            StatLine(box, "defense_stat", "Defense", stats.Defense.ToString("N0"), new Color(0.65f, 0.85f, 1f));
-            StatLine(box, "power", "Might", (stats.Hp / 10 + stats.Attack + stats.Defense).ToString("N0"), HudArt.BrassLight);
-            Divider(box);
-            StatLine(box, "hero", "Role", archetype.role.ToString(), HudArt.Ivory);
-            StatLine(box, "star", "Affinity", archetype.affinity.ToString(), Color.Lerp(aura, Color.white, 0.35f));
-            if (Village.IsHeroAssigned(hero.InstanceId))
-            {
-                var guarding = HudArt.Label(box, "Guarding your Hero Base", HudArt.Numbers, 16, TextAnchor.MiddleCenter, HudArt.BrassLight, HudArt.LacquerDeep);
-                guarding.gameObject.AddComponent<LayoutElement>().preferredHeight = 24f;
+                var evolve = Ui.Button(portrait, "EvolveButton", final ? "Final Form" : "Evolve", () => ShowEvolution(instanceId), true, new Color(0.35f, 0.45f, 0.85f), 19);
+                Ui.Anchor((RectTransform)evolve.transform, new Vector2(0.5f, 0f), new Vector2(150f, 40f), new Vector2(0f, 34f));
             }
 
-            var instanceId = hero.InstanceId;
-            // Hero training (ADR-038): Mana buys one level. The server sets the price and decides.
-            if (hero.Level < HeroMath.MaxLevel)
-            {
-                var manaCost = Roster.ManaToLevelUp(hero.Level);
-                Ui.Button(box, "TrainHeroButton", $"Train +1 level ({manaCost:N0} Mana)", () => TrainHero(instanceId), Village.Mana >= manaCost, Ui.AccentColor, 19);
-            }
-            var gearTotal = hero.Gear.Sum();
-            Ui.Button(box, "GearButton", gearTotal == 0 ? "Gear" : $"Gear (W{hero.Gear[HeroMath.Weapon]} A{hero.Gear[HeroMath.Armor]} C{hero.Gear[HeroMath.Charm]})", () => ShowGear(instanceId), true, null, 19);
-            Ui.Button(box, "MasteryButton", MasteryLabel(hero), () => ShowMastery(instanceId), true, null, 19);
-            Ui.Button(box, "LockButton", hero.Locked ? "Unlock" : "Lock", () =>
+            // Name plate across the frame's foot, with the padlock on its left end.
+            var plate = HudArt.Picture(column, "NamePlate", "ribbon", new Vector2(0.5f, 1f), new Vector2(316f, 56f), new Vector2(0f, -274f));
+            var name = HudArt.Label(plate.transform, archetype.displayName.ToUpperInvariant(), HudArt.Display, 21, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.CrimsonDark);
+            Ui.Stretch(name.rectTransform, 52f, 5f, 30f, 2f);
+            name.resizeTextForBestFit = true;
+            name.resizeTextMinSize = 12;
+            name.resizeTextMaxSize = 21;
+
+            var padlock = Ui.Rect("LockButton", column);
+            Ui.Anchor(padlock, new Vector2(0.5f, 1f), new Vector2(44f, 44f), new Vector2(-136f, -280f));
+            var face = padlock.gameObject.AddComponent<Image>();
+            face.sprite = HudArt.Sprite("medal_face_lacquer");
+            var lockButton = padlock.gameObject.AddComponent<Button>();
+            lockButton.targetGraphic = face;
+            lockButton.onClick.AddListener(() => GameSounds.Play(GameSound.Click));
+            lockButton.onClick.AddListener(() =>
             {
                 if (IsOnline)
                 {
@@ -252,10 +182,26 @@ namespace ShinobiDominion.Game
                     return;
                 }
                 Roster.SetLocked(instanceId, !hero.Locked);
-                ShowHeroDetail(instanceId);
-            }, true, null, 19);
+                RefreshHeroWindow(instanceId);
+            });
+            UiMotion.Pressable(lockButton);
+            var lockIcon = HudArt.Picture(padlock, "Icon", hero.Locked ? "icon_lock" : "icon_unlock", new Vector2(0.5f, 0.5f), new Vector2(24f, 24f), Vector2.zero);
+            lockIcon.preserveAspect = true;
+            lockIcon.color = hero.Locked ? Color.white : new Color(1f, 1f, 1f, 0.55f);
+
+            // What the hero is, in words, and what it is doing.
+            var kind = HudArt.Label(column, $"{archetype.rarity}  ·  {archetype.role}  ·  {archetype.affinity}", HudArt.Numbers, 16, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.LacquerDeep);
+            kind.name = "HeroKind";
+            Ui.Anchor(kind.rectTransform, new Vector2(0.5f, 1f), new Vector2(HeroLeftWidth, 22f), new Vector2(0f, -334f));
+            var guarding = Village.IsHeroAssigned(instanceId);
+            var status = HudArt.Label(column, guarding ? "Guarding a Hero Base" : hero.Locked ? "Locked" : "Idle", HudArt.Numbers, 16, TextAnchor.MiddleCenter, guarding ? HudArt.BrassLight : HudArt.IvoryMuted, HudArt.LacquerDeep);
+            status.name = "HeroStatus";
+            Ui.Anchor(status.rectTransform, new Vector2(0.5f, 1f), new Vector2(HeroLeftWidth, 22f), new Vector2(0f, -356f));
+
+            DrawExperience(column, hero);
+
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            Ui.Button(box, "DevLevelButton", "Dev: level 200", () =>
+            var dev = Ui.Button(column, "DevLevelButton", "Dev: level 200", () =>
             {
                 if (IsOnline)
                 {
@@ -263,39 +209,92 @@ namespace ShinobiDominion.Game
                     return;
                 }
                 Roster.GrantXp(instanceId, 100_000_000);
-                ShowHeroDetail(instanceId);
-            }, hero.Level < HeroMath.MaxLevel, new Color(0.2f, 0.22f, 0.3f), 15);
+                RefreshHeroWindow(instanceId);
+            }, hero.Level < HeroMath.MaxLevel, new Color(0.2f, 0.22f, 0.3f), 13);
+            Ui.Anchor((RectTransform)dev.transform, new Vector2(0.5f, 0f), new Vector2(150f, 30f), new Vector2(0f, 0f));
 #endif
         }
 
-        private static RectTransform StatRow(RectTransform parent, float height)
+        /// <summary>
+        /// The experience bar, and beside it the plus that trains the hero one level for Mana (ADR-038), with its
+        /// price underneath. The server sets the price and decides.
+        /// </summary>
+        private void DrawExperience(RectTransform column, HeroInstance hero)
         {
-            var row = Ui.Rect("Row", parent);
-            row.gameObject.AddComponent<LayoutElement>().preferredHeight = height;
-            return row;
+            var instanceId = hero.InstanceId;
+            var top = hero.Level >= HeroMath.MaxLevel;
+            var need = top ? 1 : Roster.XpToNextLevel(hero.Level);
+
+            var word = HudArt.Label(column, "Exp", HudArt.Numbers, 15, TextAnchor.MiddleLeft, HudArt.BrassLight, HudArt.LacquerDeep);
+            Ui.Anchor(word.rectTransform, new Vector2(0f, 1f), new Vector2(40f, 24f), new Vector2(10f, -388f));
+            var bar = Ui.Rect("LevelBar", column);
+            Ui.Anchor(bar, new Vector2(0f, 1f), new Vector2(top ? 240f : 196f, 22f), new Vector2(48f, -389f));
+            var track = bar.gameObject.AddComponent<Image>();
+            track.sprite = HudArt.Sprite("track_s8");
+            track.type = Image.Type.Sliced;
+            track.color = new Color(0.1f, 0.11f, 0.18f, 1f);
+            track.raycastTarget = false;
+            var share = top ? 1f : Mathf.Clamp01((float)hero.Experience / need);
+            if (share > 0f)
+            {
+                var fill = Ui.Rect("Fill", bar);
+                fill.anchorMin = Vector2.zero;
+                fill.anchorMax = new Vector2(Mathf.Max(share, 0.04f), 1f);
+                fill.offsetMin = new Vector2(2f, 2f);
+                fill.offsetMax = new Vector2(-2f, -2f);
+                var image = fill.gameObject.AddComponent<Image>();
+                image.sprite = HudArt.Sprite("fill_s8");
+                image.type = Image.Type.Sliced;
+                image.color = new Color(0.95f, 0.78f, 0.25f);
+                image.raycastTarget = false;
+            }
+            var count = HudArt.Label(bar, top ? "Highest level" : $"{hero.Experience:N0} / {need:N0}", HudArt.Numbers, 14, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.LacquerDeep);
+            count.name = "ExperienceCount";
+            Ui.Stretch(count.rectTransform);
+            count.resizeTextForBestFit = true;
+            count.resizeTextMinSize = 10;
+            count.resizeTextMaxSize = 14;
+            if (top) return;
+
+            var manaCost = Roster.ManaToLevelUp(hero.Level);
+            var plus = Ui.Rect("TrainHeroButton", column);
+            Ui.Anchor(plus, new Vector2(0f, 1f), new Vector2(40f, 40f), new Vector2(250f, -380f));
+            var plusImage = plus.gameObject.AddComponent<Image>();
+            plusImage.sprite = HudArt.Sprite("hud_plus_button");
+            plusImage.preserveAspect = true;
+            var can = Village.Mana >= manaCost;
+            plusImage.color = can ? Color.white : new Color(0.55f, 0.55f, 0.6f, 1f);
+            var train = plus.gameObject.AddComponent<Button>();
+            train.targetGraphic = plusImage;
+            train.interactable = can;
+            var colors = train.colors;
+            colors.disabledColor = Color.white;
+            train.colors = colors;
+            train.onClick.AddListener(() => GameSounds.Play(GameSound.Click));
+            train.onClick.AddListener(() => TrainHero(instanceId));
+            UiMotion.Pressable(train);
+            plus.gameObject.AddComponent<DeniedShake>();
+
+            var price = Ui.Rect("TrainCost", column);
+            Ui.Anchor(price, new Vector2(0f, 1f), new Vector2(170f, 30f), new Vector2(48f, -418f));
+            ScreenKit.Chip(price, "icon_chakra", $"+1 level  {manaCost:N0}");
         }
 
-        /// <summary>One stat: an icon, a muted label on the left, the value large and bright on the right.</summary>
-        private static void StatLine(RectTransform parent, string icon, string label, string value, Color valueColor)
+        /// <summary>Arrows outside the window's sides step through the heroes the Altar is showing.</summary>
+        private void DrawHeroBrowse(RectTransform content, string instanceId)
         {
-            var row = StatRow(parent, 30f);
-            var picture = HudArt.Picture(row, "Icon", "icon_" + icon, new Vector2(0f, 0.5f), new Vector2(26f, 26f), Vector2.zero);
-            picture.preserveAspect = true;
-            var name = HudArt.Label(row, label, HudArt.Numbers, 17, TextAnchor.MiddleLeft, HudArt.IvoryMuted, HudArt.LacquerDeep);
-            Ui.Stretch(name.rectTransform, 34f, 0f, 0f, 0f);
-            var number = HudArt.Label(row, value, HudArt.Numbers, 21, TextAnchor.MiddleRight, valueColor, HudArt.LacquerDeep);
-            Ui.Stretch(number.rectTransform, 90f, 0f, 0f, 0f);
+            var list = SortedHeroes(Roster.Heroes.Where(MatchesFilters)).ToList();
+            var index = list.FindIndex(h => h.InstanceId == instanceId);
+            if (list.Count < 2 || index < 0) return;
+            var previous = list[(index - 1 + list.Count) % list.Count].InstanceId;
+            var next = list[(index + 1) % list.Count].InstanceId;
+            var left = Medal.Create(content, "PreviousHeroButton", MedalKind.Primary, "back", null, () => OpenHeroWindow(previous), true, 62f);
+            Ui.Anchor((RectTransform)left.transform, new Vector2(0f, 0.5f), new Vector2(62f, 62f), new Vector2(-114f, 0f));
+            var right = Medal.Create(content, "NextHeroButton", MedalKind.Primary, "next", null, () => OpenHeroWindow(next), true, 62f);
+            Ui.Anchor((RectTransform)right.transform, new Vector2(1f, 0.5f), new Vector2(62f, 62f), new Vector2(114f, 0f));
         }
 
-        private static void Divider(RectTransform parent)
-        {
-            var line = StatRow(parent, 6f);
-            var rule = Ui.Rect("Rule", line);
-            rule.anchorMin = new Vector2(0f, 0.5f);
-            rule.anchorMax = new Vector2(1f, 0.5f);
-            rule.sizeDelta = new Vector2(0f, 2f);
-            Ui.Background(rule, new Color(0.9f, 0.7f, 0.35f, 0.35f), false);
-        }
+        // ---------- Right: Hero (skills and talent) ----------
 
         // Each skill slot's kind and picture: the first is the basic attack, the last the ultimate.
         private static readonly string[] MiddleIcons = { "target", "speed", "skill" };
@@ -304,130 +303,236 @@ namespace ShinobiDominion.Game
 
         private static string SkillIcon(int index, int count) => index == 0 ? "attack" : index == count - 1 ? "shield" : MiddleIcons[(index - 1) % MiddleIcons.Length];
 
-        /// <summary>
-        /// All four skills in a framed list (picture, name, kind, unlocked or the evolution star it needs); the
-        /// chosen one is lit and explained on parchment underneath.
-        /// </summary>
-        private void DrawSkillPanel(RectTransform scene, HeroInstance hero, HeroArchetype archetype)
+        /// <summary>A sheet of parchment filling part of the tab, with a blue plate for its heading on the top edge.</summary>
+        private static RectTransform Sheet(RectTransform area, float top, float bottom, string heading)
         {
-            var panel = Ui.Rect("SkillPanel", scene);
-            panel.anchorMin = new Vector2(1f, 1f);
-            panel.anchorMax = new Vector2(1f, 1f);
-            panel.pivot = new Vector2(1f, 1f);
-            panel.sizeDelta = new Vector2(RightWidth, 200f);
-            panel.anchoredPosition = new Vector2(-14f, -82f);
-            HudArt.Plate(panel).pixelsPerUnitMultiplier = 1.1f;
-            HudArt.DropShadow(panel);
-
-            var header = HudArt.Picture(panel, "SkillsHeader", "hud_building_nameplate", new Vector2(0.5f, 1f), new Vector2(RightWidth - 40f, 46f), new Vector2(0f, -14f));
-            var heading = HudArt.Label(header.transform, hero.TechniqueRank > 1 ? $"SKILLS - RANK {hero.TechniqueRank}" : "SKILLS", HudArt.Display, 22, TextAnchor.MiddleCenter, HudArt.BrassLight, HudArt.LacquerDeep);
-            Ui.Stretch(heading.rectTransform);
-
-            var skills = archetype.skills;
-            if (skills.Count == 0)
+            var paper = Ui.Rect("Sheet", area);
+            Ui.Stretch(paper, 0f, bottom, 0f, top);
+            Ui.Framed(paper, HudArt.Sprite("parchment_s40"), false).pixelsPerUnitMultiplier = 1.4f;
+            if (!string.IsNullOrEmpty(heading))
             {
-                var none = HudArt.Label(panel, "No skills yet.", HudArt.Numbers, 20, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.LacquerDeep);
-                Ui.Stretch(none.rectTransform);
-                return;
+                var plate = HudArt.Picture(paper, "SheetHeading", "hud_building_nameplate", new Vector2(0.5f, 1f), new Vector2(320f, 46f), new Vector2(0f, 16f));
+                var words = HudArt.Label(plate.transform, heading, HudArt.Display, 21, TextAnchor.MiddleCenter, HudArt.BrassLight, HudArt.LacquerDeep);
+                words.name = "SheetTitle";
+                Ui.Stretch(words.rectTransform, 40f, 2f, 40f, 2f);
             }
-            _selectedSkill = Mathf.Clamp(_selectedSkill, 0, skills.Count - 1);
+            return paper;
+        }
 
-            var rowHeight = skills.Count > 4 ? 74f : 88f;
-            const float listTop = 70f;
-            // The panel hugs the list and a short explanation, so no empty parchment hangs under it.
-            panel.sizeDelta = new Vector2(RightWidth, listTop + skills.Count * rowHeight + 190f);
-            for (var i = 0; i < skills.Count; i++)
+        /// <summary>
+        /// A shelf of square icons, one for each skill and one for the talent, and under it the chosen one explained
+        /// on parchment. The special skill's icon carries its technique rank and the talent's icon its level.
+        /// </summary>
+        private void DrawSkillsTab(RectTransform area, HeroInstance hero, HeroArchetype archetype)
+        {
+            var instanceId = hero.InstanceId;
+            var skills = archetype.skills;
+            var talents = Roster.Catalog.Talents;
+            var technique = Roster.Catalog.Technique;
+            var talent = talents.Find(hero.TalentId);
+            _selectedSkill = Mathf.Clamp(_selectedSkill, 0, skills.Count);
+            var onTalent = _selectedSkill == skills.Count;
+
+            var shelf = Ui.Rect("SkillShelf", area);
+            shelf.anchorMin = new Vector2(0f, 1f);
+            shelf.anchorMax = new Vector2(1f, 1f);
+            shelf.pivot = new Vector2(0.5f, 1f);
+            shelf.sizeDelta = new Vector2(0f, 96f);
+            HudArt.Plate(shelf).pixelsPerUnitMultiplier = 1.3f;
+
+            const float icon = 70f;
+            const float gap = 14f;
+            var slots = skills.Count + 1;
+            var total = slots * icon + (slots - 1) * gap + 18f;
+            for (var i = 0; i < slots; i++)
             {
                 var index = i;
-                var skill = skills[i];
-                var open = skill.unlockEvolution <= hero.EvolutionIndex;
+                var isTalent = i == skills.Count;
+                var skill = isTalent ? null : skills[i];
+                var open = isTalent ? talent != null : skill.unlockEvolution <= hero.EvolutionIndex;
                 var selected = i == _selectedSkill;
+                // The talent stands a little apart from the skills.
+                var x = -total * 0.5f + icon * 0.5f + i * (icon + gap) + (isTalent ? 18f : 0f);
 
-                var row = Ui.Rect("Skill" + i, panel);
-                Ui.Anchor(row, new Vector2(0.5f, 1f), new Vector2(RightWidth - 36f, rowHeight - 6f), new Vector2(0f, -listTop - i * rowHeight));
-                var frame = Ui.Framed(row, HudArt.Sprite(selected ? "card_s34" : "well_s18"), true);
-                frame.pixelsPerUnitMultiplier = selected ? 1.6f : 1.2f;
+                var slot = Ui.Rect(isTalent ? "TalentIcon" : "Skill" + i, shelf);
+                Ui.Anchor(slot, new Vector2(0.5f, 0.5f), new Vector2(icon, icon), new Vector2(x, 0f));
                 if (selected)
                 {
-                    var lit = HudArt.Picture(row, "Selected", "glow", new Vector2(0.5f, 0.5f), new Vector2(RightWidth, rowHeight + 20f), Vector2.zero);
-                    lit.color = new Color(1f, 0.8f, 0.4f, 0.35f);
-                    lit.transform.SetAsFirstSibling();
+                    var lit = HudArt.Picture(slot, "Selected", "glow", new Vector2(0.5f, 0.5f), new Vector2(icon + 44f, icon + 44f), Vector2.zero);
+                    lit.color = new Color(1f, 0.82f, 0.4f, 0.75f);
                 }
-                var button = row.gameObject.AddComponent<Button>();
+                var well = Ui.Rect("Well", slot);
+                Ui.Stretch(well);
+                var frame = Ui.Framed(well, HudArt.Sprite(selected ? "card_s34" : "well_s18"), true);
+                frame.pixelsPerUnitMultiplier = selected ? 1.7f : 1.3f;
+                var button = slot.gameObject.AddComponent<Button>();
                 button.targetGraphic = frame;
                 button.onClick.AddListener(() => GameSounds.Play(GameSound.Click));
                 button.onClick.AddListener(() =>
                 {
                     _selectedSkill = index;
-                    ShowHeroDetail(hero.InstanceId);
+                    RefreshHeroWindow(instanceId);
                 });
                 UiMotion.Pressable(button);
 
-                var medal = Medal.Create(row, "SkillIcon", MedalKind.IconOnly, SkillIcon(i, skills.Count), null, null, open, 64f);
-                Ui.Anchor((RectTransform)medal.transform, new Vector2(0f, 0.5f), new Vector2(64f, 64f), new Vector2(10f, 0f));
-                medal.GetComponent<Button>().enabled = false;
+                var picture = HudArt.Picture(slot, "Icon", isTalent ? "icon_star" : "icon_" + SkillIcon(i, skills.Count), new Vector2(0.5f, 0.5f), new Vector2(40f, 40f), new Vector2(0f, 6f));
+                picture.preserveAspect = true;
+                picture.color = open ? Color.white : new Color(0.45f, 0.45f, 0.5f, 0.9f);
 
-                var title = HudArt.Label(row, skill.displayName, HudArt.Display, 20, TextAnchor.LowerLeft, open ? HudArt.Ivory : HudArt.IvoryMuted, HudArt.LacquerDeep);
-                // One line, kept clear of the lock on a locked row: a long name gets a smaller size to fit the space.
-                var titleRoom = RightWidth - 36f - 84f - (open ? 12f : 52f);
-                Ui.Stretch(title.rectTransform, 84f, rowHeight * 0.46f, open ? 12f : 52f, 6f);
-                title.horizontalOverflow = HorizontalWrapMode.Overflow;
-                title.fontSize = Mathf.Clamp((int)(titleRoom / (skill.displayName.Length * 0.7f)), 13, 20);
-                var kind = SkillKind(skill, i, skills.Count);
-                var sub = HudArt.Label(row, kind, HudArt.Numbers, 16, TextAnchor.UpperLeft, open ? HudArt.BrassLight : new Color(0.6f, 0.8f, 1f), HudArt.LacquerDeep);
-                Ui.Stretch(sub.rectTransform, 84f, 6f, 8f, rowHeight * 0.56f);
-                if (!open)
+                // Under the picture: the rank of the special skill, the level of the talent, or the stars a locked skill needs.
+                string under = null;
+                if (isTalent) under = talent == null ? "None" : $"{hero.TalentLevel}/{talents.maxLevel}";
+                else if (skill.special && open) under = $"{hero.TechniqueRank}/{technique.maxRank}";
+                if (under != null)
                 {
-                    // A lock, and beside it the blue stars this skill needs, matching the evolution stars under the hero.
+                    var mark = HudArt.Label(slot, under, HudArt.Numbers, 15, TextAnchor.LowerCenter, HudArt.Ivory, HudArt.LacquerDeep);
+                    mark.name = isTalent ? "TalentMark" : "SkillRank";
+                    Ui.Stretch(mark.rectTransform, 2f, 3f, 2f, 0f);
+                }
+                if (!isTalent && !open)
+                {
+                    var locked = HudArt.Picture(slot, "Lock", "icon_lock", new Vector2(0.5f, 0.5f), new Vector2(24f, 24f), new Vector2(0f, 8f));
+                    locked.preserveAspect = true;
                     for (var s = 0; s < skill.unlockEvolution; s++)
                     {
-                        // On the lower line, beside the skill kind, so the name above has the width.
-                        var need = Ui.Icon(row, HeroArt.Star, new Vector2(1f, 0f), new Vector2(18f, 18f), new Vector2(-52f - s * 19f, 8f));
-                        need.name = "NeedStar";
-                        need.color = EvolutionBlue;
-                        need.raycastTarget = false;
+                        var needStar = Ui.Icon(slot, HeroArt.Star, new Vector2(0.5f, 0f), new Vector2(14f, 14f), new Vector2((s - (skill.unlockEvolution - 1) * 0.5f) * 15f, 5f));
+                        needStar.name = "NeedStar";
+                        needStar.color = EvolutionBlue;
+                        needStar.raycastTarget = false;
                     }
-                    var lockIcon = HudArt.Picture(row, "Lock", "icon_lock", new Vector2(1f, 0f), new Vector2(22f, 22f), new Vector2(-24f, 22f));
-                    lockIcon.preserveAspect = true;
                 }
             }
 
-            // The chosen skill, explained on parchment under the list.
-            var chosen = skills[_selectedSkill];
-            var unlocked = chosen.unlockEvolution <= hero.EvolutionIndex;
-            var paper = Ui.Rect("SkillDetail", panel);
-            paper.anchorMin = new Vector2(0f, 0f);
-            paper.anchorMax = new Vector2(1f, 1f);
-            paper.offsetMin = new Vector2(16f, 16f);
-            paper.offsetMax = new Vector2(-16f, -(listTop + skills.Count * rowHeight - 6f));
-            Ui.Framed(paper, HudArt.Sprite("parchment_s40"), false).pixelsPerUnitMultiplier = 1.4f;
+            var paper = Sheet(area, 116f, 0f, onTalent ? "Hero Talent" : "Hero Skills");
+            string title;
+            string tag;
+            string body;
+            Color tagColor;
+            if (onTalent)
+            {
+                title = talent == null ? "No talent yet" : $"{talent.displayName}, level {hero.TalentLevel}";
+                tag = talent == null ? "A roll at the Mastery banner gives this hero one" : TalentEffect(talent, hero.TalentLevel);
+                tagColor = new Color(0.18f, 0.45f, 0.14f);
+                body = talent == null ? "A talent is one lasting gift: more HP, attack or defense, a faster walk, a head start on the special skill, or harder blows against buildings." : talent.description;
+            }
+            else
+            {
+                var chosen = skills[_selectedSkill];
+                var unlocked = chosen.unlockEvolution <= hero.EvolutionIndex;
+                title = chosen.displayName;
+                var kind = SkillKind(chosen, _selectedSkill, skills.Count);
+                tag = unlocked
+                    ? chosen.special ? $"{kind}  ·  rank {hero.TechniqueRank} of {technique.maxRank}  ·  power {technique.Power(BattleSim.PowerFor(archetype.rarity.ToString()), hero.TechniqueRank)}%" : $"{kind}  ·  Unlocked"
+                    : $"{kind}  ·  Locked: evolve {chosen.unlockEvolution} time{(chosen.unlockEvolution == 1 ? "" : "s")}";
+                tagColor = unlocked ? new Color(0.18f, 0.45f, 0.14f) : new Color(0.62f, 0.2f, 0.1f);
+                body = chosen.description;
+            }
 
-            var name = Ui.Label(paper, chosen.displayName, 23, TextAnchor.MiddleLeft, PaperTitle);
+            var name = Ui.Label(paper, title, 27, TextAnchor.MiddleCenter, PaperTitle);
+            name.name = "SkillName";
             name.font = HudArt.Display;
             name.fontStyle = FontStyle.Bold;
-            Ui.Anchor(name.rectTransform, new Vector2(0f, 1f), new Vector2(RightWidth - 90f, 34f), new Vector2(20f, -10f));
-            name.rectTransform.pivot = new Vector2(0f, 1f);
-            name.rectTransform.anchoredPosition = new Vector2(20f, -10f);
+            name.rectTransform.anchorMin = new Vector2(0f, 1f);
+            name.rectTransform.anchorMax = new Vector2(1f, 1f);
+            name.rectTransform.pivot = new Vector2(0.5f, 1f);
+            name.rectTransform.sizeDelta = new Vector2(-60f, 40f);
+            name.rectTransform.anchoredPosition = new Vector2(0f, -40f);
+            name.resizeTextForBestFit = true;
+            name.resizeTextMinSize = 16;
+            name.resizeTextMaxSize = 27;
 
-            var status = Ui.Label(paper, unlocked ? "Unlocked" : $"Locked: evolve {chosen.unlockEvolution} time{(chosen.unlockEvolution == 1 ? "" : "s")}", 16, TextAnchor.MiddleLeft, unlocked ? new Color(0.18f, 0.45f, 0.14f) : new Color(0.62f, 0.2f, 0.1f));
+            var status = Ui.Label(paper, tag, 17, TextAnchor.MiddleCenter, tagColor);
+            status.name = "SkillStatus";
             status.fontStyle = FontStyle.Bold;
-            status.rectTransform.anchorMin = status.rectTransform.anchorMax = new Vector2(0f, 1f);
-            status.rectTransform.pivot = new Vector2(0f, 1f);
-            status.rectTransform.sizeDelta = new Vector2(RightWidth - 90f, 22f);
-            status.rectTransform.anchoredPosition = new Vector2(20f, -44f);
+            status.rectTransform.anchorMin = new Vector2(0f, 1f);
+            status.rectTransform.anchorMax = new Vector2(1f, 1f);
+            status.rectTransform.pivot = new Vector2(0.5f, 1f);
+            status.rectTransform.sizeDelta = new Vector2(-60f, 26f);
+            status.rectTransform.anchoredPosition = new Vector2(0f, -82f);
+            status.resizeTextForBestFit = true;
+            status.resizeTextMinSize = 12;
+            status.resizeTextMaxSize = 17;
 
-            var tag = Ui.Label(paper, SkillKind(chosen, _selectedSkill, skills.Count).ToUpperInvariant(), 13, TextAnchor.MiddleRight, new Color(0.55f, 0.33f, 0.12f));
-            tag.fontStyle = FontStyle.Bold;
-            tag.rectTransform.anchorMin = tag.rectTransform.anchorMax = new Vector2(1f, 1f);
-            tag.rectTransform.pivot = new Vector2(1f, 1f);
-            tag.rectTransform.sizeDelta = new Vector2(120f, 22f);
-            tag.rectTransform.anchoredPosition = new Vector2(-18f, -16f);
+            var text = Ui.Label(paper, body, 21, TextAnchor.UpperCenter, PaperInk);
+            text.name = "SkillBody";
+            text.rectTransform.anchorMin = Vector2.zero;
+            text.rectTransform.anchorMax = Vector2.one;
+            text.rectTransform.offsetMin = new Vector2(44f, 84f);
+            text.rectTransform.offsetMax = new Vector2(-44f, -122f);
 
-            var body = Ui.Label(paper, chosen.description, 21, TextAnchor.UpperLeft, PaperInk);
-            body.rectTransform.anchorMin = Vector2.zero;
-            body.rectTransform.anchorMax = Vector2.one;
-            body.rectTransform.offsetMin = new Vector2(20f, 14f);
-            body.rectTransform.offsetMax = new Vector2(-20f, -72f);
+            // The one thing that can be done about what is shown: raise the special skill's rank, or change the talent.
+            var special = !onTalent && skills[_selectedSkill].special && skills[_selectedSkill].unlockEvolution <= hero.EvolutionIndex;
+            if (onTalent || special)
+            {
+                var act = Ui.Button(paper, onTalent ? "TalentChangeButton" : "SkillRankButton", onTalent ? (talent == null ? "Roll" : "Change") : "Rank up", () => OpenHeroTab(instanceId, HeroTab.Mastery), true, new Color(0.35f, 0.45f, 0.85f), 21);
+                Ui.Anchor((RectTransform)act.transform, new Vector2(0.5f, 0f), new Vector2(210f, 50f), new Vector2(0f, 24f));
+            }
+        }
+
+        // ---------- Right: Attributes ----------
+
+        /// <summary>The four battle numbers large on one sheet, and what the hero is and carries listed on a second.</summary>
+        private void DrawAttributesTab(RectTransform area, HeroInstance hero, HeroArchetype archetype)
+        {
+            var stats = Roster.StatsOf(hero);
+            var numbers = Ui.Rect("AttributeNumbers", area);
+            numbers.anchorMin = new Vector2(0f, 1f);
+            numbers.anchorMax = new Vector2(1f, 1f);
+            numbers.pivot = new Vector2(0.5f, 1f);
+            numbers.sizeDelta = new Vector2(0f, 156f);
+            Ui.Framed(numbers, HudArt.Sprite("parchment_s40"), false).pixelsPerUnitMultiplier = 1.4f;
+            var upper = Ui.Rect("Upper", numbers);
+            upper.anchorMin = new Vector2(0f, 0.5f);
+            upper.anchorMax = Vector2.one;
+            upper.offsetMin = new Vector2(8f, 0f);
+            upper.offsetMax = new Vector2(-8f, -10f);
+            ScreenKit.Fact(upper, 0f, 0.5f, "icon_attack_stat", "Attack", stats.Attack.ToString("N0"));
+            ScreenKit.Fact(upper, 0.5f, 1f, "icon_health", "HP", stats.Hp.ToString("N0"));
+            var lower = Ui.Rect("Lower", numbers);
+            lower.anchorMin = Vector2.zero;
+            lower.anchorMax = new Vector2(1f, 0.5f);
+            lower.offsetMin = new Vector2(8f, 10f);
+            lower.offsetMax = new Vector2(-8f, 0f);
+            ScreenKit.Fact(lower, 0f, 0.5f, "icon_defense_stat", "Defense", stats.Defense.ToString("N0"));
+            ScreenKit.Fact(lower, 0.5f, 1f, "icon_power", "Might", (stats.Hp / 10 + stats.Attack + stats.Defense).ToString("N0"));
+
+            var paper = Sheet(area, 170f, 0f, null);
+            var technique = Roster.Catalog.Technique;
+            var talent = Roster.Catalog.Talents.Find(hero.TalentId);
+            var gear = Roster.Catalog.Gear;
+            var lines = new List<(string name, string value)>
+            {
+                ("Rarity", archetype.rarity.ToString()),
+                ("Role", archetype.role.ToString()),
+                ("Affinity", archetype.affinity.ToString()),
+                ("Form", hero.EvolutionIndex == 0 ? "Base" : $"Evolved {hero.EvolutionIndex} time{(hero.EvolutionIndex == 1 ? "" : "s")}"),
+                ("Technique", $"Rank {hero.TechniqueRank} of {technique.maxRank}, special power {technique.Power(BattleSim.PowerFor(archetype.rarity.ToString()), hero.TechniqueRank)}%"),
+                ("Talent", talent == null ? "None" : $"{talent.displayName} {hero.TalentLevel}: {TalentEffect(talent, hero.TalentLevel)}"),
+                ("Gear", string.Join(",  ", Enumerable.Range(0, 3).Select(s => $"{gear.slots[s]} {hero.Gear[s]}")))
+            };
+            const float lineHeight = 36f;
+            for (var i = 0; i < lines.Count; i++)
+            {
+                var y = -22f - i * lineHeight;
+                var label = Ui.Label(paper, lines[i].name, 18, TextAnchor.MiddleRight, ScreenKit.InkBrownSoft);
+                label.rectTransform.anchorMin = new Vector2(0f, 1f);
+                label.rectTransform.anchorMax = new Vector2(0.26f, 1f);
+                label.rectTransform.pivot = new Vector2(0.5f, 1f);
+                label.rectTransform.sizeDelta = new Vector2(0f, lineHeight);
+                label.rectTransform.anchoredPosition = new Vector2(0f, y);
+                var value = Ui.Label(paper, lines[i].value, 19, TextAnchor.MiddleLeft, ScreenKit.InkBrown);
+                value.name = "Attribute_" + lines[i].name;
+                value.fontStyle = FontStyle.Bold;
+                value.rectTransform.anchorMin = new Vector2(0.26f, 1f);
+                value.rectTransform.anchorMax = new Vector2(1f, 1f);
+                value.rectTransform.pivot = new Vector2(0.5f, 1f);
+                value.rectTransform.sizeDelta = new Vector2(-48f, lineHeight);
+                value.rectTransform.anchoredPosition = new Vector2(-6f, y);
+                value.verticalOverflow = VerticalWrapMode.Truncate;
+                value.resizeTextForBestFit = true;
+                value.resizeTextMinSize = 12;
+                value.resizeTextMaxSize = 19;
+            }
         }
     }
 }

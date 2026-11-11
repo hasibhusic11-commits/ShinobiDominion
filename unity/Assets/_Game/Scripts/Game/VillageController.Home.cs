@@ -81,7 +81,7 @@ namespace ShinobiDominion.Game
         private void ShowShop()
         {
             var view = _chest;
-            _panel.ShowStage("Shop", (ServerCrystals ?? 0).ToString("N0"), "icon_crystals", "scene_castle", false, 236f, CloseAll, panel =>
+            _panel.ShowStage("Shop", (ServerCrystals ?? 0).ToString("N0"), "icon_crystals", null, false, 0f, CloseAll, panel =>
             {
                 ScreenKit.Notice(panel, LastMessage);
                 if (view == null) return;

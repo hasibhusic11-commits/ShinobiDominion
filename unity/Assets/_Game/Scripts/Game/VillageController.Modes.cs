@@ -61,7 +61,7 @@ namespace ShinobiDominion.Game
                     new ModeTile { Button = "OpenArenaButton", Title = "Arena", Blurb = "Hero against hero", Go = "Enter", Picture = "arena_10", Light = new Color(1f, 0.85f, 0.45f), Open = ModesOnline && team > 0, Action = OpenArena },
                     new ModeTile { Button = "OpenTrialsButton", Title = "Trial Tower", Blurb = "Climb past the guardians", Go = "Climb", Picture = "spirit_turret_10", Light = new Color(0.75f, 0.55f, 1f), Open = ModesOnline && team > 0, Action = OpenTrials }
                 };
-                var block = panel.Block(536f);
+                var block = panel.Block(456f);
                 for (var i = 0; i < tiles.Length; i++) DrawModeTile(block, tiles[i], i, tiles.Length);
             }, team == 0 ? "Raids, the Arena and the Trial Tower need a hero on your Hero Base." : "Your hero leads every battle.");
         }
@@ -718,7 +718,7 @@ namespace ShinobiDominion.Game
         private void ShowMail()
         {
             var log = _defenseLog;
-            _panel.ShowStage("Mail", log == null ? "" : $"{log.Count} reports", "icon_mail", "scene_lantern", false, 230f, CloseAll, panel =>
+            _panel.ShowStage("Mail", log == null ? "" : $"{log.Count} reports", "icon_mail", null, false, 0f, CloseAll, panel =>
             {
                 ScreenKit.Notice(panel, LastMessage);
                 var shieldLeft = System.DateTimeOffset.FromUnixTimeMilliseconds(_shieldUntilMs) - System.DateTimeOffset.UtcNow;

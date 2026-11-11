@@ -306,36 +306,198 @@ namespace ShinobiDominion.Game
             .ThenBy(h => Roster.ArchetypeOf(h).displayName)
             .ThenByDescending(h => HeroMath.Cumulative(h.EvolutionIndex, h.Level));
 
+        /// <summary>How many busts stand on one shelf.</summary>
+        private const int ShelfColumns = 5;
+        private const float ShelfHeight = 214f;
+
+        private static readonly Color PlankTop = new Color(0.47f, 0.31f, 0.17f);
+        private static readonly Color PlankFace = new Color(0.33f, 0.21f, 0.12f);
+        private static readonly Color PlankShade = new Color(0.13f, 0.08f, 0.05f);
+
+        /// <summary>
+        /// The Heroes Altar (ADR-057): a window over the village with one banner for all heroes and one for each
+        /// rarity, each carrying its count, and under them shelves of hero busts, five to a shelf. A bust shows the
+        /// hero, its level on the shelf's lip, a padlock when it is locked and a shield when it guards a Hero Base.
+        /// </summary>
         public void ShowAltarRoster()
         {
             _selectionCells.Clear();
-            var shown = SortedHeroes(Roster.Heroes.Where(MatchesFilters)).ToList();
-            _panel.ShowScreen("Hero Altar", $"{shown.Count} of {Roster.HeroCount} heroes", CloseAll, panel =>
+            var pool = Roster.Heroes.Where(MatchesRoleAndAffinity).ToList();
+            var shown = SortedHeroes(pool.Where(MatchesFilters)).ToList();
+            var tabs = new List<WindowTab> { new WindowTab("FilterAll", "All", _rarityFilter == null, () => SetRarityFilter(null), pool.Count.ToString()) };
+            foreach (var rarity in ((HeroRarity[])Enum.GetValues(typeof(HeroRarity))).Reverse())
             {
-                var filters = panel.Row();
-                FilterTab(filters, "All", _rarityFilter == null, () => _rarityFilter = null);
-                foreach (HeroRarity rarity in Enum.GetValues(typeof(HeroRarity)))
+                var value = rarity;
+                tabs.Add(new WindowTab("Filter" + value, value.ToString(), _rarityFilter == value, () => SetRarityFilter(value),
+                    pool.Count(h => Roster.ArchetypeOf(h).rarity == value).ToString()));
+            }
+
+            _panel.ShowWindow("Heroes Altar", new Vector2(1060f, 610f), CloseAll, content =>
+            {
+                var shelves = Ui.Rect("Shelves", content);
+                Ui.Stretch(shelves, 0f, 54f, 0f, 0f);
+                var list = PanelView.ScrollIn(shelves);
+                var rows = Mathf.Max(2, Mathf.CeilToInt(shown.Count / (float)ShelfColumns));
+                list.sizeDelta = new Vector2(0f, rows * ShelfHeight + 6f);
+                var cell = (content.rect.width > 0f ? content.rect.width : 972f) / ShelfColumns;
+
+                // Every shelf is drawn, the bare ones too, so the Altar reads as a cabinet with room left in it.
+                for (var r = 0; r < rows; r++)
                 {
-                    var value = rarity;
-                    FilterTab(filters, value.ToString(), _rarityFilter == value, () => _rarityFilter = value);
+                    var plank = Ui.Rect("Shelf" + r, list);
+                    plank.anchorMin = new Vector2(0f, 1f);
+                    plank.anchorMax = new Vector2(1f, 1f);
+                    plank.pivot = new Vector2(0.5f, 0f);
+                    plank.sizeDelta = new Vector2(0f, 40f);
+                    plank.anchoredPosition = new Vector2(0f, -(r + 1) * ShelfHeight + 6f);
+                    Ui.Background(plank, PlankFace, false);
+                    var top = Ui.Rect("Top", plank);
+                    top.anchorMin = new Vector2(0f, 1f);
+                    top.anchorMax = new Vector2(1f, 1f);
+                    top.pivot = new Vector2(0.5f, 1f);
+                    top.sizeDelta = new Vector2(0f, 7f);
+                    Ui.Background(top, PlankTop, false);
+                    var shade = Ui.Rect("Shade", plank);
+                    shade.anchorMin = Vector2.zero;
+                    shade.anchorMax = new Vector2(1f, 0f);
+                    shade.pivot = new Vector2(0.5f, 1f);
+                    shade.sizeDelta = new Vector2(0f, 8f);
+                    Ui.Background(shade, new Color(PlankShade.r, PlankShade.g, PlankShade.b, 0.8f), false);
                 }
-                CycleTab(filters, "FilterRole", $"Role: {(_roleFilter?.ToString() ?? "All")}", () => _roleFilter = Next(_roleFilter));
-                CycleTab(filters, "FilterAffinity", $"Affinity: {(_affinityFilter?.ToString() ?? "All")}", () => _affinityFilter = Next(_affinityFilter));
 
-                if (Roster.HeroCount == 0) panel.Line("You own no heroes yet. Summon at the Summoning Gate.");
-
-                var grid = panel.Grid(HeroCardSize);
-                foreach (var hero in shown)
+                for (var i = 0; i < shown.Count; i++)
                 {
-                    var tag = Village.IsHeroAssigned(hero.InstanceId) ? "On a base" : hero.Locked ? "Locked" : null;
-                    HeroCard(grid, "Hero_" + hero.InstanceId, hero, tag, () => ShowHeroDetail(hero.InstanceId), true);
+                    var hero = shown[i];
+                    var slot = Ui.Rect("Slot", list);
+                    slot.anchorMin = slot.anchorMax = new Vector2(0f, 1f);
+                    slot.pivot = new Vector2(0f, 1f);
+                    slot.sizeDelta = new Vector2(cell, ShelfHeight);
+                    slot.anchoredPosition = new Vector2((i % ShelfColumns) * cell, -(i / ShelfColumns) * ShelfHeight);
+                    ShelfBust(slot, "Hero_" + hero.InstanceId, hero, () => ShowHeroDetail(hero.InstanceId));
                 }
 
-                panel.Action("AltarOptionsButton", "Altar building options", () =>
+                if (Roster.HeroCount == 0)
                 {
-                    ShowContextPanel();
-                });
-            });
+                    var none = HudArt.Label(shelves, "You own no heroes yet. Summon at the Summoning Gate.", HudArt.Numbers, 20, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.LacquerDeep);
+                    Ui.Stretch(none.rectTransform, 20f, 0f, 20f, 0f);
+                }
+
+                // Under the shelves: the two finer filters, each stepping through its values.
+                var foot = Ui.Rect("AltarFoot", content);
+                foot.anchorMin = Vector2.zero;
+                foot.anchorMax = new Vector2(1f, 0f);
+                foot.pivot = new Vector2(0.5f, 0f);
+                foot.sizeDelta = new Vector2(0f, 46f);
+                CycleTab(foot, "FilterRole", $"Role: {(_roleFilter?.ToString() ?? "All")}", -124f, () => _roleFilter = Next(_roleFilter));
+                CycleTab(foot, "FilterAffinity", $"Affinity: {(_affinityFilter?.ToString() ?? "All")}", 124f, () => _affinityFilter = Next(_affinityFilter));
+            }, tabs);
+        }
+
+        private void SetRarityFilter(HeroRarity? rarity)
+        {
+            _rarityFilter = rarity;
+            ShowAltarRoster();
+        }
+
+        /// <summary>
+        /// A hero standing on a shelf: the bust in its frame, and on the shelf's lip its level, with a padlock for a
+        /// locked hero and a shield for one guarding a Hero Base.
+        /// </summary>
+        private Button ShelfBust(RectTransform slot, string name, HeroInstance hero, Action onClick, bool interactable = true, string tag = null)
+        {
+            var root = Ui.Rect(name, slot);
+            Ui.Stretch(root, 8f, 6f, 8f, 4f);
+            var bust = HeroBust(root, hero, new Vector2(154f, 160f), new Vector2(0.5f, 0f), new Vector2(0f, 40f));
+            var button = root.gameObject.AddComponent<Button>();
+            button.targetGraphic = bust;
+            button.interactable = interactable;
+            var colors = button.colors;
+            colors.disabledColor = new Color(0.5f, 0.5f, 0.5f, 0.8f);
+            button.colors = colors;
+            if (onClick != null)
+            {
+                button.onClick.AddListener(() => GameSounds.Play(GameSound.Click));
+                button.onClick.AddListener(() => onClick());
+            }
+            UiMotion.Pressable(button);
+
+            var lip = Ui.Rect("Lip", root);
+            Ui.Anchor(lip, new Vector2(0.5f, 0f), new Vector2(154f, 34f), new Vector2(0f, 2f));
+            lip.pivot = new Vector2(0.5f, 0f);
+            var words = HudArt.Label(lip, string.IsNullOrEmpty(tag) ? $"Lv {hero.Level}" : tag, HudArt.Numbers, 19, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.LacquerDeep);
+            words.name = "BustLevel";
+            Ui.Stretch(words.rectTransform, 30f, 0f, 30f, 0f);
+            words.resizeTextForBestFit = true;
+            words.resizeTextMinSize = 11;
+            words.resizeTextMaxSize = 19;
+            if (Village.IsHeroAssigned(hero.InstanceId))
+            {
+                var guard = HudArt.Picture(lip, "Guarding", "icon_shield", new Vector2(0f, 0.5f), new Vector2(24f, 24f), new Vector2(4f, 0f));
+                guard.preserveAspect = true;
+            }
+            if (hero.Locked)
+            {
+                var locked = HudArt.Picture(lip, "Locked", "icon_lock", new Vector2(1f, 0.5f), new Vector2(22f, 22f), new Vector2(-4f, 0f));
+                locked.preserveAspect = true;
+            }
+            return button;
+        }
+
+        /// <summary>
+        /// A hero's bust in a metal frame coloured by rarity, over that rarity's sunburst. The rarity is also said
+        /// by a badge in the top left corner, never by colour alone. An evolved hero wears its stage at the foot.
+        /// Returns the backdrop, so a button can use it as its graphic.
+        /// </summary>
+        private Image HeroBust(Transform parent, HeroInstance hero, Vector2 size, Vector2 anchor, Vector2 offset)
+        {
+            var archetype = Roster.ArchetypeOf(hero);
+            var rect = Ui.Rect("Bust", parent);
+            Ui.Anchor(rect, anchor, size, offset);
+            var back = Ui.Framed(rect, HeroArt.CardBackdrop(archetype.rarity));
+            back.type = Image.Type.Simple;
+
+            var art = Ui.Rect("Art", rect);
+            Ui.Stretch(art, 6f, 6f, 6f, 6f);
+            art.gameObject.AddComponent<RectMask2D>();
+            if (HeroConcepts.Has(archetype.id))
+            {
+                // The painting covers the frame: scaled to fill it, centred, and cut by its edge.
+                var sprite = HeroConcepts.Card(archetype.id);
+                var box = size - new Vector2(12f, 12f);
+                var scale = Mathf.Max(box.x / sprite.rect.width, box.y / sprite.rect.height);
+                var painting = Ui.Rect("HeroConcept", art);
+                painting.anchorMin = painting.anchorMax = new Vector2(0.5f, 1f);
+                painting.pivot = new Vector2(0.5f, 1f);
+                painting.sizeDelta = new Vector2(sprite.rect.width * scale, sprite.rect.height * scale);
+                var image = painting.gameObject.AddComponent<Image>();
+                image.sprite = sprite;
+                image.raycastTarget = false;
+            }
+            else HeroPicture(art, archetype, hero.EvolutionIndex, size.y, 0f);
+
+            var frameRect = Ui.Rect("Frame", rect);
+            Ui.Stretch(frameRect);
+            var frame = Ui.Framed(frameRect, HudArt.Sprite(archetype.rarity == HeroRarity.Legendary ? "heroframe_gold_s30" : archetype.rarity == HeroRarity.Elite ? "heroframe_silver_s30" : "heroframe_bronze_s30"), false);
+            frame.pixelsPerUnitMultiplier = 1.15f;
+            if (archetype.rarity == HeroRarity.Legendary) UiMotion.Shine(frame, new Color(1f, 0.95f, 0.75f, 0.9f), 3.2f);
+
+            var badge = HudArt.Picture(rect, "RarityBadge", "badge_" + archetype.rarity.ToString().ToLowerInvariant(), new Vector2(0f, 1f), new Vector2(40f, 40f), new Vector2(-8f, 8f));
+            badge.preserveAspect = true;
+
+            if (hero.EvolutionIndex > 0)
+            {
+                var stage = Ui.Icon(rect, UiSkin.Diamond(new Color(1f, 0.87f, 0.4f), new Color(0.9f, 0.55f, 0.12f)), new Vector2(1f, 1f), new Vector2(34f, 34f), new Vector2(8f, 8f));
+                stage.name = "Stage";
+                var numeral = HudArt.Label(stage.transform, new string('I', hero.EvolutionIndex), HudArt.Display, 13, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.CrimsonDark);
+                Ui.Stretch(numeral.rectTransform);
+            }
+            return back;
+        }
+
+        private bool MatchesRoleAndAffinity(HeroInstance hero)
+        {
+            var archetype = Roster.ArchetypeOf(hero);
+            return (_roleFilter == null || archetype.role == _roleFilter) && (_affinityFilter == null || archetype.affinity == _affinityFilter);
         }
 
         private bool MatchesFilters(HeroInstance hero)
@@ -354,23 +516,14 @@ namespace ShinobiDominion.Game
             return index + 1 < values.Length ? values[index + 1] : (T?)null;
         }
 
-        private void FilterTab(RectTransform row, string caption, bool active, Action apply)
+        private void CycleTab(RectTransform foot, string name, string caption, float x, Action apply)
         {
-            var tab = Ui.Button(row, "Filter" + caption, caption, () =>
+            var tab = Ui.Button(foot, name, caption, () =>
             {
                 apply();
                 ShowAltarRoster();
-            }, true, active ? Ui.AccentColor : Ui.ButtonColor, 15);
-            tab.GetComponentInChildren<Text>().horizontalOverflow = HorizontalWrapMode.Overflow;
-        }
-
-        private void CycleTab(RectTransform row, string name, string caption, Action apply)
-        {
-            var tab = Ui.Button(row, name, caption, () =>
-            {
-                apply();
-                ShowAltarRoster();
-            }, true, Ui.ButtonColor, 15);
+            }, true, Ui.ButtonColor, 16);
+            Ui.Anchor((RectTransform)tab.transform, new Vector2(0.5f, 0.5f), new Vector2(232f, 40f), new Vector2(x, 0f));
             tab.GetComponentInChildren<Text>().horizontalOverflow = HorizontalWrapMode.Overflow;
         }
 

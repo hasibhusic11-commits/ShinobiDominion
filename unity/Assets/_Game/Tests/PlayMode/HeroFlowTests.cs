@@ -192,8 +192,11 @@ namespace ShinobiDominion.Tests
             Controller.ShowHeroDetail(hero.InstanceId);
             yield return null;
             var button = Find("MasteryButton");
-            Assert.IsNotNull(button, "The hero page has a Mastery button");
-            Assert.AreEqual("Mastery (rank 1)", button.GetComponentInChildren<Text>().text, "A new hero is rank 1 with no talent");
+            Assert.IsNotNull(button, "The hero window has a Mastery banner");
+            Assert.AreEqual("Mastery", button.GetComponentInChildren<Text>().text);
+            System.Func<string, string> named = name => Object.FindObjectsByType<Text>(FindObjectsSortMode.None).First(t => t.name == name).text;
+            Assert.AreEqual("1/10", named("SkillRank"), "A new hero's special skill is rank 1");
+            Assert.AreEqual("None", named("TalentMark"), "and it has no talent");
 
             // As the server would set them.
             hero.TechniqueRank = 3;
@@ -202,8 +205,12 @@ namespace ShinobiDominion.Tests
             Assert.AreEqual(plain.Attack * 112 / 100, Controller.Roster.StatsOf(hero).Attack, "The page's attack includes the talent");
             Controller.ShowHeroDetail(hero.InstanceId);
             yield return null;
-            Assert.AreEqual("Mastery (rank 3, Keen Edge 3)", Find("MasteryButton").GetComponentInChildren<Text>().text);
-            Assert.Contains("SKILLS - RANK 3", Object.FindObjectsByType<Text>(FindObjectsSortMode.None).Select(t => t.text).ToList());
+            Assert.AreEqual("3/10", named("SkillRank"), "The special skill's icon carries its rank");
+            Assert.AreEqual("3/5", named("TalentMark"), "The talent's icon carries its level");
+            Click(Find("TalentIcon"));
+            yield return null;
+            Assert.AreEqual("Keen Edge, level 3", named("SkillName"), "Tapping the talent explains it on the parchment");
+            Assert.AreEqual("+12% attack", named("SkillStatus"));
 
             Click(Find("MasteryButton"));
             yield return null;
@@ -249,7 +256,13 @@ namespace ShinobiDominion.Tests
             var texts = Object.FindObjectsByType<Text>(FindObjectsSortMode.None).Select(t => t.text).ToList();
             Assert.IsFalse(texts.Any(t => t == "Ready" || t == "Evo I" || t == "Evo II" || t == "Evo III"), "The old Ready / Evo row is gone");
             Assert.Contains("SOLAR BEAST SAGE", texts, "The name plate shows the hero's real name");
-            Assert.IsTrue(texts.Contains("Beast Stride") && texts.Contains("Celestial Guardian"));
+            // One skill is explained at a time: tapping an icon on the shelf puts that skill on the parchment.
+            foreach (var skill in new[] { (2, "Beast Stride"), (4, "Celestial Guardian") })
+            {
+                Click(Find("Skill" + skill.Item1));
+                yield return null;
+                Assert.AreEqual(skill.Item2, Object.FindObjectsByType<Text>(FindObjectsSortMode.None).First(t => t.name == "SkillName").text);
+            }
         }
 
         [UnityTest]

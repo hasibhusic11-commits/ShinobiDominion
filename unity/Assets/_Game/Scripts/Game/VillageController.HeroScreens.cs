@@ -27,14 +27,9 @@ namespace ShinobiDominion.Game
                 ShowAltarRoster();
                 return;
             }
-            if (_skillHeroId != instanceId)
-            {
-                _skillHeroId = instanceId;
-                _selectedSkill = 0;
-            }
-
-            var archetype = Roster.ArchetypeOf(hero);
-            _panel.ShowScene("Heroes", $"{archetype.rarity}  ·  {archetype.role}  ·  {archetype.affinity}", ShowAltarRoster, scene => DrawHeroPage(scene, hero, archetype));
+            // Opened afresh, the window shows the hero itself; a change made inside it keeps its banner.
+            _heroTab = HeroTab.Hero;
+            OpenHeroWindow(instanceId);
         }
 
         // ---------- Summoning Gate ----------

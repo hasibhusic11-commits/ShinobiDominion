@@ -6,7 +6,7 @@ using Text = ShinobiDominion.Game.GameText;
 namespace ShinobiDominion.Game
 {
     /// <summary>
-    /// Hero mastery (ADR-053), from the hero page: the technique rank, bought with Technique Manuals, and the hero's
+    /// Hero mastery (ADR-053), the hero window's Mastery banner: the technique rank, bought with Technique Manuals, and the hero's
     /// one talent, rolled by the server for a Talent Token. Online only: both change what the hero does in battle,
     /// and the server decides that. The device never rolls anything.
     /// </summary>
@@ -34,13 +34,6 @@ namespace ShinobiDominion.Game
             }
         }
 
-        /// <summary>The hero page's button label: the rank, and the talent when there is one.</summary>
-        private string MasteryLabel(HeroInstance hero)
-        {
-            var talent = Roster.Catalog.Talents.Find(hero.TalentId);
-            return talent == null ? $"Mastery (rank {hero.TechniqueRank})" : $"Mastery (rank {hero.TechniqueRank}, {talent.displayName} {hero.TalentLevel})";
-        }
-
         /// <summary>True for a message that says why a tap was refused; the idle status word is not one.</summary>
         private static bool IsRefusal(string message) => !string.IsNullOrEmpty(message) && message != "Ready";
 
@@ -63,28 +56,22 @@ namespace ShinobiDominion.Game
 
         public void ShowMastery(string instanceId)
         {
-            var hero = Roster.Find(instanceId);
-            if (hero == null) return;
-            var archetype = Roster.ArchetypeOf(hero);
+            if (Roster.Find(instanceId) == null) return;
+            _heroTab = HeroTab.Mastery;
+            OpenHeroWindow(instanceId);
+        }
+
+        private void DrawMasteryTab(RectTransform content, HeroInstance hero, HeroArchetype archetype, string note)
+        {
+            var instanceId = hero.InstanceId;
             var technique = Roster.Catalog.Technique;
             var talents = Roster.Catalog.Talents;
             var cumulative = HeroMath.Cumulative(hero.EvolutionIndex, hero.Level);
             var manuals = Roster.ItemCount(technique.item);
             var tokens = Roster.ItemCount(talents.item);
-            var note = _masteryNote;
-            _masteryNote = null;
-            _panel.ShowWindow("Mastery", new Vector2(880f, 540f), () => ShowHeroDetail(instanceId), content =>
             {
-                // Whose mastery this is, then what the last tap did or why it was refused.
-                var y = 2f;
-                var who = HudArt.Label(content, archetype.displayName, HudArt.Display, 24, TextAnchor.MiddleLeft, HudArt.BrassLight, HudArt.LacquerDeep);
-                who.name = "MasteryHero";
-                who.rectTransform.anchorMin = new Vector2(0f, 1f);
-                who.rectTransform.anchorMax = new Vector2(1f, 1f);
-                who.rectTransform.pivot = new Vector2(0.5f, 1f);
-                who.rectTransform.sizeDelta = new Vector2(-12f, 32f);
-                who.rectTransform.anchoredPosition = new Vector2(0f, y);
-                y -= 34f;
+                // What the last tap did, or why it was refused.
+                var y = 0f;
                 if (!string.IsNullOrEmpty(note))
                 {
                     var rolled = WindowLine(content, "MasteryNote", note, y, 20, MasteryGold);
@@ -116,7 +103,7 @@ namespace ShinobiDominion.Game
                 if (top) rank.Note("Highest rank");
                 else
                 {
-                    rank.Button("RankUpButton", "Rank up", () => RankUpTechnique(instanceId), canRank, Ui.AccentColor, 150f);
+                    rank.Button("RankUpButton", "Rank up", () => RankUpTechnique(instanceId), canRank, Ui.AccentColor, 124f);
                     rank.Reward("icon_scroll", cost.ToString("N0"));
                 }
                 y -= rank.Root.sizeDelta.y + 10f;
@@ -132,7 +119,7 @@ namespace ShinobiDominion.Game
                 {
                     if (hero.TalentLevel > 0) ConfirmTalentRoll(instanceId);
                     else RollTalent(instanceId);
-                }, canRoll, Ui.AccentColor, 150f);
+                }, canRoll, Ui.AccentColor, 124f);
                 gift.Reward("icon_reward", "1");
                 y -= gift.Root.sizeDelta.y + 12f;
 
@@ -143,7 +130,7 @@ namespace ShinobiDominion.Game
                 y -= 50f;
                 var sources = WindowLine(content, "MasterySources", "Manuals come from dungeon wins and from stars on rival raids. A Talent Token comes from a 3-star raid on a rival. Rank and talent stay with this hero.", y, 17, HudArt.IvoryMuted, 46f);
                 sources.alignment = TextAnchor.UpperLeft;
-            });
+            }
         }
 
         /// <summary>A roll replaces what the hero has, so a hero that already has a talent is asked first.</summary>

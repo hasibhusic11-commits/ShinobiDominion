@@ -299,8 +299,8 @@ namespace ShinobiDominion.Game
             Run(async () =>
             {
                 ApplyServerState(await _server.SetLockAsync(instanceId, locked));
-                ShowHeroDetail(instanceId);
-            }, () => ShowHeroDetail(instanceId));
+                RefreshHeroWindow(instanceId);
+            }, () => RefreshHeroWindow(instanceId));
         }
 
         private void AssignOnline(int baseId, string instanceId)
@@ -329,8 +329,8 @@ namespace ShinobiDominion.Game
                     ClearKey();
                     ApplyServerState(state);
                     LastMessage = null;
-                    ShowHeroDetail(instanceId);
-                }, () => ShowHeroDetail(instanceId));
+                    RefreshHeroWindow(instanceId);
+                }, () => RefreshHeroWindow(instanceId));
                 return;
             }
             var result = Roster.TryTrainWithMana(instanceId, Village, out var manaError);
@@ -338,7 +338,7 @@ namespace ShinobiDominion.Game
                 : result == HeroError.InvalidAmount ? VillageErrorText.Describe(manaError)
                 : HeroErrorText.Describe(result);
             RefreshHud();
-            ShowHeroDetail(instanceId);
+            RefreshHeroWindow(instanceId);
         }
 
         private void DevMaxLevelOnline(string instanceId)
@@ -346,8 +346,8 @@ namespace ShinobiDominion.Game
             Run(async () =>
             {
                 ApplyServerState(await _server.DevMaxLevelAsync(instanceId));
-                ShowHeroDetail(instanceId);
-            }, () => ShowHeroDetail(instanceId));
+                RefreshHeroWindow(instanceId);
+            }, () => RefreshHeroWindow(instanceId));
         }
     }
 }

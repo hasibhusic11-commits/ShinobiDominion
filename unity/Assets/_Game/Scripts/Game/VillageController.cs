@@ -438,20 +438,45 @@ namespace ShinobiDominion.Game
                 return;
             }
             var definition = building.Definition;
-            _panel.Show(definition.displayName, ShowContextPanel, panel =>
+            _panel.ShowScreen(definition.displayName, $"Level {building.Level} of {definition.maxLevel}", ShowContextPanel, panel =>
             {
-                panel.Line(definition.description, 18);
-                ScreenKit.Heading(panel, $"Level {building.Level} of {definition.maxLevel}");
-                StatLines(panel, building);
-                FunctionActions(panel, building);
-                UpgradeAction(panel, building);
-                if (definition.IsWall)
+                panel.Columns(250f, left =>
                 {
-                    var group = Village.ConnectedWalls(building.Id);
-                    panel.Action("UpgradeGroupButton", $"Upgrade connected walls ({group.Count})", () => Upgrade(building.Id, true));
-                }
-                // Buildings are moved, never removed (ADR-051).
-                panel.Action("MoveButton", "Move", () => BeginMove(building.Id));
+                    // The building as it stands now, on a lit well.
+                    var well = Ui.Rect("BuildingWell", left);
+                    Ui.Anchor(well, new Vector2(0.5f, 1f), new Vector2(240f, 240f), Vector2.zero);
+                    Ui.Framed(well, HudArt.Sprite("well_s18"), false).pixelsPerUnitMultiplier = 1.1f;
+                    var glow = HudArt.Picture(well, "Glow", "glow", new Vector2(0.5f, 0.5f), new Vector2(280f, 240f), Vector2.zero);
+                    glow.color = new Color(1f, 0.85f, 0.5f, 0.55f);
+                    var art = Ui.Rect("BuildingPicture", well);
+                    Ui.Stretch(art, 16f, 16f, 16f, 16f);
+                    var picture = art.gameObject.AddComponent<Image>();
+                    picture.sprite = BuildingSprites.For(definition.id, building.Level);
+                    picture.preserveAspect = true;
+                    picture.raycastTarget = false;
+                    var words = Ui.Label(left, definition.description, 17, TextAnchor.UpperCenter, HudArt.IvoryMuted);
+                    words.name = "BuildingAbout";
+                    words.rectTransform.anchorMin = new Vector2(0f, 0f);
+                    words.rectTransform.anchorMax = new Vector2(1f, 1f);
+                    words.rectTransform.offsetMin = new Vector2(4f, 0f);
+                    words.rectTransform.offsetMax = new Vector2(-4f, -252f);
+                    words.verticalOverflow = VerticalWrapMode.Truncate;
+                    words.resizeTextForBestFit = true;
+                    words.resizeTextMinSize = 12;
+                    words.resizeTextMaxSize = 17;
+                }, () =>
+                {
+                    StatLines(panel, building);
+                    FunctionActions(panel, building);
+                    UpgradeAction(panel, building);
+                    if (definition.IsWall)
+                    {
+                        var group = Village.ConnectedWalls(building.Id);
+                        panel.Action("UpgradeGroupButton", $"Upgrade connected walls ({group.Count})", () => Upgrade(building.Id, true));
+                    }
+                    // Buildings are moved, never removed (ADR-051).
+                    panel.Action("MoveButton", "Move", () => BeginMove(building.Id));
+                });
             });
         }
 
@@ -657,40 +682,30 @@ namespace ShinobiDominion.Game
             return true;
         }
 
-        private static readonly Vector2 CatalogWindow = new Vector2(1180f, 510f);
+        private static readonly Vector2 CatalogWindow = new Vector2(1180f, 530f);
         // Five cards (the most any tab has) fit one row of the window: 5 x 204 + 4 x 14 = 1076 of the 1092 inside.
         private static readonly Vector2 CatalogCardSize = new Vector2(204f, 318f);
 
         /// <summary>The build catalog as a framed window over the village (docs/ui/CATALOG_SPEC.md).</summary>
         private void ShowCatalog()
         {
+            var tabs = new List<WindowTab>
+            {
+                CatalogTab(BuildingCategory.Structures, "Structures"),
+                CatalogTab(BuildingCategory.Defense, "Defense"),
+                CatalogTab(BuildingCategory.Resources, "Resources"),
+                CatalogTab(BuildingCategory.HeroBases, "Hero Base"),
+                CatalogTab(BuildingCategory.Walls, "Walls"),
+                CatalogTab(BuildingCategory.Traps, "Traps")
+            };
             _panel.ShowWindow("Build", CatalogWindow, CloseAll, content =>
             {
-                var tabs = Ui.Rect("Tabs", content);
-                tabs.anchorMin = new Vector2(0f, 1f);
-                tabs.anchorMax = new Vector2(1f, 1f);
-                tabs.pivot = new Vector2(0.5f, 1f);
-                tabs.sizeDelta = new Vector2(0f, 58f);
-                tabs.anchoredPosition = Vector2.zero;
-                var row = tabs.gameObject.AddComponent<HorizontalLayoutGroup>();
-                row.spacing = 10f;
-                row.childControlWidth = true;
-                row.childControlHeight = true;
-                row.childForceExpandWidth = true;
-                row.childForceExpandHeight = true;
-                AddTab(tabs, BuildingCategory.Structures, "Structures", "build");
-                AddTab(tabs, BuildingCategory.Defense, "Defense", "train");
-                AddTab(tabs, BuildingCategory.Resources, "Resources", "gold");
-                AddTab(tabs, BuildingCategory.HeroBases, "Hero Base", "hero");
-                AddTab(tabs, BuildingCategory.Walls, "Walls", "walls");
-                AddTab(tabs, BuildingCategory.Traps, "Traps", "attack");
-
                 // Unique essentials such as the Dojo always exist, so they would only be noise here.
                 var cards = Ui.Rect("Cards", content);
                 cards.anchorMin = new Vector2(0f, 0f);
                 cards.anchorMax = new Vector2(1f, 1f);
                 cards.offsetMin = new Vector2(0f, 0f);
-                cards.offsetMax = new Vector2(0f, -74f);
+                cards.offsetMax = new Vector2(0f, -8f);
                 var grid = cards.gameObject.AddComponent<GridLayoutGroup>();
                 grid.cellSize = CatalogCardSize;
                 grid.spacing = new Vector2(14f, 14f);
@@ -706,23 +721,15 @@ namespace ShinobiDominion.Game
                     var undo = Medal.Create(content, "CatalogUndoButton", MedalKind.IconOnly, "back", "Undo", UndoFromCatalog, true, 56f);
                     Ui.Anchor((RectTransform)undo.transform, new Vector2(1f, 0f), new Vector2(56f, 56f), new Vector2(-6f, 30f));
                 }
-            });
+            }, tabs);
         }
 
-        private void AddTab(RectTransform row, BuildingCategory category, string caption, string icon)
-        {
-            var selected = category == _catalogCategory;
-            var tab = Ui.Button(row, "Tab" + category, caption, () =>
+        private WindowTab CatalogTab(BuildingCategory category, string caption) =>
+            new WindowTab("Tab" + category, caption, category == _catalogCategory, () =>
             {
                 _catalogCategory = category;
                 ShowCatalog();
-            }, true, selected ? Ui.AccentColor : Ui.ButtonColor, 18);
-            var label = tab.GetComponentInChildren<Text>();
-            label.horizontalOverflow = HorizontalWrapMode.Overflow;
-            Ui.Stretch(label.rectTransform, 46f, 7f, 10f, 3f);
-            label.alignment = TextAnchor.MiddleLeft;
-            HudArt.Picture(tab.transform, "Icon", "icon_" + icon, new Vector2(0f, 0.5f), new Vector2(30f, 30f), new Vector2(12f, 2f));
-        }
+            });
 
         /// <summary>A catalog card: name, the real building on a soft glow, footprint and count chips, and the price.</summary>
         private Button CatalogCard(RectTransform grid, BuildingDefinition definition)
