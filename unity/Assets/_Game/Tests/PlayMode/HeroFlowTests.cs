@@ -48,6 +48,16 @@ namespace ShinobiDominion.Tests
 
         private static void Click(Button button) => button.onClick.Invoke();
 
+        [Test]
+        public void Altar_ColumnCount_AdaptsToWindowWidth()
+        {
+            Assert.AreEqual(5, SdKit.RosterColumns(972f), "Reference-width Altar keeps five busts");
+            Assert.AreEqual(4, SdKit.RosterColumns(780f), "Tablet width uses four busts");
+            Assert.AreEqual(3, SdKit.RosterColumns(600f), "Narrow window uses three busts");
+            Assert.AreEqual(2, SdKit.RosterColumns(430f), "Very narrow window uses two busts");
+            Assert.AreEqual(1, SdKit.RosterColumns(300f), "Tiny windows avoid overlapping busts");
+        }
+
         [UnityTest]
         public IEnumerator Altar_ListsEveryOwnedHero_ThroughTheBuilding()
         {
@@ -182,6 +192,22 @@ namespace ShinobiDominion.Tests
             Controller.ShowHeroDetail(mainId);
             yield return null;
             Assert.AreEqual(1, Object.FindObjectsByType<Image>(FindObjectsSortMode.None).Count(i => i.name == "EvolutionStar"));
+
+            // Returning to the Altar must retain the same hero painting and earned
+            // evolution star, rather than falling back to a block/mesh illustration.
+            Controller.ShowAltarRoster();
+            yield return null;
+            var evolvedCard = Find("Hero_" + mainId);
+            Assert.IsNotNull(evolvedCard);
+            var concept = evolvedCard.GetComponentsInChildren<Image>()
+                .FirstOrDefault(i => i.name == "HeroConcept");
+            Assert.IsNotNull(concept, "Evolved roster cards should retain their hero illustration");
+            var form = HeroConcepts.AvailableForm("solar_beast_sage", 1);
+            Assert.AreSame(HeroConcepts.Card("solar_beast_sage", form), concept.sprite,
+                "Roster art should match the available evolution form");
+            Assert.AreEqual(1, evolvedCard.GetComponentsInChildren<Image>()
+                .Count(i => i.name == "EvolutionStar"),
+                "The roster card should display exactly one earned cyan star");
         }
 
         [UnityTest]

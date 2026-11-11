@@ -74,6 +74,16 @@ namespace ShinobiDominion.Game
     /// </summary>
     public static class SdKit
     {
+        /// <summary>
+        /// Keep Altar busts at a readable width on phones/tablets rather than
+        /// squeezing five fixed columns into every window aspect ratio.
+        /// Five columns remain the desktop/reference layout.
+        /// </summary>
+        public static int RosterColumns(float availableWidth)
+        {
+            return Mathf.Clamp(Mathf.FloorToInt(availableWidth / 176f), 1, 5);
+        }
+
         private static Image Sliced(RectTransform rect, string sprite, bool blocksPointer = false)
         {
             var image = Ui.Framed(rect, HudArt.Sprite(sprite), blocksPointer);
