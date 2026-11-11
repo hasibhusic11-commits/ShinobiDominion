@@ -43,9 +43,9 @@ namespace ShinobiDominion.Game
         {
             var team = Village.Buildings.Count(b => b.AssignedHeroInstanceId != null);
             var dungeonStars = RaidData.All.Sum(r => BestStarsOn(r.id));
-            _panel.ShowScreen("Battle", team == 0 ? "Put a hero on your Hero Base to fight" : "Your hero leads every battle", CloseAll, panel =>
+            _panel.ShowStage("Battle", null, null, null, false, 0f, CloseAll, panel =>
             {
-                if (!string.IsNullOrEmpty(LastMessage)) panel.Line(LastMessage, 20, Ui.AccentColor);
+                ScreenKit.Notice(panel, LastMessage);
                 if (!IsOnline) panel.Line(AllowOfflinePlay ? "Practice battles only: not connected, so nothing pays." : "Battles need the server.", 20, Ui.AccentColor);
                 if (IsOnline && _raidList == null)
                 {
@@ -61,10 +61,9 @@ namespace ShinobiDominion.Game
                     new ModeTile { Button = "OpenArenaButton", Title = "Arena", Blurb = "Hero against hero", Go = "Enter", Picture = "arena_10", Light = new Color(1f, 0.85f, 0.45f), Open = ModesOnline && team > 0, Action = OpenArena },
                     new ModeTile { Button = "OpenTrialsButton", Title = "Trial Tower", Blurb = "Climb past the guardians", Go = "Climb", Picture = "spirit_turret_10", Light = new Color(0.75f, 0.55f, 1f), Open = ModesOnline && team > 0, Action = OpenTrials }
                 };
-                var block = panel.Block(572f);
+                var block = panel.Block(536f);
                 for (var i = 0; i < tiles.Length; i++) DrawModeTile(block, tiles[i], i, tiles.Length);
-                if (team == 0) ScreenKit.Notice(panel, "Raids, the Arena and the Trial Tower need a hero on your Hero Base.");
-            });
+            }, team == 0 ? "Raids, the Arena and the Trial Tower need a hero on your Hero Base." : "Your hero leads every battle.");
         }
 
         /// <summary>
@@ -719,26 +718,33 @@ namespace ShinobiDominion.Game
         private void ShowMail()
         {
             var log = _defenseLog;
-            _panel.ShowScreen("Mail", log == null ? "" : $"{log.Count} reports", CloseAll, panel =>
+            _panel.ShowStage("Mail", log == null ? "" : $"{log.Count} reports", "icon_mail", "scene_lantern", false, 230f, CloseAll, panel =>
             {
-                if (!string.IsNullOrEmpty(LastMessage)) panel.Line(LastMessage, 20, Ui.AccentColor);
+                ScreenKit.Notice(panel, LastMessage);
                 var shieldLeft = System.DateTimeOffset.FromUnixTimeMilliseconds(_shieldUntilMs) - System.DateTimeOffset.UtcNow;
                 if (_shieldUntilMs > 0 && shieldLeft > System.TimeSpan.Zero)
-                    panel.Line($"Shield: no one can attack you for {(int)shieldLeft.TotalHours}h {shieldLeft.Minutes}m. Attacking someone ends it.", 20, Ui.AccentColor);
+                    ScreenKit.AddRow(panel, "ShieldRow", "icon_shield", $"Shield: {(int)shieldLeft.TotalHours}h {shieldLeft.Minutes}m", "No one can attack you. Attacking someone ends it.", true, 72f);
                 if (log == null) return;
                 if (log.Count == 0) panel.Line("No one has raided your village yet.", 21);
                 foreach (var record in log)
                 {
                     var when = System.DateTimeOffset.FromUnixTimeMilliseconds(record.atMs).LocalDateTime;
                     var who = string.IsNullOrEmpty(record.attackerName) ? "A raider" : record.attackerName;
-                    var verdict = record.stars == 0 ? "Your village held!" : $"{who} took {record.stars} of 3 stars.";
-                    var lost = record.goldLost + record.manaLost > 0 ? $" You lost {record.goldLost:N0} gold and {record.manaLost:N0} Mana." : " Nothing was lost.";
-                    panel.Line($"{when:MMM d, HH:mm}   {verdict}   {record.damagePercent}% damage, {record.defendersAlive} of {record.defendersTotal} guards standing.{lost}", 19, record.stars == 0 ? Ui.AccentColor : (Color?)null);
+                    var held = record.stars == 0;
+                    var row = ScreenKit.AddRow(panel, "MailRow_" + record.attackId, held ? "icon_shield" : "icon_battle",
+                        held ? $"Your village held against {who}" : $"{who} took {record.stars} of 3 stars",
+                        $"{when:MMM d, HH:mm}     {record.damagePercent}% damage     {record.defendersAlive} of {record.defendersTotal} guards standing");
+                    // A raider's name is something a player typed: shown as written, never obeyed.
+                    row.Title.supportRichText = false;
                     if (record.canRevenge)
                     {
                         var attackId = record.attackId;
-                        panel.Action("Revenge_" + attackId, $"Revenge on {who}", () => Revenge(attackId), true, Ui.AttackColor, 19);
+                        row.Button("Revenge_" + attackId, "Revenge", () => Revenge(attackId), true, Ui.AttackColor, 150f);
                     }
+                    // What was taken, as tiles; nothing when nothing was lost.
+                    if (record.manaLost > 0) row.Reward("icon_chakra", "-" + record.manaLost.ToString("N0"));
+                    if (record.goldLost > 0) row.Reward("icon_gold", "-" + record.goldLost.ToString("N0"));
+                    if (record.goldLost + record.manaLost == 0) row.Note("Nothing lost");
                 }
             });
         }

@@ -899,26 +899,31 @@ namespace ShinobiDominion.Game
             Ui.Background(_card, new Color(0.035f, 0.045f, 0.09f, 1f));
 
             // The scenery fills its side from top to bottom, cropped to fit and never squashed.
-            var art = Ui.Rect("Scenery", _card);
-            art.anchorMin = new Vector2(sceneOnRight ? 1f : 0f, 0f);
-            art.anchorMax = new Vector2(sceneOnRight ? 1f : 0f, 1f);
-            art.pivot = new Vector2(sceneOnRight ? 1f : 0f, 0.5f);
-            art.sizeDelta = new Vector2(sceneWidth, 0f);
-            art.gameObject.AddComponent<RectMask2D>();
-            var picture = Ui.Rect("Picture", art);
-            var sprite = HudArt.Sprite(scene);
-            var image = picture.gameObject.AddComponent<Image>();
-            image.sprite = sprite;
-            image.raycastTarget = false;
-            picture.anchorMin = picture.anchorMax = picture.pivot = new Vector2(sceneOnRight ? 1f : 0f, 1f);
-            var shape = sprite.rect.width / sprite.rect.height;
-            // Tall enough to cover the side at the 16:9 the canvas is laid out for, and at anything taller.
-            var tall = Mathf.Max(760f, sceneWidth / shape);
-            picture.sizeDelta = new Vector2(tall * shape, tall);
+            var scenic = !string.IsNullOrEmpty(scene);
+            if (scenic)
+            {
+                var art = Ui.Rect("Scenery", _card);
+                art.anchorMin = new Vector2(sceneOnRight ? 1f : 0f, 0f);
+                art.anchorMax = new Vector2(sceneOnRight ? 1f : 0f, 1f);
+                art.pivot = new Vector2(sceneOnRight ? 1f : 0f, 0.5f);
+                art.sizeDelta = new Vector2(sceneWidth, 0f);
+                art.gameObject.AddComponent<RectMask2D>();
+                var picture = Ui.Rect("Picture", art);
+                var sprite = HudArt.Sprite(scene);
+                var image = picture.gameObject.AddComponent<Image>();
+                image.sprite = sprite;
+                image.raycastTarget = false;
+                picture.anchorMin = picture.anchorMax = picture.pivot = new Vector2(sceneOnRight ? 1f : 0f, 1f);
+                var shape = sprite.rect.width / sprite.rect.height;
+                // Tall enough to cover the side at the 16:9 the canvas is laid out for, and at anything taller.
+                var tall = Mathf.Max(760f, sceneWidth / shape);
+                picture.sizeDelta = new Vector2(tall * shape, tall);
+            }
 
             var overlap = 34f;
-            var left = sceneOnRight ? 14f : sceneWidth - overlap;
-            var right = sceneOnRight ? sceneWidth - overlap : 14f;
+            // Without scenery the panel spans the screen, leaving room on the left for the Back button.
+            var left = !scenic ? 14f : sceneOnRight ? 14f : sceneWidth - overlap;
+            var right = !scenic ? 14f : sceneOnRight ? sceneWidth - overlap : 14f;
             const float top = 46f;
             const float bottom = 12f;
             var frame = Ui.Rect("Frame", _card);

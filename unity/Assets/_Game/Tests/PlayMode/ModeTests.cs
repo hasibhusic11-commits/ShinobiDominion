@@ -301,6 +301,15 @@ namespace ShinobiDominion.Tests
             Controller.OpenShortcut("gift");
             yield return WaitFor(() => Find("OpenGiftButton") != null);
             yield return shot("49_gift");
+            Controller.OpenShortcut("mail");
+            yield return WaitFor(() => AllText.Contains("No one has raided your village yet.") || _root.GetComponentsInChildren<RectTransform>(false).Any(r => r.name.StartsWith("MailRow_")));
+            yield return shot("52_mail");
+            Controller.OpenShop("mana");
+            yield return WaitFor(() => Find("Shop_mana_flask") != null);
+            yield return shot("53_shop");
+            Controller.OpenChest();
+            yield return WaitFor(() => _root.GetComponentsInChildren<Text>(false).Any(t => t.name == "ChestWords"));
+            yield return shot("54_chest");
             Controller.CloseAll();
 
             var gate = Controller.Village.Buildings.First(b => b.Definition.id == "summoning_gate").Id;

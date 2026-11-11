@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using ShinobiDominion.Core;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace ShinobiDominion.Game
 {
@@ -80,19 +81,21 @@ namespace ShinobiDominion.Game
         private void ShowShop()
         {
             var view = _chest;
-            _panel.ShowScreen("Shop", $"Gems {ServerCrystals ?? 0:N0}", CloseAll, panel =>
+            _panel.ShowStage("Shop", (ServerCrystals ?? 0).ToString("N0"), "icon_crystals", "scene_castle", false, 236f, CloseAll, panel =>
             {
-                if (!string.IsNullOrEmpty(LastMessage)) panel.Line(LastMessage, 20, Ui.AccentColor);
-                panel.Line("Swap gems for gold or Mana. Gems come from quests, dungeons, Village Siege and the daily gift. Gems can't be bought with money.", 19);
+                ScreenKit.Notice(panel, LastMessage);
                 if (view == null) return;
                 foreach (var offer in view.offers)
                 {
                     var id = offer.id;
-                    var what = offer.gold > 0 ? $"{offer.gold:N0} gold" : $"{offer.mana:N0} Mana";
+                    var gold = offer.gold > 0;
                     var enough = (ServerCrystals ?? 0) >= offer.crystals;
-                    panel.Action("Shop_" + id, $"{offer.name}: {what} for {offer.crystals:N0} gems", () => BuyOffer(id), enough, offer.gold > 0 ? new Color(0.95f, 0.75f, 0.25f) : new Color(0.6f, 0.4f, 0.95f), 20);
+                    var row = ScreenKit.AddRow(panel, "ShopRow_" + id, gold ? "icon_gold" : "icon_chakra", gold ? $"{offer.gold:N0} Gold" : $"{offer.mana:N0} Mana", offer.name, enough, 78f);
+                    row.Button("Shop_" + id, "Buy", () => BuyOffer(id), enough, Ui.AccentColor, 150f);
+                    row.Reward("icon_crystals", offer.crystals.ToString("N0"));
+                    if (!enough) row.Dim();
                 }
-            });
+            }, "Gems come from quests, dungeons, Village Siege and the daily gift. They can't be bought with money.");
         }
 
         private void BuyOffer(string offerId)
@@ -125,17 +128,44 @@ namespace ShinobiDominion.Game
         private void ShowChest()
         {
             var view = _chest;
-            _panel.ShowWindow("Treasure Chest", new Vector2(640f, 360f), CloseAll, content =>
+            _panel.ShowWindow("Treasure Chest", new Vector2(760f, 560f), CloseAll, content =>
             {
-                var text = view == null ? (LastMessage ?? "The chest cannot be reached right now.")
-                    : view.Ready ? $"Your chest is full:\n{view.gold:N0} gold and {view.mana:N0} Mana."
-                    : $"The chest refills in {FormatDuration((view.readyAtMs - view.nowMs) * TimeSpan.TicksPerMillisecond)}.\nNext: {view.gold:N0} gold and {view.mana:N0} Mana.";
-                var label = HudArt.Label(content, text, HudArt.Numbers, 24, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.LacquerDeep);
-                Ui.Anchor(label.rectTransform, new Vector2(0.5f, 1f), new Vector2(520f, 150f), new Vector2(0f, -10f));
-                if (view == null || !view.Ready) return;
-                var open = Ui.Button(content, "OpenChestButton", "Open", OpenChestNow, true, Ui.AccentColor, 26);
-                Ui.Anchor((RectTransform)open.transform, new Vector2(0.5f, 0f), new Vector2(220f, 64f), new Vector2(0f, 6f));
-                UiMotion.Pulse(open.transform, 0.06f, 1.1f);
+                var ready = view != null && view.Ready;
+                // The vault stands for the chest, lit from behind when there is something to take.
+                var light = HudArt.Picture(content, "ChestLight", "glow", new Vector2(0.5f, 1f), new Vector2(520f, 320f), new Vector2(0f, 60f));
+                light.color = ready ? new Color(1f, 0.78f, 0.36f, 0.6f) : new Color(0.5f, 0.55f, 0.7f, 0.25f);
+                var art = Ui.Rect("ChestArt", content);
+                Ui.Anchor(art, new Vector2(0.5f, 1f), new Vector2(250f, 216f), new Vector2(0f, 12f));
+                var picture = art.gameObject.AddComponent<Image>();
+                picture.sprite = Resources.Load<Sprite>("Buildings/gold_vault_10");
+                picture.preserveAspect = true;
+                picture.raycastTarget = false;
+                if (ready) UiMotion.Pulse(art, 0.03f, 1.6f);
+                else picture.color = new Color(0.55f, 0.55f, 0.6f);
+
+                var strip = ScreenKit.Parchment(content, new Vector2(0.5f, 1f), new Vector2(660f, 126f), new Vector2(0f, -214f));
+                var words = view == null ? (LastMessage ?? "The chest cannot be reached right now.")
+                    : ready ? "Your chest is full"
+                    : $"The chest refills in {FormatDuration((view.readyAtMs - view.nowMs) * TimeSpan.TicksPerMillisecond)}";
+                var line = HudArt.Label(strip, words, HudArt.Display, 22, TextAnchor.MiddleCenter, ScreenKit.InkBrown, ScreenKit.ParchmentEdge);
+                line.name = "ChestWords";
+                line.fontStyle = FontStyle.BoldAndItalic;
+                line.horizontalOverflow = HorizontalWrapMode.Wrap;
+                if (view == null)
+                {
+                    Ui.Stretch(line.rectTransform, 30f, 12f, 30f, 12f);
+                    return;
+                }
+                line.rectTransform.anchorMin = new Vector2(0f, 0.56f);
+                line.rectTransform.anchorMax = Vector2.one;
+                line.rectTransform.offsetMin = new Vector2(24f, 0f);
+                line.rectTransform.offsetMax = new Vector2(-24f, -8f);
+                GiftAmount(strip, 1f / 6f, "icon_gold", $"{view.gold:N0} Gold");
+                GiftAmount(strip, 0.5f, "icon_chakra", $"{view.mana:N0} Mana");
+                if (!ready) return;
+                var open = Ui.Button(content, "OpenChestButton", "Open", OpenChestNow, true, Ui.AccentColor, 28);
+                Ui.Anchor((RectTransform)open.transform, new Vector2(0.5f, 0f), new Vector2(290f, 66f), new Vector2(0f, 2f));
+                UiMotion.Pulse(open.transform, 0.05f, 1.1f);
             });
         }
 

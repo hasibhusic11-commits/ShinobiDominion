@@ -39,9 +39,9 @@ namespace ShinobiDominion.Game
             var stars = RaidData.All.Sum(r => BestStarsOn(r.id));
             var selected = RaidData.Find(_selectedStage);
             var chapter = RaidData.All.Where(r => r.chapter == _campaignChapter).OrderBy(r => r.stage).ToList();
-            _panel.ShowScreen("Dungeons", $"{stars} of {RaidData.All.Count * 3} stars", ShowRaidList, panel =>
+            _panel.ShowStage("Dungeons", $"{stars} / {RaidData.All.Count * 3} Stars", "icon_star", null, false, 0f, ShowRaidList, panel =>
             {
-                if (!string.IsNullOrEmpty(LastMessage)) panel.Line(LastMessage, 20, Ui.AccentColor);
+                ScreenKit.Notice(panel, LastMessage);
                 var tabs = panel.Row();
                 foreach (var number in RaidData.All.Select(r => r.chapter).Distinct())
                 {
@@ -63,7 +63,13 @@ namespace ShinobiDominion.Game
         private void DrawMap(PanelView panel, List<RaidDefinition> stages, RaidDefinition selected)
         {
             var map = panel.Block(MapHeight);
-            Ui.Background(map, Color.white, false).sprite = CampaignArt.Map(_campaignChapter);
+            // The chapter is a map drawn on parchment: the road in ink, each stage a seal.
+            var sheet = map.gameObject.AddComponent<Image>();
+            sheet.sprite = HudArt.Sprite("parchment_s40");
+            sheet.type = Image.Type.Sliced;
+            sheet.pixelsPerUnitMultiplier = 1.3f;
+            sheet.color = new Color(0.96f, 0.9f, 0.78f);
+            sheet.raycastTarget = false;
 
             for (var i = 0; i + 1 < stages.Count && i + 1 < MapSpots.Length; i++)
                 DrawRoad(map, MapSpots[i], MapSpots[i + 1], StageOpen(stages[i + 1]));
@@ -74,12 +80,20 @@ namespace ShinobiDominion.Game
                 var open = StageOpen(stage);
                 var best = BestStarsOn(stage.id);
                 var color = !open ? new Color(0.25f, 0.25f, 0.28f) : best > 0 ? Ui.AccentColor : UiSkin.Vermilion;
+                // A round seal: grey when locked, gold once any star is won, crimson for the stage still to beat.
+                var seal = !open ? UiSkin.Disc(new Color(0.42f, 0.43f, 0.5f), new Color(0.22f, 0.23f, 0.3f), new Color(0.6f, 0.58f, 0.54f))
+                    : best > 0 ? UiSkin.Disc(new Color(0.98f, 0.8f, 0.36f), new Color(0.7f, 0.48f, 0.14f), new Color(0.86f, 0.68f, 0.3f))
+                    : UiSkin.Disc(new Color(0.82f, 0.24f, 0.17f), new Color(0.5f, 0.1f, 0.08f), new Color(0.86f, 0.68f, 0.3f));
                 var chosen = stage.id;
                 var node = Ui.Button(map, "StageNode" + stage.stage, stage.stage.ToString(), () =>
                 {
                     _selectedStage = chosen;
                     ShowCampaign();
                 }, true, color, 24);
+                var face = node.GetComponent<Image>();
+                face.sprite = seal;
+                face.type = Image.Type.Simple;
+                face.preserveAspect = true;
                 var rect = (RectTransform)node.transform;
                 var size = stage.id == selected.id ? 84f : 68f;
                 rect.anchorMin = rect.anchorMax = MapSpots[i];
@@ -92,7 +106,7 @@ namespace ShinobiDominion.Game
                     UiMotion.Pulse(rect, 0.07f, 1.2f);
                 }
 
-                var label = Ui.Strong(Ui.Label(map, open ? $"{best}/3" : "Locked", 17, TextAnchor.MiddleCenter));
+                var label = HudArt.Label(map, open ? $"{best} / 3" : "Locked", HudArt.Numbers, 17, TextAnchor.MiddleCenter, ScreenKit.InkBrown, ScreenKit.ParchmentEdge);
                 var labelRect = label.rectTransform;
                 labelRect.anchorMin = labelRect.anchorMax = MapSpots[i];
                 labelRect.pivot = new Vector2(0.5f, 1f);
@@ -113,24 +127,31 @@ namespace ShinobiDominion.Game
                 dash.pivot = new Vector2(0.5f, 0.5f);
                 dash.sizeDelta = new Vector2(11f, 11f);
                 dash.anchoredPosition = Vector2.zero;
-                Ui.Background(dash, open ? new Color(0.98f, 0.86f, 0.55f, 0.95f) : new Color(0.1f, 0.1f, 0.12f, 0.55f), false);
+                Ui.Background(dash, open ? new Color(0.36f, 0.22f, 0.1f, 0.9f) : new Color(0.36f, 0.22f, 0.1f, 0.28f), false).sprite = UiSkin.Disc(Color.white, Color.white, Color.white, 0f);
             }
         }
 
         private void DrawStageCard(PanelView panel, RaidDefinition stage, int team)
         {
             var best = BestStarsOn(stage.id);
-            panel.Line($"Stage {stage.stage}: {stage.displayName}", 25, new Color(1f, 0.9f, 0.66f));
-            panel.Line(stage.description, 19);
+            var open = StageOpen(stage);
+            var can = open && team > 0 && (IsOnline || AllowOfflinePlay);
+            // The chosen stage, as the open row of a list: its number, its name, what it pays and the way in.
+            var row = ScreenKit.AddRow(panel, "StageCard", stage.stage.ToString(), stage.displayName, stage.description, true, 92f);
+            if (can) row.Button("ScoutButton", "Scout", () => ScoutRaid(stage.id), true, Ui.AttackColor);
+            else row.Locked("ScoutButton");
+            if (best == 0 && stage.firstClearCrystals > 0) row.Reward("icon_crystals", stage.firstClearCrystals.ToString("N0"));
+            if (stage.xpPerWin > 0) row.Reward("icon_experience", stage.xpPerWin.ToString("N0"));
+            row.Reward("icon_chakra", stage.manaPerStar.ToString("N0"));
+            row.Reward("icon_gold", stage.goldPerStar.ToString("N0"));
+            row.Stars(best);
             var guards = stage.defenders.Count;
             var towers = stage.buildings.Count(b => b.def == "defense_tower" || b.def == "cannon_tower" || b.def == "spirit_turret");
             var guardText = guards == 0 ? "No hero on guard" : guards == 1 ? "1 enemy hero on guard" : $"{guards} enemy heroes on guard";
-            panel.Line($"Best: {best} of 3 stars.   {guardText}, {towers} tower{(towers == 1 ? "" : "s")}.", 19);
-            panel.Line(RewardText(stage, best), 19, Ui.AccentColor);
-            var open = StageOpen(stage);
-            if (!open) panel.Line("Clear the stage before this one first.", 19, Ui.MutedText);
-            else if (team == 0) panel.Line("Put a hero on your Hero Base first.", 19, Ui.MutedText);
-            panel.Action("ScoutButton", "Scout", () => ScoutRaid(stage.id), open && team > 0 && (IsOnline || AllowOfflinePlay), Ui.AttackColor);
+            var first = best == 0 && !string.IsNullOrEmpty(stage.firstClearItem) ? $"   First win: {ItemName(stage.firstClearItem)}." : "";
+            panel.Line($"{guardText}, {towers} tower{(towers == 1 ? "" : "s")}.   Gold and Mana are paid for each new star, XP on every win.{first}", 17);
+            if (!open) panel.Line("Clear the stage before this one first.", 18, Ui.AccentColor);
+            else if (team == 0) panel.Line("Put a hero on your Hero Base first.", 18, Ui.AccentColor);
         }
 
         private static string RewardText(RaidDefinition stage, int best)

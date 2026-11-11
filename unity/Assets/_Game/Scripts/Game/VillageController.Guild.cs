@@ -110,7 +110,7 @@ namespace ShinobiDominion.Game
             _guildInput = null;
             if (view?.guild == null)
             {
-                _panel.ShowScreen("Guilds", view == null ? "" : $"You: {view.myName}", CloseAll, panel =>
+                _panel.ShowStage("Guilds", view == null ? "" : $"You: {view.myName}", "icon_friends", "scene_lantern", false, 230f, CloseAll, panel =>
                 {
                     ScreenKit.Notice(panel, LastMessage);
                     if (view == null) return;
@@ -132,39 +132,74 @@ namespace ShinobiDominion.Game
                     panel.Line($"Found your own guild for {view.foundingCost:N0} gems:", 21, new Color(1f, 0.9f, 0.66f));
                     var name = TextBox(panel.Row(), "GuildNameInput", "Guild name", 16);
                     var motto = TextBox(panel.Row(), "GuildMottoInput", "Motto (optional)", 60);
-                    panel.Action("FoundGuildButton", "Found guild", () => GuildCall(key => Modes.GuildCreateAsync(key, name.text, motto.text), $"guild-create|{name.text}"), view.crystals >= view.foundingCost, Ui.AccentColor);
+                    ScreenKit.Feature(panel, "FoundGuildButton", "Found guild", () => GuildCall(key => Modes.GuildCreateAsync(key, name.text, motto.text), $"guild-create|{name.text}"), view.crystals >= view.foundingCost, Ui.AccentColor, 320f, 62f);
                 });
                 return;
             }
 
-            _panel.ShowScreen(view.guild.name, $"{view.guild.members}/{GuildView.MaxMembers} members   {view.guild.points:N0} Arena points", CloseAll, panel =>
+            _panel.ShowStage(view.guild.name, $"{view.guild.members}/{GuildView.MaxMembers} members    {view.guild.points:N0} points", "icon_friends", "scene_lantern", false, 230f, CloseAll, panel =>
             {
-                if (!string.IsNullOrEmpty(LastMessage)) panel.Line(LastMessage, 20, Ui.AccentColor);
-                if (!string.IsNullOrEmpty(view.guild.description)) panel.Line($"\"{view.guild.description}\"", 19);
-                panel.Columns(520f, left =>
+                ScreenKit.Notice(panel, LastMessage);
+                panel.Columns(470f, left =>
                 {
-                    var title = Ui.Strong(Ui.Label(left, "Members", 22, TextAnchor.UpperLeft, new Color(1f, 0.9f, 0.66f)));
-                    title.rectTransform.anchorMin = new Vector2(0f, 1f);
-                    title.rectTransform.anchorMax = new Vector2(1f, 1f);
-                    title.rectTransform.pivot = new Vector2(0f, 1f);
-                    title.rectTransform.sizeDelta = new Vector2(0f, 30f);
-                    var y = -34f;
-                    foreach (var member in view.members.Take(14))
+                    // The members, each on its own small plate: the leader first, the player's own row on parchment.
+                    var y = 0f;
+                    foreach (var member in view.members.Take(9))
                     {
-                        var hero = !string.IsNullOrEmpty(member.archetypeId) && Roster.Catalog.TryGet(member.archetypeId, out var archetype) ? $", {archetype.displayName} {member.level}" : "";
-                        var line = Ui.Label(left, $"{(member.role == "leader" ? "Leader  " : "")}{member.name}   {member.points:N0} pts{hero}", 18, TextAnchor.UpperLeft, member.isMe ? Ui.AccentColor : (Color?)null);
-                        line.rectTransform.anchorMin = new Vector2(0f, 1f);
-                        line.rectTransform.anchorMax = new Vector2(1f, 1f);
-                        line.rectTransform.pivot = new Vector2(0f, 1f);
-                        line.rectTransform.sizeDelta = new Vector2(0f, 26f);
-                        line.rectTransform.anchoredPosition = new Vector2(0f, y);
-                        y -= 27f;
+                        var plate = Ui.Rect("Member", left);
+                        plate.anchorMin = new Vector2(0f, 1f);
+                        plate.anchorMax = new Vector2(1f, 1f);
+                        plate.pivot = new Vector2(0.5f, 1f);
+                        plate.sizeDelta = new Vector2(0f, 44f);
+                        plate.anchoredPosition = new Vector2(0f, y);
+                        var image = plate.gameObject.AddComponent<Image>();
+                        image.sprite = HudArt.Sprite(member.isMe ? "parchment_s40" : "plate_s30");
+                        image.type = Image.Type.Sliced;
+                        image.pixelsPerUnitMultiplier = 2f;
+                        image.raycastTarget = false;
+                        var ink = member.isMe ? ScreenKit.InkBrown : HudArt.Ivory;
+                        var edge = member.isMe ? ScreenKit.ParchmentEdge : HudArt.LacquerDeep;
+                        var badge = HudArt.Picture(plate, "Role", member.role == "leader" ? "icon_rank" : "icon_hero", new Vector2(0f, 0.5f), new Vector2(24f, 24f), new Vector2(14f, 0f));
+                        badge.preserveAspect = true;
+                        if (member.isMe) badge.color = ScreenKit.InkBrown;
+                        var hero = !string.IsNullOrEmpty(member.archetypeId) && Roster.Catalog.TryGet(member.archetypeId, out var archetype) ? $"{archetype.displayName} {member.level}" : "";
+                        var who = HudArt.Label(plate, member.name, HudArt.Display, 18, TextAnchor.MiddleLeft, ink, edge);
+                        // A member's name is something a player typed: shown as written, never obeyed.
+                        who.supportRichText = false;
+                        Ui.Stretch(who.rectTransform, 46f, 0f, 250f, 0f);
+                        who.horizontalOverflow = HorizontalWrapMode.Overflow;
+                        who.resizeTextForBestFit = true;
+                        who.resizeTextMinSize = 12;
+                        who.resizeTextMaxSize = 18;
+                        var guard = Ui.Label(plate, hero, 15, TextAnchor.MiddleLeft, member.isMe ? ScreenKit.InkBrownSoft : HudArt.IvoryMuted);
+                        guard.rectTransform.anchorMin = new Vector2(1f, 0f);
+                        guard.rectTransform.anchorMax = Vector2.one;
+                        guard.rectTransform.offsetMin = new Vector2(-244f, 0f);
+                        guard.rectTransform.offsetMax = new Vector2(-88f, 0f);
+                        guard.horizontalOverflow = HorizontalWrapMode.Overflow;
+                        guard.resizeTextForBestFit = true;
+                        guard.resizeTextMinSize = 10;
+                        guard.resizeTextMaxSize = 15;
+                        var points = HudArt.Label(plate, $"{member.points:N0} pts", HudArt.Numbers, 16, TextAnchor.MiddleRight, ink, edge);
+                        points.rectTransform.anchorMin = new Vector2(1f, 0f);
+                        points.rectTransform.anchorMax = Vector2.one;
+                        points.rectTransform.offsetMin = new Vector2(-88f, 0f);
+                        points.rectTransform.offsetMax = new Vector2(-12f, 0f);
+                        y -= 48f;
                     }
-                    if (view.members.Count > 14) Ui.Label(left, $"and {view.members.Count - 14} more", 17, TextAnchor.UpperLeft).rectTransform.anchoredPosition = new Vector2(0f, y);
+                    if (view.members.Count > 9)
+                    {
+                        var more = Ui.Label(left, $"and {view.members.Count - 9} more", 16, TextAnchor.UpperLeft);
+                        more.rectTransform.anchorMin = new Vector2(0f, 1f);
+                        more.rectTransform.anchorMax = new Vector2(1f, 1f);
+                        more.rectTransform.pivot = new Vector2(0f, 1f);
+                        more.rectTransform.sizeDelta = new Vector2(0f, 24f);
+                        more.rectTransform.anchoredPosition = new Vector2(8f, y - 2f);
+                    }
                 }, () =>
                 {
-                    panel.Line("Guild chat", 22, new Color(1f, 0.9f, 0.66f));
-                    if (view.chat.Count == 0) panel.Line("No messages yet. Say hello!", 19);
+                    if (!string.IsNullOrEmpty(view.guild.description)) panel.Line(view.guild.description, 18, HudArt.BrassLight).supportRichText = false;
+                    if (view.chat.Count == 0) panel.Line("No messages yet.", 19);
                     foreach (var line in view.chat.Skip(Math.Max(0, view.chat.Count - 9)))
                         panel.Line($"{line.name}: {line.text}", 18, line.isMe ? Ui.AccentColor : (Color?)null).supportRichText = false;
                     _guildInput = TextBox(panel.Row(), "GuildChatInput", "Write a message", 200);
