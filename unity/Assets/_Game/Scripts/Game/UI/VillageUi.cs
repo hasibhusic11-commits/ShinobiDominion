@@ -449,13 +449,23 @@ namespace ShinobiDominion.Game
             }
         }
 
+        /// <summary>Normalized anchors for notches and rounded corners; safe for zero-sized editor test views.</summary>
+        public static Rect NormalizedSafeArea(Rect safe, int width, int height)
+        {
+            var screenWidth = Mathf.Max(1f, width);
+            var screenHeight = Mathf.Max(1f, height);
+            return Rect.MinMaxRect(
+                Mathf.Clamp01(safe.xMin / screenWidth),
+                Mathf.Clamp01(safe.yMin / screenHeight),
+                Mathf.Clamp01(safe.xMax / screenWidth),
+                Mathf.Clamp01(safe.yMax / screenHeight));
+        }
+
         public void ApplySafeArea()
         {
-            var safe = Screen.safeArea;
-            var width = Mathf.Max(1f, Screen.width);
-            var height = Mathf.Max(1f, Screen.height);
-            Safe.anchorMin = new Vector2(safe.xMin / width, safe.yMin / height);
-            Safe.anchorMax = new Vector2(safe.xMax / width, safe.yMax / height);
+            var normalized = NormalizedSafeArea(Screen.safeArea, Screen.width, Screen.height);
+            Safe.anchorMin = normalized.min;
+            Safe.anchorMax = normalized.max;
             Safe.offsetMin = Vector2.zero;
             Safe.offsetMax = Vector2.zero;
         }
