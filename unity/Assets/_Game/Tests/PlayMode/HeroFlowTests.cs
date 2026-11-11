@@ -92,6 +92,23 @@ namespace ShinobiDominion.Tests
         }
 
         [UnityTest]
+        public IEnumerator Altar_PortraitsShowRealHeroNames()
+        {
+            Controller.Select(First("hero_altar").Id);
+            Controller.ShowAltarRoster();
+            yield return null;
+
+            var hero = Controller.Roster.Heroes.First();
+            var card = Find("Hero_" + hero.InstanceId);
+            Assert.IsNotNull(card);
+            var name = card.GetComponentsInChildren<Text>(false)
+                .FirstOrDefault(t => t.name == "HeroName");
+            Assert.IsNotNull(name, "Every hero bust should have a nameplate");
+            Assert.AreEqual(Controller.Roster.ArchetypeOf(hero).displayName, name.text,
+                "Hero names must come from the live roster, not hardcoded art labels");
+        }
+
+        [UnityTest]
         public IEnumerator Altar_RarityFilter_ShowsOnlyThatRarity()
         {
             Controller.Select(First("hero_altar").Id);
