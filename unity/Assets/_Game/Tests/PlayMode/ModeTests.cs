@@ -273,6 +273,8 @@ namespace ShinobiDominion.Tests
             yield return new WaitForSeconds(11f);
             yield return shot("42_siege_battle");
             Controller.SkipBattle();
+            // The earned stars land one after another; the picture is taken once the last has landed.
+            yield return new WaitForSecondsRealtime(1.6f);
             yield return shot("43_siege_result");
             Controller.FinishModeFight();
 
@@ -285,6 +287,8 @@ namespace ShinobiDominion.Tests
             yield return new WaitForSeconds(4f);
             yield return shot("45_arena_battle");
             Controller.SkipBattle();
+            // The earned stars land one after another; the picture is taken once the last has landed.
+            yield return new WaitForSecondsRealtime(1.6f);
             yield return shot("46_arena_result");
             Controller.FinishModeFight();
 

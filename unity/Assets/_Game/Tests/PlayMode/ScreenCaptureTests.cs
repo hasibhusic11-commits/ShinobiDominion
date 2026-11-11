@@ -165,6 +165,8 @@ namespace ShinobiDominion.Tests
             yield return new WaitForSeconds(6.6f);
             yield return shot("23_raid_battle_later");
             if (controller.CurrentRaidPhase == RaidPhase.Battle) controller.SkipBattle();
+            // The earned stars land one after another; the picture is taken once the last has landed.
+            yield return new WaitForSecondsRealtime(1.6f);
             yield return shot("24_raid_result");
             controller.FinishRaid();
             yield return null;
