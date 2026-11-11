@@ -39,6 +39,16 @@ jobs:
         with:
           go-version-file: backend/nakama/go.mod
           cache-dependency-path: backend/nakama/go.sum
+      - name: Stage embedded backend assets
+        shell: bash
+        run: |
+          mkdir -p backend/nakama/migrations backend/nakama/testdata
+          cp backend/migrations/*.sql backend/nakama/migrations/
+          for name in heroes buildings raids troops spells modes; do
+            cp "unity/Assets/_Game/Resources/Config/${name}.json" "backend/nakama/config/${name}.json"
+          done
+          cp unity/Assets/_Game/Tests/EditMode/rules_vectors.json backend/nakama/testdata/
+          cp unity/Assets/_Game/Tests/EditMode/battle_vectors.json backend/nakama/testdata/
       - name: Go vet
         working-directory: backend/nakama
         run: go vet ./...
