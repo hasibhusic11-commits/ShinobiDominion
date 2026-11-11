@@ -39,25 +39,24 @@ namespace ShinobiDominion.Game
             var stars = RaidData.All.Sum(r => BestStarsOn(r.id));
             var selected = RaidData.Find(_selectedStage);
             var chapter = RaidData.All.Where(r => r.chapter == _campaignChapter).OrderBy(r => r.stage).ToList();
+            var chapters = new List<WindowTab>();
+            foreach (var number in RaidData.All.Select(r => r.chapter).Distinct())
+            {
+                var name = RaidData.All.First(r => r.chapter == number).chapterName;
+                var chosen = number;
+                chapters.Add(new WindowTab("ChapterTab" + number, name, number == _campaignChapter, () =>
+                {
+                    _campaignChapter = chosen;
+                    _selectedStage = RaidData.All.First(r => r.chapter == chosen).id;
+                    ShowCampaign();
+                }, $"Chapter {number}"));
+            }
             _panel.ShowStage("Dungeons", $"{stars} / {RaidData.All.Count * 3} Stars", "icon_star", null, false, 0f, ShowRaidList, panel =>
             {
                 ScreenKit.Notice(panel, LastMessage);
-                var tabs = panel.Row();
-                foreach (var number in RaidData.All.Select(r => r.chapter).Distinct())
-                {
-                    var name = RaidData.All.First(r => r.chapter == number).chapterName;
-                    var chosen = number;
-                    Ui.Button(tabs, "ChapterTab" + number, $"{number}. {name}", () =>
-                    {
-                        _campaignChapter = chosen;
-                        _selectedStage = RaidData.All.First(r => r.chapter == chosen).id;
-                        ShowCampaign();
-                    }, true, number == _campaignChapter ? Ui.AccentColor : (Color?)null, 19);
-                }
-
                 DrawMap(panel, chapter, selected);
                 DrawStageCard(panel, selected, team);
-            });
+            }, null, chapters);
         }
 
         private void DrawMap(PanelView panel, List<RaidDefinition> stages, RaidDefinition selected)

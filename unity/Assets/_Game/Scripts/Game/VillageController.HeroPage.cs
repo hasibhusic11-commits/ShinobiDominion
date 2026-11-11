@@ -48,7 +48,6 @@ namespace ShinobiDominion.Game
 
             var archetype = Roster.ArchetypeOf(hero);
             var note = _masteryNote;
-            if (_heroTab == HeroTab.Mastery) _masteryNote = null;
             var tabs = new List<WindowTab>
             {
                 new WindowTab("HeroTab", "Hero", _heroTab == HeroTab.Hero, () => OpenHeroTab(instanceId, HeroTab.Hero)),
@@ -83,6 +82,8 @@ namespace ShinobiDominion.Game
         private void OpenHeroTab(string instanceId, HeroTab tab)
         {
             _heroTab = tab;
+            // What the last roll or rank-up gave is said until the player looks elsewhere.
+            _masteryNote = null;
             OpenHeroWindow(instanceId);
         }
 

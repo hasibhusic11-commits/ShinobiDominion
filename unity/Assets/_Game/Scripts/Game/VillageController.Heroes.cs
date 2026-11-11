@@ -272,13 +272,13 @@ namespace ShinobiDominion.Game
             _selectionCells.Clear();
             _panel.ShowScreen("Choose a Hero", null, ShowContextPanel, panel =>
             {
-                var grid = panel.Grid(HeroCardSize);
+                var grid = panel.Grid(BustCell);
                 foreach (var hero in SortedHeroes(Roster.Heroes))
                 {
                     var here = Village.Find(baseId)?.AssignedHeroInstanceId == hero.InstanceId;
                     var elsewhere = !here && Village.IsHeroAssigned(hero.InstanceId);
                     var tag = here ? "On this base" : elsewhere ? "On another base" : null;
-                    HeroCard(grid, "Pick_" + hero.InstanceId, hero, tag, () => AssignHero(baseId, hero.InstanceId), !here && !elsewhere);
+                    ShelfBust(Ui.Rect("Slot", grid), "Pick_" + hero.InstanceId, hero, () => AssignHero(baseId, hero.InstanceId), !here && !elsewhere, tag);
                 }
             });
         }
@@ -309,6 +309,8 @@ namespace ShinobiDominion.Game
         /// <summary>How many busts stand on one shelf.</summary>
         private const int ShelfColumns = 5;
         private const float ShelfHeight = 214f;
+        /// <summary>One bust and its lip, where busts stand in a grid and not on the Altar's shelves.</summary>
+        private static readonly Vector2 BustCell = new Vector2(186f, 214f);
 
         private static readonly Color PlankTop = new Color(0.47f, 0.31f, 0.17f);
         private static readonly Color PlankFace = new Color(0.33f, 0.21f, 0.12f);
@@ -598,9 +600,9 @@ namespace ShinobiDominion.Game
 
                 // Centred like the requirement rows above and the cards below.
                 panel.Line("Choose the copy to sacrifice:", 22, Ui.TextColor).alignment = TextAnchor.UpperCenter;
-                var grid = panel.Grid(HeroCardSize);
+                var grid = panel.Grid(BustCell);
                 foreach (var duplicate in duplicates)
-                    HeroCard(grid, "Sacrifice_" + duplicate.InstanceId, duplicate, "Sacrifice", () => ShowEvolutionConfirm(instanceId, duplicate.InstanceId), true);
+                    ShelfBust(Ui.Rect("Slot", grid), "Sacrifice_" + duplicate.InstanceId, duplicate, () => ShowEvolutionConfirm(instanceId, duplicate.InstanceId), true, $"Lv {duplicate.Level}");
             });
         }
 

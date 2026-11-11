@@ -29,6 +29,7 @@ namespace ShinobiDominion.Game
             }
             // Opened afresh, the window shows the hero itself; a change made inside it keeps its banner.
             _heroTab = HeroTab.Hero;
+            _masteryNote = null;
             OpenHeroWindow(instanceId);
         }
 
