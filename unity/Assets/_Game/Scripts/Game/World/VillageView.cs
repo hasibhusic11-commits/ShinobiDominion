@@ -279,6 +279,33 @@ namespace ShinobiDominion.Game
         /// <summary>Where the hero stands: on the ring, where it appears.</summary>
         public static readonly Vector3 GuardOffset = PedestalOffset + Vector3.up * PedestalTop;
 
+        // The optional animated prefab roster is not complete yet. Reuse bounded,
+        // generated development meshes for missing characters instead of leaving
+        // an assigned Hero Base visibly empty. This is NOT finished hero artwork.
+        private sealed class FallbackFigure
+        {
+            public Mesh Mesh;
+            public Material[] Materials;
+        }
+
+        private static readonly Dictionary<string, FallbackFigure> FallbackFigures =
+            new Dictionary<string, FallbackFigure>();
+
+        private static FallbackFigure FigureFor(HeroLook look)
+        {
+            if (!FallbackFigures.TryGetValue(look.Key, out var figure))
+            {
+                var builder = BuildingMeshes.Figure(look);
+                figure = new FallbackFigure
+                {
+                    Mesh = builder.Build("HeroBaseFallback"),
+                    Materials = builder.LitMaterials()
+                };
+                FallbackFigures.Add(look.Key, figure);
+            }
+            return figure;
+        }
+
         private sealed class Entry
         {
             public GameObject Go;
@@ -469,6 +496,21 @@ namespace ShinobiDominion.Game
                     // It stands on the platform's ring.
                     HeroGuard.Attach(actor, go.transform, PedestalOffset + Vector3.up * PedestalTop, GuardOffset, look != null ? look.Color : Color.white);
                     hero = actor.GetComponentsInChildren<Renderer>(true);
+                }
+                else if (look != null)
+                {
+                    // Elites and any incomplete hero model still need to appear on the
+                    // pedestal. BattleStage uses this same procedural development fallback.
+                    var placeholder = new GameObject("HeroFallback");
+                    placeholder.transform.SetParent(go.transform, false);
+                    placeholder.transform.localPosition = GuardOffset;
+                    placeholder.transform.localScale = Vector3.one * BaseHeroScale3D;
+                    var figure = FigureFor(look);
+                    placeholder.AddComponent<MeshFilter>().sharedMesh = figure.Mesh;
+                    var renderer = placeholder.AddComponent<MeshRenderer>();
+                    renderer.sharedMaterials = figure.Materials;
+                    renderer.shadowCastingMode = ShadowCastingMode.Off;
+                    hero = new Renderer[] { renderer };
                 }
             }
             return new Entry { Go = go, Signature = signature, Stand = stand, Hero = hero };
