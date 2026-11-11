@@ -49,6 +49,30 @@ namespace ShinobiDominion.Tests
         private static void Click(Button button) => button.onClick.Invoke();
 
         [Test]
+        public void HeroCardCrop_StaysInsideSquareAndWideArt()
+        {
+            foreach (var dimensions in new[] {
+                new Vector2Int(390, 390), new Vector2Int(800, 1400),
+                new Vector2Int(800, 250)
+            })
+            {
+                var crop = HeroConcepts.CardCropRect(dimensions.x, dimensions.y);
+                Assert.GreaterOrEqual(crop.xMin, 0f);
+                Assert.GreaterOrEqual(crop.yMin, 0f);
+                Assert.LessOrEqual(crop.xMax, dimensions.x);
+                Assert.LessOrEqual(crop.yMax, dimensions.y);
+                Assert.Greater(crop.height, 0f);
+            }
+
+            var square = HeroConcepts.CardCropRect(390, 390);
+            Assert.Less(square.yMin, 30f,
+                "Square character cards should retain the top of the portrait");
+            var tall = HeroConcepts.CardCropRect(800, 1400);
+            Assert.AreEqual(800f * HeroConcepts.CardWidthShare, tall.width, 0.01f,
+                "Existing taller Legendary paintings keep their original crop width");
+        }
+
+        [Test]
         public void Altar_ColumnCount_AdaptsToWindowWidth()
         {
             Assert.AreEqual(5, SdKit.RosterColumns(972f), "Reference-width Altar keeps five busts");
