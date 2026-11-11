@@ -106,6 +106,13 @@ namespace ShinobiDominion.Tests
             Assert.IsNotNull(name, "Every hero bust should have a nameplate");
             Assert.AreEqual(Controller.Roster.ArchetypeOf(hero).displayName, name.text,
                 "Hero names must come from the live roster, not hardcoded art labels");
+            var namePlate = (RectTransform)name.transform.parent;
+            var levelPlate = card.GetComponentsInChildren<RectTransform>(false)
+                .FirstOrDefault(t => t.name == "Lip");
+            Assert.IsNotNull(levelPlate);
+            Assert.GreaterOrEqual(namePlate.anchoredPosition.y,
+                levelPlate.anchoredPosition.y + levelPlate.rect.height,
+                "Hero nameplate must not cover the level or guard/lock indicators");
         }
 
         [UnityTest]
