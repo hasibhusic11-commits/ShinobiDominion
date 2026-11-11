@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -180,6 +181,55 @@ namespace ShinobiDominion.Game
             UiMotion.Pressable(button);
             rect.gameObject.AddComponent<DeniedShake>();
             return button;
+        }
+
+        /// <summary>Reusable tactile section tabs for roster rarity filters and the hero detail pages.
+        /// These use the shared nine-sliced UI art, not runtime-drawn generic rectangles.</summary>
+        public static void Tabs(RectTransform parent, IList<WindowTab> tabs, float leftInset = 0f, float rightInset = 0f)
+        {
+            if (tabs == null || tabs.Count == 0) return;
+            var strip = Ui.Rect("SectionTabs", parent);
+            strip.anchorMin = new Vector2(0f, 1f);
+            strip.anchorMax = new Vector2(1f, 1f);
+            strip.pivot = new Vector2(0.5f, 1f);
+            strip.offsetMin = new Vector2(leftInset, -52f);
+            strip.offsetMax = new Vector2(-rightInset, 0f);
+            for (var i = 0; i < tabs.Count; i++)
+            {
+                var tab = tabs[i];
+                var caption = string.IsNullOrEmpty(tab.Count) ? tab.Caption : tab.Caption + "  " + tab.Count;
+                var button = Button(strip, tab.Name, caption,
+                    tab.Active ? SdButtonKind.Gold : SdButtonKind.Navy, tab.OnClick, true);
+                var rect = (RectTransform)button.transform;
+                rect.anchorMin = new Vector2(i / (float)tabs.Count, 0f);
+                rect.anchorMax = new Vector2((i + 1f) / tabs.Count, 1f);
+                rect.offsetMin = new Vector2(i == 0 ? 0f : 5f, 0f);
+                rect.offsetMax = new Vector2(i == tabs.Count - 1 ? 0f : -5f, 0f);
+            }
+        }
+
+        /// <summary>One blue star for each earned evolution; no Roman-numeral emblems or empty slots.</summary>
+        public static void EvolutionStars(RectTransform parent, int evolutionCount, Vector2 anchor,
+            Vector2 offset, float size = 24f)
+        {
+            var count = Mathf.Clamp(evolutionCount, 0, 3);
+            if (count == 0) return;
+            var spacing = size + 3f;
+            var strip = Ui.Rect("EvolutionStars", parent);
+            Ui.Anchor(strip, anchor, new Vector2(count * spacing + 10f, size + 14f), offset);
+            for (var i = 0; i < count; i++)
+            {
+                var x = (i - (count - 1) * 0.5f) * spacing;
+                var glow = Ui.Icon(strip, HeroArt.Glow, new Vector2(0.5f, 0.5f),
+                    new Vector2(size + 15f, size + 15f), new Vector2(x, 0f));
+                glow.color = new Color(0.21f, 0.72f, 1f, 0.42f);
+                glow.raycastTarget = false;
+                var star = Ui.Icon(strip, HeroArt.Star, new Vector2(0.5f, 0.5f),
+                    new Vector2(size, size), new Vector2(x, 0f));
+                star.name = "EvolutionStar";
+                star.color = new Color(0.55f, 0.93f, 1f, 1f);
+                star.raycastTarget = false;
+            }
         }
 
         /// <summary>A small crimson pill carrying one live fact (stars, a floor, a count), with an optional icon.</summary>
