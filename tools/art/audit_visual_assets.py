@@ -116,6 +116,13 @@ def main(argv=None):
           f"Legendary evo paintings: {len(result['missing_legendary_evolution_paintings'])}; " +
           f"wall sprites: {len(result['missing_wall_sprites'])}; " +
           f"building types with incomplete tiers: {len(result['missing_building_tiers'])}")
+    if result["missing_hero_portraits"]:
+        print("Missing hero portrait IDs: " + ", ".join(result["missing_hero_portraits"]))
+    if result["eligible_for_3d_model_bake"]:
+        print("Baking candidates: " + ", ".join(result["eligible_for_3d_model_bake"]))
+    if result["missing_legendary_evolution_paintings"]:
+        print("Missing Legendary evo paintings: " +
+              ", ".join(result["missing_legendary_evolution_paintings"]))
     if args.strict and not result["complete"]:
         print("ART AUDIT FAILED: some original assets are missing.", file=sys.stderr)
         return 1
