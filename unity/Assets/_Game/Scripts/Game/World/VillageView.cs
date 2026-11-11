@@ -177,7 +177,10 @@ namespace ShinobiDominion.Game
                 var east = (mask & Village.WallEast) != 0;
                 if (east) Piece($"wall_seg_x_{art:00}", art, post, BuildingSprites.Order(center + new Vector3(0.5f, 0f, 0f)));
                 if (north) Piece($"wall_seg_z_{art:00}", art, post, BuildingSprites.Order(center + new Vector3(0f, 0f, 0.5f)));
-                if (mask == 0) Piece($"wall_post_v2_{art:00}", art, post, BuildingSprites.Order(center) + 1);
+                // Every wall cell is a structural post, including ends, corners and
+                // intersections. Previously posts were omitted whenever a connection
+                // existed, leaving gaps at turns and at the ends of a continuous wall.
+                Piece($"wall_post_v2_{art:00}", art, post, BuildingSprites.Order(center) + 1);
             }
 
             for (var i = _used; i < _pieces.Count; i++) _pieces[i].gameObject.SetActive(false);
