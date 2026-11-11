@@ -190,9 +190,22 @@ namespace ShinobiDominion.Game
         /// </summary>
         private void Piece(string name, int art, Vector3 foot, int order)
         {
+            // An incomplete upgrade art pack must not make a real wall invisible.
+            // Keep the same direction/type and use the closest available lower tier.
             var sprite = BuildingSprites.Load(name);
-            if (sprite == null) return;
-            var step = BuildingSprites.MetaPixels($"wall_seg_x_{art:00}");
+            var picturedTier = art;
+            if (sprite == null)
+            {
+                var suffix = name.LastIndexOf('_');
+                var prefix = suffix >= 0 ? name.Substring(0, suffix + 1) : name + "_";
+                for (var tier = art - 1; tier >= 1 && sprite == null; tier--)
+                {
+                    sprite = BuildingSprites.Load(prefix + tier.ToString("00"));
+                    if (sprite != null) picturedTier = tier;
+                }
+            }
+            if (sprite == null) return; // Requires missing source art; never fabricate a wall.
+            var step = BuildingSprites.MetaPixels($"wall_seg_x_{picturedTier:00}");
             if (step <= 0f) step = 184f;
             var screenWidth = sprite.rect.width / step * 0.70710678f;
             if (_used < _pieces.Count)
