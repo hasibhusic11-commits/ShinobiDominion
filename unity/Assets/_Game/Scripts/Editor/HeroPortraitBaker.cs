@@ -108,7 +108,12 @@ namespace ShinobiDominion.Editor
                     if (importer != null)
                     {
                         importer.textureType = TextureImporterType.Default;
+                        // HeroConcepts.Card/Full create sprites from pixel sub-rects.
+                        // Read/write must be on for those runtime Sprite.Create calls.
+                        importer.isReadable = true;
                         importer.alphaIsTransparency = true;
+                        importer.alphaSource = TextureImporterAlphaSource.FromInput;
+                        importer.textureCompression = TextureImporterCompression.Uncompressed;
                         importer.maxTextureSize = 1024;
                         importer.mipmapEnabled = false;
                         importer.SaveAndReimport();
@@ -123,10 +128,13 @@ namespace ShinobiDominion.Editor
             }
 
             AssetDatabase.Refresh();
+            AssetDatabase.SaveAssets();
             Debug.Log($"Hero portrait bake complete: {created} rendered, {skipped} skipped, {missing} missing/failed. " +
                       "Open the Heroes Altar and inspect the results before approving the art.");
         }
 
+        // Also supports: Unity -batchmode -projectPath unity -executeMethod
+        // ShinobiDominion.Editor.HeroPortraitBaker.BakeMissing
         private static byte[] Capture(GameObject prefab)
         {
             GameObject subject = null;
@@ -164,6 +172,7 @@ namespace ShinobiDominion.Editor
                 camera.orthographic = true;
                 camera.allowHDR = false;
                 camera.allowMSAA = true;
+                camera.useOcclusionCulling = false;
                 camera.nearClipPlane = 0.01f;
                 camera.farClipPlane = 200f;
 
