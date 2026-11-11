@@ -290,7 +290,10 @@ func decodeStrict(payload string, target interface{}) error {
 	if err := decoder.Decode(target); err != nil {
 		return errBadRequest
 	}
-	if decoder.More() {
+	// More() only checks whether the current JSON array/object has additional elements.
+	// At top level it can miss a second JSON value after the first request object.
+	var trailing interface{}
+	if err := decoder.Decode(&trailing); !errors.Is(err, io.EOF) {
 		return errBadRequest
 	}
 	return nil
