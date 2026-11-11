@@ -305,8 +305,7 @@ namespace ShinobiDominion.Game
             .ThenBy(h => Roster.ArchetypeOf(h).displayName)
             .ThenByDescending(h => HeroMath.Cumulative(h.EvolutionIndex, h.Level));
 
-        /// <summary>How many busts stand on one shelf.</summary>
-        private const int ShelfColumns = 5;
+        /// <summary>The reference shelf holds five busts, reduced automatically for narrower screens.</summary>
         private const float ShelfHeight = 214f;
         /// <summary>One bust and its lip, where busts stand in a grid and not on the Altar's shelves.</summary>
         private static readonly Vector2 BustCell = new Vector2(186f, 214f);
@@ -339,9 +338,11 @@ namespace ShinobiDominion.Game
                 var shelves = Ui.Rect("Shelves", content);
                 Ui.Stretch(shelves, 0f, 54f, 0f, 62f);
                 var list = PanelView.ScrollIn(shelves);
-                var rows = Mathf.Max(2, Mathf.CeilToInt(shown.Count / (float)ShelfColumns));
+                var width = content.rect.width > 0f ? content.rect.width : 972f;
+                var columns = SdKit.RosterColumns(width);
+                var rows = Mathf.Max(2, Mathf.CeilToInt(shown.Count / (float)columns));
                 list.sizeDelta = new Vector2(0f, rows * ShelfHeight + 6f);
-                var cell = (content.rect.width > 0f ? content.rect.width : 972f) / ShelfColumns;
+                var cell = width / columns;
 
                 // Every shelf is drawn, the bare ones too, so the Altar reads as a cabinet with room left in it.
                 for (var r = 0; r < rows; r++)
@@ -374,13 +375,16 @@ namespace ShinobiDominion.Game
                     slot.anchorMin = slot.anchorMax = new Vector2(0f, 1f);
                     slot.pivot = new Vector2(0f, 1f);
                     slot.sizeDelta = new Vector2(cell, ShelfHeight);
-                    slot.anchoredPosition = new Vector2((i % ShelfColumns) * cell, -(i / ShelfColumns) * ShelfHeight);
+                    slot.anchoredPosition = new Vector2((i % columns) * cell, -(i / columns) * ShelfHeight);
                     ShelfBust(slot, "Hero_" + hero.InstanceId, hero, () => ShowHeroDetail(hero.InstanceId));
                 }
 
-                if (Roster.HeroCount == 0)
+                if (shown.Count == 0)
                 {
-                    var none = HudArt.Label(shelves, "You own no heroes yet. Summon at the Summoning Gate.", HudArt.Numbers, 20, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.LacquerDeep);
+                    var message = Roster.HeroCount == 0
+                        ? "You own no heroes yet. Summon at the Summoning Gate."
+                        : "No heroes match these filters.";
+                    var none = HudArt.Label(shelves, message, HudArt.Numbers, 20, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.LacquerDeep);
                     Ui.Stretch(none.rectTransform, 20f, 0f, 20f, 0f);
                 }
 
