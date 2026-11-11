@@ -102,6 +102,7 @@ The owner handed over the UI art direction with a pack in `docs/ui/overhaul/` (`
 - **Conflict left as it is.** The pack predates ADR-048 and asks to keep one hero. The code keeps up to six; only the wording was corrected.
 - **Two window kits for now.** ADR-057's `OpenFrame` windows and v3's `SdKit.Window` both exist. They should become one kit once the owner approves the v3 look.
 - **Tests.** New: `UiOverhaulTests`. PlayMode: 155 of 155 passed. EditMode: 214 passed, 2 skipped. Both ran against the local server.
+- **Currency order.** The owner pointed out that gems sat between gold and Mana. The home bars now read gold, Mana, gems from left to right, the genre's order and the order in the owner's mockups. This replaces the order in ADR-033's HUD.
 - **Not verified.** A phone, frame time and safe-area notches. The art still needed is listed in `ART_REQUIRED.md`.
 
 ## ADR-057: Classic windows: the Altar's shelves, the hero window, and every list in a window, 2026-11-11

@@ -542,11 +542,11 @@ namespace ShinobiDominion.Game
             var banner = HudArt.Picture(Root, "ClanBanner", "banner_tomoe", new Vector2(1f, 1f), new Vector2(64f, 100f), new Vector2(-Margin - 78f, -2f));
             banner.preserveAspect = true;
 
-            // Currencies: gold, gems and mana, each on the pack's bar with its picture on the left and a "+".
+            // Currencies, left to right: gold, Mana, gems (the genre's order and the owner's mockups; premium on the right).
             var barsRight = -(Margin + 78f + 64f + 22f);
             // Gems are the purple gem (icon_crystals) and Mana the blue swirl (icon_chakra), as the owner reads them (2026-11-09).
-            _mana = Counter(Root, "Mana", "chakra", barsRight, onShop, out _, out _);
-            _crystals = Counter(Root, "Crystals", "crystals", barsRight - (BarWidth + BarGap), onShop, out _, out _);
+            _crystals = Counter(Root, "Crystals", "crystals", barsRight, onShop, out _, out _);
+            _mana = Counter(Root, "Mana", "chakra", barsRight - (BarWidth + BarGap), onShop, out _, out _);
             _gold = Counter(Root, "Gold", "gold", barsRight - 2f * (BarWidth + BarGap), onShop, out _goldFill, out _goldFillImage);
 
             // The left column of round shortcuts (gift, rankings, quests, friends, mail).
