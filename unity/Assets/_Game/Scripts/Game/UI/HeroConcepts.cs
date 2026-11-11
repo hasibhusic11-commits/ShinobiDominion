@@ -24,7 +24,7 @@ namespace ShinobiDominion.Game
             evolution <= 0 ? heroId : heroId + "_evo_" + Mathf.Clamp(evolution, 1, 3);
 
         public static bool HasForm(string heroId, int evolution) =>
-            Resources.Load<Texture2D>("HeroConcepts/" + FormKey(heroId, evolution)) != null;
+            Texture(FormKey(heroId, evolution)) != null;
 
         public static int AvailableForm(string heroId, int evolution) =>
             evolution > 0 && HasForm(heroId, evolution) ? evolution : 0;
