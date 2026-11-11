@@ -48,6 +48,15 @@ namespace ShinobiDominion.Tests
 
         private static void Click(Button button) => button.onClick.Invoke();
 
+        [Test]
+        public void Altar_ColumnCount_AdaptsToWindowWidth()
+        {
+            Assert.AreEqual(5, SdKit.RosterColumns(972f), "Reference-width Altar keeps five busts");
+            Assert.AreEqual(4, SdKit.RosterColumns(780f), "Tablet width uses four busts");
+            Assert.AreEqual(3, SdKit.RosterColumns(600f), "Narrow window uses three busts");
+            Assert.AreEqual(2, SdKit.RosterColumns(430f), "Very narrow window uses two busts");
+        }
+
         [UnityTest]
         public IEnumerator Altar_ListsEveryOwnedHero_ThroughTheBuilding()
         {
