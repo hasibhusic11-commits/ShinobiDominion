@@ -201,7 +201,30 @@ namespace ShinobiDominion.Game
                     if (!string.IsNullOrEmpty(view.guild.description)) panel.Line(view.guild.description, 18, HudArt.BrassLight).supportRichText = false;
                     if (view.chat.Count == 0) panel.Line("No messages yet.", 19);
                     foreach (var line in view.chat.Skip(Math.Max(0, view.chat.Count - 9)))
-                        panel.Line($"{line.name}: {line.text}", 18, line.isMe ? Ui.AccentColor : (Color?)null).supportRichText = false;
+                    {
+                        var row = panel.Row();
+                        var caption = Ui.Label(row, $"{line.name}: {line.text}", 17,
+                            TextAnchor.MiddleLeft, line.isMe ? Ui.AccentColor : Ui.MutedText);
+                        caption.supportRichText = false;
+                        caption.resizeTextForBestFit = true;
+                        caption.resizeTextMinSize = 12;
+                        caption.resizeTextMaxSize = 17;
+                        var captionLayout = caption.gameObject.AddComponent<LayoutElement>();
+                        captionLayout.flexibleWidth = 1f;
+                        captionLayout.minHeight = 42f;
+                        if (!line.isMe && line.id > 0)
+                        {
+                            var messageId = line.id;
+                            var report = SdKit.Button(row, "ReportGuildMessage_" + messageId,
+                                line.reported ? "Reported" : "Report", SdButtonKind.Navy,
+                                () => GuildCall(key => Modes.GuildReportAsync(key, messageId),
+                                    "guild-report|" + messageId), !line.reported);
+                            var reportLayout = report.gameObject.AddComponent<LayoutElement>();
+                            reportLayout.preferredWidth = 102f;
+                            reportLayout.minWidth = 92f;
+                            reportLayout.preferredHeight = 40f;
+                        }
+                    }
                     _guildInput = TextBox(panel.Row(), "GuildChatInput", "Write a message", 200);
                     var input = _guildInput;
                     panel.Action("SendChatButton", "Send", () => GuildCall(key => Modes.GuildChatAsync(key, input.text), $"guild-chat|{input.text}|{DateTime.UtcNow.Ticks}"), true, Ui.AccentColor, 20);
