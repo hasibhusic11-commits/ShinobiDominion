@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using Text = ShinobiDominion.Game.GameText;
 
 namespace ShinobiDominion.Game
 {
@@ -46,12 +47,7 @@ namespace ShinobiDominion.Game
             var text = Ui.Label(parent, content, size, alignment, color);
             text.font = font;
             text.fontStyle = FontStyle.Bold;
-            var edge = text.gameObject.AddComponent<Outline>();
-            edge.effectColor = outline;
-            edge.effectDistance = new Vector2(2.2f, -2.2f);
-            var drop = text.gameObject.AddComponent<Shadow>();
-            drop.effectColor = new Color(0f, 0f, 0f, 0.55f);
-            drop.effectDistance = new Vector2(0f, -2.5f);
+            text.SetEdge(outline, EdgeKind.Heavy);
             return text;
         }
 

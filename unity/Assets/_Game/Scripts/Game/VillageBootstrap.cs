@@ -39,6 +39,8 @@ namespace ShinobiDominion.Game
             // Phones default to 30 frames a second, which makes panning and every animation look choppy.
             QualitySettings.vSyncCount = 0;
             Application.targetFrameRate = 60;
+            // A phone draws the world with a lighter set of the same settings (ADR-054).
+            RenderProfile.Apply();
 
             var config = Resources.Load<TextAsset>("Config/buildings");
             if (config == null)

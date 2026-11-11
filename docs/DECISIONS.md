@@ -16,7 +16,7 @@ Newest Unity 6 LTS on the release API on 2026-11-05, changeset `8f082d2fe476`. T
 Unity's `JsonUtility` needs the engine, which would stop Core tests running outside Unity. `com.unity.nuget.newtonsoft-json` is an official Unity package, and the same library comes from NuGet in the harness.
 
 ## ADR-004: uGUI built from code, with the built-in font
-UI Toolkit needs theme assets and TextMeshPro needs an imported resources folder, and both add setup that has nothing to do with proving the layout. uGUI with the legacy runtime font has no such setup. Replace the font before release, because it will not cover every language.
+UI Toolkit needs theme assets and TextMeshPro needs an imported resources folder, and both add setup that has nothing to do with proving the layout. uGUI with the legacy runtime font has no such setup. Replace the font before release, because it will not cover every language. (Superseded for text by ADR-054: the interface is still uGUI from code, but text is now TextMeshPro with fonts made in code.)
 
 ## ADR-005: Procedural placeholder art and a code-built scene
 The Village scene holds a single `VillageBootstrap` object, and everything else is created at runtime. Buildings are generated meshes in a neutral palette, each with its own silhouette. All of it is honest placeholder art and is replaced in Phase 5.
@@ -87,6 +87,33 @@ Follows the owner's ADR-021. Up to four Troop Camps, gated by Dojo level, and a 
 - If a camp is removed, troops already trained stay, but no more can be trained until there is room.
 - A raid still needs at least one hero. At most 200 troops can land in one raid, to bound the server's work.
 - Troop names and all numbers are test values. Offline practice troops aren't saved.
+
+## ADR-054: Distance-field text, and a first phone performance pass, 2026-11-10
+Scorecard gap 8. It replaces ADR-004's "uGUI with the legacy font": the interface is still uGUI built from code, but its text is no longer the legacy kind.
+
+**Text**
+- Every word on screen is a `GameText`, a TextMeshPro text drawn from a distance field. Edges stay sharp at any size and on any screen. The outline and drop shadow are part of the letter's shader, so a label is one quad per letter where the old `Outline` and `Shadow` components drew ten.
+- `GameText` keeps the names the screens already used (alignment as a `TextAnchor`, best fit, wrap, overflow, `supportRichText`), and files reach it as `Text` through a `using` alias. The screens were not rewritten.
+- `GameFonts` makes the distance-field copy of Cinzel and Rubik in code on first use, from the same font files as before, and keeps a handful of shared materials (plain, thin edge, heavy edge with shadow, per edge colour). There is no baked font asset to keep in step with the font file.
+- Unity's own "TMP Essential Resources" (its shaders, settings and fallback font) are unpacked into `Assets/TextMesh Pro`, without the HDRP shaders and the emoji sprites.
+- `UiMotion.Shine` on a word glows toward the colour and back; the sweeping band is a picture effect and is kept for pictures.
+- The canvas no longer snaps to pixels (`pixelPerfect`): distance-field text does not need it, and snapping rebuilt the canvas whenever anything moved.
+- Damage numbers and the other floating words are distance-field text too, with the same heavy edge, and ignore depth so a number is never hidden behind what it rose from.
+
+**Performance**
+- `FrameMeter` measures a stretch of frames: time per frame, the slowest frame, and managed memory allocated per frame. `PerformanceTests` uses it on the village at rest, the village with upgrade timers and a raid in battle, and fails if any goes back to allocating heavily every frame.
+- What it found on this PC, in the editor, with frames running free: about 1 ms a frame and 0.8 to 0.9 KB allocated a frame in all three, most of it the editor's own. The game's own per-frame code was already light. The one thing it caught was the upgrade timers, which built lists and strings every frame (1.8 KB a frame with two timers); they now allocate nothing and rewrite their words once a second.
+- The editor's 60-a-second limiter itself allocates about 160 KB a frame while it waits, so the tests lift the limit while they measure.
+- Floating numbers are reused when they finish. Forty numbers over four seconds make about ten objects.
+- `RenderProfile` gives a phone a lighter set of the pipeline's settings at start, chosen from its memory and screen: HDR off, 2x anti-aliasing and a 2048 shadow map (1x and 1024 under 3.5 GB of memory), and the world drawn no taller than 1080 (810 on a weak phone) and scaled up. A desktop and the editor are never changed.
+- On Android and iOS every picture is compressed with ASTC by `UiSpriteImporter`: interface art and hero paintings at 4x4, buildings, props, effects and the map at 6x6, buildings capped at 1024. A desktop keeps everything uncompressed. Uncompressed, the building pictures alone are about 160 MB.
+
+**Known gaps**
+- Nothing here has run on a phone. This Unity install has no Android or iOS build support, so the render profile and the ASTC settings are first guesses that have not been built, looked at or measured. A real device pass is still owed.
+- The guild chat's typing box still uses legacy text, because the engine's `InputField` draws its caret on one.
+- The interface is still one canvas, so a rolling counter redraws all of it. Splitting it into still and moving parts is the next step if a phone shows it matters.
+- Buildings are separate pictures, not an atlas, so they do not batch together.
+- No Android player settings (IL2CPP, application id, target API) are set.
 
 ## ADR-053: Hero mastery: technique ranks and server-rolled talents, 2026-11-10
 The second layer of hero progression, after levels, evolutions and gear (ADR-044). It closes scorecard gap 5. Every number is a test value in the `technique` and `talents` blocks of `heroes.json`, read by both client and server.

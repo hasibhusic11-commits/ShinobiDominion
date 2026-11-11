@@ -5,6 +5,7 @@
         "ShinobiDominion.Core",
         "ShinobiDominion.Game",
         "UnityEngine.UI",
+        "Unity.TextMeshPro",
         "Unity.InputSystem",
         "UnityEngine.TestRunner",
         "Coffee.UIEffect"

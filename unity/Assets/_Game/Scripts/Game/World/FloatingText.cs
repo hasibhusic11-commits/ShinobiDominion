@@ -1,10 +1,13 @@
+using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 
 namespace ShinobiDominion.Game
 {
     /// <summary>
-    /// A number that pops in, rises and fades above something in the world. It carries its own dark shadow so it
-    /// reads over grass, stone and fire alike, and it draws over every battle effect. Cheap, and capped by its caller.
+    /// A number that pops in, rises and fades above something in the world. Its dark edge and shadow are part of the
+    /// letters (ADR-054), so it reads over grass, stone and fire alike, and it draws over every battle effect.
+    /// A finished number is kept and used again, so a long fight makes a handful of these and no more.
     /// </summary>
     public sealed class FloatingText : MonoBehaviour
     {
@@ -14,51 +17,56 @@ namespace ShinobiDominion.Game
         private const float Life = 0.9f;
         private const float RiseSpeed = 1.3f;
         private const float PopTime = 0.12f;
+        private static readonly Color Edge = new Color(0.05f, 0.03f, 0.03f, 1f);
 
-        private TextMesh _mesh;
-        private TextMesh _shadow;
+        /// <summary>Finished numbers waiting to be used again. One that went with its parent is skipped.</summary>
+        private static readonly Stack<FloatingText> Spare = new Stack<FloatingText>();
+
+        /// <summary>How many were made new since the game started, for the tests: a fight reuses, it does not pile up.</summary>
+        public static int Made { get; private set; }
+
+        private TextMeshPro _text;
         private Color _color;
         private float _age;
         private Camera _camera;
 
         public static FloatingText Create(Transform parent, Camera viewer, Vector3 at, string text, Color color, float size = 0.09f)
         {
-            var go = new GameObject("FloatingText");
-            go.transform.SetParent(parent, false);
-            go.transform.position = at;
-            if (viewer != null) go.transform.rotation = viewer.transform.rotation;
+            FloatingText floating = null;
+            while (Spare.Count > 0 && floating == null) floating = Spare.Pop();
+            if (floating == null)
+            {
+                var go = new GameObject("FloatingText");
+                floating = go.AddComponent<FloatingText>();
+                floating._text = go.AddComponent<TextMeshPro>();
+                var asset = GameFonts.For(HudArt.Numbers);
+                if (asset != null)
+                {
+                    floating._text.font = asset;
+                    floating._text.fontSharedMaterial = GameFonts.WorldMaterial(asset, Edge);
+                }
+                floating._text.alignment = TextAlignmentOptions.Center;
+                floating._text.textWrappingMode = TextWrappingModes.NoWrap;
+                floating._text.overflowMode = TextOverflowModes.Overflow;
+                floating._text.raycastTarget = false;
+                floating._text.rectTransform.sizeDelta = new Vector2(8f, 2f);
+                floating._text.sortingOrder = Order;
+                Made++;
+            }
+            var transform = floating.transform;
+            transform.SetParent(parent, false);
+            transform.position = at;
+            if (viewer != null) transform.rotation = viewer.transform.rotation;
             // Same apparent size at any zoom, and big enough to read on a phone.
             var characterSize = size * 1.5f * (viewer != null && viewer.orthographic ? viewer.orthographicSize / 8f : 1f);
-            var mesh = Write(go, text, characterSize, color, Order);
-
-            var shade = new GameObject("Shadow");
-            shade.transform.SetParent(go.transform, false);
-            shade.transform.localPosition = new Vector3(characterSize * 0.28f, -characterSize * 0.28f, 0f);
-
-            var floating = go.AddComponent<FloatingText>();
-            floating._mesh = mesh;
-            floating._shadow = Write(shade, text, characterSize, new Color(0.05f, 0.03f, 0.03f, 0.7f * color.a), Order - 1);
+            floating._text.fontSize = characterSize * 48f;
+            floating._text.text = text;
             floating._color = color;
             floating._camera = viewer;
+            floating._age = 0f;
+            floating.gameObject.SetActive(true);
             floating.Show();
             return floating;
-        }
-
-        private static TextMesh Write(GameObject go, string text, float characterSize, Color color, int order)
-        {
-            var mesh = go.AddComponent<TextMesh>();
-            mesh.font = Ui.Font;
-            var renderer = mesh.GetComponent<MeshRenderer>();
-            renderer.sharedMaterial = Ui.Font.material;
-            renderer.sortingOrder = order;
-            mesh.text = text;
-            mesh.fontSize = 48;
-            mesh.characterSize = characterSize;
-            mesh.fontStyle = FontStyle.Bold;
-            mesh.anchor = TextAnchor.MiddleCenter;
-            mesh.alignment = TextAlignment.Center;
-            mesh.color = color;
-            return mesh;
         }
 
         private void Update()
@@ -67,7 +75,9 @@ namespace ShinobiDominion.Game
             transform.position += Vector3.up * (RiseSpeed * Time.deltaTime);
             if (_camera != null) transform.rotation = _camera.transform.rotation;
             Show();
-            if (_age >= Life) Destroy(gameObject);
+            if (_age < Life) return;
+            gameObject.SetActive(false);
+            Spare.Push(this);
         }
 
         private void Show()
@@ -78,8 +88,7 @@ namespace ShinobiDominion.Game
             var fade = Mathf.Clamp01((1f - _age / Life) * 2f);
             var color = _color;
             color.a = fade * _color.a;
-            _mesh.color = color;
-            if (_shadow != null) _shadow.color = new Color(0.05f, 0.03f, 0.03f, 0.7f * color.a);
+            _text.color = color;
         }
     }
 }

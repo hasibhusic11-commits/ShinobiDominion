@@ -103,6 +103,15 @@ namespace ShinobiDominion.Tests
             controller.ShowHeroDetail(evolving.InstanceId);
             yield return shot("13_hero_detail_evolved");
             evolving.EvolutionIndex = 0;
+            // Mastery (ADR-053), shown as the server would set it (put back straight after).
+            evolving.TechniqueRank = 3;
+            evolving.TalentId = "keen_edge";
+            evolving.TalentLevel = 3;
+            controller.ShowMastery(evolving.InstanceId);
+            yield return shot("13b_hero_mastery");
+            evolving.TechniqueRank = 1;
+            evolving.TalentId = "";
+            evolving.TalentLevel = 0;
             controller.ShowEvolution(evolving.InstanceId);
             yield return shot("11_evolution_requirements");
             controller.CloseAll();

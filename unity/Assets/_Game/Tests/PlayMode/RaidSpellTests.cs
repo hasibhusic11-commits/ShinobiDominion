@@ -7,6 +7,7 @@ using ShinobiDominion.Game;
 using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
+using Text = ShinobiDominion.Game.GameText;
 
 namespace ShinobiDominion.Tests
 {

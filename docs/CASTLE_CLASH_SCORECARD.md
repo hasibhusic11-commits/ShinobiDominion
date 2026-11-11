@@ -15,7 +15,7 @@ notice theirs is better. Each row says why.
 | --- | --- | --- |
 | Fair play | Ahead | The server fights every battle again and decides every reward (ADR-050). Castle Clash is known for hacked accounts; ours cannot be paid by a tampered device. |
 | Summon honesty | Ahead | Every rate is shown and rolled on the server. No hidden pity or guarantee. |
-| Text sharpness | Level | Cinzel and Rubik at full resolution, outlined. Still legacy text, so very small sizes are softer than a modern SDF font. |
+| Text sharpness | Level | Was legacy text with a smeared outline. Now Cinzel and Rubik drawn from a distance field, with the outline and shadow part of the letter, sharp at every size (ADR-054). |
 | Menus and panels | Ahead | Painted brass and lacquer kit, nine-sliced, aligned on one grid (alignment pass e2c9f57). Castle Clash's menus are dense and dated. |
 | Building art | Level | Painted, five looks per building as it levels. Theirs has more animation on each building (flags, smoke, glow). |
 | Village ground | Behind | Plain grass up close, few decorations, tiny block villagers. Theirs is busier. |
@@ -30,7 +30,7 @@ notice theirs is better. Each row says why.
 | Dungeons to farm | Behind | Ours pay only for new stars. Theirs can be replayed for materials. |
 | Trophies and "Next" | Behind | Rival raids exist, but there is no trophy ladder or skip-to-next rival. |
 | Sound | Level | Every action has a sound, but all are made in code. Recorded sounds would be better than both. |
-| Phone performance | Not measured | Not yet profiled on a phone. |
+| Phone performance | Not measured | Still not run on a phone. Measured on a PC: about 1 ms and under 1 KB of memory a frame from the game's own code. Phones now get compressed pictures and a lighter render profile, neither yet tried on a device (ADR-054). |
 
 ## Ranked gaps, biggest first
 
@@ -46,7 +46,7 @@ notice theirs is better. Each row says why.
 5. **Hero depth.** Fix: technique ranks and server-rolled talents (ADR-053).
 6. **Farmable dungeons, trophies and Next.**
 7. **Recorded sounds and music** in place of code-made ones.
-8. **Modern text rendering** (SDF) and a phone performance pass.
+8. **Modern text rendering and a phone performance pass.** Fix: distance-field text, a frame-cost meter with tests, compressed pictures and a lighter render profile for phones (ADR-054). A run on a real phone is still owed.
 
 ## What this batch does
 
@@ -121,3 +121,14 @@ Date: 2026-11-10. Items 1 and 2 of the ranked gaps. Every number below is a test
 - The result panel covers the left part of the base, and has an empty band under its button.
 - The spell gaps listed under ADR-052 (a Relic Hall upgrade finishing mid-raid, no aim ring under a finger, once
   per battle as the only limit).
+
+## Second batch: hero mastery, sharper text, a performance pass
+
+Date: 2026-11-10. Items 5 and 8 of the ranked gaps (ADR-053, ADR-054).
+
+- Hero mastery: technique ranks and server-rolled talents. Checked by rule tests in C# and Go, five shared battle
+  scenarios, and server tests against a running server.
+- Text: every word is distance-field text. Looked at by eye in the capture set (1600x900): home, hero page, mastery
+  panel, Hero Altar, battle screen, raid in battle and the result.
+- Performance: measured on a PC only. Unity PlayMode: 152 tests, 117 passed, 0 failed, 35 skipped (they need the server key).
+- Not checked: a phone or tablet. The phone render profile and compressed pictures have never been built or run.

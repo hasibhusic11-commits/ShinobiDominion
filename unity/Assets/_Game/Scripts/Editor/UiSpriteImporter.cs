@@ -12,13 +12,32 @@ namespace ShinobiDominion.EditorTools
     /// Building sprites stand on their bottom edge (the front corner of the footprint). The two wall arms stand
     /// on the corner where they meet: the Z arm on its bottom right, the X arm on its bottom left.
     /// Battle effect pictures under Resources/Effects (shots, sparks, bursts) turn about their middle.
+    /// On a desktop every picture stays uncompressed. On Android and iOS each kind is compressed with ASTC (ADR-054):
+    /// uncompressed, the building pictures alone are about 160 MB of memory, more than a modest phone can give.
+    /// The phone settings have not been looked at on a phone yet.
     /// </summary>
     public sealed class UiSpriteImporter : AssetPostprocessor
     {
         private static readonly Regex Border = new Regex(@"_s(\d+)$");
 
         /// <summary>Raising this reimports every texture the rules apply to.</summary>
-        public override uint GetVersion() => 3;
+        public override uint GetVersion() => 4;
+
+        private static readonly string[] Phones = { "Android", "iPhone" };
+
+        /// <summary>The same picture on a phone: compressed, and no larger than it is ever shown.</summary>
+        private static void OnPhones(TextureImporter importer, int maxSize, TextureImporterFormat format)
+        {
+            foreach (var platform in Phones)
+            {
+                var settings = importer.GetPlatformTextureSettings(platform);
+                settings.overridden = true;
+                settings.maxTextureSize = maxSize;
+                settings.format = format;
+                settings.compressionQuality = 100;
+                importer.SetPlatformTextureSettings(settings);
+            }
+        }
 
         private void OnPreprocessTexture()
         {
@@ -38,6 +57,7 @@ namespace ShinobiDominion.EditorTools
                 map.anisoLevel = 4;
                 map.maxTextureSize = 2048;
                 map.textureCompression = TextureImporterCompression.Uncompressed;
+                OnPhones(map, 2048, TextureImporterFormat.ASTC_6x6);
                 return;
             }
             if (path.Contains("/Resources/HeroConcepts/"))
@@ -50,6 +70,8 @@ namespace ShinobiDominion.EditorTools
                 painting.filterMode = FilterMode.Trilinear;
                 painting.anisoLevel = 2;
                 painting.textureCompression = TextureImporterCompression.Uncompressed;
+                // The finest block size: these went blocky when compressed harder.
+                OnPhones(painting, 1024, TextureImporterFormat.ASTC_4x4);
                 return;
             }
             if (!ui && !building && !effect) return;
@@ -64,6 +86,9 @@ namespace ShinobiDominion.EditorTools
             importer.anisoLevel = 2;
             importer.textureCompression = TextureImporterCompression.Uncompressed;
             importer.spritePixelsPerUnit = 100f;
+            // Interface art has hard edges and thin rims, so it keeps the finest block size; buildings are painted and
+            // shown small, effects are small and brief.
+            OnPhones(importer, effect ? 256 : ui ? 2048 : 1024, ui ? TextureImporterFormat.ASTC_4x4 : TextureImporterFormat.ASTC_6x6);
 
             var name = System.IO.Path.GetFileNameWithoutExtension(path);
             var settings = new TextureImporterSettings();

@@ -6,6 +6,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
+using Text = ShinobiDominion.Game.GameText;
 
 namespace ShinobiDominion.Game
 {
@@ -304,9 +305,26 @@ namespace ShinobiDominion.Game
         public static Text Strong(Text text)
         {
             text.fontStyle = FontStyle.Bold;
-            var outline = text.gameObject.AddComponent<Outline>();
-            outline.effectColor = new Color(0f, 0f, 0f, 0.92f);
-            outline.effectDistance = new Vector2(1.4f, -1.4f);
+            text.SetEdge(new Color(0f, 0f, 0f, 0.92f), EdgeKind.Thin);
+            return text;
+        }
+
+        /// <summary>
+        /// Text of the old kind, for a typing box only: the engine's InputField draws its caret and selection on one of
+        /// these. Everything else on screen is a GameText.
+        /// </summary>
+        public static UnityEngine.UI.Text LegacyLabel(Transform parent, string content, int size, TextAnchor alignment, Color color)
+        {
+            var rect = Rect("Label", parent);
+            var text = rect.gameObject.AddComponent<UnityEngine.UI.Text>();
+            text.font = HudArt.Numbers;
+            text.text = content;
+            text.fontSize = size;
+            text.alignment = alignment;
+            text.color = color;
+            text.raycastTarget = false;
+            text.horizontalOverflow = HorizontalWrapMode.Overflow;
+            text.verticalOverflow = VerticalWrapMode.Overflow;
             return text;
         }
 
@@ -365,7 +383,9 @@ namespace ShinobiDominion.Game
             // An overlay canvas draws last whatever this says. The number only matters when a capture test puts the
             // canvas in front of the world camera: there it must stay above the battle's effects and health bars.
             Canvas.sortingOrder = 30000;
-            Canvas.pixelPerfect = true;
+            // Text is a distance field and stays sharp between pixels, so nothing is snapped to them: snapping costs a
+            // rebuild whenever anything moves.
+            Canvas.pixelPerfect = false;
             var scaler = canvasObject.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1280f, 720f);

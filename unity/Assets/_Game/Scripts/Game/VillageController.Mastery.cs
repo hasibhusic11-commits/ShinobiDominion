@@ -64,7 +64,7 @@ namespace ShinobiDominion.Game
 
                 // Technique rank.
                 var power = technique.Power(BattleSim.PowerFor(archetype.rarity.ToString()), hero.TechniqueRank);
-                panel.Line($"Technique rank {hero.TechniqueRank} of {technique.maxRank}. Special power {power}%.", 21, HudArt.BrassLight).name = "RankLine";
+                panel.Line($"Technique rank {hero.TechniqueRank} of {technique.maxRank}. Special power {power}%, +{technique.powerPerRank}% a rank.", 21, HudArt.BrassLight).name = "RankLine";
                 if (hero.TechniqueRank >= technique.maxRank)
                 {
                     panel.Action("RankUpButton", "Technique at its highest rank", null, false, null, 19);
@@ -75,7 +75,7 @@ namespace ShinobiDominion.Game
                     var cost = technique.Manuals(next);
                     var needs = technique.HeroLevel(next);
                     var why = cumulative < needs ? $"   needs hero level {needs}" : "";
-                    panel.Action("RankUpButton", $"Rank up (+{technique.powerPerRank}% power): {cost:N0} Technique Manuals, you have {manuals:N0}{why}",
+                    panel.Action("RankUpButton", $"Rank up: {cost:N0} manuals (have {manuals:N0}){why}",
                         () => RankUpTechnique(instanceId), ModesOnline && manuals >= cost && cumulative >= needs, Ui.AccentColor, 18);
                 }
 
@@ -85,7 +85,7 @@ namespace ShinobiDominion.Game
                     ? "No talent yet."
                     : $"Talent: {talent.displayName}, level {hero.TalentLevel} of {talents.maxLevel} ({TalentEffect(talent, hero.TalentLevel)}). {talent.description}";
                 panel.Line(line, 21, HudArt.BrassLight).name = "TalentLine";
-                panel.Action("TalentRollButton", $"Roll a talent: 1 Talent Token, you have {tokens:N0}",
+                panel.Action("TalentRollButton", $"Roll a talent: 1 token (have {tokens:N0})",
                     () =>
                     {
                         if (hero.TalentLevel > 0) ConfirmTalentRoll(instanceId);

@@ -5,6 +5,7 @@ using System.Linq;
 using ShinobiDominion.Core;
 using UnityEngine;
 using UnityEngine.UI;
+using Text = ShinobiDominion.Game.GameText;
 
 namespace ShinobiDominion.Game
 {

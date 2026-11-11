@@ -94,6 +94,15 @@ namespace ShinobiDominion.Game
         /// <summary>A band of light that sweeps across a picture every few seconds.</summary>
         public static UIEffect Shine(Graphic graphic, Color color, float interval = 2.2f, float width = 0.25f)
         {
+            // The sweep is a picture effect. Words glow toward the colour and back instead.
+            if (graphic is TMPro.TMP_Text)
+            {
+                var from = graphic.color;
+                var to = Color.Lerp(from, new Color(color.r, color.g, color.b, from.a), 0.7f);
+                LMotion.Create(0f, 1f, Mathf.Max(0.3f, interval * 0.5f)).WithEase(Ease.InOutSine).WithLoops(-1, LoopType.Yoyo).WithScheduler(Clock)
+                    .Bind(t => { if (graphic != null) graphic.color = Color.Lerp(from, to, t); }).AddTo(graphic.gameObject);
+                return null;
+            }
             var effect = graphic.gameObject.GetComponent<UIEffect>();
             if (effect == null) effect = graphic.gameObject.AddComponent<UIEffect>();
             effect.transitionFilter = TransitionFilter.Shiny;

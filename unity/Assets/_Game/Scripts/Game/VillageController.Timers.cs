@@ -4,6 +4,7 @@ using System.Linq;
 using ShinobiDominion.Core;
 using UnityEngine;
 using UnityEngine.UI;
+using Text = ShinobiDominion.Game.GameText;
 
 namespace ShinobiDominion.Game
 {
@@ -19,7 +20,13 @@ namespace ShinobiDominion.Game
             public RectTransform Root;
             public Text Label;
             public RectTransform Fill;
+            /// <summary>The whole seconds the label last showed, so its words are only rewritten when they change.</summary>
+            public long Shown = -1;
         }
+
+        // Kept between frames so placing the timers asks for no memory.
+        private readonly List<int> _timerGone = new List<int>();
+        private Canvas _timerCanvas;
 
         private readonly Dictionary<int, TimerPill> _timerPills = new Dictionary<int, TimerPill>();
         private RectTransform _timerLayer;
@@ -92,18 +99,27 @@ namespace ShinobiDominion.Game
                 Ui.Stretch(_timerLayer);
                 _timerLayer.SetAsFirstSibling();
             }
-            _timerLayer.gameObject.SetActive(show);
+            if (_timerLayer.gameObject.activeSelf != show) _timerLayer.gameObject.SetActive(show);
             if (!show) return;
 
             var now = Now;
-            var upgrading = Village.Buildings.Where(b => b.Upgrading).ToList();
-            foreach (var id in _timerPills.Keys.Where(id => upgrading.All(b => b.Id != id)).ToList())
+            // A pill whose building is no longer upgrading goes.
+            _timerGone.Clear();
+            foreach (var pair in _timerPills)
+            {
+                var building = Village.Find(pair.Key);
+                if (building == null || !building.Upgrading) _timerGone.Add(pair.Key);
+            }
+            foreach (var id in _timerGone)
             {
                 Destroy(_timerPills[id].Root.gameObject);
                 _timerPills.Remove(id);
             }
-            foreach (var building in upgrading)
+            if (_timerCanvas == null) _timerCanvas = _timerLayer.GetComponentInParent<Canvas>();
+            var uiCamera = _timerCanvas == null || _timerCanvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : _timerCanvas.worldCamera;
+            foreach (var building in Village.Buildings)
             {
+                if (!building.Upgrading) continue;
                 if (!_timerPills.TryGetValue(building.Id, out var pill))
                 {
                     pill = CreateTimerPill(building.Id);
@@ -111,14 +127,19 @@ namespace ShinobiDominion.Game
                 }
                 var top = GridSpace.FootprintCenter(building.Footprint) + Vector3.up * 2.3f;
                 var screen = _camera.Camera.WorldToScreenPoint(top);
-                var canvas = _timerLayer.GetComponentInParent<Canvas>();
-                var uiCamera = canvas == null || canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
                 RectTransformUtility.ScreenPointToLocalPointInRectangle(_timerLayer, screen, uiCamera, out var local);
                 pill.Root.anchoredPosition = local;
-                pill.Root.gameObject.SetActive(screen.z > 0f);
+                var inFront = screen.z > 0f;
+                if (pill.Root.gameObject.activeSelf != inFront) pill.Root.gameObject.SetActive(inFront);
                 var total = Village.Catalog.UpgradeSeconds(building.Definition, building.Level + 1) * TimeSpan.TicksPerSecond;
                 var left = building.UpgradeDoneUtcTicks - now;
-                pill.Label.text = FormatDuration(left);
+                // The label counts whole seconds, so it is written once a second and not sixty times.
+                var seconds = Math.Max(0L, (left + TimeSpan.TicksPerSecond - 1) / TimeSpan.TicksPerSecond);
+                if (seconds != pill.Shown)
+                {
+                    pill.Shown = seconds;
+                    pill.Label.text = FormatDuration(left);
+                }
                 var done = total <= 0 ? 1f : Mathf.Clamp01(1f - (float)left / total);
                 pill.Fill.anchorMax = new Vector2(done, 1f);
             }

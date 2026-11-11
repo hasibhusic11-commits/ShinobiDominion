@@ -34,10 +34,10 @@ namespace ShinobiDominion.Game
             field.targetGraphic = back;
             field.characterLimit = limit;
             field.lineType = InputField.LineType.SingleLine;
-            var text = Ui.Label(rect, "", 20, TextAnchor.MiddleLeft, Color.white);
+            var text = Ui.LegacyLabel(rect, "", 20, TextAnchor.MiddleLeft, Color.white);
             Ui.Stretch(text.rectTransform, 16f, 4f, 16f, 4f);
             text.supportRichText = false;
-            var hint = Ui.Label(rect, placeholder, 20, TextAnchor.MiddleLeft, new Color(1f, 1f, 1f, 0.45f));
+            var hint = Ui.LegacyLabel(rect, placeholder, 20, TextAnchor.MiddleLeft, new Color(1f, 1f, 1f, 0.45f));
             Ui.Stretch(hint.rectTransform, 16f, 4f, 16f, 4f);
             field.textComponent = text;
             field.placeholder = hint;
