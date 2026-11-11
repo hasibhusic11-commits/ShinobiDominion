@@ -22,6 +22,14 @@ This is a **release gate**, not a marketing score. Do not publicly launch or ena
 | Mobile QA / performance / accessibility | **BLOCKED: devices** | Safe-area refresh on dimension/cutout changes is now implemented with a normalization regression test, but device rotation and notches still need hands-on validation. Test 60/30 fps targets, memory, draw calls, touch sizes, offline/reconnect, battery, text scaling |
 | Production backend hardening | **BLOCKED: deployment** | TLS endpoint, secret rotation, durable DB backup/restore, shared rate limiting, abuse telemetry, private/admin endpoints, incident response and independent security review |
 
+## Consolidated audit checks (2026-11-11)
+
+- PR #3 now includes responsive safe-area refresh and a Unity safe-area regression test originally developed in the separate PR #2 branch.
+- The Go JSON decoder regression suite now covers trailing `null`, `true`, numeric values and malformed text, in addition to duplicate objects and unknown fields.
+- The PR workflow runs both `tools/qa/audit_configs.py` and `tools/ci/validate_catalog.py` for production-reference and content consistency checks. The catalog script can be run manually with `--release` to **fail deliberately** while incomplete Legendary art/content remains.
+- PR #2 overlaps with PR #3 and must **not be merged blindly**. Compare remaining differences (notably guild reporting, UI styling and additional integration tests) before choosing a single canonical implementation.
+- A green Go/.NET/config workflow is **not** evidence of passing Unity Editor/PlayMode, real Nakama integration or device tests.
+
 ## Merge gates for this branch
 
 1. Review all changed files. No unapproved rule, summon, stat, currency, progression, tower or building-limit changes.
