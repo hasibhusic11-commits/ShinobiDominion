@@ -1,6 +1,8 @@
 # Art status and provenance
 
-**All world art is original and generated in code. No third-party models, textures or shaders are in the project.** It is a real improvement on primitives, but it is temporary art, not professional final art.
+> **Historical art-pipeline notes.** The paragraph and tables below describe the early procedural-art pass; they are **not an up-to-date statement about assets on main**. As of 2026-11-11, the repository includes owner-supplied painted building/UI sprites, 18 3D hero FBX models with animations, and a Solar Beast Sage sprite-hero prototype. The remaining 10 Elite heroes still lack a finished in-world authored prefab. See `docs/THIRD_PARTY_NOTICES.md`, `Resources/Config/hero_sprites.json`, and `docs/RELEASE_READINESS.md` for current status and provenance.
+
+**Original historical note (now superseded):** All world art was generated in code; these procedural assets remain as temporary development fallbacks.
 
 ## How it is built
 | Part | File |
