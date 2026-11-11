@@ -871,11 +871,11 @@ namespace ShinobiDominion.Game
             var tabbed = tabs != null && tabs.Count > 0;
             _card = Ui.Rect("Window", _parent);
             Ui.Stretch(_card);
-            Ui.Background(_card, new Color(0f, 0f, 0f, 0.7f));
+            Ui.Background(_card, SdTheme.Dimmer);
 
             frame = Ui.Rect("Frame", _card);
             Ui.Anchor(frame, new Vector2(0.5f, 0.5f), size, new Vector2(0f, -24f));
-            Ui.Framed(frame, HudArt.Sprite("frame_s80"));
+            Ui.Framed(frame, HudArt.Sprite(SdTheme.WindowFrame)).pixelsPerUnitMultiplier = SdTheme.WindowFrameScale;
             HudArt.DropShadow(frame, 12f, 22f, 0.65f);
             var fret = Ui.Rect("Fret", frame);
             Ui.Stretch(fret, 34f, 34f, 34f, 34f);
@@ -892,7 +892,9 @@ namespace ShinobiDominion.Game
             if (tabbed) HangTabs(frame, tabs);
             else
             {
-                var ribbon = HudArt.Picture(frame, "Ribbon", "ribbon", new Vector2(0.5f, 1f), new Vector2(Mathf.Clamp(title.Length * 20f + 150f, 340f, size.x - 190f), 70f), new Vector2(0f, 34f));
+                var ribbon = HudArt.Picture(frame, "Ribbon", SdTheme.Ribbon, new Vector2(0.5f, 1f), new Vector2(Mathf.Clamp(title.Length * 20f + 150f, 340f, size.x - 190f), 70f), new Vector2(0f, 34f));
+                ribbon.type = Image.Type.Sliced;
+                ribbon.pixelsPerUnitMultiplier = SdTheme.ArtScale;
                 var heading = HudArt.Label(ribbon.transform, title.ToUpperInvariant(), HudArt.Display, 28, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.CrimsonDark);
                 heading.name = "WindowTitle";
                 Ui.Stretch(heading.rectTransform, 34f, 4f, 34f, 2f);
@@ -1022,10 +1024,12 @@ namespace ShinobiDominion.Game
             const float bottom = 12f;
             var frame = Ui.Rect("Frame", _card);
             Ui.Stretch(frame, left, bottom, right, top);
-            Ui.Framed(frame, HudArt.Sprite("frame_s80")).pixelsPerUnitMultiplier = 1.15f;
+            Ui.Framed(frame, HudArt.Sprite(SdTheme.WindowFrame)).pixelsPerUnitMultiplier = SdTheme.WindowFrameScale;
             HudArt.DropShadow(frame, 10f, 18f, 0.6f);
 
-            var plaque = HudArt.Picture(frame, "Plaque", "ribbon", new Vector2(0.5f, 1f), new Vector2(Mathf.Max(340f, title.Length * 22f + 150f), 62f), new Vector2(0f, 30f));
+            var plaque = HudArt.Picture(frame, "Plaque", SdTheme.Ribbon, new Vector2(0.5f, 1f), new Vector2(Mathf.Max(340f, title.Length * 22f + 150f), 62f), new Vector2(0f, 30f));
+            plaque.type = Image.Type.Sliced;
+            plaque.pixelsPerUnitMultiplier = SdTheme.ArtScale;
             var heading = HudArt.Label(plaque.transform, title, HudArt.Display, 29, TextAnchor.MiddleCenter, HudArt.Ivory, HudArt.CrimsonDark);
             heading.name = "ScreenTitle";
             Ui.Stretch(heading.rectTransform, 30f, 4f, 30f, 2f);
