@@ -31,15 +31,19 @@ namespace ShinobiDominion.Game
         public Vector3 GuardOffset => _to;
 
         public static HeroGuard Attach(HeroSpriteActor actor, Transform baseRoot, Vector3 pedestal, Vector3 guard, Color color)
+            => Attach(actor.transform, actor, baseRoot, pedestal, guard, color);
+
+        /// <summary>Also supports development fallback meshes when an authored actor prefab is absent.</summary>
+        public static HeroGuard Attach(Transform visual, HeroSpriteActor actor, Transform baseRoot, Vector3 pedestal, Vector3 guard, Color color)
         {
-            var guardian = actor.gameObject.AddComponent<HeroGuard>();
+            var guardian = visual.gameObject.AddComponent<HeroGuard>();
             guardian._actor = actor;
             guardian._base = baseRoot;
             guardian._from = pedestal;
             guardian._to = guard;
             Color.RGBToHSV(color, out var hue, out var saturation, out _);
             guardian._ringColor = Color.HSVToRGB(hue, Mathf.Max(saturation, 0.75f), 1f);
-            guardian._ring = Ring(actor.transform, guardian._ringColor);
+            guardian._ring = Ring(visual, guardian._ringColor);
             guardian._halo = Halo(guardian._ring.transform);
             // Standing where it appears means no hop: it is on guard from the start.
             if ((pedestal - guard).sqrMagnitude < 0.0001f) guardian._clock = HopDelay + HopTime;
@@ -96,12 +100,12 @@ namespace ShinobiDominion.Game
             if (_stage == 0 && t > 0f)
             {
                 _stage = 1;
-                _actor.Face(_to - _from);
+                _actor?.Face(_to - _from);
             }
             if (_stage == 1 && t >= 1f)
             {
                 _stage = 2;
-                _actor.Face(Outward);
+                _actor?.Face(Outward);
             }
 
             if (_ring == null) return;
