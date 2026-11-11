@@ -204,6 +204,17 @@ namespace ShinobiDominion.Editor
                 output = new Texture2D(PortraitWidth, PortraitHeight, TextureFormat.RGBA32, false);
                 output.ReadPixels(new Rect(0, 0, PortraitWidth, PortraitHeight), 0, 0);
                 output.Apply();
+
+                // A missing camera view, unsupported alpha or invisible model must not
+                // silently become a blank playable hero portrait.
+                var pixels = output.GetPixels32();
+                var visible = 0;
+                foreach (var pixel in pixels)
+                    if (pixel.a >= 20) visible++;
+                var coverage = visible / (float)pixels.Length;
+                if (coverage < 0.01f || coverage > 0.96f)
+                    throw new InvalidOperationException(
+                        $"Portrait alpha coverage {coverage:P1} is invalid; inspect model, camera and URP transparency settings.");
                 return output.EncodeToPNG();
             }
             finally
