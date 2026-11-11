@@ -510,7 +510,11 @@ namespace ShinobiDominion.Game
                     var renderer = placeholder.AddComponent<MeshRenderer>();
                     renderer.sharedMaterials = figure.Materials;
                     renderer.shadowCastingMode = ShadowCastingMode.Off;
-                    hero = new Renderer[] { renderer };
+                    // Keep the same guard placement and original elemental halo
+                    // that finished 3D heroes receive.
+                    HeroGuard.Attach(placeholder.transform, null, go.transform,
+                        GuardOffset, GuardOffset, look.Color);
+                    hero = placeholder.GetComponentsInChildren<Renderer>(true);
                 }
             }
             return new Entry { Go = go, Signature = signature, Stand = stand, Hero = hero };
