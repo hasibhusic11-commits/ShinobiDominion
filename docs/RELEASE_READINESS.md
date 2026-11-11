@@ -19,7 +19,7 @@ This is a **release gate**, not a marketing score. Do not publicly launch or ena
 | Complete high-quality UI migration | **BLOCKED: art & Unity screenshot QA** | Battle Menu uses v3; draft PR #1 updates Hero Altar/Detail. Remaining screens need design-by-screen implementation and capture approval |
 | Account recovery / portable sign-in | **BLOCKED: identity UX and server migration** | `PlayerPrefs` device ID is not a recovery credential. Add provider/email verification, link/unlink/recover, account transfer and loss-of-device test cases before launch |
 | Chat moderation and player safety | **BLOCKED: operator workflow** | Report queue now records evidence. Add reviewer roles, action audit log, abuse handling, retention policy, player block/mute, appeal and escalation |
-| Mobile QA / performance / accessibility | **BLOCKED: devices** | Unity Editor perf tests do not prove iOS/Android. Test 60/30 fps targets, memory, draw calls, safe areas, touch sizes, offline/reconnect, battery, text scaling |
+| Mobile QA / performance / accessibility | **BLOCKED: devices** | Safe-area refresh on dimension/cutout changes is now implemented with a normalization regression test, but device rotation and notches still need hands-on validation. Test 60/30 fps targets, memory, draw calls, touch sizes, offline/reconnect, battery, text scaling |
 | Production backend hardening | **BLOCKED: deployment** | TLS endpoint, secret rotation, durable DB backup/restore, shared rate limiting, abuse telemetry, private/admin endpoints, incident response and independent security review |
 
 ## Merge gates for this branch
@@ -30,7 +30,7 @@ This is a **release gate**, not a marketing score. Do not publicly launch or ena
 4. With Nakama and Postgres running, run backend integration and concurrency suites including new guild report migrations; verify no migrations fail.
 5. Test reporting as two different players in the same guild; verify ID ownership, spoofed ID rejection, no self-report, different-guild rejection, invalid reason rejection, ten-per-day limit, and duplicate behavior.
 6. Test one Elite defending a village and in battle, inspect mesh memory lifetime and absence of ghost visuals after reassignment.
-7. Capture screenshots for 16:9, 20:9, and 4:3 plus notched phone/tablet screen; compare visual quality.
+7. Capture screenshots for 16:9, 20:9, and 4:3 plus notched phone/tablet screen; rotate/rescale while running, and verify HUD remains inside the refreshed safe area. Compare visual quality.
 8. Review backend log files with test-only credentials and ensure secrets are absent after startup.
 
 ## Controlled content migration — eight Legendaries
