@@ -182,6 +182,22 @@ namespace ShinobiDominion.Tests
             Controller.ShowHeroDetail(mainId);
             yield return null;
             Assert.AreEqual(1, Object.FindObjectsByType<Image>(FindObjectsSortMode.None).Count(i => i.name == "EvolutionStar"));
+
+            // Returning to the Altar must retain the same hero painting and earned
+            // evolution star, rather than falling back to a block/mesh illustration.
+            Controller.ShowAltarRoster();
+            yield return null;
+            var evolvedCard = Find("Hero_" + mainId);
+            Assert.IsNotNull(evolvedCard);
+            var concept = evolvedCard.GetComponentsInChildren<Image>()
+                .FirstOrDefault(i => i.name == "HeroConcept");
+            Assert.IsNotNull(concept, "Evolved roster cards should retain their hero illustration");
+            var form = HeroConcepts.AvailableForm("solar_beast_sage", 1);
+            Assert.AreSame(HeroConcepts.Card("solar_beast_sage", form), concept.sprite,
+                "Roster art should match the available evolution form");
+            Assert.AreEqual(1, evolvedCard.GetComponentsInChildren<Image>()
+                .Count(i => i.name == "EvolutionStar"),
+                "The roster card should display exactly one earned cyan star");
         }
 
         [UnityTest]
