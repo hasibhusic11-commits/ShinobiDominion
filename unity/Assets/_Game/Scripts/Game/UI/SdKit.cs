@@ -81,7 +81,7 @@ namespace ShinobiDominion.Game
         /// </summary>
         public static int RosterColumns(float availableWidth)
         {
-            return Mathf.Clamp(Mathf.FloorToInt(availableWidth / 176f), 2, 5);
+            return Mathf.Clamp(Mathf.FloorToInt(availableWidth / 176f), 1, 5);
         }
 
         private static Image Sliced(RectTransform rect, string sprite, bool blocksPointer = false)
