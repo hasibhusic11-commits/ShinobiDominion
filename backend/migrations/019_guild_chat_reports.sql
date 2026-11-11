@@ -3,7 +3,7 @@
 -- never accessible from a public RPC (only inserts scoped to a signed-in reporter).
 CREATE TABLE IF NOT EXISTS sd_guild_chat_report (
     id           BIGSERIAL PRIMARY KEY,
-    guild_id     UUID NOT NULL REFERENCES sd_guild (id),
+    guild_id     UUID NOT NULL, -- retain evidence after a guild is dissolved
     message_id   BIGINT NOT NULL,
     sender_id    UUID NOT NULL REFERENCES sd_player (user_id),
     reporter_id  UUID NOT NULL REFERENCES sd_player (user_id),
