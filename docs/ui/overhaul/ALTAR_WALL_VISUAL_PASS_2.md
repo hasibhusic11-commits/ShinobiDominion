@@ -41,3 +41,9 @@ The old wall renderer only drew `wall_post_v2_*` when `mask == 0` (an isolated t
 - A capture must contain a believable fraction of visible alpha. Mostly transparent (under 1%) or nearly all opaque (over 96%) results are rejected and logged rather than added as blank/incorrect portraits. If the URP camera forces opaque alpha, fix the capture configuration first.
 - The bake method can also be called with Unity's `-executeMethod ShinobiDominion.Editor.HeroPortraitBaker.BakeMissing` in Editor batch mode, with an absolute `-projectPath` and log file. This is a build-machine task, **not performed by this GitHub integration**.
 - Review that the character faces the camera: the baker uses its original prefab transform and frames the renderer bounds; some models may need dedicated art-directed camera poses. Those models require human visual inspection, not silent acceptance.
+
+## Altar hero identity pass
+- Every roster bust now displays the **live hero archetype name** in an individual slim lacquer plate on the portrait's lower edge, separate from the level plate. This makes duplicate and similarly colored heroes distinguishable without opening each detail page.
+- Names use the existing body font with text-best-fit rather than baked label pixels; the actual roster remains the source of truth.
+- Added a PlayMode test asserting that the card's name matches the corresponding hero archetype.
+- The portrait baker now imports readable/uncompressed PNGs (required by the existing runtime `Sprite.Create` crop path) and rejects transparent/opaque failed captures instead of silently adding broken art.
