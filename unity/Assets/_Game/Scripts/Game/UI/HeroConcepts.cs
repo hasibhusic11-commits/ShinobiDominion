@@ -32,7 +32,7 @@ namespace ShinobiDominion.Game
 
         private static Texture2D Texture(string heroId)
         {
-            if (!Textures.TryGetValue(heroId, out var texture))
+            if (!Textures.TryGetValue(heroId, out var texture) || texture == null)
             {
                 texture = Resources.Load<Texture2D>("HeroConcepts/" + heroId);
                 // Authored concept art takes precedence. If an original painting is not
