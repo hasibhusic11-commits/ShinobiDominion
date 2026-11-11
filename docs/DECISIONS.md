@@ -88,6 +88,16 @@ Follows the owner's ADR-021. Up to four Troop Camps, gated by Dojo level, and a 
 - A raid still needs at least one hero. At most 200 troops can land in one raid, to bound the server's work.
 - Troop names and all numbers are test values. Offline practice troops aren't saved.
 
+## ADR-055: One kit for every list screen, and the first screens rebuilt on it, 2026-11-10
+The owner's verdict on the screens a player opens: many "scream AI slop", and the game should feel prestigious. An audit of every one of them (38 places a panel is opened) found one cause behind most of it. Nearly every screen was the same navy box holding a stack of full-width buttons, each button one long sentence with the name, the state, the numbers and the reward run together. There were no pictures, no columns and nothing to tell a row's state at a glance, and a short screen left most of the display empty. The art to do better was already in the project and unused: 100 icons, plates, wells, medals and the building paintings.
+
+- **The kit.** `ScreenKit` builds every list from the same parts: a framed row with a lead picture or number, a title in the display face, one line of detail, and on the right reward chips (picture and amount), three stars, a progress bar, a state mark and at most one button. A row that wants the eye is drawn on the brighter plate; one the player cannot use yet is drawn back. `Stats` is a band of tiles (picture, large value, small name), `Feature` is a screen's one main button, and `Notice` is the framed line for a refusal. A screen says what a row holds; how it looks is decided once.
+- **Words.** Each screen lost its opening paragraph. What is left is what a player needs: the rule that decides stars, what a win pays. Numbers moved out of sentences and into chips.
+- **Rebuilt in this batch.** The Battle hub (each mode is its building, painted, in place of a noise texture), Village Siege, the Arena (rank, points, wins and losses as tiles, the fight as the main button, the top three shown), Rankings, Daily Quests (a progress bar, the reward, and a Claim button only when there is something to claim), the guild list and the Trial Tower.
+- **Kept.** Every button keeps its name, so the guide and the tests find the same controls. Names and mottos players typed are shown with rich text off.
+- **Still to do.** The side panels that are lists of plain lines (battle results, Relic Hall research, gear, mastery, the menu, building info), the dungeon map, evolution, summon results, the shop, mail, the inside of a guild, and the daily gift and chest windows. The Battle hub's coloured light behind each building does not show yet.
+- **Tests.** The whole Unity suite ran against the local server: 152 tests, all passed, none skipped.
+
 ## ADR-054: Distance-field text, and a first phone performance pass, 2026-11-10
 Scorecard gap 8. It replaces ADR-004's "uGUI with the legacy font": the interface is still uGUI built from code, but its text is no longer the legacy kind.
 

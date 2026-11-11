@@ -32,7 +32,9 @@ namespace ShinobiDominion.Game
             public string Title;
             public string Blurb;
             public string Go;
-            public int Art;
+            /// <summary>The building picture that stands for the mode, and the colour of the light behind it.</summary>
+            public string Picture;
+            public Color Light;
             public bool Open;
             public System.Action Action;
         }
@@ -53,73 +55,90 @@ namespace ShinobiDominion.Game
                 }
                 var tiles = new[]
                 {
-                    new ModeTile { Button = "FindRivalButton", Title = "Raid", Blurb = "Raid a real player's village as they left it.", Go = "Find a rival", Art = 1, Open = IsOnline && team > 0, Action = FindRival },
-                    new ModeTile { Button = "OpenDungeonsButton", Title = "Dungeons", Blurb = $"15 fortified camps. {dungeonStars} of {RaidData.All.Count * 3} stars.", Go = "Open the map", Art = 2, Open = IsOnline || AllowOfflinePlay, Action = OpenCampaign },
-                    new ModeTile { Button = "OpenSiegeButton", Title = "Village Siege", Blurb = "Waves storm your own village. Hold them off.", Go = "Defend", Art = 3, Open = ModesOnline, Action = OpenSiege },
-                    new ModeTile { Button = "OpenArenaButton", Title = "Arena", Blurb = "Hero against hero, for points and rank.", Go = "Enter", Art = 4, Open = ModesOnline && team > 0, Action = OpenArena },
-                    new ModeTile { Button = "OpenTrialsButton", Title = "Trial Tower", Blurb = "Climb floor by floor past ever-stronger guardians.", Go = "Climb", Art = 5, Open = ModesOnline && team > 0, Action = OpenTrials }
+                    new ModeTile { Button = "FindRivalButton", Title = "Raid", Blurb = "Loot a rival's village", Go = "Find a rival", Picture = "gold_vault_10", Light = new Color(1f, 0.74f, 0.3f), Open = IsOnline && team > 0, Action = FindRival },
+                    new ModeTile { Button = "OpenDungeonsButton", Title = "Dungeons", Blurb = $"{dungeonStars} of {RaidData.All.Count * 3} stars", Go = "Open the map", Picture = "cannon_tower_10", Light = new Color(0.45f, 0.9f, 0.6f), Open = IsOnline || AllowOfflinePlay, Action = OpenCampaign },
+                    new ModeTile { Button = "OpenSiegeButton", Title = "Village Siege", Blurb = "Defend your own village", Go = "Defend", Picture = "defense_tower_10", Light = new Color(1f, 0.5f, 0.4f), Open = ModesOnline, Action = OpenSiege },
+                    new ModeTile { Button = "OpenArenaButton", Title = "Arena", Blurb = "Hero against hero", Go = "Enter", Picture = "arena_10", Light = new Color(1f, 0.85f, 0.45f), Open = ModesOnline && team > 0, Action = OpenArena },
+                    new ModeTile { Button = "OpenTrialsButton", Title = "Trial Tower", Blurb = "Climb past the guardians", Go = "Climb", Picture = "spirit_turret_10", Light = new Color(0.75f, 0.55f, 1f), Open = ModesOnline && team > 0, Action = OpenTrials }
                 };
-                var block = panel.Block(560f);
+                var block = panel.Block(572f);
                 for (var i = 0; i < tiles.Length; i++) DrawModeTile(block, tiles[i], i, tiles.Length);
-                if (team == 0) panel.Line("Raids and the Arena need a hero on your Hero Base. Your village still defends itself in a Siege.", 19, Ui.MutedText);
+                if (team == 0) ScreenKit.Notice(panel, "Raids, the Arena and the Trial Tower need a hero on your Hero Base.");
             });
         }
 
+        /// <summary>
+        /// One way to fight, as a framed card: the mode's building lit from behind, its name, a few words and one
+        /// button. A mode that cannot be entered yet is drawn back and carries a lock.
+        /// </summary>
         private static void DrawModeTile(RectTransform parent, ModeTile tile, int index, int count)
         {
             var rect = Ui.Rect("ModeTile" + index, parent);
             var width = 1f / count;
             rect.anchorMin = new Vector2(index * width, 0f);
             rect.anchorMax = new Vector2((index + 1) * width, 1f);
-            rect.offsetMin = new Vector2(8f, 0f);
-            rect.offsetMax = new Vector2(-8f, 0f);
-            Ui.Background(rect, new Color(0.08f, 0.07f, 0.12f, 1f), false);
-            var artRect = Ui.Rect("Art", rect);
-            Ui.Stretch(artRect, 14f, 14f, 14f, 14f);
-            var art = artRect.gameObject.AddComponent<Image>();
-            art.sprite = CampaignArt.Map(tile.Art);
-            art.type = Image.Type.Simple;
-            art.preserveAspect = false;
-            art.raycastTarget = false;
-            // The three stony maps get their own colour, so each mode reads as its own place.
-            var tint = tile.Art == 3 ? new Color(1f, 0.7f, 0.62f) : tile.Art == 4 ? new Color(1f, 0.86f, 0.55f) : tile.Art == 5 ? new Color(0.7f, 0.82f, 1f) : Color.white;
-            art.color = tile.Open ? tint : tint * new Color(0.45f, 0.45f, 0.48f);
+            rect.offsetMin = new Vector2(7f, 0f);
+            rect.offsetMax = new Vector2(-7f, 0f);
             HudArt.DropShadow(rect, 6f, 10f, 0.5f);
-            var frame = Ui.Rect("Frame", rect);
-            Ui.Stretch(frame);
-            var border = Ui.Framed(frame, HudArt.Sprite("frame_s80"));
-            border.raycastTarget = false;
-            // Only the border: the painted ground shows through the middle.
-            border.fillCenter = false;
-            // The frame sprite has a wide dark inner band; drawn smaller, it leaves room for the art.
-            border.pixelsPerUnitMultiplier = 3f;
-            var shade = Ui.Rect("Shade", rect);
-            Ui.Stretch(shade);
-            Ui.Background(shade, new Color(0.05f, 0.04f, 0.08f, 0.35f), false);
-            shade.SetSiblingIndex(artRect.GetSiblingIndex() + 1);
+            var card = rect.gameObject.AddComponent<Image>();
+            card.sprite = HudArt.Sprite("card_s34");
+            card.type = Image.Type.Sliced;
+            card.pixelsPerUnitMultiplier = 1.2f;
+            card.raycastTarget = false;
+            if (!tile.Open) card.color = new Color(0.62f, 0.62f, 0.68f);
 
-            var title = HudArt.Label(rect, tile.Title, HudArt.Display, 30, TextAnchor.UpperCenter, HudArt.BrassLight, HudArt.LacquerDeep);
-            // Stretched with a margin on each side, so a long title shrinks inside the card instead of touching its edges.
+            // The picture stands in a dark well, with a soft light of the mode's own colour behind it.
+            var well = Ui.Rect("Well", rect);
+            well.anchorMin = new Vector2(0f, 0.3f);
+            well.anchorMax = new Vector2(1f, 1f);
+            well.offsetMin = new Vector2(18f, 0f);
+            well.offsetMax = new Vector2(-18f, -66f);
+            var wellImage = well.gameObject.AddComponent<Image>();
+            wellImage.sprite = HudArt.Sprite("well_s18");
+            wellImage.type = Image.Type.Sliced;
+            wellImage.raycastTarget = false;
+            var light = HudArt.Picture(well, "Light", "glow", new Vector2(0.5f, 0.5f), new Vector2(330f, 330f), Vector2.zero);
+            light.color = tile.Open ? new Color(tile.Light.r, tile.Light.g, tile.Light.b, 1f) : new Color(0.5f, 0.5f, 0.55f, 0.3f);
+            var art = Ui.Rect("Art", well);
+            Ui.Stretch(art, 10f, 10f, 10f, 10f);
+            var picture = art.gameObject.AddComponent<Image>();
+            picture.sprite = Resources.Load<Sprite>("Buildings/" + tile.Picture);
+            picture.preserveAspect = true;
+            picture.raycastTarget = false;
+            picture.color = tile.Open ? Color.white : new Color(0.42f, 0.42f, 0.47f);
+            if (!tile.Open)
+            {
+                var locked = HudArt.Picture(well, "Lock", "icon_lock", new Vector2(0.5f, 0.5f), new Vector2(64f, 64f), Vector2.zero);
+                locked.preserveAspect = true;
+            }
+
+            var title = HudArt.Label(rect, tile.Title, HudArt.Display, 27, TextAnchor.MiddleCenter, tile.Open ? HudArt.BrassLight : HudArt.IvoryMuted, HudArt.LacquerDeep);
             title.rectTransform.anchorMin = new Vector2(0f, 1f);
             title.rectTransform.anchorMax = new Vector2(1f, 1f);
             title.rectTransform.pivot = new Vector2(0.5f, 1f);
-            title.rectTransform.sizeDelta = new Vector2(-48f, 52f);
+            title.rectTransform.sizeDelta = new Vector2(-36f, 44f);
             title.rectTransform.anchoredPosition = new Vector2(0f, -16f);
-            title.horizontalOverflow = HorizontalWrapMode.Wrap;
+            title.horizontalOverflow = HorizontalWrapMode.Overflow;
             title.verticalOverflow = VerticalWrapMode.Truncate;
             title.resizeTextForBestFit = true;
-            title.resizeTextMinSize = 18;
-            title.resizeTextMaxSize = 30;
-            var blurb = HudArt.Label(rect, tile.Blurb, HudArt.Numbers, 18, TextAnchor.UpperCenter, HudArt.Ivory, HudArt.LacquerDeep);
-            blurb.rectTransform.anchorMin = new Vector2(0f, 1f);
-            blurb.rectTransform.anchorMax = new Vector2(1f, 1f);
-            blurb.rectTransform.pivot = new Vector2(0.5f, 1f);
-            blurb.rectTransform.sizeDelta = new Vector2(-64f, 160f);
-            blurb.rectTransform.anchoredPosition = new Vector2(0f, -86f);
-            blurb.horizontalOverflow = HorizontalWrapMode.Wrap;
+            title.resizeTextMinSize = 16;
+            title.resizeTextMaxSize = 27;
 
-            var go = Ui.Button(rect, tile.Button, tile.Go, tile.Action, tile.Open, tile.Open ? Ui.AttackColor : (Color?)null, 21);
-            Ui.Anchor((RectTransform)go.transform, new Vector2(0.5f, 0f), new Vector2(180f, 56f), new Vector2(0f, 18f));
+            var blurb = HudArt.Label(rect, tile.Blurb, HudArt.Numbers, 17, TextAnchor.MiddleCenter, tile.Open ? HudArt.Ivory : HudArt.IvoryMuted, HudArt.LacquerDeep);
+            blurb.name = "Blurb";
+            blurb.rectTransform.anchorMin = new Vector2(0f, 0.3f);
+            blurb.rectTransform.anchorMax = new Vector2(1f, 0.3f);
+            blurb.rectTransform.pivot = new Vector2(0.5f, 1f);
+            blurb.rectTransform.sizeDelta = new Vector2(-36f, 56f);
+            blurb.rectTransform.anchoredPosition = new Vector2(0f, -8f);
+            blurb.horizontalOverflow = HorizontalWrapMode.Wrap;
+            blurb.verticalOverflow = VerticalWrapMode.Truncate;
+            blurb.resizeTextForBestFit = true;
+            blurb.resizeTextMinSize = 13;
+            blurb.resizeTextMaxSize = 17;
+
+            var go = Ui.Button(rect, tile.Button, tile.Go, tile.Action, tile.Open, tile.Open ? Ui.AttackColor : (Color?)null, 20);
+            Ui.Anchor((RectTransform)go.transform, new Vector2(0.5f, 0f), new Vector2(176f, 56f), new Vector2(0f, 22f));
             if (tile.Open) UiMotion.PopIn(rect, 0.04f * index, 0.85f, 0.26f);
         }
 
@@ -144,9 +163,7 @@ namespace ShinobiDominion.Game
             var total = (_siegeList?.Count ?? 0) * 3;
             _panel.ShowScreen("Village Siege", _siegeList == null ? "" : $"{stars} of {total} stars", ShowBattleHub, panel =>
             {
-                if (!string.IsNullOrEmpty(LastMessage)) panel.Line(LastMessage, 20, Ui.AccentColor);
-                panel.Line("Rogue ninja bands storm your own village. Your towers, walls and your heroes on their bases hold them off. Nothing in your village is lost, win or lose.", 19);
-                panel.Line("Three stars: under 10% damage. Two: under 30%. One: they take no star. New stars pay once.", 19, Ui.AccentColor);
+                ScreenKit.Notice(panel, LastMessage);
                 if (_siegeList == null)
                 {
                     panel.Line("Scouting the hills...");
@@ -155,12 +172,23 @@ namespace ShinobiDominion.Game
                 foreach (var level in _siegeList)
                 {
                     var chosen = level.level;
-                    var reward = level.bestStars >= 3 ? "All stars won." : $"{level.goldPerStar:N0} gold, {level.manaPerStar:N0} Mana per new star" + (level.bestStars == 0 && level.firstClearCrystals > 0 ? $", {level.firstClearCrystals:N0} gems first time" : "");
-                    var caption = level.open
-                        ? $"{level.level}. {level.name}   {Stars(level.bestStars)}   {level.attackers} attackers. {reward}"
-                        : $"{level.level}. {level.name}   Locked: hold level {level.level - 1} first";
-                    panel.Action("SiegeLevel" + level.level, caption, () => FightSiege(chosen), level.open, level.open && level.bestStars == 0 ? Ui.AttackColor : (Color?)null, 18);
+                    var first = level.open && level.bestStars == 0;
+                    var row = ScreenKit.AddRow(panel, "SiegeRow" + level.level, level.level.ToString(), level.name,
+                        level.open ? $"{level.attackers} attackers" : $"Hold level {level.level - 1} first", first);
+                    row.Button("SiegeLevel" + level.level, level.open ? "Defend" : "Locked", () => FightSiege(chosen), level.open, level.open ? Ui.AttackColor : (Color?)null, 150f);
+                    if (!level.open)
+                    {
+                        row.Dim();
+                        continue;
+                    }
+                    row.Stars(level.bestStars);
+                    if (level.bestStars >= 3) continue;
+                    // What each new star pays, and what the first win adds.
+                    if (first && level.firstClearCrystals > 0) row.Reward("icon_crystals", level.firstClearCrystals.ToString("N0"));
+                    row.Reward("icon_chakra", level.manaPerStar.ToString("N0"));
+                    row.Reward("icon_gold", level.goldPerStar.ToString("N0"));
                 }
+                panel.Line("Three stars under 10% damage, two under 30%. Gold and Mana are paid for each new star. Nothing in your village is lost.", 17);
             });
         }
 
@@ -199,19 +227,37 @@ namespace ShinobiDominion.Game
             var board = _arenaBoard;
             _panel.ShowScreen("Arena", board == null ? "" : $"{board.points:N0} points   Rank #{board.rank:N0}", ShowBattleHub, panel =>
             {
-                if (!string.IsNullOrEmpty(LastMessage)) panel.Line(LastMessage, 20, Ui.AccentColor);
-                panel.Line("Your hero charges the shrine of another hero, who guards it. Topple the shrine to win. Defending costs nothing: only your own duels move your points.", 19);
+                ScreenKit.Notice(panel, LastMessage);
                 if (board == null)
                 {
                     panel.Line("Finding the Arena...");
                     return;
                 }
-                panel.Line($"Wins {board.wins:N0}   Losses {board.losses:N0}", 22, new Color(1f, 0.9f, 0.66f));
-                panel.Line(board.paidWinsLeft > 0
-                    ? $"Each win today pays {board.winGold:N0} gold and {board.winMana:N0} Mana ({board.paidWinsLeft} paid wins left today)."
-                    : "Today's paid wins are used up. Wins still earn points.", 19, Ui.AccentColor);
-                panel.Action("ArenaFightButton", "Fight!", FightArena, true, Ui.AttackColor, 26);
-                panel.Action("ArenaRankingsButton", "Rankings", ShowRankingsFromArena, true, null, 20);
+                ScreenKit.Stats(panel,
+                    ("icon_rank", $"#{board.rank:N0}", "Rank"),
+                    ("icon_trophy", board.points.ToString("N0"), "Points"),
+                    ("icon_victory", board.wins.ToString("N0"), "Wins"),
+                    ("icon_retreat", board.losses.ToString("N0"), "Losses"));
+                ScreenKit.Feature(panel, "ArenaFightButton", "Fight", FightArena, true, Ui.AttackColor);
+                var paid = board.paidWinsLeft > 0;
+                var pay = ScreenKit.AddRow(panel, "ArenaPayRow", "icon_reward", paid ? "A win pays" : "Today's paid wins are used up",
+                    paid ? $"{board.paidWinsLeft} paid wins left today" : "Wins still earn points");
+                if (paid)
+                {
+                    pay.Reward("icon_chakra", board.winMana.ToString("N0"));
+                    pay.Reward("icon_gold", board.winGold.ToString("N0"));
+                }
+                ScreenKit.AddRow(panel, "ArenaRankRow", "icon_trophy", "Rankings", board.top.Count == 0 ? "No one has fought yet" : null)
+                    .Button("ArenaRankingsButton", "View all", ShowRankingsFromArena, true, null, 150f);
+                // The three on top, so the screen shows who there is to beat.
+                foreach (var entry in board.top.Take(3))
+                {
+                    var hero = !string.IsNullOrEmpty(entry.archetypeId) && Roster.Catalog.TryGet(entry.archetypeId, out var archetype) ? $"{archetype.displayName}, level {entry.level}" : "No hero on guard";
+                    var row = ScreenKit.AddRow(panel, "ArenaTop" + entry.rank, entry.rank.ToString(), entry.name, hero, entry.isMe, 62f);
+                    row.Title.supportRichText = false;
+                    row.Reward("icon_trophy", entry.points.ToString("N0"));
+                }
+                panel.Line("Your hero charges another hero's shrine and must topple it. Only your own duels move your points.", 17);
             });
         }
 
@@ -344,40 +390,20 @@ namespace ShinobiDominion.Game
             var board = _arenaBoard;
             _panel.ShowScreen("Rankings", board == null ? "" : $"You: rank #{board.rank:N0}, {board.points:N0} points", back, panel =>
             {
-                if (!string.IsNullOrEmpty(LastMessage)) panel.Line(LastMessage, 20, Ui.AccentColor);
-                panel.Line("The Arena's best. Points rise with each duel won.", 19);
+                ScreenKit.Notice(panel, LastMessage);
                 if (board == null) return;
-                if (board.top.Count == 0) panel.Line("No one has fought in the Arena yet. Be the first.", 21);
+                if (board.top.Count == 0) panel.Line("No one has fought in the Arena yet.", 21);
                 foreach (var entry in board.top)
                 {
-                    var hero = !string.IsNullOrEmpty(entry.archetypeId) && Roster.Catalog.TryGet(entry.archetypeId, out var archetype) ? $"{archetype.displayName}, level {entry.level}" : "no hero on guard";
-                    // Fixed columns, so rank, name, points and hero line up from row to row.
-                    var size = entry.isMe ? 23 : 20;
-                    var color = entry.isMe ? Ui.AccentColor : (entry.rank <= 3 ? new Color(1f, 0.87f, 0.45f) : Ui.MutedText);
-                    var row = panel.Row();
-                    row.GetComponent<HorizontalLayoutGroup>().childForceExpandWidth = false;
-                    RankCell(row, $"#{entry.rank}", 80f, size, color);
-                    var name = RankCell(row, entry.name, 300f, size, color);
-                    RankCell(row, $"{entry.points:N0} points", 180f, size, color);
-                    RankCell(row, hero, 0f, size, color);
-                    if (entry.isMe) UiMotion.Shine(name, Color.white, 2.4f, 0.3f);
+                    var hero = !string.IsNullOrEmpty(entry.archetypeId) && Roster.Catalog.TryGet(entry.archetypeId, out var archetype) ? $"{archetype.displayName}, level {entry.level}" : "No hero on guard";
+                    var row = ScreenKit.AddRow(panel, "RankRow" + entry.rank, entry.rank.ToString(), entry.name, hero, entry.isMe, 66f);
+                    // A name is something a player typed: shown as written, never obeyed.
+                    row.Title.supportRichText = false;
+                    row.Reward("icon_trophy", entry.points.ToString("N0"));
+                    if (entry.rank <= 3 && !entry.isMe) row.Title.color = new Color(1f, 0.87f, 0.45f);
+                    if (entry.isMe) UiMotion.Shine(row.Title, Color.white, 2.4f, 0.3f);
                 }
             });
-        }
-
-        private static Text RankCell(RectTransform row, string text, float width, int size, Color color)
-        {
-            var label = Ui.Label(row, text, size, TextAnchor.MiddleLeft, color);
-            label.horizontalOverflow = HorizontalWrapMode.Wrap;
-            label.verticalOverflow = VerticalWrapMode.Truncate;
-            label.resizeTextForBestFit = true;
-            label.resizeTextMinSize = 14;
-            label.resizeTextMaxSize = size;
-            var cell = label.gameObject.AddComponent<LayoutElement>();
-            cell.minHeight = cell.preferredHeight = size + 12f;
-            if (width > 0f) cell.minWidth = cell.preferredWidth = width;
-            else cell.flexibleWidth = 1f;
-            return label;
         }
 
         public void OpenQuests()
@@ -396,25 +422,36 @@ namespace ShinobiDominion.Game
             var done = board?.Quests.Count(q => q.claimed) ?? 0;
             _panel.ShowScreen("Daily Quests", board == null ? "" : $"{done} of {board.Quests.Count} claimed today", CloseAll, panel =>
             {
-                if (!string.IsNullOrEmpty(LastMessage)) panel.Line(LastMessage, 20, Ui.AccentColor);
-                panel.Line("New quests every day at midnight UTC. Each pays gems.", 19);
+                ScreenKit.Notice(panel, LastMessage);
                 if (board == null) return;
                 foreach (var quest in board.Quests)
                 {
                     var id = quest.id;
-                    var progress = $"{Mathf.Min(quest.progress, quest.target)}/{quest.target}";
-                    if (quest.claimed)
-                        panel.Action("Quest_" + id, $"{quest.title}   {progress}   Claimed", null, false, null, 19);
-                    else if (quest.Done)
-                    {
-                        var button = panel.Action("Quest_" + id, $"{quest.title}   {progress}   Claim {quest.crystals:N0} gems", () => ClaimQuest(id), true, Ui.AccentColor, 19);
-                        // The caption pulses, not the button: a growing button broke out of the list's straight edges.
-                        UiMotion.Pulse(button.GetComponentInChildren<Text>().transform, 0.05f, 1.2f);
-                    }
-                    else
-                        panel.Action("Quest_" + id, $"{quest.title}   {progress}   {quest.crystals:N0} gems", null, false, null, 19);
+                    var ready = quest.Done && !quest.claimed;
+                    var row = ScreenKit.AddRow(panel, "QuestRow_" + id, QuestIcon(id), quest.title, null, ready);
+                    if (ready) row.Button("Quest_" + id, "Claim", () => ClaimQuest(id), true, Ui.AccentColor, 140f);
+                    if (quest.claimed) row.Note("Claimed").Mark("icon_check").Dim();
+                    else row.Reward("icon_crystals", quest.crystals.ToString("N0"));
+                    row.Progress(quest.progress, quest.target);
                 }
+                panel.Line("New quests every day at midnight UTC.", 17);
             });
+        }
+
+        /// <summary>The picture for a quest, by what it asks for.</summary>
+        private static string QuestIcon(string id)
+        {
+            switch (id)
+            {
+                case "collect": return "icon_collect";
+                case "train": return "icon_train";
+                case "upgrade": return "icon_upgrade";
+                case "raid_win": return "icon_battle";
+                case "arena": return "icon_arena";
+                case "siege": return "icon_shield";
+                case "summon": return "icon_summon";
+                default: return "icon_quests";
+            }
         }
 
         public void ClaimQuest(string questId)

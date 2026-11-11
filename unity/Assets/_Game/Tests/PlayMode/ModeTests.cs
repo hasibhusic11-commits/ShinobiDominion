@@ -292,7 +292,7 @@ namespace ShinobiDominion.Tests
             yield return WaitFor(() => AllText.Contains("Rankings") && AllText.Contains("points"));
             yield return shot("47_rankings");
             Controller.OpenShortcut("quests");
-            yield return WaitFor(() => Find("Quest_collect") != null);
+            yield return WaitFor(() => _root.GetComponentsInChildren<RectTransform>(false).Any(r => r.name == "QuestRow_collect"));
             yield return shot("48_quests");
             Controller.OpenShortcut("gift");
             yield return WaitFor(() => Find("OpenGiftButton") != null);

@@ -32,8 +32,7 @@ namespace ShinobiDominion.Game
             var cleared = floors?.Count(f => f.cleared) ?? 0;
             _panel.ShowScreen("Trial Tower", floors == null ? "" : $"{cleared} of {floors.Count} floors cleared", ShowBattleHub, panel =>
             {
-                if (!string.IsNullOrEmpty(LastMessage)) panel.Line(LastMessage, 20, Ui.AccentColor);
-                panel.Line("Climb the tower one guardian at a time. Your hero must topple each guardian's shrine. Each floor pays once, the first time it is cleared.", 19);
+                ScreenKit.Notice(panel, LastMessage);
                 if (floors == null)
                 {
                     panel.Line("Climbing the stairs...");
@@ -46,14 +45,20 @@ namespace ShinobiDominion.Game
                 {
                     var number = floor.floor;
                     var name = Roster.Catalog.TryGet(floor.archetypeId, out var archetype) ? archetype.displayName : "Guardian";
-                    var evolution = floor.evolution > 0 ? $" Evo {floor.evolution}" : "";
-                    var caption = floor.cleared
-                        ? $"Floor {number}: {name}, level {floor.level}{evolution}   Cleared"
-                        : floor.open
-                            ? $"Floor {number}: {name}, level {floor.level}{evolution}   First clear: {floor.crystals:N0} gems, {floor.mana:N0} Mana"
-                            : $"Floor {number}: locked until floor {number - 1} is cleared";
-                    panel.Action("TrialFloor" + number, caption, () => FightTrial(number), floor.open, floor.open && !floor.cleared ? Ui.AttackColor : (Color?)null, 18);
+                    var evolution = floor.evolution > 0 ? $", Evo {floor.evolution}" : "";
+                    var usable = floor.open || floor.cleared;
+                    var row = ScreenKit.AddRow(panel, "TrialRow" + number, number.ToString(), usable ? name : "Locked",
+                        usable ? $"Guardian level {floor.level}{evolution}" : $"Clear floor {number - 1} first", floor.open && !floor.cleared);
+                    row.Button("TrialFloor" + number, floor.cleared ? "Again" : floor.open ? "Climb" : "Locked", () => FightTrial(number), floor.open, floor.open && !floor.cleared ? Ui.AttackColor : (Color?)null, 140f);
+                    if (floor.cleared) row.Mark("icon_check");
+                    else if (floor.open)
+                    {
+                        row.Reward("icon_chakra", floor.mana.ToString("N0"));
+                        row.Reward("icon_crystals", floor.crystals.ToString("N0"));
+                    }
+                    else row.Dim();
                 }
+                panel.Line("Your hero must topple each guardian's shrine. A floor pays once, the first time it is cleared.", 17);
             });
         }
 

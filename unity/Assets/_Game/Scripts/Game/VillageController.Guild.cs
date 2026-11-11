@@ -112,17 +112,22 @@ namespace ShinobiDominion.Game
             {
                 _panel.ShowScreen("Guilds", view == null ? "" : $"You: {view.myName}", CloseAll, panel =>
                 {
-                    if (!string.IsNullOrEmpty(LastMessage)) panel.Line(LastMessage, 20, Ui.AccentColor);
+                    ScreenKit.Notice(panel, LastMessage);
                     if (view == null) return;
-                    panel.Line("Join a guild to chat with other commanders and climb the rankings together.", 19);
-                    if (view.browse.Count == 0) panel.Line("No guilds yet. Found the first one!", 21);
+                    if (view.browse.Count == 0) panel.Line("No guilds yet.", 21);
                     for (var i = 0; i < view.browse.Count; i++)
                     {
                         var guild = view.browse[i];
                         var full = guild.members >= GuildView.MaxMembers;
                         var id = guild.id;
-                        panel.Action("JoinGuild" + i, $"{guild.name}   {guild.members}/{GuildView.MaxMembers} members   {guild.points:N0} Arena points" + (string.IsNullOrEmpty(guild.description) ? "" : $"   \"{guild.description}\""),
-                            () => GuildCall(key => Modes.GuildJoinAsync(key, id), "guild-join|" + id), !full, null, 18);
+                        var row = ScreenKit.AddRow(panel, "GuildRow" + i, "icon_guild", guild.name, string.IsNullOrEmpty(guild.description) ? null : guild.description);
+                        // A guild's name and motto are things a player typed: shown as written, never obeyed.
+                        row.Title.supportRichText = false;
+                        if (row.Detail != null) row.Detail.supportRichText = false;
+                        row.Button("JoinGuild" + i, full ? "Full" : "Join", () => GuildCall(key => Modes.GuildJoinAsync(key, id), "guild-join|" + id), !full, full ? (Color?)null : Ui.AccentColor, 130f);
+                        row.Reward("icon_trophy", guild.points.ToString("N0"));
+                        row.Reward("icon_friends", $"{guild.members}/{GuildView.MaxMembers}");
+                        if (full) row.Dim();
                     }
                     panel.Line($"Found your own guild for {view.foundingCost:N0} gems:", 21, new Color(1f, 0.9f, 0.66f));
                     var name = TextBox(panel.Row(), "GuildNameInput", "Guild name", 16);
