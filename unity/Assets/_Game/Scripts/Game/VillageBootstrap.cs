@@ -33,6 +33,11 @@ namespace ShinobiDominion.Game
         public VillageController Controller { get; private set; }
         public IsoCamera IsoCamera { get; private set; }
 
+        private UiRoot _uiRoot;
+        private Rect _lastSafeArea;
+        private int _lastScreenWidth = -1;
+        private int _lastScreenHeight = -1;
+
         private void Awake()
         {
             GameMusic.Ensure();
@@ -79,10 +84,10 @@ namespace ShinobiDominion.Game
             IsoCamera = cameraObject.AddComponent<IsoCamera>();
             IsoCamera.Initialize(new Vector3(25f, 0f, 25f), 8.5f);
 
-            var ui = new UiRoot(transform);
+            _uiRoot = new UiRoot(transform);
             Controller = gameObject.AddComponent<VillageController>();
             Controller.AllowOfflinePlay = AllowOfflinePlay;
-            Controller.Initialize(village, AllowOfflinePlay ? store : null, roster, AllowOfflinePlay ? rosterStore : null, IsoCamera, world, ui);
+            Controller.Initialize(village, AllowOfflinePlay ? store : null, roster, AllowOfflinePlay ? rosterStore : null, IsoCamera, world, _uiRoot);
 
             if (ServerOverride != null)
             {
@@ -95,6 +100,19 @@ namespace ShinobiDominion.Game
             }
 
             gameObject.AddComponent<WorldInput>().Initialize(IsoCamera, Controller);
+        }
+
+        private void Update()
+        {
+            // Device rotation, window resize and cutout changes must not leave
+            // the HUD under a notch. This does no layout work on unchanged frames.
+            var bounds = Screen.safeArea;
+            if (_lastScreenWidth == Screen.width && _lastScreenHeight == Screen.height && bounds == _lastSafeArea)
+                return;
+            _lastScreenWidth = Screen.width;
+            _lastScreenHeight = Screen.height;
+            _lastSafeArea = bounds;
+            _uiRoot?.ApplySafeArea();
         }
 
         private static Light CreateLight(Transform parent)
