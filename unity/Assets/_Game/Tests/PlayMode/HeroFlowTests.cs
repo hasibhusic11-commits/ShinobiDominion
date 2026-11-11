@@ -70,6 +70,28 @@ namespace ShinobiDominion.Tests
         }
 
         [UnityTest]
+        public IEnumerator Altar_HasThinShelfAndIndividualFramedLevelPlates()
+        {
+            Controller.Select(First("hero_altar").Id);
+            Controller.ShowAltarRoster();
+            yield return null;
+
+            var shelf = _root.GetComponentsInChildren<RectTransform>(false)
+                .FirstOrDefault(t => t.name == "Shelf0");
+            Assert.IsNotNull(shelf);
+            Assert.LessOrEqual(shelf.sizeDelta.y, 12f,
+                "The shelf must not become a 40-pixel brown banner over the cards");
+
+            var card = Buttons().First(b => b.name.StartsWith("Hero_"));
+            var lip = card.GetComponentsInChildren<RectTransform>(false)
+                .FirstOrDefault(t => t.name == "Lip");
+            Assert.IsNotNull(lip);
+            var plate = lip.GetComponent<Image>();
+            Assert.IsNotNull(plate, "Each hero level needs its own framed plate");
+            Assert.IsNotNull(plate.sprite, "Level plate must use the painted UI sprite");
+        }
+
+        [UnityTest]
         public IEnumerator Altar_RarityFilter_ShowsOnlyThatRarity()
         {
             Controller.Select(First("hero_altar").Id);
