@@ -38,6 +38,25 @@ namespace ShinobiDominion.Tests
         }
 
         [Test]
+        public void FirstWallTier_UsesAnAvailableLaterTierWhenThePackIsIncomplete()
+        {
+            var texture = new Texture2D(2, 2);
+            var sprite = Sprite.Create(texture, new Rect(0, 0, 2, 2), Vector2.one * 0.5f);
+            try
+            {
+                Sprite Load(string name) => name == "wall_post_v2_04" ? sprite : null;
+                var result = WallView.FindAvailableSprite("wall_post_v2_01", 1, Load, out var tier);
+                Assert.AreSame(sprite, result);
+                Assert.AreEqual(4, tier);
+            }
+            finally
+            {
+                Object.DestroyImmediate(sprite);
+                Object.DestroyImmediate(texture);
+            }
+        }
+
+        [Test]
         public void MissingAllWallArt_DoesNotInventGeometry()
         {
             var result = WallView.FindAvailableSprite("wall_post_v2_10", 10, _ => null, out var tier);
