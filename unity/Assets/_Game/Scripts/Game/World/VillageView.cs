@@ -192,18 +192,7 @@ namespace ShinobiDominion.Game
         {
             // An incomplete upgrade art pack must not make a real wall invisible.
             // Keep the same direction/type and use the closest available lower tier.
-            var sprite = BuildingSprites.Load(name);
-            var picturedTier = art;
-            if (sprite == null)
-            {
-                var suffix = name.LastIndexOf('_');
-                var prefix = suffix >= 0 ? name.Substring(0, suffix + 1) : name + "_";
-                for (var tier = art - 1; tier >= 1 && sprite == null; tier--)
-                {
-                    sprite = BuildingSprites.Load(prefix + tier.ToString("00"));
-                    if (sprite != null) picturedTier = tier;
-                }
-            }
+            var sprite = FindAvailableSprite(name, art, BuildingSprites.Load, out var picturedTier);
             if (sprite == null) return; // Requires missing source art; never fabricate a wall.
             var step = BuildingSprites.MetaPixels($"wall_seg_x_{picturedTier:00}");
             if (step <= 0f) step = 184f;
@@ -223,6 +212,31 @@ namespace ShinobiDominion.Game
                 _pieces.Add(BuildingSprites.Stand(_root, "WallPiece", sprite, foot, screenWidth, order, Color.white));
             }
             _used++;
+        }
+
+        /// <summary>
+        /// Keep the requested wall direction/type while walking backwards through
+        /// its visual upgrade tiers. Exposed to Unity tests with an injected loader.
+        /// This never changes the wall's actual village/gameplay level.
+        /// </summary>
+        public static Sprite FindAvailableSprite(string name, int art, System.Func<string, Sprite> load, out int picturedTier)
+        {
+            picturedTier = art;
+            if (string.IsNullOrEmpty(name) || load == null || art < 1) return null;
+
+            var sprite = load(name);
+            if (sprite != null) return sprite;
+
+            var suffix = name.LastIndexOf('_');
+            var prefix = suffix >= 0 ? name.Substring(0, suffix + 1) : name + "_";
+            for (var tier = art - 1; tier >= 1; tier--)
+            {
+                sprite = load(prefix + tier.ToString("00"));
+                if (sprite == null) continue;
+                picturedTier = tier;
+                return sprite;
+            }
+            return null;
         }
 
         private void Shadow(Vector3 center)
