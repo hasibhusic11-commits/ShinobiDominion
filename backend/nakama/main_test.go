@@ -119,6 +119,10 @@ func TestDecodeStrict_RejectsExtraFieldsAndOversize(t *testing.T) {
 		`{"poolVersion":1,"count":1,"key":"abcdefgh","seed":42}`,
 		`not json`,
 		`{"poolVersion":1,"count":1,"key":"abcdefgh"}{"count":10}`,
+		`{"poolVersion":1,"count":1,"key":"abcdefgh"} null`,
+		`{"poolVersion":1,"count":1,"key":"abcdefgh"} true`,
+		`{"poolVersion":1,"count":1,"key":"abcdefgh"} 12`,
+		`{"poolVersion":1,"count":1,"key":"abcdefgh"} garbage`,
 		`{"key":"` + strings.Repeat("a", maxPayloadBytes) + `"}`,
 	} {
 		if err := decodeStrict(payload, &request); !errors.Is(err, errBadRequest) {

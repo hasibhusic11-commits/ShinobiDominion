@@ -26,6 +26,8 @@ namespace ShinobiDominion.Core
 
     public sealed class GuildChatLine
     {
+        public long id;
+        public bool reported;
         public string name;
         public string text;
         public long atMs;

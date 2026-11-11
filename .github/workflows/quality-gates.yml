@@ -1,0 +1,49 @@
+name: Shinobi Dominion quality gates
+
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+      - 'fix/**'
+  pull_request:
+  workflow_dispatch:
+
+# CI only reads the repository. Never give pull-request builds write privileges.
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  content-integrity:
+    name: Validate catalogs and resource references
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate hero, building and summon data
+        run: python3 tools/ci/validate_catalog.py
+
+  core-rules:
+    name: .NET core and shared battle tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Test engine-free C# rules
+        run: dotnet test tools/core-tests/ShinobiDominion.Core.Tests.csproj --configuration Release --verbosity normal
+
+  nakama:
+    name: Go/Nakama unit tests and plugin build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # The Dockerfile copies the same shipped catalogs as Unity, runs go vet
+      # and Go unit tests, then compiles the Nakama plugin. A plain go test
+      # outside the Docker build would be missing those embedded resources.
+      - name: Validate backend inside its production build environment
+        run: docker build --progress=plain -f backend/nakama/Dockerfile -t shinobi-dominion-nakama:ci .

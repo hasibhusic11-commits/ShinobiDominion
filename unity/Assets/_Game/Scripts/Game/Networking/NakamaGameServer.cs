@@ -59,6 +59,7 @@ namespace ShinobiDominion.Game
         Task<GuildView> GuildJoinAsync(string key, string guildId);
         Task<GuildView> GuildLeaveAsync(string key);
         Task<GuildView> GuildChatAsync(string key, string text);
+        Task<GuildView> GuildReportAsync(string key, long messageId);
         Task<ChestView> ChestViewAsync();
         Task<ChestView> ChestOpenAsync(string key);
         Task<ChestView> ShopBuyAsync(string key, string offerId);
@@ -217,6 +218,8 @@ namespace ShinobiDominion.Game
         public async Task<GuildView> GuildLeaveAsync(string key) => GuildView.Parse(await CallAsync("sd_guild_leave", new { key }));
 
         public async Task<GuildView> GuildChatAsync(string key, string text) => GuildView.Parse(await CallAsync("sd_guild_chat", new { key, text }));
+
+        public async Task<GuildView> GuildReportAsync(string key, long messageId) => GuildView.Parse(await CallAsync("sd_guild_report", new { key, messageId }));
 
         public async Task<ChestView> ChestViewAsync() => ChestView.Parse(await CallAsync("sd_chest_view", null));
 

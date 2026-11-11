@@ -1,51 +1,52 @@
-# Economy and odds
+# Economy and summon odds — current shipped prototype data
 
-**Every number here is a test value that you have not approved.**
+**Last reconciled: 2026-11-11. All rates, costs and caps are provisional and NOT APPROVED for release.**
+The canonical numbers live in `backend/nakama/config/summon_pool.json`, `Resources/Config/heroes.json`,
+and `Resources/Config/buildings.json`. This document summarizes them, never overrides them.
 
-## Summon pool, version 1 (`backend/nakama/config/summon_pool.json`)
-| Hero | Rarity | Weight | Chance |
-|---|---|---|---|
-| River Scout | Common | 7,500 | 75.000% |
-| Lantern Warden | Elite | 2,000 | 20.000% |
-| Solar Beast Sage | Legendary | 125 | 1.250% |
-| Thunder Empress | Legendary | 125 | 1.250% |
-| Stone Titan | Legendary | 125 | 1.250% |
-| Moonfang Oracle | Legendary | 125 | 1.250% |
+## Summoning
 
-Totals: Common 75%, Elite 20%, Legendary 5%. Only heroes with finished content can be in a pool, so the four incomplete Legendaries are refused until they are ready, and the server refuses to start otherwise.
+Pool `version: 1` — **Standard Gate**.
+`TEST RATES - NOT APPROVED for release. Owner's working rates 2026-11-08: Common 70%, Elite 28%, Legendary 2%, split evenly within each rarity.`
 
-To change rates, edit the file and raise `version`. Clients holding old rates are then refused and must fetch the new ones, so a player is never charged under rates different from those shown.
+| Rarity | Summonable characters | Total weight | Probability |
+|---|---:|---:|---:|
+| Common | 10 | 7,000 | 70.000% |
+| Elite | 10 | 2,800 | 28.000% |
+| Legendary | 4 | 200 | 2.000% |
+| **Total** | **24** | **10,000** | **100.000%** |
 
-## Prices and starting values
-- 100 crystals per roll. A ten-pull costs exactly 1,000 and has no discount or bonus.
-- New players start with 3,000 crystals, no heroes and no catalysts. That is hardcoded as `startingCrystals` in `backend/nakama/main.go`.
+- 4 of the 8 designed Legendaries are currently included (Solar Beast Sage, Thunder Empress, Stone Titan, Moonfang Oracle).
+- Other four Legendary IDs are in `heroes.json` but marked `contentComplete: false`. **Do not add them until their content is approved and their published odds are updated.**
+- Gems are called `crystals` in the internal server and serialization code; the player-facing resource is **Gems**. The other resources are Gold and Mana. No wood or energy.
+- One summon costs **100 gems**. Ten independent summons cost **1000 gems** with no hidden discount.
+- A newly created player receives **3,000 gems** from `startingCrystals` in `backend/nakama/main.go`.
+- **No pity, duplicate protection, selector, guaranteed rare result or scripted first pull**. The server uses cryptographic randomness and returns actual advertised odds.
+- Changing the table requires a `version` bump. An old-version request is rejected rather than charged at unadvertised rates.
 
-## Rules that do not change
-No pity, no guarantee, no duplicate protection, no selector, no scripted first summon. A ten-pull is ten independent rolls.
+## Hero evolution
 
-## Decisions still yours
-Final rates, prices, crystal income, how catalysts are earned (there is no source yet), and how XP is earned (only a development button exists).
+Base plus **Evo I, Evo II and Evo III**. Each transition requires max level (200),
+one **duplicate of the exact hero**, and one catalyst. Current test catalyst IDs:
+`awakening_scroll`, `ascension_stone`, `sovereign_scroll`.
+The server decides sacrifices and rewards. No pets or animal companions.
 
-## Building levels (test values)
-Every building has 15 levels. Edit `tools/balance/generate_building_levels.ps1` and rerun it to change them. Full tables are in `buildings.json`.
+## Building progression
 
-| Stat | Level 1 | Level 15 | Growth |
-|---|---|---|---|
-| HP (most buildings) | base | 9x | Faster and faster |
-| HP (walls) | 300 | 120,000 | Fastest of all |
-| Upgrade cost | base | 450x base, for 14 to 15 | Faster and faster |
-| Gold mine, per hour | 600 | 6,000 | Steady |
-| Gold mine, holds | 2,400 | 31,200 | Faster and faster |
-| Vault capacity | 15,000 | 225,000 | Faster and faster |
-| Tower attack | 60 | 340 | +20 per level |
-| Tower range | 13 | 18 | Steps |
-| Hero base bonus | 2% | 30% | +2% per level |
+Current shipped content uses **15 levels per building** (21 building types). This reflects **ADR-025**; an earlier design discussion considered ten. **Do not silently change all upgrade tables** without a deliberate new gameplay decision, a balance rerun and synchronized client/server tests.
 
-Dojo level needed: 3 for level 5, 6 for level 8, 9 for level 11, 12 for level 14.
+Gold/Mana mine production, capacities, tower damage, builder timers and upgrade costs live in `buildings.json`.
+Do not quote old numeric tables as current after a balance generator change.
 
-## Dungeon rewards (test values, ADR-029)
-Made by `tools/balance/generate_campaign.js` (ADR-047). Only the server pays these.
-- Gold: each stage pays per new star, as raids always have.
-- Hero XP: 30 + 25 for each stage number, per hero landed, on each win. At most 30 paying wins in 24 hours.
-- Crystals: paid once, on a stage's first clear.
-- Catalysts: one each, once only: stage 5 Awakening Scroll, stage 10 Ascension Stone, stage 15 Sovereign Scroll.
+## Dungeon rewards
+
+Fifteen campaign stages. Server-controlled rewards include Gold/Mana on eligible
+stars, Hero XP from eligible wins, first-clear gems, and the three one-time
+catalysts (stages 5, 10 and 15). Check `backend/nakama/battle_rpc.go`
+and the shared rules tests before changing reward caps.
+
+## Next owner decisions
+
+Final summon odds, game launch roster completeness, approved reward pacing,
+monetization (currently **no real-money purchases**), building level ceiling,
+and a launch-ready account-recovery/authentication system.

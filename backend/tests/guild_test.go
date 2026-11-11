@@ -21,8 +21,10 @@ type guildView struct {
 		IsMe bool   `json:"isMe"`
 	} `json:"members"`
 	Chat []struct {
+		ID int64 `json:"id"`
 		Name string `json:"name"`
 		Text string `json:"text"`
+		Reported bool `json:"reported"`
 	} `json:"chat"`
 	Browse []struct {
 		ID   string `json:"id"`
@@ -131,5 +133,45 @@ func TestGuild_ConcurrentJoinsNeverPassTheCap(t *testing.T) {
 	final, _ := guildCall(leader, "sd_guild_chat", map[string]interface{}{"text": "roll call"})
 	if final.Guild.Members != 30 {
 		t.Fatalf("a guild holds 30, it has %d", final.Guild.Members)
+	}
+}
+
+
+// Requires the real Nakama + Postgres integration stack; verifies that
+// reporting cannot cross guilds and that evidence survives guild dissolution.
+func TestGuild_ReportIsScopedAndSurvivesGuildClosure(t *testing.T) {
+	leader := newPlayer(t)
+	member := newPlayer(t)
+	outsider := newPlayer(t)
+	name := "Report" + randomHex(4)
+	created, err := guildCall(leader, "sd_guild_create", map[string]interface{}{"name": name})
+	if err != nil { t.Fatal(err) }
+	if _, err := guildCall(member, "sd_guild_join", map[string]interface{}{"guildId": created.Guild.ID}); err != nil {
+		t.Fatal(err)
+	}
+	chat, err := guildCall(leader, "sd_guild_chat", map[string]interface{}{"text": "please review this text"})
+	if err != nil { t.Fatal(err) }
+	if len(chat.Chat) == 0 || chat.Chat[len(chat.Chat)-1].ID < 1 {
+		t.Fatalf("chat must carry a message ID: %+v", chat)
+	}
+	messageID := chat.Chat[len(chat.Chat)-1].ID
+
+	_, err = guildCall(outsider, "sd_guild_report", map[string]interface{}{"messageId": messageID})
+	expectError(t, err, "NOT_IN_GUILD")
+	_, err = guildCall(leader, "sd_guild_report", map[string]interface{}{"messageId": messageID})
+	expectError(t, err, "CANNOT_REPORT_SELF")
+
+	result, err := guildCall(member, "sd_guild_report", map[string]interface{}{"messageId": messageID})
+	if err != nil { t.Fatal(err) }
+	if len(result.Chat) == 0 || !result.Chat[len(result.Chat)-1].Reported {
+		t.Fatalf("reporter must see their own report status: %+v", result.Chat)
+	}
+	// A fresh request key for the same line is harmless and still returns success.
+	if _, err := guildCall(member, "sd_guild_report", map[string]interface{}{"messageId": messageID}); err != nil {
+		t.Fatalf("duplicate report must be idempotent: %v", err)
+	}
+	if _, err := guildCall(leader, "sd_guild_leave", nil); err != nil { t.Fatal(err) }
+	if _, err := guildCall(member, "sd_guild_leave", nil); err != nil {
+		t.Fatalf("a guild with reported messages must still dissolve cleanly: %v", err)
 	}
 }

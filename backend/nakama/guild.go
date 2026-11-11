@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
@@ -34,6 +35,9 @@ var (
 	errGuildNotFound = gameError("GUILD_NOT_FOUND", codeNotFound)
 	errBadChat       = gameError("BAD_MESSAGE", codeInvalid)
 	errChatTooFast   = gameError("CHAT_TOO_FAST", codeExhausted)
+	errGuildReportLimit = gameError("REPORT_LIMIT", codeExhausted)
+	errGuildReportTarget = gameError("REPORT_TARGET_NOT_FOUND", codeNotFound)
+	errGuildReportSelf = gameError("CANNOT_REPORT_SELF", codeInvalid)
 )
 
 // cleanName trims a name and checks it: 3 to 16 letters, digits, spaces, - or _, starting and ending
@@ -117,6 +121,8 @@ type guildMember struct {
 }
 
 type guildChatLine struct {
+	ID int64 `json:"id"`
+	Reported bool `json:"reported"`
 	Name string `json:"name"`
 	Text string `json:"text"`
 	AtMs int64  `json:"atMs"`
@@ -213,9 +219,10 @@ func (s *Server) loadGuildView(ctx context.Context, tx *sql.Tx, userID string, c
 		return nil, err
 	}
 	memberRows.Close()
-	chatRows, err := tx.QueryContext(ctx, `SELECT * FROM (SELECT c.user_id::text, COALESCE(`+sqlPlayerName+`, 'Shinobi'), c.text, (EXTRACT(EPOCH FROM c.created_at) * 1000)::bigint, c.id
+	chatRows, err := tx.QueryContext(ctx, `SELECT * FROM (SELECT c.user_id::text, COALESCE(`+sqlPlayerName+`, 'Shinobi'), c.text, (EXTRACT(EPOCH FROM c.created_at) * 1000)::bigint, c.id,
+		    EXISTS (SELECT 1 FROM sd_guild_chat_report r WHERE r.reporter_id = $2 AND r.message_id = c.id)
 		FROM sd_guild_chat c LEFT JOIN users u ON u.id = c.user_id
-		WHERE c.guild_id = $1 ORDER BY c.id DESC LIMIT 40) recent ORDER BY 5`, guildID)
+		WHERE c.guild_id = $1 ORDER BY c.id DESC LIMIT 40) recent ORDER BY 5`, guildID, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -224,9 +231,10 @@ func (s *Server) loadGuildView(ctx context.Context, tx *sql.Tx, userID string, c
 		var line guildChatLine
 		var id string
 		var serial int64
-		if err := chatRows.Scan(&id, &line.Name, &line.Text, &line.AtMs, &serial); err != nil {
+		if err := chatRows.Scan(&id, &line.Name, &line.Text, &line.AtMs, &serial, &line.Reported); err != nil {
 			return nil, err
 		}
+		line.ID = serial
 		line.IsMe = id == userID
 		view.Chat = append(view.Chat, line)
 	}
@@ -449,4 +457,65 @@ func (s *Server) rpcGuildChat(ctx context.Context, logger runtime.Logger, db *sq
 		_, err = tx.ExecContext(ctx, `DELETE FROM sd_guild_chat WHERE guild_id = $1 AND id NOT IN (SELECT id FROM sd_guild_chat WHERE guild_id = $1 ORDER BY id DESC LIMIT $2)`, guildID, guildChatKeep)
 		return crystals, err
 	})
+}
+
+
+// rpcGuildReport saves a scoped, private immutable snapshot of a harmful chat
+// line. It survives ordinary chat pruning; moderation review tooling remains
+// an explicit release requirement.
+func (s *Server) rpcGuildReport(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error) {
+	userID, err := userFrom(ctx)
+	if err != nil { return "", err }
+	var request struct {
+		Key string `json:"key"`
+		MessageID int64 `json:"messageId"`
+	}
+	if err := decodeStrict(payload, &request); err != nil { return "", err }
+	if !keyPattern.MatchString(request.Key) || request.MessageID <= 0 { return "", errBadRequest }
+	if !s.limiter.Allow(userID, time.Now()) { return "", errRateLimited }
+
+	requestHash := hashRequest(strconv.FormatInt(request.MessageID, 10))
+	var output string
+	err = withTx(ctx, db, func(tx *sql.Tx) error {
+		crystals, err := s.lockPlayer(ctx, tx, userID)
+		if err != nil { return err }
+		if stored, found, err := replayed(ctx, tx, userID, request.Key, "guild_report", requestHash); err != nil {
+			return err
+		} else if found {
+			output = stored
+			return nil
+		}
+		guildID, err := myGuildID(ctx, tx, userID)
+		if err != nil { return err }
+		if guildID == "" { return errNotInGuild }
+		var sender, snapshot string
+		err = tx.QueryRowContext(ctx,
+			`SELECT user_id::text, text FROM sd_guild_chat WHERE guild_id = $1 AND id = $2`,
+			guildID, request.MessageID).Scan(&sender, &snapshot)
+		if errors.Is(err, sql.ErrNoRows) { return errGuildReportTarget }
+		if err != nil { return err }
+		if sender == userID { return errGuildReportSelf }
+		var exists bool
+		if err := tx.QueryRowContext(ctx,
+			`SELECT EXISTS (SELECT 1 FROM sd_guild_chat_report WHERE reporter_id = $1 AND message_id = $2)`,
+			userID, request.MessageID).Scan(&exists); err != nil { return err }
+		if !exists {
+			var recent int
+			if err := tx.QueryRowContext(ctx,
+				`SELECT count(*) FROM sd_guild_chat_report WHERE reporter_id = $1 AND reported_at > now() - interval '24 hours'`,
+				userID).Scan(&recent); err != nil { return err }
+			if recent >= 10 { return errGuildReportLimit }
+			if _, err := tx.ExecContext(ctx,
+				`INSERT INTO sd_guild_chat_report (guild_id, message_id, sender_id, reporter_id, text_snapshot)
+				 VALUES ($1, $2, $3, $4, $5)
+				 ON CONFLICT (reporter_id, message_id) DO NOTHING`,
+				guildID, request.MessageID, sender, userID, snapshot); err != nil { return err }
+		}
+		view, err := s.loadGuildView(ctx, tx, userID, crystals)
+		if err != nil { return err }
+		output, err = marshal(view)
+		if err != nil { return err }
+		return storeResponse(ctx, tx, userID, request.Key, "guild_report", requestHash, output)
+	})
+	return output, err
 }

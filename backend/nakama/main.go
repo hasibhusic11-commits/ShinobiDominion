@@ -176,6 +176,7 @@ func (s *Server) register(initializer runtime.Initializer, logger runtime.Logger
 		"sd_guild_join":   s.rpcGuildJoin,
 		"sd_guild_leave":  s.rpcGuildLeave,
 		"sd_guild_chat":   s.rpcGuildChat,
+		"sd_guild_report": s.rpcGuildReport,
 		"sd_chest_view":   s.rpcChestView,
 		"sd_chest_open":   s.rpcChestOpen,
 		"sd_shop_buy":     s.rpcShopBuy,
@@ -289,7 +290,10 @@ func decodeStrict(payload string, target interface{}) error {
 	if err := decoder.Decode(target); err != nil {
 		return errBadRequest
 	}
-	if decoder.More() {
+	// More() only answers whether an array/object has another element. At the
+	// top level use a second decode to reject trailing JSON values or garbage.
+	var trailing interface{}
+	if err := decoder.Decode(&trailing); err != io.EOF {
 		return errBadRequest
 	}
 	return nil
