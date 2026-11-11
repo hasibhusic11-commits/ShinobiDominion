@@ -12,6 +12,12 @@ Before this pass, Hero Detail chose an authored evolution painting when present 
 - Keep existing rarity frame, level, role, name, selected state, and callback names unchanged. This does not change hero stats, evolution eligibility, summons, server behavior, or economy.
 - Added regression coverage to `HeroFlowTests.EvolutionFlow_FromAltar_ConsumesDuplicate_AndKeepsMain`: after evolution, return to Altar and verify the artwork and exactly one earned star.
 
+## Responsive Altar shelves (follow-up)
+- Altar shelves adapt from five columns to four, three, two or one according to their actual window width; the fixed five-column arrangement could overlap busts on narrower aspect ratios.
+- The scroll height and slot positions now use the same calculated column count.
+- A filtered roster with zero matches now displays **No heroes match these filters** rather than a silent empty cabinet.
+- Added direct PlayMode-assembly tests for the column-count layout decisions at widths 972, 780, 600, 430 and 300 Unity canvas units. These tests do not replace visual screenshots.
+
 ## Acceptance checks (not yet run in Unity)
 1. Open Hero Altar at 1280×720, 1600×900, 2340×1080 and 1600×1200; capture Common/Elite/Legendary, locked and assigned cards.
 2. Evolve a Legendary through the existing development test flow. Compare the same hero in the Altar and Hero Detail: identity, available form and star count must match.
